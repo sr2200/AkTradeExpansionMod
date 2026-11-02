@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "trade_expansion",
+	"version": "${version}",
+	"name": "Trade Expansion",
+	"description": "Dynamic market trading with coins, regional goods and distance-based price propagation.",
+	"authors": [
+		"akf"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/trade_expansion/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.akf.tradeexpansion.TradeExpansion"
+		],
+		"client": [
+			"com.akf.tradeexpansion.client.TradeExpansionClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

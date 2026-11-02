@@ -1,0 +1,892 @@
+# Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
+
+- 版：v0.4（段階0〜6の実装結果を反映）　作成日：2026-11-02　更新日：2026-11-02（改版履歴は付録B）
+- 対象：Minecraft Java Edition 26.3、Java 25
+- ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
+- 実装状況：段階0〜6 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
+- Mod名：**Trade Expansion**
+- Mod ID：`trade_expansion`（名前空間。アイテムIDは `trade_expansion:copper_coin` 等）
+- パッケージ：`com.akf.tradeexpansion`　／　コマンド：`/tradeex`（別名 `/trade_expansion`）
+- ログ接頭辞：`[TradeExpansion]`
+
+> **注意**：26.x 系は難読化が撤廃され、Fabric でも Mojang 公式名（`Item`, `AbstractContainerMenu`, `SavedData` など）で開発する前提で書いています。Fabric API の各モジュール名・クラス名はバージョンごとに改名されることがあるため、実装着手時に [Fabric 公式 Docs](https://docs.fabricmc.net/) と テンプレートジェネレーター（fabricmc.net/develop/template）で最新版を確認してください。本書中「（要確認）」の箇所が該当します。v0.4 時点で実装により確認できたものは **付録A（26.3 API 確認結果）** にまとめ、本文の「（要確認）」を「（確認済：付録A）」に改めています。
+
+---
+
+## 0. ローダー選定：Fabric を推奨
+
+| 観点 | Fabric | NeoForge |
+|---|---|---|
+| 最新版への追従 | 速い（スナップショットから追従） | やや遅れることがある |
+| 本Modに必要な機能（アイテム/ブロック/画面/通信/SavedData/データパック/コマンド） | すべて Fabric API で可 | すべて可 |
+| 設定ファイル | 標準機能なし（自作 or ライブラリ） | `ModConfigSpec` が標準 |
+| 学習資料 | 公式Docsが整理されている、軽量で全体像を掴みやすい | Docs充実、ただし仕組み（イベントバス/Capability等）が多い |
+| ビルドの軽さ | 軽い | やや重い |
+
+**結論：Fabric のままでよい。** 本Modはバニラのクラスに深く手を入れず（Mixin ほぼ不要）、独自ブロック・独自画面・独自データで完結する設計にするため、NeoForge の強み（Capability、標準Config、大型Mod連携）がほとんど効きません。唯一の不足は Config ですが、JSON + Codec で自作します（G章）。
+NeoForge を選ぶべきなのは「Create 等の NeoForge 専用大型Modと同じModパックに入れたい」場合のみです（Q4）。
+
+---
+
+## 1. 先に確認したい未決事項（質問リスト）
+
+回答がない項目は、本書の **【既定案】** で進めます。
+
+| # | 質問 | 既定案 |
+|---|---|---|
+| Q1 | ~~Mod名・Mod ID は？~~ | **決定**：Trade Expansion／`trade_expansion` |
+| Q2 | 前提欄（開発経験・想定プレイ・併用Mod）が例のままです。実際は？ | Java経験あり／Mod初、友人数人のマルチ（専用サーバー）、併用なし |
+| Q3 | 交易窓口は「交易ブロック（屋台）」先行で良いか？ 商人NPCはフェーズ2で良いか？ | はい（A章） |
+| Q4 | NeoForge専用Modと併用する予定はあるか？ | なし → Fabric |
+| Q5 | バニラ村人の交易は残すか？（無効化／エメラルド交易のまま併存） | 併存（触らない）。設定で村人交易を無効化するオプションはフェーズ3 |
+| Q6 | 価格の「売りすぎで下がる」は**買値・売値の両方**が下がる理解で良いか？（＝相場そのものが下がる） | 両方下がる（買い手にとっては安く買えるチャンス） |
+| Q7 | プレイヤー間の価格差を使った「交易で儲ける（安い地域で買い、高い地域で売る）」はゲーム性として歓迎か？ | 歓迎。ただし同一市場での売り買い往復で儲からない制約は入れる |
+| Q8 | コイン比率を変更した時、**価格を銅換算で固定**するか、**コイン表記で固定**するか？（E章） | 銅換算固定（内部単位＝銅貨） |
+| Q9 | コインの入手手段：交易のみ／宝箱にも入れる／インゴットから鋳造可？ | 交易＋宝箱少量。鋳造は既定OFF |
+| Q10 | ネザー・エンドにも市場を置けるか？ 次元をまたいで相場は影響し合うか？ | 置ける。次元ごとに独立（設定で ネザー↔オーバーワールド連動可） |
+| Q11 | 時間による回復の速さの感覚は？（「1日で半分戻る」程度で良いか） | ゲーム内1日（20分）で影響が半減 |
+| Q12 | 交易ブロックはサバイバルでクラフト可能？ それとも村に自然生成のみ？ | 村に自然生成＋クラフト可。クラフト品は近く（`mergeRadius`内）に市場があればそこに所属し、無い場所に置いた時だけ品揃えの少ない「クラフト屋台用市場」を新設（C-1） |
+| Q13 | 1回の取引上限（まとめ売り）は？ | 1操作最大 1スタック（`trade.maxPerTransaction`）、Shiftで最大「インベントリ全部」（`trade.allowShiftAll`） |
+| Q14 | 経済のログ（誰が何をいくらで売買したか）を管理者向けに残すか？ | 残す（サーバーログ出力、ON/OFF設定） |
+| Q15 | 【v0.4追加】`trade.payoutSmallest`（受け取りを小さいコイン優先）の具体的なルールは？ 全額を銅貨にすると枚数が膨大になる | 未決（段階8で決定）。案：最上位コインを使わず1段下までで払う |
+| Q16 | 【v0.4追加】お釣りがドロップした時の「数秒間は取引した本人だけが拾える」を実装するか？ | 未決。現状は誰でも拾える（E-3） |
+| Q17 | 【v0.4追加】交易画面の所持金の内訳表示（金3 鉄4 銅7）・前回比▲▼・相場メーターを設計どおり作るか、現状の「倍率%を色付き表示」を仕様にするか？ | 未決。現状は合計額と倍率%のみ（A-4） |
+| Q18 | 【v0.4追加】確定時の価格チェックで、**プレイヤーに有利な方向のずれ**（買値が下がった／売値が上がった）は許可するか？ | 未決。現状は設計どおり「1cでも違えば中止」（A-4） |
+| Q19 | 【v0.4追加】`MarketDeltaS2C`（差分だけ送る）を実装するか、全体スナップショットの再送で済ませるか？ | 未決。現状は全体を再送（F-2）。市場あたり商品数十件なら再送で十分 |
+
+---
+
+## 2. 推奨仕様
+
+### A. 交易の窓口
+
+#### A-1. 方式比較
+
+| 方式 | 内容 | 長所 | 短所 | 難易度 |
+|---|---|---|---|---|
+| ① バニラ村人交易を置き換え | 村人の `MerchantOffers` を動的価格に差し替え | 既存の村をそのまま使える | バニラの交易UIは「1オファー=固定の入力→出力」「使用回数」前提で、数量指定・売り/買い両方向・相場表示に向かない。Mixin多用、村人の職業/レベル/値引き（評判）と衝突 | 高 |
+| ② 村人交易を拡張 | 村人に右クリック→独自UIを追加 | 村と紐づく | 村人のAI・職業ブロック・ゾンビ化など挙動の整合が大変。他Mod・バニラ更新に弱い | 中〜高 |
+| ③ 新規 交易ブロック（屋台） | ブロックを右クリックで独自UI | 実装が最も単純。位置が固定なので「市場」の位置が明確。Mixin不要 | 「人と取引している感」は弱い | **低** |
+| ④ 新規 商人NPC | 独自エンティティ（村人風） | 雰囲気が良い。村に住まわせられる | エンティティ登録・モデル・AI・スポーン・保護が必要 | 中〜高 |
+
+#### A-2. 推奨
+**③交易ブロックを先に作り、④商人NPCを後から追加。両者は同じ「市場（Market）」バックエンドを使う。**
+
+- フェーズ1（5章の段階0〜8）：`交易所ブロック（Market Stall）`。右クリックで交易画面。ブロック位置から所属市場を決定。
+- フェーズ2（段階9〜10）：村への自然生成と`商人NPC（Trader）`。村生成時に交易所ブロックの前に1体スポーン。右クリックで同じ画面（エンティティは市場IDを持つだけ）。
+- フェーズ3（段階11以降）：仕上げ・オプション機能（村人交易の無効化など）。
+- バニラ村人は触らない（Q5）。
+
+#### A-3. 交易所ブロック仕様
+
+| 項目 | 内容 |
+|---|---|
+| ID | `trade_expansion:market_stall` |
+| 形状 | 屋台風（向きあり、`HORIZONTAL_FACING`） |
+| 入手 | 村に自然生成（屋台入りの建物ピースを村のテンプレートプールに追加、段階9）＋クラフト（仮レシピ：1段目 カーペット×3／2段目 木材・エメラルド・木材／3段目 木材・樽・木材。`#minecraft:wool_carpets`, `#minecraft:planks`） |
+| 採掘 | 斧（`#minecraft:mineable/axe`）。ドロップは自身 |
+| 形状（v0.4 現状） | 通常の立方体（`minecraft:block/orientable` 親モデル、仮テクスチャ）。屋台風の形状は段階11 |
+| ブロックエンティティ | 持つ（`market_id` を long で保存。未割当は `-1`）。**プレイヤーが設置した時**はその場で市場を割当（生成元 `crafted`）。**プレイヤー以外の方法で置かれたもの**（自然生成・`/setblock` 等）は、最初に右クリックされた時に割当（生成元 `natural`）。ワールド生成は別スレッドで動くため、生成中に SavedData を触らない。所属市場が管理コマンドで削除されていた場合も、次の右クリックで割り当て直す |
+| 設置の拒否（C-1） | 実装上は「いったん設置 → 割当に失敗したら即座に破壊」。サバイバルではアイテムが戻り、クリエイティブでは戻らない。理由（最寄り市場までの距離、統合半径、最小距離）をチャットに表示 |
+| 破壊 | 自然生成品は破壊不可にする設定 `worldgen.protectNaturalStalls`（既定 false）。破壊時は市場の `stallPositions` から外す（市場自体は残す）。画面を開いているプレイヤーの画面は、メニューの有効性チェック（`stillValid`：屋台がまだ存在し、`trade.maxDistance` 以内にいるか）で自動的に閉じる |
+
+#### A-4. 交易画面（UI）
+
+```
+┌──────────────── [市場名：平原の村 #12] ───[所持金: 金3 鉄4 銅7 = 347c]┐
+│ [購入] [売却] [両替]                                                     │
+├──────────────────────────────────────────────────────────────────┤
+│ アイコン 商品名        単価(買)   在庫     相場        │ 数量 [-][ 1][+] │
+│ 🍞 パン               24c ▲     16/16   ■■■■□ 100%   │ [1][8][64][最大] │
+│ ⚔ ダイヤの剣          1,080c    8/8     ■■■■□ 100%   │ 合計: 1,080c     │
+│ ...（スクロール）                                       │ [ 購入する ]     │
+└──────────────────────────────────────────────────────────────────┘
+│ プレイヤーインベントリ                                                    │
+```
+
+- **購入タブ**：商品一覧（アイコン、名前、現在の買値、在庫/目標在庫、相場メーター、前回比▲▼）。数量を選ぶと「合計金額」をプレビュー（逐次価格の合計、B-5）。在庫0は灰色「売り切れ（次の入荷まで約 x 分）」。
+- **売却タブ**：この市場が**買い取る商品**の一覧と現在の売値。
+  - 操作1：一覧から商品を選び数量指定→インベントリから自動で引き抜いて売却。
+  - 操作2：画面内の「売却スロット」にアイテムを置く→プレビュー→[売却する]。
+  - 「買取停止」表示（在庫が上限、B-4）。
+  - 売却スロットにアイテムを置いたまま画面を閉じた場合は、プレイヤーのインベントリへ返却（入らなければ足元にドロップ）。
+  - エンチャント・耐久減少品の扱い：既定は **未使用・エンチャントなしのみ買取**（設定で耐久割合で減額買取 `trade.acceptDamaged`／商品ごとの `accept_damaged` が優先）。
+- **両替タブ**：コイン同士の両替（E-3）。
+- **共通**：取引確定時、サーバーで再計算した価格がプレビューから `trade.priceTolerance`（既定 0％＝1銅でも違えば）ずれていたら中止し、最新価格を再表示（他プレイヤーが同時に取引した場合の保護）。
+  - プレビューはクライアントがサーバーと同じ `PriceModel` で計算する（F-2）。時間による回復もクライアントのゲーム時刻で計算するため、価格の境目をまたぐ瞬間に確定するとまれに `PRICE_CHANGED` になる。これは仕様どおりの挙動で、再度押せば成立する（有利方向のずれを許可するかは Q18）。
+- ツールチップ：基準価格・現在倍率・回復予測（デバッグ表示は設定 `client.showDebugTooltip`）。
+
+##### v0.4 実装状況（段階3）
+
+| 項目 | 状態 |
+|---|---|
+| 画面サイズ | 300×240。左に商品一覧（6行、マウスホイールでスクロール）、右に選択商品・数量・合計・確定ボタン、下にプレイヤーインベントリ |
+| 一覧の列 | アイコン／商品名／単価（売り切れ時は「売り切れ」、買取停止時は「買取停止」）／在庫/目標在庫／倍率%（100%超は赤、未満は緑） |
+| 数量 | `[−][+][1][8][64][最大]`。上限は `trade.maxPerTransaction`。「最大」は B-5 の可能な最大数量（購入：在庫・所持金・空き枠、売却：所持数・Scap までの余裕） |
+| 右パネル | 合計額、最大数量（売り切れ時は「入荷まで約x分」。ゲーム内1日＝20分で換算） |
+| 結果表示 | 一覧の下に1行（成功は緑、失敗は結果コードの翻訳を赤） |
+| 所持金 | タイトル行の右に合計額（c）のみ |
+| 未実装 | 両替タブ（段階11）、売却スロット（操作2）、Shift で全数（`trade.allowShiftAll`）、所持金の内訳・前回比▲▼・相場メーター（Q17）、ツールチップの基準価格等 |
+
+---
+
+### B. 価格モデル
+
+#### B-1. 用語と状態変数
+
+全ての金額は **銅貨単位（c）の整数 `long`** で扱う。
+
+| 記号 | 名前 | 種類 | 説明 |
+|---|---|---|---|
+| `B` | 基準価格 | 定義値（JSON） | その市場でのこの商品の標準価格（c） |
+| `X` | 需給圧（pressure） | 状態（double） | 売られると＋、買われると−。0が平常 |
+| `τ` | 弾力性（elasticity） | 定義値 | `X` がいくつで価値が 1/e（約37%）になるか。大きいほど値崩れしにくい |
+| `V` | 価値倍率 | 計算値 | `V = clamp(exp(−X/τ), Vmin, Vmax)` |
+| `s` | 売買スプレッド | 定義値 | 買値と売値の差の割合 |
+| `S` | 在庫 | 状態（double） | 購入で −1、売却で +1 |
+| `T` | 目標在庫 | 定義値 | 平常時に戻る在庫量 |
+| `Scap` | 在庫上限 | 定義値 | これ以上は買い取らない。商品定義の `max_stock`、無ければ `T × price.defaultMaxStockMultiplier`（既定2.0） |
+| `H` | 回復半減期 | 設定値 | `X` が半分に戻るまでの時間（ゲーム内日） |
+| `r` | 補充速度 | 定義値 | 在庫が `T` に向かって戻る速さ（個/日） |
+
+#### B-2. 価格の数式
+
+```
+V        = clamp( exp(−X / τ), Vmin, Vmax )
+買値 Pbuy  = max(1, ceil ( B × V × (1 + s/2) ))   … プレイヤーが買う値段（切り上げ）
+売値 Psell = max(1, floor( B × V × (1 − s/2) ))   … プレイヤーが売る値段（切り捨て、最低1c）
+```
+
+- 「売りすぎると価値が下がる」＝売るたびに `X += 1 × wDist`、`V` が指数的に下がる。
+- 「買いすぎると高くなる＆売り切れ」＝買うたびに `X −= 1 × wDist`、`S −= 1`。`S < 1` で購入不可。
+- 丸めを「買値は切り上げ・売値は切り捨て」にすることで、安い商品でも常に 買値 ≥ 売値 となる（四捨五入だと数cの商品で両者が一致し得る）。
+- 指数関数にする理由：何個目でも「1個あたり一定割合」で下がるので直感的、かつ0以下にならない。
+- 変化量の上下限：`V` を `[Vmin, Vmax]` にクランプ（既定 0.25〜3.0）。さらに `X` 自体も `[−τ·ln(Vmax), τ·ln(1/Vmin)]` にクランプし、上限を超えて溜まらないようにする（回復が不自然に遅れるのを防ぐ）。
+
+#### B-3. 時間による回復（遅延評価）
+
+毎tick全市場を更新するのは重いので、**市場にアクセスした時に経過時間から一括計算**する（lazy update）。
+
+```
+Δt = (現在の gameTime − lastUpdateGameTime) / 24000      … ゲーム内日数
+X ← X × 2^(−Δt / H)                                      … 半減期で 0 へ戻る
+S ← S < T ? min(T, S + r·Δt)  :  max(T, S − r·Δt·0.5)     … 在庫は T へ戻る（過剰在庫はゆっくり減る）
+lastUpdateGameTime ← 現在
+```
+
+- 時刻は `level.getGameTime()`（ワールドの累計tick）を使う。`/time set` や寝ることで巻き戻らない／飛ばない。
+  - 寝てスキップした分も回復させたい場合は設定 `recovery.clock = DAY_TIME` に切替（既定 `GAME_TIME`）。
+  - `DAY_TIME` では `/time set` で時刻が戻ることがあるため、`Δt < 0` の場合は `Δt = 0` として扱い、`lastUpdateGameTime` を現在値に更新する。
+- サーバー停止中は時間が進まないので回復もしない（自然）。
+
+#### B-4. 売り切れと復活
+
+| 状態 | 条件 | 挙動 |
+|---|---|---|
+| 通常 | `1 ≤ S` | 購入可 |
+| 売り切れ | `S < 1` | 購入不可。UIに「次の入荷まで」= `(1 − S)/r` 日を表示 |
+| 復活 | 回復計算で `S ≥ 1` | 自動で購入可に戻る（イベント不要） |
+| 買取停止 | `S ≥ Scap` | その商品は売却不可（市場が抱えきれない） |
+| 非取扱 | 定義で `buy:false` / `sell:false` | その方向の取引なし（例：買取専門の商品） |
+
+- プレイヤーが売った品は在庫に入り、他プレイヤーが買える（市場が流通を仲介する）。
+
+#### B-5. まとめ売買の価格（逐次計算）
+
+n個まとめて売買する時の合計は「1個ずつ取引した場合の合計」と一致させる（分割取引で得をしない）。
+
+```
+売却合計 = Σ_{k=0}^{n−1} Psell( X + k )      … 1個売るごとに X が +1
+購入合計 = Σ_{k=0}^{n−1} Pbuy ( X − k )      … 1個買うごとに X が −1
+```
+n は最大でもインベントリ分（2,304個）なのでループで十分。
+
+**足りない場合の扱い（部分約定しない）**：
+
+- プレビュー時に「可能な最大数量」を計算して表示する。購入なら `min(floor(S), 所持金で買える数, インベントリの空き)`、売却なら `min(所持数, floor(Scap − S))`。
+- 確定時に指定数量を全部取引できなければ**取引全体を中止**する。期待額チェック（A-4）と同じく「見た額と違う取引は成立しない」で統一する。
+- 中止時、サーバーは結果コードと**市場の最新スナップショット**を送り直す。最大数量はサーバーから返さず、クライアントがスナップショットと自分のインベントリから再計算する（v0.4 で変更）。
+
+##### 結果コード（`TradeResult`）
+
+| コード | 意味 |
+|---|---|
+| `SUCCESS` | 成立 |
+| `INVALID_REQUEST` | 市場が存在しない／開いている画面の市場IDと不一致／数量が 0 以下または `trade.maxPerTransaction` 超 |
+| `TOO_FAR` | 屋台が無くなった、または `trade.maxDistance` より離れている |
+| `CREATIVE_NOT_ALLOWED` | クリエイティブモードで `trade.allowCreative=false` |
+| `NOT_AVAILABLE` | その市場に無い商品、定義が消えた商品、`buy`/`sell` が false の方向 |
+| `INSUFFICIENT_STOCK` | 購入数 > floor(S) |
+| `INSUFFICIENT_FUNDS` | 所持金不足 |
+| `INSUFFICIENT_ITEMS` | 売却数 > 所持数（付加情報なしの通常品のみ数える） |
+| `INVENTORY_FULL` | 購入品がインベントリに入らない |
+| `STOCK_FULL` | 売却数 > floor(Scap − S) |
+| `PRICE_CHANGED` | サーバーの合計額がプレビュー額から許容範囲を超えてずれた |
+
+検証の順序：`INVALID_REQUEST` → `TOO_FAR` → `CREATIVE_NOT_ALLOWED` → `NOT_AVAILABLE` →（遅延回復）→ 在庫系（`INSUFFICIENT_STOCK` / `STOCK_FULL`）→ `PRICE_CHANGED` → 所持系（`INSUFFICIENT_FUNDS` / `INVENTORY_FULL` / `INSUFFICIENT_ITEMS`）。
+
+#### B-6. 搾取防止の条件
+
+同一市場で「売る→すぐ買い戻す」で利益が出ない条件：
+`(1 + s/2)/(1 − s/2) > exp(1/τ)`。既定 `s = 0.4` なら左辺 1.5 → **τ > 2.47** なら安全。スプレッドを小さくすると必要な τ は大きくなる（例：`s=0.05` なら τ > 20）ため、設定範囲だけでは保証できない。ロード時に商品ごとに検証し、違反する定義は警告＋`τ` をこの条件を満たす値に補正する（補正後の値 = `1 / ln((1+s/2)/(1−s/2)) × 1.01`、つまり安全な最小値に1%の余裕を足す。実装：`PriceModel.ensureExploitSafe`。警告ログは段階7のデータパック読込で出す）。
+（クラフト経由の裏技：安い素材を買って高い完成品を売る、は管理コマンド `/tradeex audit`（4-2、段階11）で検出する）
+
+#### B-7. 既定値
+
+| パラメータ | 既定値 | 備考 |
+|---|---|---|
+| `s`（スプレッド） | 0.4 | 買値 = 基準×1.2、売値 = 基準×0.8 |
+| `τ`（弾力性） | 商品ごと。既定 32、高額品 16、大量流通品（小麦等）128 | |
+| `Vmin` / `Vmax` | 0.25 / 3.0 | |
+| `H`（半減期） | 1.0日 | |
+| `T` / `r` | 商品ごと。既定 `T=16`, `r=T/2`（2日で満タン） | |
+| `Scap` | `max_stock`、無ければ `2T` | |
+
+---
+
+### C. 距離による影響
+
+#### C-1. 「市場」の単位：**市場ノード（交易所ごと）＋近接統合**
+
+| 案 | 長所 | 短所 |
+|---|---|---|
+| 村単位 | 直感的 | 村の判定が曖昧（バニラに「村」オブジェクトは無い。POIの集まりでしかない）、クラフト設置に対応しにくい |
+| チャンク/グリッド単位 | 計算が単純 | グリッドの境目で隣の家同士が別市場になる不自然さ |
+| **ノード＋統合（推奨）** | 交易所の位置が市場。近くの交易所は同じ市場に統合 | 統合ロジックが必要（簡単） |
+
+- **市場ノード**：交易所ブロック（またはNPC）の市場割当時（A-3）、同じ次元で半径 `mergeRadius`（既定 **64ブロック**、水平距離）以内に既存市場があればそこに所属、なければ新しい市場を作る。中心座標は最初の交易所の位置。
+  - 同じ村の複数の屋台は1つの市場＝**在庫も相場も完全に共通**。
+  - `mergeRadius` 内に市場が複数ある場合は、**中心が最も近い市場**に所属する（等距離なら ID の小さい方）。
+  - クラフトした屋台も同じルールで、近くに市場があればそこに所属する（Q12）。
+- **新規市場の制限**：クラフトした屋台で新しい市場を作れるのは、同じ次元の既存市場の中心から `distance.minNewMarketDistance`（既定 **256ブロック**）以上離れた場所だけ。条件を満たさない場合は設置を拒否し、理由をメッセージ表示する（屋台を置き直して相場をリセットする抜け道を防ぐ。拒否の実装方法は A-3）。自然生成の屋台にはこの制限をかけない。
+  - 判定のまとめ：最寄り市場までの距離 d について、`d ≤ mergeRadius` → その市場に所属／`mergeRadius < d < minNewMarketDistance` → クラフト品は拒否・自然生成品は新規市場／`d ≥ minNewMarketDistance` → 新規市場。
+- **新規市場の品揃え**（v0.4 暫定）：段階7までは組み込みの10商品（`GoodsCatalog`）をすべて扱う。`priceFactor` の乱数シードは `ワールドシード ^ (中心座標.asLong() × 0x9E3779B97F4A7C15)`。
+- **新規市場の初期相場**：新しい市場の各商品の `X` は 0 ではなく、周辺市場の相場の距離重み付き平均から始める。
+  ```
+  Rnear 以内に同じ商品を扱う市場がある → X_new = それらの X の平均（近場は同じ相場）
+  無ければ                             → X_new = Σ_j ( w(d_j) × X_j ) / Σ_j w(d_j)   … j は Rfar 以内の市場
+  周辺に該当市場が無い（Σw = 0）       → X_new = 0
+  （各市場の X は refresh 後の値を使う）
+  ```
+  在庫 `S` は `T` から始める。これにより「近場（Rnear以内）は同じ相場」が後から作った市場でも保たれる。
+- 市場が保持する交易所が0になっても市場データは残す（再設置で復活）。
+
+#### C-2. 距離減衰（相場の波及）
+
+ある市場Aで取引して `ΔX` が発生したら、同じ次元の他の市場Bにも波及させる：
+
+```
+d = 市場A中心と市場B中心の水平距離（ブロック）
+w(d) = 1                                  (d ≤ Rnear)
+     = ((Rfar − d) / (Rfar − Rnear))^p     (Rnear < d < Rfar)
+     = 0                                  (d ≥ Rfar)
+ΔX_B = ΔX_A × w(d) × 商品の連動係数 link（既定1.0）
+```
+
+| パラメータ | 既定 | 意味 |
+|---|---|---|
+| `mergeRadius` | 64 | この範囲は同じ市場（在庫も共通） |
+| `Rnear` | 128 | ここまでは **相場（X）が100%共通**＝「近場は同じ」 |
+| `Rfar` | 1536 | ここから先は影響0 |
+| `p` | 2.0 | 減衰カーブ。1＝直線、2＝Rnearを出た直後に大きく下がり、遠方ではなだらかに0へ |
+
+- 波及するのは **相場（X）だけ**。在庫（S）は波及しない（遠くの店の棚が空になるのは不自然）。
+- 波及先がその商品を扱っていない場合は無視。扱いがあるが `B` が違っても `X` で波及するので「割合」で連動する。
+- 計算量：市場は多くて数百。空間インデックス（512ブロックのセルでハッシュ）で `Rfar` 内だけ走査。
+
+#### C-3. ネザー・エンド
+
+| 次元 | 既定の扱い |
+|---|---|
+| オーバーワールド | 通常 |
+| ネザー | 独立した市場群（オーバーワールドへ波及しない）。設定 `distance.linkNetherToOverworld=true` で、ネザー座標×8 をオーバーワールド座標とみなして相互波及 |
+| エンド | 独立。距離計算は通常通り（外縁の島同士でも波及） |
+| 他Modの次元 | 独立 |
+
+---
+
+### D. 地域ごとの品揃え
+
+#### D-1. 決定ロジック
+
+市場が**作られた瞬間に1回だけ**決定し、保存する（後でデータパックを変えたら `/tradeex market reroll` で再抽選）。
+
+1. 市場位置の情報を集める：次元、バイオーム（タグ）、含まれる構造物（村・前哨基地など）、村タイプ（バイオームから `VillagerType` 相当を導出：plains/desert/savanna/snow/taiga/jungle/swamp）、生成元（自然生成 or クラフト設置）。
+2. 全 `market_profile` の `conditions` を評価し、合致したものから `priority` が最も高いものを採用（同点は `weight` で抽選）。
+3. プロファイルの `pools` から商品を抽選（`rolls` 回）。乱数のシードは `ワールドシード ^ 市場中心座標のハッシュ` → **同じ場所なら同じ品揃え**（再現性あり）。
+4. 各商品について、ばらつき係数 `priceFactor = 1 + 乱数(−price.jitter 〜 +price.jitter)`（既定 ±15%）を抽選して**保存する**。
+5. 基準価格は保存せず、使うたびに次の式で計算する：
+   ```
+   B = goods定義の base_price × プロファイルの倍率（base_price_multiplier × price_modifiers） × priceFactor × price.globalMultiplier
+   ```
+   こうすることで、データパックで `base_price` を変えて `/reload` すると、既存市場にも反映される。
+
+#### D-2. データパック形式
+
+配置：`data/<namespace>/trade_expansion/market_profile/<name>.json` と `data/<namespace>/trade_expansion/goods/<name>.json`
+
+**商品定義（goods）**：商品のデフォルト値
+
+```json
+// data/trade_expansion/trade_expansion/goods/diamond_sword.json
+{
+  "item": "minecraft:diamond_sword",
+  "base_price": 900,
+  "elasticity": 16,
+  "target_stock": 8,
+  "max_stock": 24,
+  "restock_per_day": 4,
+  "spread": 0.4,
+  "buy": true,
+  "sell": true,
+  "accept_damaged": false
+}
+```
+
+- `buy` / `sell` は**プレイヤー視点**（`buy`=プレイヤーが買える、`sell`=プレイヤーが売れる）。
+- 省略可能な項目（`elasticity`, `max_stock`, `spread`, `accept_damaged` など）は省略すると全体設定（G章）の既定値を使う。**商品定義に書いてあればそちらが優先**。
+- 付加情報（データコンポーネント）で区別が必要な商品は、任意項目 `components` で絞り込む。指定した付加情報が一致するアイテムだけを同じ商品として扱い、購入時はその付加情報を付けたアイテムを渡す。
+
+```json
+// data/trade_expansion/trade_expansion/goods/potion_healing.json
+{
+  "item": "minecraft:potion",
+  "components": { "minecraft:potion_contents": { "potion": "minecraft:healing" } },
+  "base_price": 120
+}
+```
+※付加情報の書式は 26.3 のアイテムコンポーネント仕様で要確認。`components` 未指定の商品は「付加情報なし（通常品）」のみ一致する（名前付き・エンチャント付きは別物として扱い、買い取らない）。
+
+**市場プロファイル（market_profile）**
+
+```json
+// data/trade_expansion/trade_expansion/market_profile/desert_village.json
+{
+  "display_name": { "translate": "trade_expansion.profile.desert_village" },
+  "priority": 10,
+  "weight": 1,
+  "conditions": [
+    { "type": "trade_expansion:structure", "structure": "#minecraft:village" },
+    { "type": "trade_expansion:biome", "biome": "#minecraft:is_badlands_or_desert" }   
+  ],
+  "pools": [
+    {
+      "rolls": { "min": 4, "max": 6 },
+      "entries": [
+        { "goods": "trade_expansion:bread",  "weight": 10 },
+        { "goods": "trade_expansion:cactus", "weight": 8, "base_price_multiplier": 0.5 },
+        { "goods": "trade_expansion:water_bucket", "weight": 5, "base_price_multiplier": 2.0 }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        { "goods": "trade_expansion:diamond_sword", "weight": 1 },
+        { "goods": "trade_expansion:golden_apple",  "weight": 2 }
+      ]
+    }
+  ],
+  "always": ["trade_expansion:wheat"],
+  "price_modifiers": [
+    { "item_tag": "#minecraft:sand", "multiplier": 0.5 }
+  ]
+}
+```
+※バイオームタグ名は例。26.3の実在タグで要確認。
+
+**条件の種類（段階7で実装するもの）**
+
+| type | 引数 | 意味 |
+|---|---|---|
+| `trade_expansion:dimension` | `dimension` | 次元一致 |
+| `trade_expansion:biome` | `biome`（ID or `#タグ`） | 中心座標のバイオーム |
+| `trade_expansion:structure` | `structure`（ID or `#タグ`） | 中心がその構造物内 |
+| `trade_expansion:villager_type` | `type` | 村タイプ |
+| `trade_expansion:origin` | `natural` / `crafted` | 生成元 |
+| `trade_expansion:distance_from_spawn` | `min`/`max` | スポーンからの距離（遠いほど高級品、等） |
+| `trade_expansion:all_of` / `any_of` / `not` | 子条件 | 論理演算 |
+
+- 何も合致しない場合は `trade_expansion:default`（`priority: 0`, 条件なし）を使う。
+- データパックは `/reload` で再読込。既存市場の**商品構成は変えない**が、`base_price`・`τ` 等の定義値は再読込値を使う（保存している状態 `X`, `S`, `priceFactor` は保持。`B` は D-1 の式で再計算）。
+
+#### D-3. 同梱する初期データ（目安）
+
+既定プロファイル：平原村・砂漠村・サバンナ村・雪原村・タイガ村・ジャングル/沼地村・クラフト屋台・ネザー（ピグリン風：金・ネザー素材）・エンド（エンダーパール・シュルカー殻）。
+商品数：初期 40〜60種。
+
+---
+
+### E. 通貨
+
+#### E-1. コイン5種
+
+比率 `R`（既定 10）。内部価値は銅貨単位。
+
+| コイン | ID | 価値（c）既定比率の場合 | 一般式（全段が同じ比率 R の場合） | スタック |
+|---|---|---|---|---|
+| 銅貨 | `trade_expansion:copper_coin` | 1 | 1 | 64 |
+| 鉄貨 | `trade_expansion:iron_coin` | 10 | R | 64 |
+| 金貨 | `trade_expansion:gold_coin` | 100 | R² | 64 |
+| ダイヤ貨 | `trade_expansion:diamond_coin` | 1,000 | R³ | 64 |
+| ネザライト貨 | `trade_expansion:netherite_coin` | 10,000 | R⁴ | 64 |
+
+- 比率は設定 `currency.ratios = [10,10,10,10]`（銅→鉄、鉄→金、金→ダイヤ、ダイヤ→ネザライト）で**段ごとに**指定する。各コインの価値は「その段までの比率の積」（例：金貨 = ratios[0] × ratios[1]）。全段を同じ値にすれば上表の一般式になる。
+- ネザライト貨は溶岩で燃えない（ネザライトと同様の `fireResistant`）。
+- ツールチップに「価値：1,000c」表示（2枚以上ならスタック合計、下位コインがあれば「スニーク＋右クリックで崩す」の案内も表示）。
+  - 注：26.3 では `Item.appendHoverText` が非推奨（動作はする）。置き換え先（データコンポーネントによるツールチップ等）は段階11で検討。
+- 各比率は 2〜100 に制限（G章）。最大でもネザライト貨 = 100⁴ = 1億c なので `long` で十分。
+
+#### E-2. 入手方法
+
+| 方法 | 既定 |
+|---|---|
+| 市場に商品を売る | ON（主な入手手段） |
+| 宝箱ルートテーブル（村の宝箱・廃坑・ダンジョン） | ON（少量：銅〜金）。`currency.lootTableCoins` |
+| 鋳造（インゴット→コイン） | OFF（`currency.allowMinting`）。インフレ防止のため既定無効 |
+| 初回ログイン時の支給 | 0c（`currency.startingMoney`） |
+
+※ 3×3クラフトは9枠しかないので **1:10 の両替はクラフトレシピでは作れない**。両替は交易画面の「両替タブ」と、コインを手に持ってスニーク+右クリック（1枚を下位コインに崩す。`currency.sneakUseExchange`）で行う。
+
+#### E-3. 自動両替（支払い・お釣り）
+
+**所持金の対象範囲**：メインインベントリの36枠（ホットバー＋27枠）にあるコインのみ。オフハンド・防具欄・エンダーチェスト等は数えない。付加情報（名前など）付きのコインも価値どおりに数える。
+
+**支払い**（価格 P）：
+
+1. 所持コインの合計価値 `W` を計算。`W < P` なら失敗（`INSUFFICIENT_FUNDS`）。
+2. **所持コインをいったん全部回収**する。
+3. 残額 `W − P` を、**大きいコインから貪欲法**で返す（各コインの価値は下位コインの整数倍なので、貪欲法で最小枚数になる）。
+4. 返却はインベントリへ。入りきらなければ足元にドロップ（`ItemEntity`、取引プレイヤーのみ数秒拾える）。
+
+- この方式は所持コインの組み合わせに関係なく常に正しく支払える（例：ダイヤ貨2枚で 1,080c → 回収 2,000c、返却 920c＝金貨9・鉄貨2）。
+- 返却枚数は各コイン種「比率−1」枚以下（最上位を除く）なので、最大でも5種類＝通常5枠程度で収まる（比率が64を超える設定では1種類が2枠になることがある）。
+- 実装上は、回収前に「返却分がインベントリ（回収で空く枠を含む）に入るか」を計算し、入らない分だけドロップする。手順はすべてサーバーの1回の処理内で行い、途中で失敗したら元に戻す。
+- **購入時の順序（v0.4 確定）**：①所持金・空き枠を検証（失敗ならここで中止し、何も変えない）→ ②コインを全部回収 → ③**商品を先に渡す** → ④お釣りを返す。商品の空き枠判定では、回収されるコインの枠を空きとして数える。商品は検証済みなので必ず入り、入りきらない可能性があるのはお釣りだけになる（溢れたお釣りは足元にドロップ）。
+- **副作用（仕様とする）**：支払いのたびに手持ちコインが最小枚数に整理される（例：銅貨200枚を持って 1c 払うと、金貨1・鉄貨9・銅貨9 になる）。
+- ドロップしたお釣りの拾得制限（取引プレイヤーのみ数秒）は v0.4 では未実装（Q16）。
+
+**受け取り**（売却額 Q）：大きいコインから貪欲法で支払う（設定 `trade.payoutSmallest=true` で小さいコイン優先。具体的なルールは未決：Q15）。売却時はアイテムを先に取り除いてからコインを渡す。
+
+**端数**：価格は常に銅貨単位の整数なので端数は発生しない（丸めは B-2 で実施）。
+
+**両替タブ**：上位↔下位の1段変換。手数料 `currency.exchangeFee`（既定 0%）。
+
+#### E-4. 比率変更時の影響（Q8）
+
+既定案「**銅換算固定**」：商品価格は銅貨単位で定義・保存されるため、比率を10→20に変えると
+- 商品の銅換算価格は変わらない（パン20c のまま）。
+- 上位コインの価値が変わる（金貨 100c → 400c）。**既に持っている金貨の価値が4倍になる**。
+
+そのため：
+- 比率はワールド作成時に決める前提とし、変更時はサーバーログに警告。
+- 別案「コイン表記固定」は、価格を「金貨1枚」のように上位コインで定義し、比率変更で銅換算が変わる方式。ゲーム途中の比率変更に強いが、価格表示がブレるので非推奨。
+- 設定 `currency.ratioLocked=true` で、ワールド作成後の比率変更を拒否（保存データ側の比率を優先）するオプションを用意。
+
+---
+
+### F. データ保存・マルチ対応
+
+#### F-1. 永続化
+
+- `SavedData` を **サーバー全体の SavedDataStorage**（`MinecraftServer.getDataStorage()`）に1つ。ID は `trade_expansion:markets`。全次元の市場を保持（各市場が次元IDを持つ）。（確認済：付録A）
+  - 定義：`new SavedDataType<>(Identifier, MarketRegistry::new, CODEC, null)`。第4引数（データ変換の種類 `DataFixTypes`）は null。バニラの読み込み処理は null だと例外になるが、Fabric API（`fabric-object-builder-api-v1` の `SavedDataStorageMixin`）が null の時は変換を飛ばすため問題ない。将来データ形式を変える時は `schemaVersion` を見て自前で移行する。
+  - 保存形式は Codec（NBT）。フィールド名は snake_case（`schema_version`, `currency_ratios`, `next_id`, `markets`、市場は `id`, `dimension`, `center`, `origin`, `stalls`, `last_update`, `goods`、商品は `item` と `state{price_factor, pressure, stock, last_trade}`）。商品は表示順を保つため Map ではなくリストで保存する。
+- 構造：
+
+```
+MarketRegistry
+ ├ schemaVersion: int
+ ├ currencyRatios: int[4]           … E-4 用
+ ├ nextId: long
+ └ markets: Map<MarketId, Market>
+     Market
+      ├ id, dimension, center(BlockPos), profileId, origin
+      ├ stallPositions: Set<BlockPos>
+      ├ lastUpdateGameTime: long
+      └ goods: Map<ItemId, GoodState>
+           GoodState { priceFactor(double), X(double), S(double), lastTradeGameTime }   … 基準価格 B は保存せず D-1 の式で計算
+```
+- 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
+- 交易所ブロックエンティティは `market_id` だけ保存（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）。
+- データパックで定義が消えた商品は状態を残したまま「非表示」にする（再追加で復活）。
+
+#### F-2. サーバー・クライアント同期
+
+**原則：取引の成否と状態の変更はすべてサーバー。クライアントはサーバーと同じ式でプレビューを計算して表示するだけ**（確定はサーバーの再計算で行う）。シングルでも内部サーバーで同じ処理が走るので分岐不要。
+
+| パケット | 方向 | 内容 | 送るタイミング | v0.4 |
+|---|---|---|---|---|
+| `MarketSnapshotS2C` | S→C | 市場ID、中心座標、サーバーのゲーム時刻、全商品の（item, **確定済みパラメータ** B・τ・s・T・Scap・r・Vmin・Vmax, X, S, buy可否, sell可否） | 画面を開いた時／その市場（と波及先）が変化した時に、その市場の画面を開いている全員へ／取引失敗時に本人へ | 実装済 |
+| `MarketDeltaS2C` | S→C | 変化した商品だけ | 誰かが取引した時 | 未実装（全体を再送で代用、Q19） |
+| `TradeRequestC2S` | C→S | 市場ID, item, 方向（buy=true/false）, 数量, 期待合計額 | 購入/売却ボタン | 実装済 |
+| `TradeResultS2C` | S→C | 結果コード（B-5）, 方向, 数量, 合計額（成功時） | 取引処理後 | 実装済 |
+| `ExchangeRequestC2S` | C→S | コイン種, 方向, 枚数 | 両替 | 未実装（段階11） |
+
+- **価格はクライアントでも計算する**（v0.4 で変更）：スナップショットは価格そのものではなく、計算に必要な値を送る。クライアントは共通コードの `PriceModel` で買値・売値・合計・最大数量を計算し、時間による回復も「スナップショットのゲーム時刻 → 自分のゲーム時刻」の差で計算する。これによりプレビュー額とサーバーの計算額が一致する（境目のずれについては A-4）。
+- 画面は `AbstractContainerMenu` ＋ `ExtendedMenuType`（`fabric-menu-api-v1`。開く時に `OpenData(市場ID, 屋台の座標)` を渡す）。v0.4 ではメニューはプレイヤーインベントリだけを持つ（売却スロットは未実装）。（確認済：付録A）
+- サーバー側で必ず検証：プレイヤーが開いている画面の市場IDが要求と一致、屋台が存在し `trade.maxDistance`（既定8）以内、数量が 1〜`trade.maxPerTransaction`、アイテム実在（B-5 の結果コード参照）。
+- 同時取引：サーバーのメインスレッドで処理するので排他は不要。Fabric の `ServerPlayNetworking` の受信処理は最初からサーバースレッドで呼ばれるため、`server.execute()` は不要（Fabric の仕様からの判断で、実機では未確認）。
+- 経済ログ：`[TradeExpansion] Steve SELL minecraft:diamond_sword x10 @market#12 total=5517c`（設定 `log.trades`）。
+
+---
+
+### G. 設定項目一覧
+
+ファイル：`config/trade_expansion.json`（サーバー側。クライアントには表示用に必要な値のみ同期）。`/tradeex reload` で再読込。
+
+> **v0.4 実装状況**：設定ファイルの読み込みは未実装（段階8）。現在は `config/TradeExpansionConfig`（record）に、下表のうち価格・回復・距離・取引・ログの値を既定値で固定して持っている。コイン比率は `CoinType.setRatios`、スニーク崩しは `CoinItem.sneakUseExchange` で個別に保持（段階8で設定ファイルにまとめる）。
+
+**クライアントに同期する値（段階8で実装）**：クライアントはプレビューを自分で計算する（F-2）ため、次の値がサーバーと違うとプレビュー額がずれて取引が `PRICE_CHANGED` で中止され続ける。ログイン時と `/tradeex reload` 時に同期する。
+
+| キー | クライアントでの用途 |
+|---|---|
+| `currency.ratios` | 所持金の計算、コインのツールチップ |
+| `currency.sneakUseExchange` | ツールチップの案内表示、使用時の判定 |
+| `recovery.halfLifeDays` / `recovery.restockMultiplier` | 時間回復の計算（プレビュー額・入荷までの時間） |
+| `trade.maxPerTransaction` | 数量の上限・「最大」ボタン |
+| `trade.maxDistance` | メニューの有効性チェック（`stillValid` はクライアントでも呼ばれる） |
+
+※ 商品ごとのパラメータ（`price.*` から決まる B・τ・s・Vmin・Vmax 等）はスナップショットに含めて送るので同期不要。
+
+**優先順位**：商品ごとの項目（`elasticity`, `spread`, `max_stock`, `accept_damaged` など）は **商品定義（D-2） ＞ この設定の既定値** の順で決まる。この表の `price.default*` や `trade.acceptDamaged` は「商品定義に書かれていない時の既定値」。
+
+| カテゴリ | キー | 既定値 | 範囲 | 説明 |
+|---|---|---|---|---|
+| 通貨 | `currency.ratios` | `[10,10,10,10]` | 各 2〜100 | 銅→鉄→金→ダイヤ→ネザライト |
+| 通貨 | `currency.ratioLocked` | true | bool | ワールド作成後の比率変更を拒否 |
+| 通貨 | `currency.allowMinting` | false | bool | インゴット→コイン鋳造 |
+| 通貨 | `currency.exchangeFee` | 0.0 | 0〜0.5 | 両替手数料 |
+| 通貨 | `currency.startingMoney` | 0 | 0〜1e9 | 初回支給（c） |
+| 通貨 | `currency.lootTableCoins` | true | bool | 宝箱にコインを追加 |
+| 通貨 | `currency.sneakUseExchange` | true | bool | スニーク+右クリックでコインを崩す |
+| 価格 | `price.defaultSpread` | 0.4 | 0.05〜0.9 | 売買スプレッド |
+| 価格 | `price.defaultElasticity` | 32 | 3〜10000 | τ |
+| 価格 | `price.minMultiplier` | 0.25 | 0.01〜1 | Vmin |
+| 価格 | `price.maxMultiplier` | 3.0 | 1〜100 | Vmax |
+| 価格 | `price.jitter` | 0.15 | 0〜0.5 | 市場ごとの基準価格ばらつき |
+| 価格 | `price.defaultMaxStockMultiplier` | 2.0 | 1〜10 | `max_stock` 未指定時の在庫上限 = T × この値 |
+| 価格 | `price.globalMultiplier` | 1.0 | 0.01〜100 | 全価格倍率 |
+| 回復 | `recovery.halfLifeDays` | 1.0 | 0.05〜100 | H |
+| 回復 | `recovery.restockMultiplier` | 1.0 | 0〜100 | r の全体倍率 |
+| 回復 | `recovery.clock` | `GAME_TIME` | `GAME_TIME`/`DAY_TIME` | 回復の時計 |
+| 距離 | `distance.mergeRadius` | 64 | 8〜512 | 同一市場の半径 |
+| 距離 | `distance.nearRadius` | 128 | mergeRadius〜 | 相場100%共通 |
+| 距離 | `distance.farRadius` | 1536 | nearRadius+1〜100000 | 影響0 |
+| 距離 | `distance.falloffExponent` | 2.0 | 0.5〜5 | p |
+| 距離 | `distance.linkNetherToOverworld` | false | bool | ネザー×8で連動 |
+| 距離 | `distance.minNewMarketDistance` | 256 | 0〜10000 | クラフト屋台で新規市場を作れる最小距離（C-1） |
+| 取引 | `trade.maxDistance` | 8 | 2〜32 | 交易所から操作可能な距離 |
+| 取引 | `trade.acceptDamaged` | false | bool | 耐久減少品の買取 |
+| 取引 | `trade.priceTolerance` | 0.0 | 0〜0.2 | 確定時の価格ずれ許容 |
+| 取引 | `trade.payoutSmallest` | false | bool | 受取を小さいコインで |
+| 取引 | `trade.maxPerTransaction` | 64 | 1〜2304 | 通常操作1回の最大数量 |
+| 取引 | `trade.allowShiftAll` | true | bool | Shift操作で「可能な最大数量」まで一括取引 |
+| 取引 | `trade.allowCreative` | false | bool | クリエイティブモードのプレイヤーの取引を許可（無限アイテムでの経済破壊を防ぐため既定OFF。シングルで試す時はON） |
+| 生成 | `worldgen.spawnStallsInVillages` | true | bool | 村に交易所生成 |
+| 生成 | `worldgen.protectNaturalStalls` | false | bool | 自然生成品を破壊不可 |
+| 生成 | `worldgen.spawnTraderNpc` | true | bool | 商人NPCを生成（フェーズ2） |
+| ログ | `log.trades` | true | bool | 取引ログ |
+| 管理 | `command.permissionLevel` | 2 | 0〜4 | `/tradeex` 管理系サブコマンドに必要な権限レベル（2＝OP）。26.3 の権限判定は数値ではなく定数なので、0→`Commands.LEVEL_ALL`、1→`LEVEL_MODERATORS`、2→`LEVEL_GAMEMASTERS`、3→`LEVEL_ADMINS`、4→`LEVEL_OWNERS` に変換して `Commands.hasPermission(...)` に渡す（v0.4 は `LEVEL_GAMEMASTERS` 固定） |
+| バニラ | `vanilla.disableVillagerTrades` | false | bool | バニラ村人の交易を無効化（フェーズ3） |
+| 表示 | `client.showDebugTooltip` | false | bool | クライアント設定 |
+
+---
+
+## 3. 数値例
+
+前提：既定値（`s=0.4`、`H=1日`、`Rnear=128`、`Rfar=1536`、`p=2`、比率10）。
+
+### 3-1. ダイヤの剣を10本売る（B=900c、τ=16、T=8、max_stock=24）
+
+平常時（X=0、在庫8）：買値 1,080c（金10鉄8）、売値 720c（金7鉄2）。丸めは買値切り上げ・売値切り捨て。
+
+| 本目 | 売る前のX | V | その1本の売値 | 累計 |
+|---|---|---|---|---|
+| 1 | 0 | 1.000 | 720 | 720 |
+| 2 | 1 | 0.939 | 676 | 1,396 |
+| 3 | 2 | 0.882 | 635 | 2,031 |
+| 4 | 3 | 0.829 | 596 | 2,627 |
+| 5 | 4 | 0.779 | 560 | 3,187 |
+| 6 | 5 | 0.732 | 526 | 3,713 |
+| 7 | 6 | 0.687 | 494 | 4,207 |
+| 8 | 7 | 0.646 | 464 | 4,671 |
+| 9 | 8 | 0.607 | 436 | 5,107 |
+| 10 | 9 | 0.570 | 410 | **5,517c** |
+
+- 10本まとめ売りでも1本ずつでも合計 5,517c（＝ダイヤ貨5・金貨5・鉄貨1・銅貨7）。値崩れなしなら 7,200c なので約23%減。
+- 売却後 X=10：次の売値 385c、**買値は 579c まで下がる**（平常 1,080c）→ 他のプレイヤーには安く買うチャンス。在庫は 8→18（`max_stock=24` 以内なので全数買取。あと6本売ると買取停止）。
+
+**時間回復**（X=10から）
+
+| 経過 | X | 売値 |
+|---|---|---|
+| 0.5日（10分） | 7.07 | 462 |
+| 1日 | 5.00 | 526 |
+| 2日 | 2.50 | 615 |
+| 3日 | 1.25 | 665 |
+
+**周辺の市場への波及**（X=+10 の波及量）
+
+| 距離 | 重み w | 波及後のX | その市場の売値 |
+|---|---|---|---|
+| 64（同一市場） | 1.000 | 10.00 | 385 |
+| 128 | 1.000 | 10.00 | 385 |
+| 300 | 0.771 | 7.71 | 444 |
+| 500 | 0.541 | 5.41 | 513 |
+| 1000 | 0.145 | 1.45 | 657 |
+| 1536以上 | 0 | 0 | 720 |
+
+### 3-2. パンを買い占める（B=20c、τ=32、在庫16）
+
+1個目 24c → 16個目 39c と1個ずつ値上がり、16個で合計 497c、17個目は「売り切れ」。`r=8/日` なので約2.5分後（0.125日）に1個入荷、1日で8個、2日で満タン。X=−16 は1日後に −8（買値 31c）まで戻る。
+
+> v0.4：3-1・3-2 の数値（各表の値、5,517c、497c など）は JUnit テスト（`PriceModelTest` / `DistanceModelTest`）ですべて再現を確認済み。
+> 実装上の注意：`20 × 1.2 = 24.000000000000004` のような浮動小数点の誤差で切り上げ結果が 25 になるのを防ぐため、切り上げ・切り捨ての前に 1e-9 の補正を入れている。
+
+---
+
+## 4. クラス構成・パッケージ構成
+
+### 4-1. 方針
+- **価格計算・距離計算・通貨計算は Minecraft に依存しない純Javaクラス**にする → JUnitで高速テスト可能。
+- Minecraft依存部分（登録・画面・通信・保存）は薄く。
+
+### 4-2. パッケージ
+
+テンプレートの `splitEnvironmentSourceSets()` に従い、**共通（サーバーでも動く）コードは `src/main/java`、クライアント専用コード（画面・描画・クライアント受信）は `src/client/java`** に置く。共通側からクライアント専用クラスを参照すると、専用サーバーで起動した時にクラッシュするので禁止（ビルド時にも検出される）。
+
+凡例：✅ v0.4 実装済み／△ 一部実装・暫定／（無印）未実装
+
+```
+src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クライアント両方で読み込まれる）
+├─ TradeExpansion.java              ✅ … ModInitializer（登録の呼び出し、イベント登録）
+├─ core/                          ★Minecraft非依存（純Java）
+│   ├─ PriceModel.java            ✅ … V, Pbuy, Psell, 逐次合計, 最大購入数, 回復計算, B-6 検証・補正
+│   ├─ DistanceModel.java         ✅ … w(d), 新規市場の初期相場（C-1）
+│   ├─ CoinMath.java              ✅ … 比率→価値, 支払い・お釣り・貪欲分解
+│   ├─ GoodParams.java (record)   ✅ … B, τ, s, T, Scap, r, Vmin, Vmax（X のクランプ範囲も計算）
+│   └─ GoodState.java             ✅ … priceFactor, X, S, lastTradeGameTime
+├─ registry/
+│   ├─ ModItems.java              ✅ … コイン5種
+│   ├─ ModBlocks.java             ✅ … MarketStallBlock（＋ブロックアイテム）
+│   ├─ ModBlockEntities.java      ✅
+│   ├─ ModMenus.java              ✅
+│   ├─ ModEntities.java              … フェーズ2 TraderEntity
+│   └─ ModCreativeTab.java        ✅
+├─ item/
+│   └─ CoinItem.java              ✅ … 価値ツールチップ、スニーク＋右クリックで崩す（v0.4 追加）
+├─ currency/
+│   ├─ CoinType.java (enum)       ✅ … COPPER..NETHERITE、価値（比率から計算）
+│   └─ WalletService.java         ✅ … 所持金計算・全回収・支払い・付与（溢れはドロップ）
+├─ market/
+│   ├─ Market.java                ✅ … 市場1つ（goods: 表示順を保つ Map<Identifier, GoodState>、遅延回復）
+│   ├─ MarketOrigin.java          ✅ … natural / crafted（v0.4 追加。MarketId は long で代用）
+│   ├─ MarketRegistry.java        ✅ … SavedData（Codec）、屋台の割当・統合、新規市場作成（v0.4 では MarketFactory を兼ねる）
+│   ├─ MarketIndex.java              … 空間インデックス（次元×512セル）。v0.4 は全件走査で代用
+│   ├─ MarketFactory.java            … 新規市場作成（プロファイル選択・抽選）。段階7で MarketRegistry から分離
+│   └─ Propagation.java           ✅ … 波及処理
+├─ data/
+│   ├─ GoodsDefinition.java       △ … 商品定義（record。Codec・JSON読込は段階7）
+│   ├─ GoodsCatalog.java          △ … 組み込みの10商品（段階7でデータパック読込に置き換える仮置き）
+│   ├─ MarketProfile.java            … JSON market_profile（Codec）
+│   ├─ condition/ (MarketCondition インタフェース + 各実装)
+│   └─ DataReloadListener.java       … データパック読込
+├─ trade/
+│   ├─ TradeService.java          ✅ … 購入/売却の一連処理（検証→回復→計算→照合→移動→波及→保存/ログ→同期）。両替は未実装
+│   ├─ TradeResult.java (enum)    ✅ … 結果コード（B-5）
+│   └─ InventoryUtil.java         ✅ … 通常品の判定・数え上げ・取り除き・空き枠計算・付与（サーバーとクライアントで共用、v0.4 追加）
+├─ block/
+│   ├─ MarketStallBlock.java      ✅
+│   └─ MarketStallBlockEntity.java ✅ … market_id、ExtendedMenuProvider
+├─ menu/
+│   └─ MarketMenu.java            △ … プレイヤーインベントリのみ（売却スロットは未実装）、stillValid で距離・存在チェック
+├─ network/
+│   ├─ ModPayloads.java           ✅ … 登録＋サーバー側受信処理（ServerHandlers は作らず統合）
+│   ├─ MarketSnapshotS2C.java     ✅
+│   ├─ TradeRequestC2S.java       ✅
+│   ├─ TradeResultS2C.java        ✅
+│   └─ MarketDeltaS2C.java / ExchangeRequestC2S.java … 未実装（Q19／段階11）
+├─ config/
+│   ├─ TradeExpansionConfig.java  △ … record（既定値固定。Codec・ファイル読込は段階8）
+│   └─ ConfigManager.java            … 段階8
+├─ worldgen/                       … フェーズ2：村への屋台配置
+├─ entity/                         … フェーズ2：TraderEntity
+└─ command/
+    └─ TradeExpansionCommand.java △ … 実装済：/tradeex balance|pay|give、/tradeex market info|advance
+                                       未実装：/tradeex market reset|reroll|setx、/tradeex simulate、/tradeex reload、/tradeex audit
+
+src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
+├─ TradeExpansionClient.java      ✅ … ClientModInitializer（MenuScreens.register、S2C受信の登録）
+├─ MarketScreen.java              ✅ … タブ・一覧・数量・プレビュー（一覧は画面クラス内で直接描画）
+├─ ClientMarketCache.java         ✅ … 受信したスナップショット（最新1件。切断時に破棄）
+├─ ClientNetworkHandlers.java     ✅ … S2C受信処理（開いている MarketScreen に通知）
+└─ widget/ (GoodsListWidget, PriceMeter...)  … 段階11（UI改善）で画面クラスから分離
+```
+
+テスト（`src/test/java/com/akf/tradeexpansion/core/`）：`PriceModelTest`（13件）、`DistanceModelTest`（4件）、`CoinMathTest`（6件） ✅
+
+- パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
+
+`fabric.mod.json`（抜粋）：
+```json
+{
+  "schemaVersion": 1,
+  "id": "trade_expansion",
+  "name": "Trade Expansion",
+  "description": "Dynamic market trading with coins, regional goods and distance-based price propagation.",
+  "version": "${version}",
+  "environment": "*",
+  "icon": "assets/trade_expansion/icon.png",
+  "entrypoints": {
+    "main":   ["com.akf.tradeexpansion.TradeExpansion"],
+    "client": ["com.akf.tradeexpansion.client.TradeExpansionClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
+```
+- テンプレートからの変更点：`id`/`name`/`entrypoints`/アイコンのパス、`settings.gradle` の `rootProject.name = 'trade_expansion'`、`build.gradle` の `loom { mods { "trade_expansion" { ... } } }`、`gradle.properties` の `group=com.akf.tradeexpansion`、mixin設定ファイル名（`modid.mixins.json` → `trade_expansion.mixins.json` など、中の `package` も変更）。
+- Mixin は当面使わない（村の生成やフェーズ3の村人交易無効化で必要になった時に追加）。**v0.4 では `mixins` 項目・mixin 設定ファイル・サンプル Mixin を削除済み**（上の抜粋も削除後の形）。必要になったら `trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`）として追加する。
+- `authors` は `akf`、`license` はテンプレートのまま `CC0-1.0`（公開前に見直す）。
+
+リソース（✅ は v0.4 で作成済み）：
+```
+src/main/resources/
+├─ fabric.mod.json                                         ✅
+├─ assets/trade_expansion/
+│   ├─ icon.png                                            ✅（テンプレートのまま）
+│   ├─ lang/ja_jp.json, en_us.json                         ✅
+│   ├─ items/*_coin.json, market_stall.json                ✅（26.x のアイテムモデル定義）
+│   ├─ models/item/*_coin.json, models/block/market_stall.json ✅
+│   ├─ blockstates/market_stall.json                       ✅（facing 4方向）
+│   └─ textures/item/*_coin.png, textures/block/market_stall_{front,side,top}.png ✅（仮テクスチャ）
+└─ data/
+    ├─ trade_expansion/recipe/market_stall.json            ✅
+    ├─ trade_expansion/loot_table/blocks/market_stall.json ✅
+    ├─ minecraft/tags/block/mineable/axe.json              ✅
+    └─ trade_expansion/trade_expansion/goods/*.json, market_profile/*.json … 段階7
+```
+
+### 4-3. データフロー（売却の例）
+
+```
+[Client] MarketScreen：数量10選択 → ClientMarketCacheの値でプレビュー表示（5,517c）
+   │ [売却する] TradeRequestC2S(market=12, item=diamond_sword, SELL, qty=10, expected=5517)
+   ▼
+[Server] ModPayloads の受信処理（サーバースレッド）→ TradeService.handle()
+    1. 検証：メニュー一致・数量≤上限 → 距離（stillValid）→ クリエイティブ可否 → 取扱可（B-5 の順序）
+    2. Market.refresh(now)        … B-3 遅延回復
+    3. S+10≤Scap を確認 → PriceModel.sumSell(params, X, 10) → 5517
+    4. 期待額と比較（ずれ > tolerance → 失敗 PRICE_CHANGED）
+    5. 所持数≥10 を確認 → InventoryUtil.removePlain(剣10本) → WalletService.give(5517)（コイン付与/溢れはドロップ）
+    6. PriceModel.applySell：X += 10, S += 10
+    7. Propagation.apply(registry, market, item, ΔX=10) … 同次元の全市場を走査し、各市場 refresh 後に X += ΔX×w(d)
+    8. MarketRegistry.setDirty(), ログ出力
+    9. TradeResultS2C(成功) → 本人
+       MarketSnapshotS2C → この市場/波及先の画面を開いている全プレイヤー（v0.4 は差分ではなく全体）
+       ※ 失敗時は TradeResultS2C(失敗コード) ＋ 最新 MarketSnapshotS2C を本人へ
+   ▼
+[Client] ClientMarketCache更新 → 画面再描画（価格・最大数量はクライアントの PriceModel で再計算）
+```
+
+---
+
+## 5. 実装ステップとテスト
+
+### 5-1. 段階
+
+| 段階 | 内容 | 完了条件 | v0.4 状態 |
+|---|---|---|---|
+| **0. 環境** | JDK 25、IntelliJ IDEA、Fabric テンプレート生成（26.3, Fabric API）、`runClient` 起動確認、Git管理 | 空Modが起動する | ✅（JDK 26 で release 25 指定でもビルド可。Git 管理は未） |
+| **1. コイン** | 5種コイン登録、テクスチャ、翻訳、クリエイティブタブ、ツールチップに価値表示 | クリエイティブで取り出せる | ✅（テクスチャは仮） |
+| **2. 通貨ロジック** | `build.gradle` にJUnit追加（5-2）、`CoinMath`（純Java）＋JUnit、`WalletService`、スニーク右クリック崩し、`/tradeex pay` テストコマンド | 支払い・お釣りがテスト通過 | ✅（`/tradeex balance`・`give` も追加） |
+| **3. MVP：固定市場** | 交易所ブロック、`Market` 1種固定（JSONで5商品）、価格は固定、交易画面（購入/売却）、C2S/S2Cパケット | マルチで買って売れる | ✅（商品は JSON ではなく組み込み10商品。段階4と同時に実装したため価格は最初から変動） |
+| **4. 価格モデル** | `PriceModel`＋JUnit、在庫・売り切れ・X、遅延回復、`SavedData` 永続化 | 再起動しても相場が残る、3章の数値が再現 | ✅（3章の数値はテストで再現。再起動での残存はゲーム内未確認） |
+| **5. 市場の分割・統合** | 設置位置で市場を作成/統合、`MarketIndex` | 64ブロック内の屋台が同一市場 | △（統合・設置拒否は実装。`MarketIndex` は全件走査で代用） |
+| **6. 距離波及** | `DistanceModel`＋JUnit、`Propagation`、Delta同期 | 500ブロック先で約54%の影響 | △（波及は実装。同期は全体再送、Q19。ネザー連動・商品ごとの `link` 係数は未） |
+| **7. 地域品揃え** | goods / market_profile のデータパック、条件評価、シード抽選、`/reload` | 砂漠村と雪原村で品揃えが違う | 次の段階 |
+| **8. 設定・管理コマンド** | `trade_expansion.json`（G章の「クライアントに同期する値」も含む）、`/tradeex market info/reset/reroll`、`/tradeex simulate`、ログ | 設定変更が反映 | △（`market info`・`market advance` とログのみ実装） |
+| **9. 村への自然生成** | 屋台入りの建物ピース（構造物NBT）を作り、村の各テンプレートプール（plains/desert/savanna/snowy/taiga の houses）に追加する。Fabric API にはテンプレートプールへの追加機能が無いため、Mixin で追加するか、プール追加用ライブラリを使うかを着手時に判断（要確認）。プロセッサは既存ブロックの置換しかできないので使わない。市場の割当は最初の右クリック時（A-3、v0.4 で実装済み） | 新規チャンクの村に屋台 | 未着手 |
+| **10. 商人NPC** | `TraderEntity`（村人モデル流用）、右クリックで同じ画面 | NPCから取引できる | 未着手 |
+| **11. 仕上げ** | 宝箱ルート、両替タブ、UI改善（相場グラフ、Q17）、屋台風の形状、売却スロット、Shift で全数、`appendHoverText` の置き換え、バランス調整、`/tradeex audit`（クラフト裏技検出：素材の買値合計 < 完成品の売値 を列挙） | | 未着手 |
+
+**フェーズとの対応**：フェーズ1 = 段階0〜8、フェーズ2 = 段階9〜10、フェーズ3 = 段階11以降。
+
+**最初の目標は段階3（MVP）**。ここまでで Mod 開発の基本（登録・画面・通信）をひと通り経験できます。
+
+**開発環境の注意（v0.4 で判明）**：プロジェクトを OneDrive の同期フォルダに置くと、Gradle が古いビルド成果物を消せずに `Failed to clean up stale outputs` で失敗することがある（Loom も警告を出す）。その場合は `build` フォルダを削除して再実行する。根本的には OneDrive の外（例：`C:\dev\`）に置くのが望ましい。
+
+### 5-2. テスト方法
+
+| 種類 | 対象 | 方法 |
+|---|---|---|
+| 単体テスト（JUnit 5） | `PriceModel` | 3章の表の値を期待値に（例：10本売却で合計5517）、Vのクランプ、回復の半減期、Δt<0 の扱い、B-6の往復で損すること・常に買値≥売値の性質テスト、新規市場の初期相場（C-1） |
+| 〃 | `DistanceModel` | d=128→1.0、500→0.541、1536→0、境界値 |
+| 〃 | `CoinMath` | 支払い/お釣りの全ケース（ダイヤ貨2枚で1,080c等）、所持不足、比率 2/10/100・段ごとに異なる比率、ランダム1万回で「支払い前後の総価値の差 = 価格」 |
+| 〃 | 条件評価・JSON | Codecで正しいJSON/不正JSON（エラーメッセージ） |
+| ゲームテスト | 取引の一連処理 | Fabric Game Test API（`fabric-gametest-api-v1` は Fabric API に同梱されていることを確認済み。Loom 1.19 での有効化方法は要確認。テスト用サーバーの起動には EULA への同意設定が必要になる点に注意）で、テスト用構造物に屋台を置き、偽プレイヤーで購入→所持金と在庫を検証 |
+| 手動テスト（シングル） | UI | チェックリスト：売り切れ表示、買取停止、在庫・所持金不足時の中止と最大数量表示、インベントリ満杯時のお釣りドロップ、画面を開いたまま時間経過、売却スロットに置いたまま閉じる、画面を開いたまま屋台を壊す |
+| 手動テスト（マルチ） | 同期 | `runServer` ＋ `runClient` を2つ（ユーザー名を変えて起動）。同じ屋台を2人で開き、片方の取引がもう片方に即反映、同時押しで二重購入しない、価格変動時の拒否 |
+| 永続化 | SavedData | 取引→サーバー停止→起動で状態一致。ゲーム内時間を `/time add` ではなく実時間待ち or テストコマンド `/tradeex market advance <日数>`（最寄り市場に指定日数分の回復を適用、v0.4 実装済み）で回復確認。`/tradeex market info` で X・S・価格を確認できる |
+| 手動テスト（共通の注意） | — | `trade.allowCreative` の既定が false なので、**取引の確認はサバイバルモードで行う**（お金は `/tradeex give <額>` で用意） |
+| バランス | 経済 | `/tradeex simulate <item> <sell|buy> <n>`（実際には取引せず価格推移を表示）、`/tradeex audit` |
+| 専用サーバー | クライアントコード分離 | `runServer` が起動し、屋台を右クリックしてもサーバー側で例外が出ないこと |
+
+**JUnit の追加**（テンプレートには含まれていない）：`build.gradle` に以下を追記し、テストは `src/test/java` に置く。`core/` パッケージは Minecraft に依存しないので、ゲームを起動せずに `gradlew test` で実行できる。
+
+```groovy
+dependencies {
+	testImplementation platform("org.junit:junit-bom:5.12.2")   // v0.4 でこの版で動作確認済み
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+	useJUnitPlatform()
+}
+```
+
+---
+
+## 付録：用語
+- **c**：銅貨単位（copper）。全ての価格の内部単位。
+- **市場（Market）**：交易所の集まり。在庫と相場を共有する単位。
+- **相場（X / V）**：需給圧と、それによる価値倍率。
+- **波及**：ある市場の取引が、近くの市場の相場に距離に応じて影響すること。
+
+---
+
+## 付録A：26.3 API 確認結果（v0.4）
+
+段階0〜6の実装時に、Minecraft 26.3 と Fabric API 0.165.0+26.3 の実物で確認した内容。
+
+| 用途 | 26.3 での書き方 | 備考 |
+|---|---|---|
+| アイテム登録 | `ResourceKey.create(Registries.ITEM, id)` → `new Item.Properties().setId(key)` → `Registry.register(BuiltInRegistries.ITEM, key, item)` | Properties に ID を先に設定しないと起動時に失敗する |
+| ブロック登録 | `BlockBehaviour.Properties.of().setId(blockKey)`、ブロックアイテムは `new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()` | 26.3 では `Block.codec()` の実装は不要 |
+| 向き付きブロック | `HorizontalDirectionalBlock` ＋ `EntityBlock`。右クリックは `useWithoutItem(...)`、設置者は `setPlacedBy(...)` | |
+| ブロックエンティティ | `FabricBlockEntityTypeBuilder.create(Factory, blocks...).build()`。保存は `loadAdditional(ValueInput)` / `saveAdditional(ValueOutput)` | 破壊時の後処理は `BlockEntity.preRemoveSideEffects(pos, state)` |
+| アイテムモデル | `assets/<ns>/items/<id>.json`（`{"model":{"type":"minecraft:model","model":...}}`）＋ `models/item/<id>.json` | |
+| クリエイティブタブ | `fabric-creative-tab-api-v1` の `FabricCreativeModeTab.builder()` | 旧 ItemGroup API の後継 |
+| ツールチップ | `Item.appendHoverText(ItemStack, TooltipContext, TooltipDisplay, Consumer<Component>, TooltipFlag)` | 非推奨（動作はする）。E-1 参照 |
+| コマンド | `CommandRegistrationCallback.EVENT`（`fabric-command-api-v2`）。権限は `Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)` | 権限は数値ではなく定数（G章 `command.permissionLevel`） |
+| メニュー | `fabric-menu-api-v1` の `ExtendedMenuType<Menu, Data>(factory, StreamCodec)`、`ExtendedMenuProvider<Data>`（`getScreenOpeningData`） | 旧 ExtendedScreenHandler の後継 |
+| 画面の登録 | `MenuScreens.register(menuType, Screen::new)` | 本来 private だが Fabric API のアクセス拡張で呼べる |
+| 画面の描画 | `GuiGraphicsExtractor` に描く方式。`extractBackground`（絶対座標）、`extractLabels`（画面左上基準の相対座標）。文字色は ARGB（不透明度を含める） | 旧 `GuiGraphics` / `render*` から改名。マウスクリックは `mouseClicked(MouseButtonEvent, boolean)` |
+| 現在の画面 | `Minecraft.getInstance().gui.screen()` | `minecraft.screen` フィールドは無い |
+| 通信 | `PayloadTypeRegistry.clientboundPlay()/serverboundPlay().register(type, codec)`、`ServerPlayNetworking` / `ClientPlayNetworking` | 受信処理はメイン（サーバー／描画）スレッドで呼ばれる |
+| 保存（SavedData） | `MinecraftServer.getDataStorage().computeIfAbsent(SavedDataType)`、`new SavedDataType<>(Identifier, Supplier, Codec, DataFixTypes)` | DataFixTypes は null 可（Fabric API が対処）。F-1 参照 |
+| インベントリ | `Inventory.INVENTORY_SIZE = 36`、`placeItemBackInInventory(stack, Prediction.SERVER_ONLY)`（入らない分は自動でドロップ） | |
+| 付加情報なし判定 | `stack.getComponentsPatch().isEmpty()` | D-2 の「通常品のみ一致」に使用 |
+| ゲーム時刻 | `level.getGameTime()` | |
+
+## 付録B：改版履歴
+
+| 版 | 日付 | 内容 |
+|---|---|---|
+| v0.3 | 2026-11-02 | レビュー指摘22件を反映 |
+| v0.4 | 2026-11-02 | 段階0〜6の実装結果を反映。要確認だった API を確定（付録A）。F-1 保存先（サーバー全体の DataStorage）、F-2 同期方式（計算に必要な値を送りクライアントでも計算、差分同期は保留）と受信スレッド、B-5 失敗時の挙動と結果コード一覧、E-3 所持金の範囲・支払い順序・コイン整理の副作用、A-3 設置拒否・画面を閉じる処理・割当のタイミング、A-4 画面の実装状況、B-6 τ 補正の余裕量、G章 クライアント同期項目と権限レベルの対応、4-2 パッケージ構成の実装状況、5章 段階ごとの状況と開発環境の注意を追記。未決事項 Q15〜Q19 を追加 |
