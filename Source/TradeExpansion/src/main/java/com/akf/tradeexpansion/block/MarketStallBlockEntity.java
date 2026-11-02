@@ -19,13 +19,16 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 /**
- * Remembers which market a stall belongs to (A-3). {@code -1} = not assigned yet
- * (naturally generated stalls get their market on first use).
+ * Remembers which market a stall belongs to and how it was placed (A-3). {@code -1} = not assigned yet
+ * (naturally generated stalls get their market on first use). The origin decides the C-1 distance rule when the
+ * stall has to be reassigned after its market was deleted.
  */
 public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuProvider<MarketMenu.OpenData> {
 	public static final long UNASSIGNED = -1;
 
 	private long marketId = UNASSIGNED;
+	/** Natural until a player places it (A-3). */
+	private MarketOrigin origin = MarketOrigin.NATURAL;
 
 	public MarketStallBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.MARKET_STALL, pos, state);
@@ -35,8 +38,10 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		return marketId;
 	}
 
-	/** Assigns this stall to a market (C-1). */
+	/** Assigns this stall to a market (C-1) and remembers the origin. */
 	public MarketRegistry.Assignment assign(ServerLevel level, MarketOrigin origin) {
+		this.origin = origin;
+		setChanged();
 		MarketRegistry.Assignment assignment = MarketRegistry.get(level.getServer()).assignStall(level, getBlockPos(), origin);
 		if (assignment.market() != null) {
 			marketId = assignment.market().id();
@@ -45,23 +50,29 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		return assignment;
 	}
 
-	/** The stall's market; assigns one (as natural) if missing. */
-	public Market resolveMarket(ServerLevel level) {
+	/**
+	 * The stall's market. Assigns one if it has none yet or its market was deleted, using the stored origin:
+	 * a crafted stall may then be refused (C-1), in which case {@code market()} is {@code null}.
+	 */
+	public MarketRegistry.Assignment resolveMarket(ServerLevel level) {
 		Market market = marketId == UNASSIGNED ? null : MarketRegistry.get(level.getServer()).get(marketId);
-		if (market != null) return market;
-		return assign(level, MarketOrigin.NATURAL).market();
+		if (market != null) return new MarketRegistry.Assignment(market, null, 0);
+		return assign(level, origin);
 	}
 
 	@Override
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
 		marketId = input.getLongOr("market_id", UNASSIGNED);
+		// Stalls saved before stage 8 have no origin: assigned ones count as crafted (the safe side, A-3).
+		origin = input.read("origin", MarketOrigin.CODEC).orElse(marketId == UNASSIGNED ? MarketOrigin.NATURAL : MarketOrigin.CRAFTED);
 	}
 
 	@Override
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
 		output.putLong("market_id", marketId);
+		output.store("origin", MarketOrigin.CODEC, origin);
 	}
 
 	@Override
@@ -72,9 +83,18 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		}
 	}
 
+	/** Title of the trade screen: "Market #12 (Town)" (D-4). */
 	@Override
 	public Component getDisplayName() {
-		return Component.translatable("container.trade_expansion.market", marketId);
+		Market market = level instanceof ServerLevel serverLevel && marketId != UNASSIGNED
+				? MarketRegistry.get(serverLevel.getServer()).get(marketId) : null;
+		if (market == null) return Component.translatable("container.trade_expansion.market", marketId);
+		return Component.translatable("container.trade_expansion.market_level", marketId, levelName(market.level()));
+	}
+
+	/** "Hamlet" .. "City" (D-4). */
+	public static Component levelName(int level) {
+		return Component.translatable("market_level.trade_expansion." + level);
 	}
 
 	@Override

@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:torch",
+  "base_price": 2,
+  "elasticity": 256,
+  "target_stock": 128
+}

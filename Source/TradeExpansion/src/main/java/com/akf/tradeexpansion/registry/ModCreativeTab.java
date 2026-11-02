@@ -26,6 +26,8 @@ public final class ModCreativeTab {
 					for (CoinType type : CoinType.values()) {
 						output.accept(ModItems.coin(type));
 					}
+					output.accept(ModItems.EMERALD_COIN);
+					output.accept(ModItems.WALLET);
 				})
 				.build());
 	}

@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:quartz",
+  "base_price": 12,
+  "elasticity": 64,
+  "target_stock": 32
+}

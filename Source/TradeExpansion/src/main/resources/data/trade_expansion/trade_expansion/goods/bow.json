@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:bow",
+  "base_price": 14,
+  "elasticity": 32,
+  "target_stock": 8
+}

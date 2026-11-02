@@ -7,7 +7,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-/** Outcome of a {@link TradeRequestC2S} (design F-2). */
+/** Outcome of a {@link TradeRequestC2S} (design F-2). {@code quantity} counts trading units. */
 public record TradeResultS2C(TradeResult result, boolean buy, int quantity, long total) implements CustomPacketPayload {
 	public static final Type<TradeResultS2C> TYPE = new Type<>(TradeExpansion.id("trade_result"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, TradeResultS2C> CODEC = StreamCodec.composite(

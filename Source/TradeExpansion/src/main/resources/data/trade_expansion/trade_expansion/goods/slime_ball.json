@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:slime_ball",
+  "base_price": 25,
+  "elasticity": 32,
+  "target_stock": 16
+}

@@ -3,60 +3,69 @@ package com.akf.tradeexpansion.data;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.PriceModel;
+import com.akf.tradeexpansion.data.condition.MarketCondition;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
-import java.util.OptionalDouble;
+import java.util.List;
+import java.util.Optional;
 
 /**
- * One goods definition (design D-2). Optional values fall back to {@link TradeExpansionConfig}.
+ * One goods definition: {@code data/<ns>/trade_expansion/goods/<name>.json} (design D-2).
+ * Optional values fall back to {@link TradeExpansionConfig}. Prices, stock and pressure count in units of {@code unit} items.
  *
- * @param item       item id; a good matches only plain stacks of this item (no extra components)
- * @param buy        the player can buy it
- * @param sell       the player can sell it
+ * @param item          item id; a good matches only plain stacks of this item (no extra components)
+ * @param buy           the player can buy it
+ * @param sell          the player can sell it
+ * @param acceptDamaged reduced-price buying of damaged items (stored; the trade logic comes later, A-4)
+ * @param unit          items per trading unit (B-5, v0.6)
+ * @param autoAdd       markets matching these conditions deal in this good outside the profile (D-1 step 0)
  */
 public record GoodsDefinition(
 		Identifier item,
 		double basePrice,
-		OptionalDouble elasticity,
+		Optional<Double> elasticity,
 		double targetStock,
-		OptionalDouble maxStock,
-		OptionalDouble restockPerDay,
-		OptionalDouble spread,
+		Optional<Double> maxStock,
+		Optional<Double> restockPerDay,
+		Optional<Double> spread,
 		boolean buy,
-		boolean sell
+		boolean sell,
+		Optional<Boolean> acceptDamaged,
+		int unit,
+		Optional<List<MarketCondition>> autoAdd
 ) {
-	public static GoodsDefinition of(String item, double basePrice, double elasticity, double targetStock) {
-		return new GoodsDefinition(Identifier.parse(item), basePrice, OptionalDouble.of(elasticity), targetStock,
-				OptionalDouble.empty(), OptionalDouble.empty(), OptionalDouble.empty(), true, true);
-	}
-
-	public GoodsDefinition withMaxStock(double value) {
-		return new GoodsDefinition(item, basePrice, elasticity, targetStock, OptionalDouble.of(value), restockPerDay, spread, buy, sell);
-	}
-
-	public GoodsDefinition withRestock(double value) {
-		return new GoodsDefinition(item, basePrice, elasticity, targetStock, maxStock, OptionalDouble.of(value), spread, buy, sell);
-	}
-
-	public GoodsDefinition sellOnly() {
-		return new GoodsDefinition(item, basePrice, elasticity, targetStock, maxStock, restockPerDay, spread, false, true);
-	}
+	public static final Codec<GoodsDefinition> CODEC = RecordCodecBuilder.create(i -> i.group(
+			Identifier.CODEC.fieldOf("item").forGetter(GoodsDefinition::item),
+			Codec.doubleRange(0.01, 1e9).fieldOf("base_price").forGetter(GoodsDefinition::basePrice),
+			Codec.doubleRange(0.01, 1e6).optionalFieldOf("elasticity").forGetter(GoodsDefinition::elasticity),
+			Codec.doubleRange(0, 1e6).optionalFieldOf("target_stock", 16.0).forGetter(GoodsDefinition::targetStock),
+			Codec.doubleRange(0, 1e6).optionalFieldOf("max_stock").forGetter(GoodsDefinition::maxStock),
+			Codec.doubleRange(0, 1e6).optionalFieldOf("restock_per_day").forGetter(GoodsDefinition::restockPerDay),
+			Codec.doubleRange(0, 1.9).optionalFieldOf("spread").forGetter(GoodsDefinition::spread),
+			Codec.BOOL.optionalFieldOf("buy", true).forGetter(GoodsDefinition::buy),
+			Codec.BOOL.optionalFieldOf("sell", true).forGetter(GoodsDefinition::sell),
+			Codec.BOOL.optionalFieldOf("accept_damaged").forGetter(GoodsDefinition::acceptDamaged),
+			Codec.intRange(1, 64).optionalFieldOf("unit", 1).forGetter(GoodsDefinition::unit),
+			MarketCondition.CODEC.listOf().optionalFieldOf("auto_add").forGetter(GoodsDefinition::autoAdd)
+	).apply(i, GoodsDefinition::new));
 
 	/**
 	 * Resolves the effective params for a market (D-1):
-	 * B = base_price × priceFactor × price.globalMultiplier, with B-6 correction of tau.
+	 * B = base_price × profile multiplier × priceFactor × price.globalMultiplier, with B-6 correction of tau.
 	 */
-	public GoodParams params(double priceFactor, TradeExpansionConfig config) {
+	public GoodParams params(double priceFactor, double profileMultiplier, TradeExpansionConfig config) {
 		double t = targetStock;
 		GoodParams params = new GoodParams(
-				basePrice * priceFactor * config.globalMultiplier(),
-				elasticity.orElse(config.defaultElasticity()),
-				spread.orElse(config.defaultSpread()),
+				basePrice * profileMultiplier * priceFactor * config.price.globalMultiplier,
+				elasticity.orElse(config.price.defaultElasticity),
+				spread.orElse(config.price.defaultSpread),
 				t,
-				maxStock.orElse(t * config.defaultMaxStockMultiplier()),
+				maxStock.orElse(t * config.price.defaultMaxStockMultiplier),
 				restockPerDay.orElse(t / 2),
-				config.minMultiplier(),
-				config.maxMultiplier());
+				config.price.minMultiplier,
+				config.price.maxMultiplier);
 		return PriceModel.ensureExploitSafe(params);
 	}
 }

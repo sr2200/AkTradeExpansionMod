@@ -1,7 +1,10 @@
 package com.akf.tradeexpansion.block;
 
+import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.market.Market;
+import com.akf.tradeexpansion.market.MarketClock;
+import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketOrigin;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
@@ -59,10 +62,7 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 
 		MarketRegistry.Assignment assignment = stall.assign(serverLevel, MarketOrigin.CRAFTED);
 		if (assignment.market() == null) {
-			TradeExpansionConfig config = TradeExpansionConfig.get();
-			player.sendSystemMessage(Component.translatable("message.trade_expansion.stall_too_close",
-					(int) assignment.nearestDistance(), (int) config.mergeRadius(), (int) config.minNewMarketDistance())
-					.withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(tooCloseMessage(assignment));
 			level.destroyBlock(pos, !player.isCreative());
 		} else {
 			player.sendSystemMessage(Component.translatable("message.trade_expansion.stall_joined", assignment.market().id())
@@ -70,17 +70,38 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 		}
 	}
 
+	private static Component tooCloseMessage(MarketRegistry.Assignment assignment) {
+		TradeExpansionConfig config = TradeExpansionConfig.get();
+		return Component.translatable("message.trade_expansion.stall_too_close",
+				(int) assignment.nearestDistance(), (int) config.distance.mergeRadius, (int) config.distance.minNewMarketDistance)
+				.withStyle(ChatFormatting.RED);
+	}
+
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer
 				&& level.getBlockEntity(pos) instanceof MarketStallBlockEntity stall) {
-			Market market = stall.resolveMarket(serverLevel);
-			if (market == null) return InteractionResult.FAIL;
+			MarketRegistry.Assignment assignment = stall.resolveMarket(serverLevel);
+			Market market = assignment.market();
+			if (market == null) {
+				// A crafted stall whose market was deleted and that may not found a new one here (A-3): keep the block.
+				player.sendSystemMessage(tooCloseMessage(assignment));
+				return InteractionResult.FAIL;
+			}
+
+			MarketRegistry registry = MarketRegistry.get(serverLevel.getServer());
+			if (MarketFactory.growIfDue(serverLevel, market, registry.inDimension(serverLevel.dimension()))) {
+				// D-4: tell the player the market has grown.
+				player.sendSystemMessage(Component.translatable("message.trade_expansion.market_grew", market.id(),
+						MarketStallBlockEntity.levelName(market.level())).withStyle(ChatFormatting.GREEN));
+			}
+			registry.setDirty();
 
 			serverPlayer.openMenu(stall);
-			long now = serverLevel.getGameTime();
+			long now = MarketClock.now(serverLevel);
 			market.refresh(now);
 			ServerPlayNetworking.send(serverPlayer, MarketSnapshotS2C.of(market, now));
+			BankService.sendAccount(serverPlayer);
 		}
 		return InteractionResult.SUCCESS;
 	}

@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:acacia_log",
+  "base_price": 8,
+  "elasticity": 128,
+  "target_stock": 64
+}

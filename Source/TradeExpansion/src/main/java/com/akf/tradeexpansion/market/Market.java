@@ -3,9 +3,12 @@ package com.akf.tradeexpansion.market;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.GoodState;
+import com.akf.tradeexpansion.core.MarketLevel;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.data.MarketProfile;
+import com.akf.tradeexpansion.data.MarketProfiles;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -18,10 +21,13 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 /**
- * One market: a group of stalls sharing stock and prices (design C-1 / F-1).
+ * One market: a group of stalls sharing stock and prices (design C-1 / D-4 / F-1).
+ * Goods are keyed by goods id ({@code trade_expansion:bread}), not by item id.
  */
 public final class Market {
 	private static final Codec<GoodState> GOOD_STATE_CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -31,6 +37,7 @@ public final class Market {
 			Codec.LONG.fieldOf("last_trade").forGetter(GoodState::lastTradeGameTime)
 	).apply(i, GoodState::new));
 
+	/** The NBT field stays "item" (schema 1 name) although it holds the goods id since schema 2. */
 	private record GoodEntry(Identifier item, GoodState state) {
 		static final Codec<GoodEntry> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Identifier.CODEC.fieldOf("item").forGetter(GoodEntry::item),
@@ -43,6 +50,9 @@ public final class Market {
 			Level.RESOURCE_KEY_CODEC.fieldOf("dimension").forGetter(Market::dimension),
 			BlockPos.CODEC.fieldOf("center").forGetter(Market::center),
 			MarketOrigin.CODEC.fieldOf("origin").forGetter(Market::origin),
+			Identifier.CODEC.optionalFieldOf("profile").forGetter(m -> Optional.ofNullable(m.profileId)),
+			Codec.intRange(MarketLevel.MIN_LEVEL, MarketLevel.MAX_LEVEL).optionalFieldOf("level", MarketLevel.MIN_LEVEL).forGetter(Market::level),
+			Codec.LONG.optionalFieldOf("last_level_check", 0L).forGetter(Market::lastLevelCheckGameTime),
 			BlockPos.CODEC.listOf().fieldOf("stalls").forGetter(m -> List.copyOf(m.stalls)),
 			Codec.LONG.fieldOf("last_update").forGetter(Market::lastUpdateGameTime),
 			GoodEntry.CODEC.listOf().fieldOf("goods").forGetter(Market::goodEntries)
@@ -52,17 +62,23 @@ public final class Market {
 	private final ResourceKey<Level> dimension;
 	private final BlockPos center;
 	private final MarketOrigin origin;
+	private Identifier profileId;
+	private int level;
+	private long lastLevelCheckGameTime;
 	private final Set<BlockPos> stalls;
 	private long lastUpdateGameTime;
 	/** Insertion order = display order. */
 	private final Map<Identifier, GoodState> goods;
 
-	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, List<BlockPos> stalls,
-			long lastUpdateGameTime, List<GoodEntry> goods) {
+	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
+			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods) {
 		this.id = id;
 		this.dimension = dimension;
 		this.center = center;
 		this.origin = origin;
+		this.profileId = profileId.orElse(null);
+		this.level = level;
+		this.lastLevelCheckGameTime = lastLevelCheckGameTime;
 		this.stalls = new HashSet<>(stalls);
 		this.lastUpdateGameTime = lastUpdateGameTime;
 		this.goods = new LinkedHashMap<>();
@@ -70,12 +86,12 @@ public final class Market {
 	}
 
 	public Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, long gameTime) {
-		this(id, dimension, center, origin, List.of(), gameTime, List.of());
+		this(id, dimension, center, origin, Optional.empty(), MarketLevel.MIN_LEVEL, gameTime, List.of(), gameTime, List.of());
 	}
 
 	private List<GoodEntry> goodEntries() {
 		List<GoodEntry> list = new ArrayList<>(goods.size());
-		goods.forEach((item, state) -> list.add(new GoodEntry(item, state)));
+		goods.forEach((goodsId, state) -> list.add(new GoodEntry(goodsId, state)));
 		return list;
 	}
 
@@ -95,6 +111,32 @@ public final class Market {
 		return origin;
 	}
 
+	/** The market profile (D-1 step 2), or {@code null} for markets created before stage 7. */
+	public Identifier profileId() {
+		return profileId;
+	}
+
+	public void setProfileId(Identifier profileId) {
+		this.profileId = profileId;
+	}
+
+	/** Market level 1..5 (D-4). Never decreases (Q21). */
+	public int level() {
+		return level;
+	}
+
+	public void setLevel(int level) {
+		this.level = level;
+	}
+
+	public long lastLevelCheckGameTime() {
+		return lastLevelCheckGameTime;
+	}
+
+	public void setLastLevelCheckGameTime(long gameTime) {
+		this.lastLevelCheckGameTime = gameTime;
+	}
+
 	public Set<BlockPos> stalls() {
 		return stalls;
 	}
@@ -108,20 +150,29 @@ public final class Market {
 		return goods;
 	}
 
-	public GoodState good(Identifier item) {
-		return goods.get(item);
+	public GoodState good(Identifier goodsId) {
+		return goods.get(goodsId);
 	}
 
-	public void addGood(Identifier item, GoodState state) {
-		goods.put(item, state);
+	public void addGood(Identifier goodsId, GoodState state) {
+		goods.put(goodsId, state);
+	}
+
+	/** Schema 1 → 2: goods were keyed by item id; the built-in goods ids share the item's path. */
+	void remapGoods(UnaryOperator<Identifier> mapping) {
+		Map<Identifier, GoodState> old = new LinkedHashMap<>(goods);
+		goods.clear();
+		old.forEach((key, state) -> goods.put(mapping.apply(key), state));
 	}
 
 	/** Effective params of one good, or {@code null} if it has no definition any more. */
-	public GoodParams params(Identifier item) {
-		GoodState state = goods.get(item);
-		GoodsDefinition def = GoodsCatalog.get(item);
+	public GoodParams params(Identifier goodsId) {
+		GoodState state = goods.get(goodsId);
+		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		if (state == null || def == null) return null;
-		return def.params(state.priceFactor(), TradeExpansionConfig.get());
+		MarketProfile profile = MarketProfiles.get(profileId);
+		double multiplier = profile == null ? 1.0 : profile.multiplier(goodsId, def.item());
+		return def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
 	}
 
 	/** Lazy recovery of every good up to {@code gameTime} (B-3). */
@@ -129,9 +180,9 @@ public final class Market {
 		double days = (gameTime - lastUpdateGameTime) / (double) PriceModel.TICKS_PER_DAY;
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		if (days > 0) {
-			goods.forEach((item, state) -> {
-				GoodParams p = params(item);
-				if (p != null) PriceModel.recover(p, state, days, config.halfLifeDays(), config.restockMultiplier());
+			goods.forEach((goodsId, state) -> {
+				GoodParams p = params(goodsId);
+				if (p != null) PriceModel.recover(p, state, days, config.recovery.halfLifeDays, config.recovery.restockMultiplier);
 			});
 		}
 		lastUpdateGameTime = gameTime;
@@ -140,9 +191,9 @@ public final class Market {
 	/** Applies {@code days} of recovery without waiting (test command, design 5-2). */
 	public void elapse(double days) {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
-		goods.forEach((item, state) -> {
-			GoodParams p = params(item);
-			if (p != null) PriceModel.recover(p, state, days, config.halfLifeDays(), config.restockMultiplier());
+		goods.forEach((goodsId, state) -> {
+			GoodParams p = params(goodsId);
+			if (p != null) PriceModel.recover(p, state, days, config.recovery.halfLifeDays, config.recovery.restockMultiplier);
 		});
 	}
 

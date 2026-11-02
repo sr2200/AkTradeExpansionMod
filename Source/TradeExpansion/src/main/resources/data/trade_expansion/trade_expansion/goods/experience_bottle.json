@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:experience_bottle",
+  "base_price": 40,
+  "elasticity": 32,
+  "target_stock": 16
+}

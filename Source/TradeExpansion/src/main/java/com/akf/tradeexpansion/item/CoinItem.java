@@ -1,5 +1,6 @@
 package com.akf.tradeexpansion.item;
 
+import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.currency.CoinType;
 import com.akf.tradeexpansion.currency.WalletService;
 import net.minecraft.ChatFormatting;
@@ -19,9 +20,6 @@ import java.util.function.Consumer;
  * A coin. Shows its value in the tooltip; sneak + right-click breaks one coin into the next smaller tier (E-2).
  */
 public class CoinItem extends Item {
-	/** {@code currency.sneakUseExchange}; wired to the config in stage 8. */
-	public static boolean sneakUseExchange = true;
-
 	private final CoinType type;
 
 	public CoinItem(CoinType type, Properties properties) {
@@ -36,7 +34,7 @@ public class CoinItem extends Item {
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
 		CoinType lower = type.lower();
-		if (!sneakUseExchange || lower == null || !player.isShiftKeyDown()) {
+		if (!sneakUseExchange() || lower == null || !player.isShiftKeyDown()) {
 			return InteractionResult.PASS;
 		}
 		if (!level.isClientSide()) {
@@ -57,9 +55,14 @@ public class CoinItem extends Item {
 			tooltip.accept(Component.translatable("tooltip.trade_expansion.coin_stack_value", formatCopper(type.value() * stack.getCount()))
 					.withStyle(ChatFormatting.GRAY));
 		}
-		if (sneakUseExchange && type.lower() != null) {
+		if (sneakUseExchange() && type.lower() != null) {
 			tooltip.accept(Component.translatable("tooltip.trade_expansion.coin_break_hint").withStyle(ChatFormatting.DARK_GRAY));
 		}
+	}
+
+	/** {@code currency.sneakUseExchange} (synced to clients, design G). */
+	private static boolean sneakUseExchange() {
+		return TradeExpansionConfig.get().currency.sneakUseExchange;
 	}
 
 	/** 1000 → "1,000c" */

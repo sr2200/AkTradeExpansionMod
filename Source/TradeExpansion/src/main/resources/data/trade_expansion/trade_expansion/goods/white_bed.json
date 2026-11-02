@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:white_bed",
+  "base_price": 44,
+  "elasticity": 32,
+  "target_stock": 8
+}

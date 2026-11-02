@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:gold_nugget",
+  "base_price": 9,
+  "elasticity": 64,
+  "target_stock": 32
+}

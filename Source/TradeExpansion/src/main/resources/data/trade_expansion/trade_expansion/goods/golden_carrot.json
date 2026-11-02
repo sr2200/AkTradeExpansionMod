@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:golden_carrot",
+  "base_price": 70,
+  "elasticity": 32,
+  "target_stock": 16
+}

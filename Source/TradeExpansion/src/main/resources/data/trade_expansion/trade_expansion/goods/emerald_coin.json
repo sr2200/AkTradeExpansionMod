@@ -1,0 +1,17 @@
+{
+  "item": "trade_expansion:emerald_coin",
+  "unit": 10,
+  "base_price": 5,
+  "elasticity": 128,
+  "target_stock": 0,
+  "max_stock": 64,
+  "restock_per_day": 64,
+  "buy": false,
+  "sell": true,
+  "auto_add": [
+    {
+      "type": "trade_expansion:structure",
+      "structure": "#minecraft:village"
+    }
+  ]
+}

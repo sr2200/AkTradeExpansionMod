@@ -10,17 +10,21 @@ import net.minecraft.resources.Identifier;
 /**
  * Buy / sell button (design F-2).
  *
+ * @param goods         goods id (not the item id)
  * @param buy           true = the player buys, false = the player sells
+ * @param quantity      number of trading units (B-5)
  * @param expectedTotal total shown in the preview; the trade is cancelled if the server's total differs (A-4)
+ * @param useCard       pay / receive through the bank account instead of cash (E-8)
  */
-public record TradeRequestC2S(long marketId, Identifier item, boolean buy, int quantity, long expectedTotal) implements CustomPacketPayload {
+public record TradeRequestC2S(long marketId, Identifier goods, boolean buy, int quantity, long expectedTotal, boolean useCard) implements CustomPacketPayload {
 	public static final Type<TradeRequestC2S> TYPE = new Type<>(TradeExpansion.id("trade_request"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, TradeRequestC2S> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_LONG, TradeRequestC2S::marketId,
-			Identifier.STREAM_CODEC, TradeRequestC2S::item,
+			Identifier.STREAM_CODEC, TradeRequestC2S::goods,
 			ByteBufCodecs.BOOL, TradeRequestC2S::buy,
 			ByteBufCodecs.VAR_INT, TradeRequestC2S::quantity,
 			ByteBufCodecs.VAR_LONG, TradeRequestC2S::expectedTotal,
+			ByteBufCodecs.BOOL, TradeRequestC2S::useCard,
 			TradeRequestC2S::new);
 
 	@Override

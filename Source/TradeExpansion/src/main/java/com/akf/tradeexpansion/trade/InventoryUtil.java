@@ -48,12 +48,17 @@ public final class InventoryUtil {
 	 * collected before the goods are handed over (E-3).
 	 */
 	public static int freeSpaceFor(Player player, Item item) {
+		return freeSpaceFor(player, item, true);
+	}
+
+	/** @param coinSlotsFree count coin slots as empty (cash payments collect the coins first; card payments do not, E-8) */
+	public static int freeSpaceFor(Player player, Item item, boolean coinSlotsFree) {
 		Inventory inventory = player.getInventory();
 		int maxStack = new ItemStack(item).getMaxStackSize();
 		int space = 0;
 		for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
 			ItemStack stack = inventory.getItem(slot);
-			if (stack.isEmpty() || stack.getItem() instanceof CoinItem) {
+			if (stack.isEmpty() || (coinSlotsFree && stack.getItem() instanceof CoinItem)) {
 				space += maxStack;
 			} else if (isPlain(stack, item)) {
 				space += Math.max(0, maxStack - stack.getCount());

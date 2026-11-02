@@ -16,6 +16,9 @@
 		],
 		"client": [
 			"com.akf.tradeexpansion.client.TradeExpansionClient"
+		],
+		"modmenu": [
+			"com.akf.tradeexpansion.client.config.ModMenuIntegration"
 		]
 	},
 	"depends": {
@@ -23,5 +26,12 @@
 		"minecraft": "~26.3",
 		"java": ">=25",
 		"fabric-api": "*"
-	}
+	},
+	"suggests": {
+		"modmenu": "*",
+		"yet_another_config_lib_v3": "*"
+	},
+	"mixins": [
+		"trade_expansion.mixins.json"
+	]
 }

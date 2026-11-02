@@ -18,7 +18,9 @@ public enum TradeResult {
 	INSUFFICIENT_ITEMS,
 	INVENTORY_FULL,
 	STOCK_FULL,
-	PRICE_CHANGED;
+	PRICE_CHANGED,
+	/** Card payment chosen without a valid card (E-8). Appended last: ordinals are sent over the network. */
+	CARD_INVALID;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:redstone",
+  "base_price": 10,
+  "elasticity": 64,
+  "target_stock": 32
+}

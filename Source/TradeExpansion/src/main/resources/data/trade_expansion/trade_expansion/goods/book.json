@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:book",
+  "base_price": 32,
+  "elasticity": 32,
+  "target_stock": 16
+}

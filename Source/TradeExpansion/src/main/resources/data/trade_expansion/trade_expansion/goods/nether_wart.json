@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:nether_wart",
+  "base_price": 8,
+  "elasticity": 64,
+  "target_stock": 32
+}

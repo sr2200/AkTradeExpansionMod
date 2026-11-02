@@ -2,16 +2,10 @@ package com.akf.tradeexpansion.market;
 
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
-import com.akf.tradeexpansion.core.DistanceModel;
-import com.akf.tradeexpansion.core.GoodParams;
-import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.currency.CoinType;
-import com.akf.tradeexpansion.data.GoodsCatalog;
-import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -25,13 +19,13 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Every market of every dimension, stored once per world (design F-1).
  */
 public final class MarketRegistry extends SavedData {
-	public static final int SCHEMA_VERSION = 1;
+	/** 2: goods keyed by goods id, markets have profile / level (stage 7). */
+	public static final int SCHEMA_VERSION = 2;
 
 	public static final Codec<MarketRegistry> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.INT.fieldOf("schema_version").forGetter(r -> SCHEMA_VERSION),
@@ -65,12 +59,28 @@ public final class MarketRegistry extends SavedData {
 		this.currencyRatios = new ArrayList<>(currencyRatios);
 		this.nextId = nextId;
 		markets.forEach(m -> this.markets.put(m.id(), m));
+		if (schemaVersion < 2) {
+			// Built-in goods of schema 1 were keyed by item id (minecraft:bread → trade_expansion:bread).
+			this.markets.values().forEach(m -> m.remapGoods(id -> TradeExpansion.id(id.getPath())));
+			setDirty();
+		}
 	}
 
 	private static List<Integer> toList(int[] values) {
 		List<Integer> list = new ArrayList<>(values.length);
 		for (int v : values) list.add(v);
 		return list;
+	}
+
+	/** Coin ratios this world was created with (E-4). */
+	public int[] currencyRatios() {
+		return currencyRatios.stream().mapToInt(Integer::intValue).toArray();
+	}
+
+	public void setCurrencyRatios(int[] ratios) {
+		currencyRatios.clear();
+		for (int r : ratios) currencyRatios.add(r);
+		setDirty();
 	}
 
 	public static MarketRegistry get(MinecraftServer server) {
@@ -103,12 +113,12 @@ public final class MarketRegistry extends SavedData {
 				.orElse(null);
 		double nearestDistance = nearest == null ? Double.POSITIVE_INFINITY : nearest.horizontalDistanceTo(pos);
 
-		if (nearest != null && nearestDistance <= config.mergeRadius()) {
+		if (nearest != null && nearestDistance <= config.distance.mergeRadius) {
 			nearest.stalls().add(pos.immutable());
 			setDirty();
 			return new Assignment(nearest, null, nearestDistance);
 		}
-		if (origin == MarketOrigin.CRAFTED && nearestDistance < config.minNewMarketDistance()) {
+		if (origin == MarketOrigin.CRAFTED && nearestDistance < config.distance.minNewMarketDistance) {
 			return new Assignment(null, Rejection.TOO_CLOSE_TO_MARKET, nearestDistance);
 		}
 
@@ -127,34 +137,12 @@ public final class MarketRegistry extends SavedData {
 	}
 
 	private Market createMarket(ServerLevel level, BlockPos center, MarketOrigin origin, List<Market> sameDimension) {
-		TradeExpansionConfig config = TradeExpansionConfig.get();
-		long now = level.getGameTime();
-		Market market = new Market(nextId++, level.dimension(), center.immutable(), origin, now);
-
-		// Same place, same rolls (D-1). Stage 7 replaces "all goods" with market_profile pools.
-		Random random = new Random(level.getSeed() ^ center.asLong() * 0x9E3779B97F4A7C15L);
-		for (GoodsDefinition def : GoodsCatalog.all()) {
-			double priceFactor = 1 + (random.nextDouble() * 2 - 1) * config.jitter();
-			GoodParams params = def.params(priceFactor, config);
-			double pressure = params.clampPressure(initialPressure(def.item(), center, sameDimension, now, config));
-			market.addGood(def.item(), new GoodState(priceFactor, pressure, params.targetStock(), now));
-		}
+		Market market = new Market(nextId++, level.dimension(), center.immutable(), origin, MarketClock.now(level));
+		MarketFactory.populate(level, market, sameDimension);
 		markets.put(market.id(), market);
-		TradeExpansion.LOGGER.info("Created market #{} ({}) at {} in {}", market.id(), origin.getSerializedName(),
-				center.toShortString(), level.dimension().identifier());
+		TradeExpansion.LOGGER.info("Created market #{} ({}, {}, level {}, {} goods) at {} in {}", market.id(), origin.getSerializedName(),
+				market.profileId(), market.level(), market.goods().size(), center.toShortString(), level.dimension().identifier());
 		return market;
-	}
-
-	/** C-1: start from the distance-weighted average of nearby markets' X instead of 0. */
-	private static double initialPressure(Identifier item, BlockPos center, List<Market> others, long now, TradeExpansionConfig config) {
-		List<DistanceModel.Neighbor> neighbors = new ArrayList<>();
-		for (Market other : others) {
-			double d = other.horizontalDistanceTo(center);
-			if (d >= config.farRadius() || other.good(item) == null) continue;
-			other.refresh(now);
-			neighbors.add(new DistanceModel.Neighbor(d, other.good(item).pressure()));
-		}
-		return DistanceModel.initialPressure(neighbors, config.nearRadius(), config.farRadius(), config.falloffExponent());
 	}
 
 	/** Deletes a market (admin command). Stalls pointing at it get a new market on next use. */

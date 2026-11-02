@@ -1,9 +1,14 @@
 package com.akf.tradeexpansion;
 
 import com.akf.tradeexpansion.command.TradeExpansionCommand;
+import com.akf.tradeexpansion.config.ConfigManager;
+import com.akf.tradeexpansion.config.ServerConfig;
+import com.akf.tradeexpansion.crafting.EmeraldCoinRecipe;
+import com.akf.tradeexpansion.data.DataReloadListener;
 import com.akf.tradeexpansion.network.ModPayloads;
 import com.akf.tradeexpansion.registry.ModBlockEntities;
 import com.akf.tradeexpansion.registry.ModBlocks;
+import com.akf.tradeexpansion.registry.ModDataComponents;
 import com.akf.tradeexpansion.registry.ModCreativeTab;
 import com.akf.tradeexpansion.registry.ModItems;
 import com.akf.tradeexpansion.registry.ModMenus;
@@ -21,12 +26,17 @@ public class TradeExpansion implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		ConfigManager.load();
+		ModDataComponents.init();
 		ModItems.init();
 		ModBlocks.init();
 		ModBlockEntities.init();
 		ModMenus.init();
 		ModCreativeTab.init();
 		ModPayloads.init();
+		EmeraldCoinRecipe.init();
+		DataReloadListener.init();
+		ServerConfig.init();
 		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> TradeExpansionCommand.register(dispatcher));
 
 		LOGGER.info("Trade Expansion initialized");

@@ -56,7 +56,7 @@ public class MarketMenu extends AbstractContainerMenu {
 	/** Closes automatically when the stall is broken or the player walks away (A-3, F-2). */
 	@Override
 	public boolean stillValid(Player player) {
-		double max = TradeExpansionConfig.get().maxDistance();
+		double max = TradeExpansionConfig.get().trade.maxDistance;
 		return player.level().getBlockState(stallPos).is(ModBlocks.MARKET_STALL)
 				&& player.distanceToSqr(Vec3.atCenterOf(stallPos)) <= max * max;
 	}

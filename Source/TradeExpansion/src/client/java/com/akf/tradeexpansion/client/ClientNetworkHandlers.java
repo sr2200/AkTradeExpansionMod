@@ -1,5 +1,8 @@
 package com.akf.tradeexpansion.client;
 
+import com.akf.tradeexpansion.config.ConfigManager;
+import com.akf.tradeexpansion.network.AccountS2C;
+import com.akf.tradeexpansion.network.ConfigSyncS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.TradeResultS2C;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -22,6 +25,16 @@ public final class ClientNetworkHandlers {
 				screen.onResult(payload);
 			}
 		});
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientMarketCache.clear());
+		ClientPlayNetworking.registerGlobalReceiver(AccountS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof MarketScreen screen) {
+				screen.onAccount(payload);
+			}
+		});
+		// Server settings needed for previews (design G); local settings come back on disconnect.
+		ClientPlayNetworking.registerGlobalReceiver(ConfigSyncS2C.TYPE, (payload, context) -> payload.applyOnClient());
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			ClientMarketCache.clear();
+			ConfigManager.load();
+		});
 	}
 }
