@@ -103,7 +103,7 @@ public final class Market {
 		return lastUpdateGameTime;
 	}
 
-	/** Goods this market deals in that still have a definition (F-1: removed definitions are hidden). */
+	/** Every good this market deals in, including ones whose definition was removed (F-1: callers hide those via {@link #params} == null). */
 	public Map<Identifier, GoodState> goods() {
 		return goods;
 	}

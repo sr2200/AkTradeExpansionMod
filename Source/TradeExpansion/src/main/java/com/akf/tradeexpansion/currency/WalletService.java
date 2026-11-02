@@ -9,7 +9,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Reads and changes the coins in a player's main inventory (design E-3). Server side only.
+ * Reads and changes the coins in a player's main inventory (design E-3).
+ * Reading ({@link #coinCounts}, {@link #balance}) also runs on the client for the trade screen preview;
+ * everything that changes the inventory is server side only.
  */
 public final class WalletService {
 	private WalletService() {

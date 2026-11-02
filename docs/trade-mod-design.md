@@ -1,6 +1,6 @@
 # Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.4（段階0〜6の実装結果を反映）　作成日：2026-11-02　更新日：2026-11-02（改版履歴は付録B）
+- 版：v0.4.1（段階0〜6の実装結果を反映）　作成日：2026-11-02　更新日：2026-11-02（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜6 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -86,7 +86,8 @@ NeoForge を選ぶべきなのは「Create 等の NeoForge 専用大型Modと同
 | 入手 | 村に自然生成（屋台入りの建物ピースを村のテンプレートプールに追加、段階9）＋クラフト（仮レシピ：1段目 カーペット×3／2段目 木材・エメラルド・木材／3段目 木材・樽・木材。`#minecraft:wool_carpets`, `#minecraft:planks`） |
 | 採掘 | 斧（`#minecraft:mineable/axe`）。ドロップは自身 |
 | 形状（v0.4 現状） | 通常の立方体（`minecraft:block/orientable` 親モデル、仮テクスチャ）。屋台風の形状は段階11 |
-| ブロックエンティティ | 持つ（`market_id` を long で保存。未割当は `-1`）。**プレイヤーが設置した時**はその場で市場を割当（生成元 `crafted`）。**プレイヤー以外の方法で置かれたもの**（自然生成・`/setblock` 等）は、最初に右クリックされた時に割当（生成元 `natural`）。ワールド生成は別スレッドで動くため、生成中に SavedData を触らない。所属市場が管理コマンドで削除されていた場合も、次の右クリックで割り当て直す |
+| ブロックエンティティ | 持つ（`market_id` を long で保存。未割当は `-1`）。**プレイヤーが設置した時**はその場で市場を割当（生成元 `crafted`）。**プレイヤー以外の方法で置かれたもの**（自然生成・`/setblock` 等）は、最初に右クリックされた時に割当（生成元 `natural`）。ワールド生成は別スレッドで動くため、生成中に SavedData を触らない。【v0.4.1】生成元 `origin`（`natural`/`crafted`）も一緒に保存する（段階8で実装） |
+| 割り当て直し（v0.4.1） | 所属市場が `/tradeex market delete`（4-2）で削除されていた場合、次の右クリックで割り当て直す。判定には**保存した生成元**を使う（クラフト品は C-1 の最小距離制限がそのままかかり、自然生成品はかからない）。クラフト品が制限に引っかかった時は、画面を開かずに理由をチャットに表示し、**ブロックは壊さない**（設置時と違い、他人の屋台を右クリックしただけで壊れるのを防ぐ。プレイヤーは壊して置き直す）。`origin` が保存されていない古い屋台は、`market_id = -1` なら `natural`、それ以外なら `crafted` とみなす（制限がかかる安全側） |
 | 設置の拒否（C-1） | 実装上は「いったん設置 → 割当に失敗したら即座に破壊」。サバイバルではアイテムが戻り、クリエイティブでは戻らない。理由（最寄り市場までの距離、統合半径、最小距離）をチャットに表示 |
 | 破壊 | 自然生成品は破壊不可にする設定 `worldgen.protectNaturalStalls`（既定 false）。破壊時は市場の `stallPositions` から外す（市場自体は残す）。画面を開いているプレイヤーの画面は、メニューの有効性チェック（`stillValid`：屋台がまだ存在し、`trade.maxDistance` 以内にいるか）で自動的に閉じる |
 
@@ -270,6 +271,7 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
   ```
   在庫 `S` は `T` から始める。これにより「近場（Rnear以内）は同じ相場」が後から作った市場でも保たれる。
 - 市場が保持する交易所が0になっても市場データは残す（再設置で復活）。
+- 【v0.4.1】管理者が市場の相場を戻したい時は、市場を削除せず `/tradeex market reset` で状態だけ初期化する（市場IDが残るので屋台の割り当て直しは起きない）。市場そのものを消す `/tradeex market delete` を使った場合、所属していた屋台は次の右クリックで割り当て直され、クラフト屋台には上の新規市場の制限がかかる（A-3）。
 
 #### C-2. 距離減衰（相場の波及）
 
@@ -460,7 +462,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 - この方式は所持コインの組み合わせに関係なく常に正しく支払える（例：ダイヤ貨2枚で 1,080c → 回収 2,000c、返却 920c＝金貨9・鉄貨2）。
 - 返却枚数は各コイン種「比率−1」枚以下（最上位を除く）なので、最大でも5種類＝通常5枠程度で収まる（比率が64を超える設定では1種類が2枠になることがある）。
-- 実装上は、回収前に「返却分がインベントリ（回収で空く枠を含む）に入るか」を計算し、入らない分だけドロップする。手順はすべてサーバーの1回の処理内で行い、途中で失敗したら元に戻す。
+- 実装上は、所持金などの検証をすべて済ませてから回収・付与を行う（検証後に失敗する処理が無いので、元に戻す処理は持たない）。返却はゲーム標準の `placeItemBackInInventory` で行い、入りきらない分は自動で足元にドロップされる。手順はすべてサーバーの1回の処理内で行う。
 - **購入時の順序（v0.4 確定）**：①所持金・空き枠を検証（失敗ならここで中止し、何も変えない）→ ②コインを全部回収 → ③**商品を先に渡す** → ④お釣りを返す。商品の空き枠判定では、回収されるコインの枠を空きとして数える。商品は検証済みなので必ず入り、入りきらない可能性があるのはお釣りだけになる（溢れたお釣りは足元にドロップ）。
 - **副作用（仕様とする）**：支払いのたびに手持ちコインが最小枚数に整理される（例：銅貨200枚を持って 1c 払うと、金貨1・鉄貨9・銅貨9 になる）。
 - ドロップしたお釣りの拾得制限（取引プレイヤーのみ数秒）は v0.4 では未実装（Q16）。
@@ -500,14 +502,14 @@ MarketRegistry
  ├ nextId: long
  └ markets: Map<MarketId, Market>
      Market
-      ├ id, dimension, center(BlockPos), profileId, origin
+      ├ id, dimension, center(BlockPos), profileId（段階7。v0.4 は未実装）, origin
       ├ stallPositions: Set<BlockPos>
       ├ lastUpdateGameTime: long
       └ goods: Map<ItemId, GoodState>
            GoodState { priceFactor(double), X(double), S(double), lastTradeGameTime }   … 基準価格 B は保存せず D-1 の式で計算
 ```
 - 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
-- 交易所ブロックエンティティは `market_id` だけ保存（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）。
+- 交易所ブロックエンティティは `market_id`（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）と `origin`（`natural`/`crafted`。v0.4.1 で追加、段階8で実装。割り当て直しの判定に使う）を保存。
 - データパックで定義が消えた商品は状態を残したまま「非表示」にする（再追加で復活）。
 
 #### F-2. サーバー・クライアント同期
@@ -519,14 +521,14 @@ MarketRegistry
 | `MarketSnapshotS2C` | S→C | 市場ID、中心座標、サーバーのゲーム時刻、全商品の（item, **確定済みパラメータ** B・τ・s・T・Scap・r・Vmin・Vmax, X, S, buy可否, sell可否） | 画面を開いた時／その市場（と波及先）が変化した時に、その市場の画面を開いている全員へ／取引失敗時に本人へ | 実装済 |
 | `MarketDeltaS2C` | S→C | 変化した商品だけ | 誰かが取引した時 | 未実装（全体を再送で代用、Q19） |
 | `TradeRequestC2S` | C→S | 市場ID, item, 方向（buy=true/false）, 数量, 期待合計額 | 購入/売却ボタン | 実装済 |
-| `TradeResultS2C` | S→C | 結果コード（B-5）, 方向, 数量, 合計額（成功時） | 取引処理後 | 実装済 |
+| `TradeResultS2C` | S→C | 結果コード（B-5）, 方向, 数量, 合計額（成功時は取引額、`PRICE_CHANGED` 時はサーバーの再計算額、その他の失敗時は 0） | 取引処理後 | 実装済 |
 | `ExchangeRequestC2S` | C→S | コイン種, 方向, 枚数 | 両替 | 未実装（段階11） |
 
 - **価格はクライアントでも計算する**（v0.4 で変更）：スナップショットは価格そのものではなく、計算に必要な値を送る。クライアントは共通コードの `PriceModel` で買値・売値・合計・最大数量を計算し、時間による回復も「スナップショットのゲーム時刻 → 自分のゲーム時刻」の差で計算する。これによりプレビュー額とサーバーの計算額が一致する（境目のずれについては A-4）。
 - 画面は `AbstractContainerMenu` ＋ `ExtendedMenuType`（`fabric-menu-api-v1`。開く時に `OpenData(市場ID, 屋台の座標)` を渡す）。v0.4 ではメニューはプレイヤーインベントリだけを持つ（売却スロットは未実装）。（確認済：付録A）
 - サーバー側で必ず検証：プレイヤーが開いている画面の市場IDが要求と一致、屋台が存在し `trade.maxDistance`（既定8）以内、数量が 1〜`trade.maxPerTransaction`、アイテム実在（B-5 の結果コード参照）。
 - 同時取引：サーバーのメインスレッドで処理するので排他は不要。Fabric の `ServerPlayNetworking` の受信処理は最初からサーバースレッドで呼ばれるため、`server.execute()` は不要（Fabric の仕様からの判断で、実機では未確認）。
-- 経済ログ：`[TradeExpansion] Steve SELL minecraft:diamond_sword x10 @market#12 total=5517c`（設定 `log.trades`）。
+- 経済ログ：`[TradeExpansion] Steve SELL minecraft:diamond_sword x10 @market#12 total=5,517c`（設定 `log.trades`。金額は3桁区切り）。
 
 ---
 
@@ -534,7 +536,7 @@ MarketRegistry
 
 ファイル：`config/trade_expansion.json`（サーバー側。クライアントには表示用に必要な値のみ同期）。`/tradeex reload` で再読込。
 
-> **v0.4 実装状況**：設定ファイルの読み込みは未実装（段階8）。現在は `config/TradeExpansionConfig`（record）に、下表のうち価格・回復・距離・取引・ログの値を既定値で固定して持っている。コイン比率は `CoinType.setRatios`、スニーク崩しは `CoinItem.sneakUseExchange` で個別に保持（段階8で設定ファイルにまとめる）。
+> **v0.4 実装状況**：設定ファイルの読み込みは未実装（段階8）。現在は `config/TradeExpansionConfig`（record）に、下表のうち価格・回復・距離・取引・ログの値を既定値で固定して持っている（ただし `recovery.clock`、`distance.linkNetherToOverworld`、`trade.acceptDamaged`、`trade.payoutSmallest`、`trade.allowShiftAll` は機能自体が未実装のため含まない）。コイン比率は `CoinType.setRatios`、スニーク崩しは `CoinItem.sneakUseExchange` で個別に保持（段階8で設定ファイルにまとめる）。
 
 **クライアントに同期する値（段階8で実装）**：クライアントはプレビューを自分で計算する（F-2）ため、次の値がサーバーと違うとプレビュー額がずれて取引が `PRICE_CHANGED` で中止され続ける。ログイン時と `/tradeex reload` 時に同期する。
 
@@ -697,7 +699,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   └─ InventoryUtil.java         ✅ … 通常品の判定・数え上げ・取り除き・空き枠計算・付与（サーバーとクライアントで共用、v0.4 追加）
 ├─ block/
 │   ├─ MarketStallBlock.java      ✅
-│   └─ MarketStallBlockEntity.java ✅ … market_id、ExtendedMenuProvider
+│   └─ MarketStallBlockEntity.java ✅ … market_id、ExtendedMenuProvider（origin の保存は段階8）
 ├─ menu/
 │   └─ MarketMenu.java            △ … プレイヤーインベントリのみ（売却スロットは未実装）、stillValid で距離・存在チェック
 ├─ network/
@@ -713,7 +715,9 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ entity/                         … フェーズ2：TraderEntity
 └─ command/
     └─ TradeExpansionCommand.java △ … 実装済：/tradeex balance|pay|give、/tradeex market info|advance
-                                       未実装：/tradeex market reset|reroll|setx、/tradeex simulate、/tradeex reload、/tradeex audit
+                                       未実装：/tradeex market reset|delete|reroll|setx、/tradeex simulate、/tradeex reload、/tradeex audit
+                                       【v0.4.1】market reset [id]：市場は残し、全商品の X=0・S=T に戻す（priceFactor と商品構成は保持。id 省略時は最寄り市場）
+                                                 market delete <id>：市場を削除（誤操作防止のため id 必須）。屋台は次の右クリックで割り当て直し（A-3）
 
 src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ├─ TradeExpansionClient.java      ✅ … ClientModInitializer（MenuScreens.register、S2C受信の登録）
@@ -801,7 +805,7 @@ src/main/resources/
 
 | 段階 | 内容 | 完了条件 | v0.4 状態 |
 |---|---|---|---|
-| **0. 環境** | JDK 25、IntelliJ IDEA、Fabric テンプレート生成（26.3, Fabric API）、`runClient` 起動確認、Git管理 | 空Modが起動する | ✅（JDK 26 で release 25 指定でもビルド可。Git 管理は未） |
+| **0. 環境** | JDK 25、IntelliJ IDEA、Fabric テンプレート生成（26.3, Fabric API）、`runClient` 起動確認、Git管理 | 空Modが起動する | ✅（JDK 26 で release 25 指定でもビルド可。Git 管理済み） |
 | **1. コイン** | 5種コイン登録、テクスチャ、翻訳、クリエイティブタブ、ツールチップに価値表示 | クリエイティブで取り出せる | ✅（テクスチャは仮） |
 | **2. 通貨ロジック** | `build.gradle` にJUnit追加（5-2）、`CoinMath`（純Java）＋JUnit、`WalletService`、スニーク右クリック崩し、`/tradeex pay` テストコマンド | 支払い・お釣りがテスト通過 | ✅（`/tradeex balance`・`give` も追加） |
 | **3. MVP：固定市場** | 交易所ブロック、`Market` 1種固定（JSONで5商品）、価格は固定、交易画面（購入/売却）、C2S/S2Cパケット | マルチで買って売れる | ✅（商品は JSON ではなく組み込み10商品。段階4と同時に実装したため価格は最初から変動） |
@@ -809,7 +813,7 @@ src/main/resources/
 | **5. 市場の分割・統合** | 設置位置で市場を作成/統合、`MarketIndex` | 64ブロック内の屋台が同一市場 | △（統合・設置拒否は実装。`MarketIndex` は全件走査で代用） |
 | **6. 距離波及** | `DistanceModel`＋JUnit、`Propagation`、Delta同期 | 500ブロック先で約54%の影響 | △（波及は実装。同期は全体再送、Q19。ネザー連動・商品ごとの `link` 係数は未） |
 | **7. 地域品揃え** | goods / market_profile のデータパック、条件評価、シード抽選、`/reload` | 砂漠村と雪原村で品揃えが違う | 次の段階 |
-| **8. 設定・管理コマンド** | `trade_expansion.json`（G章の「クライアントに同期する値」も含む）、`/tradeex market info/reset/reroll`、`/tradeex simulate`、ログ | 設定変更が反映 | △（`market info`・`market advance` とログのみ実装） |
+| **8. 設定・管理コマンド** | `trade_expansion.json`（G章の「クライアントに同期する値」も含む）、`/tradeex market info/reset/delete/reroll`、`/tradeex simulate`、ログ、屋台の生成元 `origin` の保存と割り当て直し時の判定（A-3） | 設定変更が反映 | △（`market info`・`market advance` とログのみ実装） |
 | **9. 村への自然生成** | 屋台入りの建物ピース（構造物NBT）を作り、村の各テンプレートプール（plains/desert/savanna/snowy/taiga の houses）に追加する。Fabric API にはテンプレートプールへの追加機能が無いため、Mixin で追加するか、プール追加用ライブラリを使うかを着手時に判断（要確認）。プロセッサは既存ブロックの置換しかできないので使わない。市場の割当は最初の右クリック時（A-3、v0.4 で実装済み） | 新規チャンクの村に屋台 | 未着手 |
 | **10. 商人NPC** | `TraderEntity`（村人モデル流用）、右クリックで同じ画面 | NPCから取引できる | 未着手 |
 | **11. 仕上げ** | 宝箱ルート、両替タブ、UI改善（相場グラフ、Q17）、屋台風の形状、売却スロット、Shift で全数、`appendHoverText` の置き換え、バランス調整、`/tradeex audit`（クラフト裏技検出：素材の買値合計 < 完成品の売値 を列挙） | | 未着手 |
@@ -890,3 +894,4 @@ test {
 |---|---|---|
 | v0.3 | 2026-11-02 | レビュー指摘22件を反映 |
 | v0.4 | 2026-11-02 | 段階0〜6の実装結果を反映。要確認だった API を確定（付録A）。F-1 保存先（サーバー全体の DataStorage）、F-2 同期方式（計算に必要な値を送りクライアントでも計算、差分同期は保留）と受信スレッド、B-5 失敗時の挙動と結果コード一覧、E-3 所持金の範囲・支払い順序・コイン整理の副作用、A-3 設置拒否・画面を閉じる処理・割当のタイミング、A-4 画面の実装状況、B-6 τ 補正の余裕量、G章 クライアント同期項目と権限レベルの対応、4-2 パッケージ構成の実装状況、5章 段階ごとの状況と開発環境の注意を追記。未決事項 Q15〜Q19 を追加 |
+| v0.4.1 | 2026-11-02 | ソースとの照合結果を反映：F-2 経済ログの金額表記・`TradeResultS2C` の合計額、E-3 お釣りの実装方法、G章 実装状況の注記、F-1 `profileId` が未実装である旨、5-1 Git 管理の状況。屋台の割り当て直しの仕様を追加（A-3・C-1・F-1・4-2・5-1：屋台に生成元 `origin` を保存して判定に使う、`market reset` は状態の初期化、市場の削除は `market delete` に分離）|

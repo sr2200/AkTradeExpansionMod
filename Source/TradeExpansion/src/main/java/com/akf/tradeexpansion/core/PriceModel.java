@@ -64,7 +64,7 @@ public final class PriceModel {
 		return maxCount;
 	}
 
-	/** Applies the result of selling n items to the state (X += n * weight, S += n). */
+	/** Applies the result of selling n items to the state (X += n, S += n). */
 	public static void applySell(GoodParams p, GoodState s, int n) {
 		s.setPressure(p.clampPressure(s.pressure() + n));
 		s.setStock(s.stock() + n);
