@@ -142,9 +142,12 @@ public final class MarketFactory {
 		return level.dimension().equals(Level.NETHER) || level.dimension().equals(Level.END);
 	}
 
+	/** Beds within the horizontal radius, at any height (D-4). */
 	public static long countBeds(ServerLevel level, BlockPos center) {
 		int radius = TradeExpansionConfig.get().market.levelRadius;
-		return level.getPoiManager().getCountInRange(h -> h.is(PoiTypes.HOME), center, radius, PoiManager.Occupancy.ANY);
+		return level.getPoiManager().getInSquare(h -> h.is(PoiTypes.HOME), center, radius, PoiManager.Occupancy.ANY)
+				.filter(r -> DistanceModel.horizontalDistance(r.getPos().getX(), r.getPos().getZ(), center.getX(), center.getZ()) <= radius)
+				.count();
 	}
 
 	public static long countVillagers(ServerLevel level, BlockPos center) {

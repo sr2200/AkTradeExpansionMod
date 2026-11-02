@@ -1,6 +1,6 @@
 # Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.11（段階0〜8・12の実装結果、確認事項 Q1〜Q35 の決定、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-02（改版履歴は付録B）
+- 版：v0.11.1（段階0〜8・12の実装結果、確認事項 Q1〜Q35 の決定、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-02（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜8・12 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -102,7 +102,7 @@ v0.10 時点で Q1〜Q35 はすべて決定済み。「今後変更予定」は�
 | 入手 | 村に自然生成（屋台入りの建物ピースを村のテンプレートプールに追加、段階9）＋クラフト（仮レシピ：1段目 カーペット×3／2段目 木材・エメラルド・木材／3段目 木材・樽・木材。`#minecraft:wool_carpets`, `#minecraft:planks`） |
 | 採掘 | 斧（`#minecraft:mineable/axe`）。ドロップは自身 |
 | 形状（v0.4 現状） | 通常の立方体（`minecraft:block/orientable` 親モデル、仮テクスチャ）。屋台風の形状は段階11 |
-| ブロックエンティティ | 持つ（`market_id` を long で保存。未割当は `-1`）。**プレイヤーが設置した時**はその場で市場を割当（生成元 `crafted`）。**プレイヤー以外の方法で置かれたもの**（自然生成・`/setblock` 等）は、最初に右クリックされた時に割当（生成元 `natural`）。ワールド生成は別スレッドで動くため、生成中に SavedData を触らない。【v0.4.1】生成元 `origin`（`natural`/`crafted`）も一緒に保存する（段階8で実装） |
+| ブロックエンティティ | 持つ（`market_id` を long で保存。未割当は `-1`）。**プレイヤーが設置した時**はその場で市場を割当（生成元 `crafted`）。**プレイヤー以外の方法で置かれたもの**（自然生成・`/setblock` 等）は、最初に右クリックされた時に割当（生成元 `natural`）。ワールド生成は別スレッドで動くため、生成中に SavedData を触らない。【v0.4.1】生成元 `origin`（`natural`/`crafted`）も一緒に保存する（段階8で実装済み） |
 | 割り当て直し（v0.4.1） | 所属市場が `/tradeex market delete`（4-2）で削除されていた場合、次の右クリックで割り当て直す。判定には**保存した生成元**を使う（クラフト品は C-1 の最小距離制限がそのままかかり、自然生成品はかからない）。クラフト品が制限に引っかかった時は、画面を開かずに理由をチャットに表示し、**ブロックは壊さない**（設置時と違い、他人の屋台を右クリックしただけで壊れるのを防ぐ。プレイヤーは壊して置き直す）。`origin` が保存されていない古い屋台は、`market_id = -1` なら `natural`、それ以外なら `crafted` とみなす（制限がかかる安全側） |
 | 設置の拒否（C-1） | 実装上は「いったん設置 → 割当に失敗したら即座に破壊」。サバイバルではアイテムが戻り、クリエイティブでは戻らない。理由（最寄り市場までの距離、統合半径、最小距離）をチャットに表示 |
 | 破壊 | 自然生成品は破壊不可にする設定 `worldgen.protectNaturalStalls`（既定 false）。破壊時は市場の `stallPositions` から外す（市場自体は残す）。画面を開いているプレイヤーの画面は、メニューの有効性チェック（`stillValid`：屋台がまだ存在し、`trade.maxDistance` 以内にいるか）で自動的に閉じる |
@@ -139,7 +139,7 @@ v0.10 時点で Q1〜Q35 はすべて決定済み。「今後変更予定」は�
   - プレビューはクライアントがサーバーと同じ `PriceModel` で計算する（F-2）。時間による回復もクライアントのゲーム時刻で計算するため、価格の境目をまたぐ瞬間に確定するとまれに `PRICE_CHANGED` になる。これは仕様どおりの挙動で、再度押せば成立する（プレイヤーに有利な方向のずれも当面は許可しない。Q18、今後変更予定）。
 - ツールチップ：基準価格・現在倍率・回復予測（デバッグ表示は設定 `client.showDebugTooltip`）。
 
-##### v0.4 実装状況（段階3）
+##### 実装状況（v0.11.1 時点）
 
 | 項目 | 状態 |
 |---|---|
@@ -148,7 +148,10 @@ v0.10 時点で Q1〜Q35 はすべて決定済み。「今後変更予定」は�
 | 数量 | `[−][+][1][8][64][最大]`。上限は `trade.maxPerTransaction`。「最大」は B-5 の可能な最大数量（購入：在庫・所持金・空き枠、売却：所持数・Scap までの余裕） |
 | 右パネル | 合計額、最大数量（売り切れ時は「入荷まで約x分」。ゲーム内1日＝20分で換算） |
 | 結果表示 | 一覧の下に1行（成功は緑、失敗は結果コードの翻訳を赤） |
-| 所持金 | タイトル行の右に合計額（c）のみ |
+| タブ | 購入／売却／銀行（市場レベル3以上だけ表示、E-7） |
+| 支払い方法 | 有効なカードを持っている時だけ、右上に「支払い：カード／現金」の切り替えボタン（既定はカード、E-8） |
+| 所持金 | タイトル行の右に合計額（c）。銀行の情報を受け取った後は「現金：X ／ 銀行：Y」 |
+| 銀行タブ | 銀行残高・現金、預け入れ・引き出し（100c／1,000c／10,000c／全額）、カード発行。操作の結果は結果表示の行に出す |
 | 未実装 | 両替タブ（段階11）、売却スロット（操作2）、Shift で全数（`trade.allowShiftAll`）、所持金の内訳・前回比▲▼・相場メーター（Q17）、ツールチップの基準価格等 |
 
 ---
@@ -248,8 +251,9 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
 | `INVENTORY_FULL` | 購入品がインベントリに入らない |
 | `STOCK_FULL` | 売却数 > floor(Scap − S) |
 | `PRICE_CHANGED` | サーバーの合計額がプレビュー額から許容範囲を超えてずれた |
+| `CARD_INVALID` | カード払いを選んだが、有効なカード（自分のもので最新の番号）を持っていない（v0.11、E-8） |
 
-検証の順序：`INVALID_REQUEST` → `TOO_FAR` → `CREATIVE_NOT_ALLOWED` → `NOT_AVAILABLE` →（遅延回復）→ 在庫系（`INSUFFICIENT_STOCK` / `STOCK_FULL`）→ `PRICE_CHANGED` → 所持系（`INSUFFICIENT_FUNDS` / `INVENTORY_FULL` / `INSUFFICIENT_ITEMS`）。
+検証の順序：`INVALID_REQUEST` → `TOO_FAR` → `CREATIVE_NOT_ALLOWED` → `CARD_INVALID` → `NOT_AVAILABLE` →（遅延回復）→ 在庫系（`INSUFFICIENT_STOCK` / `STOCK_FULL`）→ `PRICE_CHANGED` → 所持系（`INSUFFICIENT_FUNDS` / `INVENTORY_FULL` / `INSUFFICIENT_ITEMS`）。
 
 #### B-6. 搾取防止の条件
 
@@ -469,7 +473,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 **規模の測り方**：次元によって測るものが違う。
 
-- **オーバーワールド・他Modの次元**：市場の中心から水平半径 `market.levelRadius`（既定 64）以内にある**ベッドの数**（村人やプレイヤーの家を表す `minecraft:home` POI。26.3 の `PoiManager`／`PoiTypes` の名前は要確認）。村は家が多いほどベッドが多く、プレイヤーが作った町も家を建てるほど育つ。
+- **オーバーワールド・他Modの次元**：市場の中心から水平半径 `market.levelRadius`（既定 64）以内にある**ベッドの数**（村人やプレイヤーの家を表す `minecraft:home` POI。`PoiManager` で水平距離を見て数える。高さは問わない）。村は家が多いほどベッドが多く、プレイヤーが作った町も家を建てるほど育つ。
 - **ネザー・エンド**（v0.7、Q27）：ベッドが使えない（爆発する）ため、同じ水平半径・上下 ±32 ブロック以内にいる**村人（`minecraft:villager`）の人数**。行商人・ゾンビ村人は数えない。村人はネザー・エンドでは増やせないので、プレイヤーがポータルで連れて来た人数が市場の規模になる。村人はエンティティなので、周りのチャンクが読み込まれている必要があるが、測るのは誰かが画面を開いた時なので通常は問題にならない。
 
 | レベル | 名前 | ベッド数（既定） | 村人の人数（ネザー・エンド、既定） | 商品数 N（既定 10〜20 の場合） |
@@ -634,7 +638,7 @@ w(d) = 1                                  (d ≤ Rnear)
 | 出し方 | 財布を手に持って右クリック → 財布の画面で、コインの種類ごとに 1枚／10枚／1スタック取り出す |
 | ツールチップ | 「残高：12,345c」 |
 | 死亡時 | 普通のアイテムと同じくドロップする（**中のお金ごと失うリスクがある**。安全に持ちたいなら銀行へ） |
-| 複数持っている時 | 所持金には全部の財布を数える。支払い・受け取りに使うのはメインインベントリで最初に見つかった財布 |
+| 複数持っている時 | 所持金には全部の財布を数える。支払いはメインインベントリの順に財布から引き、受け取りも同じ順に各財布の容量まで入れる |
 
 **所持金と支払いの変更**（E-3 を拡張）：
 
@@ -674,7 +678,7 @@ w(d) = 1                                  (d ≤ Rnear)
 | 受け取り | カードを選んでいる時は、売却代金を銀行口座に入れる |
 | 残高不足 | **分割払いはしない**。選んだ方法で全額払えなければ `INSUFFICIENT_FUNDS`。残高以上は使えない（借金はしない） |
 | 現金化 | カードでは引き出せない（引き出しは銀行タブだけ） |
-| 手数料 | 1回ごとの手数料 `bank.cardTransactionFee`（既定 0） |
+| 手数料 | カードで**買う**時、1回ごとに代金 × `bank.cardTransactionFee`（既定 0、切り上げ）を上乗せして口座から引く。売却代金を口座に入れる時は手数料なし |
 
 - 財布（持ち歩けるが失うリスクあり）、銀行（安全だが大きな市場でしか出し入れできない）、カード（銀行のお金をどこでも使える）の3つで、便利さとリスクの段階を作る。
 
@@ -705,7 +709,7 @@ MarketRegistry
 ```
 - 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
 - 【v0.9】銀行口座は別の SavedData `trade_expansion:bank`（サーバー全体に1つ）：`accounts: Map<UUID, Account>`、`Account { balance: long, cardNumber: int }`。財布の残高はアイテム側（データコンポーネント）に持つので、保存データには入らない。
-- 交易所ブロックエンティティは `market_id`（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）と `origin`（`natural`/`crafted`。v0.4.1 で追加、段階8で実装。割り当て直しの判定に使う）を保存。
+- 交易所ブロックエンティティは `market_id`（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）と `origin`（`natural`/`crafted`。v0.4.1 で追加、段階8で実装済み。割り当て直しの判定に使う。保存されていない古い屋台は A-3 のとおり補う）を保存。
 - データパックで定義が消えた商品は状態を残したまま「非表示」にする（再追加で復活）。
 
 #### F-2. サーバー・クライアント同期
@@ -730,7 +734,7 @@ MarketRegistry
 - 画面は `AbstractContainerMenu` ＋ `ExtendedMenuType`（`fabric-menu-api-v1`。開く時に `OpenData(市場ID, 屋台の座標)` を渡す）。v0.4 ではメニューはプレイヤーインベントリだけを持つ（売却スロットは未実装）。（確認済：付録A）
 - サーバー側で必ず検証：プレイヤーが開いている画面の市場IDが要求と一致、屋台が存在し `trade.maxDistance`（既定8）以内、数量が 1〜`trade.maxPerTransaction`、アイテム実在（B-5 の結果コード参照）。
 - 同時取引：サーバーのメインスレッドで処理するので排他は不要。Fabric の `ServerPlayNetworking` の受信処理は最初からサーバースレッドで呼ばれるため、`server.execute()` は不要（Fabric の仕様からの判断で、実機では未確認）。
-- 経済ログ：`[TradeExpansion] Steve SELL minecraft:diamond_sword x10 @market#12 total=5,517c`（設定 `log.trades`。金額は3桁区切り）。
+- 経済ログ：`[TradeExpansion] Steve SELL minecraft:diamond_sword x10 @market#12 total=5,517c`（設定 `log.trades`。金額は3桁区切り。カード払いの時は末尾に ` (card)`）。
 
 ---
 
@@ -740,11 +744,11 @@ MarketRegistry
 
 **設定画面（v0.10、Q35）**：Mod Menu の Mod 一覧で Trade Expansion の「設定」ボタンを押すと、YetAnotherConfigLib（YACL）で作った設定画面が開く。
 
-- 画面はカテゴリ（下表の「通貨」「価格」「回復」「距離」「市場」「財布」「銀行」「取引」「生成」「ログ」「管理」「バニラ」「表示」）ごとのタブに分け、各項目に説明文と範囲を出す。範囲外の値は入力できないようにする（YACL の入力欄の範囲指定）。
+- 画面はカテゴリごとのタブに分ける：「通貨」「価格」「回復」「距離」「市場」「財布」「銀行」「取引」「その他」（生成・ログ・管理・バニラをまとめる）「表示」。各項目に説明文と範囲を出す。範囲外の値は入力できないようにする（YACL の入力欄の範囲指定）。
 - 保存すると `config/trade_expansion.json` に書き込む。**シングルプレイ**では内部サーバーが同じファイルを使うので、保存した時点で反映する（`/tradeex reload` と同じ処理を呼ぶ）。
 - **マルチプレイに接続中**は、サーバー側の項目を「サーバーの値（変更不可）」として灰色で表示し、クライアント側の項目（`client.*`）だけ変更できる。サーバーの設定を変えるには、サーバーの `config/trade_expansion.json` を編集して `/tradeex reload` を実行する。
 - **依存関係**：Mod Menu と YACL は任意の依存（`fabric.mod.json` の `suggests`）。入っていない環境でも Mod は動き、設定画面の代わりに設定ファイルを直接編集する。コードは Mod Menu の `modmenu` エントリーポイント（`ModMenuApi`）から YACL を呼ぶ形にし、YACL が無い時はクラスを読み込まないようにする（読み込むとクラッシュするため）。
-- **対応版（要確認）**：2026-11 時点の調査では、YACL は `3.9.7+26.3-fabric`、Mod Menu は `21.0.0`（26.3 向け、ベータの可能性あり）が見つかった。段階8の着手時に Modrinth の公式ページで最新版を確認し、`build.gradle` には開発時だけ使う依存（`modLocalRuntime` 等）として入れる。
+- **対応版**：YACL `3.9.7+26.3-fabric`（maven.isxander.dev）、Mod Menu `21.0.0`（maven.terraformersmc.com）。どちらも公式の Maven で 26.3 向けを確認済み（段階8）。`build.gradle` では `compileOnly` ＋ `localRuntime`（開発時だけ読み込み、配布物には含めない）。
 - 価格・相場など一部の項目は、変えると既存の市場の価格がすぐ変わる。設定画面の説明文でその旨を示す。
 
 > **v0.11 実装状況**：設定ファイルは段階8で実装済み。JSON はカテゴリごとのオブジェクトで、キーは下表のとおり（例：`{"recovery": {"halfLifeDays": 2.0}, "trade": {"allowCreative": false}}`）。初回起動時に全項目を既定値で書き出す。書かれていない項目は既定値、範囲外の値は範囲内に直して警告ログを出す（ファイル全体を捨てない）。`/tradeex reload` か設定画面の保存で読み直す。表の中で機能自体がまだ無いもの（鋳造・両替・初回支給・モブのドロップ・ネザー連動・減額買取・Shift で全数・村への生成・商人NPC・村人交易の無効化・デバッグ表示・利息）は、値を保存するだけで効果はない（設定画面の説明に「未実装」と表示）。
@@ -758,6 +762,9 @@ MarketRegistry
 | `recovery.halfLifeDays` / `recovery.restockMultiplier` / `recovery.clock` | 時間回復の計算（プレビュー額・入荷までの時間）。時計の種類が違うと経過時間がずれる |
 | `trade.maxPerTransaction` | 数量の上限・「最大」ボタン |
 | `trade.maxDistance` | メニューの有効性チェック（`stillValid` はクライアントでも呼ばれる） |
+| `wallet.capacity` | 財布に入るかの予測（重ねて入れる操作はクライアントでも動く）・ツールチップ |
+| `bank.minMarketLevel` | 銀行タブを出すか |
+| `bank.cardFee` / `bank.cardTransactionFee` | カード発行ボタンの表示・カード払いの最大数量 |
 
 ※ 商品ごとのパラメータ（`price.*` から決まる B・τ・s・Vmin・Vmax 等）はスナップショットに含めて送るので同期不要。
 
@@ -772,7 +779,7 @@ MarketRegistry
 | 通貨 | `currency.startingMoney` | 0 | 0〜1e9 | 初回支給（c） |
 | 通貨 | `currency.mobDropCoins` | true | bool | 敵モブがコインを落とす（E-2。v0.5 で宝箱の `currency.lootTableCoins` から置き換え） |
 | 通貨 | `currency.sneakUseExchange` | true | bool | スニーク+右クリックでコインを崩す |
-| 通貨 | `currency.emeraldCoinsPerBlock` | 1 | 0〜64 | エメラルドブロック1個から石切台で作れるエメラルド貨の枚数（0 でレシピ無効、E-5。段階8） |
+| 通貨 | `currency.emeraldCoinsPerBlock` | 1 | 0〜64 | エメラルドブロック1個から石切台で作れるエメラルド貨の枚数（0 でレシピ無効、E-5。反映はサーバー再起動か `/reload` の後） |
 | 価格 | `price.defaultSpread` | 0.4 | 0.05〜0.9 | 売買スプレッド |
 | 価格 | `price.defaultElasticity` | 32 | 3〜10000 | τ |
 | 価格 | `price.minMultiplier` | 0.25 | 0.01〜1 | Vmin |
@@ -811,7 +818,7 @@ MarketRegistry
 | 銀行 | `bank.cardFee` | 100 | 0〜1e6 | カード発行手数料（c、E-8） |
 | 銀行 | `bank.cardTransactionFee` | 0.0 | 0〜0.1 | カード払い1回の手数料（割合） |
 | ログ | `log.trades` | true | bool | 取引ログ（v0.9：銀行の預け入れ・引き出しも出す） |
-| 管理 | `command.permissionLevel` | 2 | 0〜4 | `/tradeex` 管理系サブコマンドに必要な権限レベル（2＝OP）。26.3 の権限判定は数値ではなく定数なので、0→`Commands.LEVEL_ALL`、1→`LEVEL_MODERATORS`、2→`LEVEL_GAMEMASTERS`、3→`LEVEL_ADMINS`、4→`LEVEL_OWNERS` に変換して `Commands.hasPermission(...)` に渡す（v0.4 は `LEVEL_GAMEMASTERS` 固定） |
+| 管理 | `command.permissionLevel` | 2 | 0〜4 | `/tradeex` 管理系サブコマンドに必要な権限レベル（2＝OP）。26.3 の権限判定は数値ではなく定数なので、0→`Commands.LEVEL_ALL`、1→`LEVEL_MODERATORS`、2→`LEVEL_GAMEMASTERS`、3→`LEVEL_ADMINS`、4→`LEVEL_OWNERS` に変換して `Commands.hasPermission(...)` に渡す（判定のたびに設定を読むので `/tradeex reload` で反映） |
 | バニラ | `vanilla.disableVillagerTrades` | false | bool | バニラ村人の交易を無効化（フェーズ3） |
 | 表示 | `client.showDebugTooltip` | false | bool | クライアント側の設定（各クライアントの同名ファイルから読み、サーバーからは同期しない） |
 
@@ -894,6 +901,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ GoodParams.java (record)   ✅ … B, τ, s, T, Scap, r, Vmin, Vmax（X のクランプ範囲も計算）
 │   ├─ GoodState.java             ✅ … priceFactor, X, S, lastTradeGameTime
 │   ├─ MarketLevel.java           ✅ … ベッド数・村人の人数→レベル、レベル→商品数 N（D-4）
+│   ├─ WalletMath.java            ✅ … 財布での支払い・受け取りの計算（E-6）
 │   └─ GoodsSelector.java         ✅ … 商品の抽選（always・プール・追加抽選・レベルアップ時の追加、D-1・D-4）
 ├─ registry/
 │   ├─ ModItems.java              ✅ … コイン5種、エメラルド貨
@@ -922,7 +930,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ MarketRegistry.java        ✅ … SavedData（Codec、schema 2）、屋台の割当・統合
 │   ├─ MarketIndex.java              … 空間インデックス（次元×512セル）。v0.4 は全件走査で代用
 │   ├─ MarketFactory.java         ✅ … 新規市場の中身（プロファイル選択・レベル測定・商品の抽選・auto_add）、レベルアップ
-│   └─ Propagation.java           ✅ … 波及処理
+│   ├─ Propagation.java           ✅ … 波及処理
+│   └─ MarketClock.java           ✅ … 回復の時計（`recovery.clock`、B-3）
 ├─ data/
 │   ├─ GoodsDefinition.java       ✅ … 商品定義（Codec）。`components` と減額買取の取引処理は未実装
 │   ├─ GoodsCatalog.java          ✅ … データパックから読んだ商品定義（商品IDがキー）
@@ -940,7 +949,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   └─ InventoryUtil.java         ✅ … 通常品の判定・数え上げ・取り除き・空き枠計算・付与（サーバーとクライアントで共用、v0.4 追加）
 ├─ block/
 │   ├─ MarketStallBlock.java      ✅
-│   └─ MarketStallBlockEntity.java ✅ … market_id、ExtendedMenuProvider（origin の保存は段階8）
+│   └─ MarketStallBlockEntity.java ✅ … market_id・origin、ExtendedMenuProvider、画面タイトル（レベル名）
 ├─ menu/
 │   └─ MarketMenu.java            △ … プレイヤーインベントリのみ（売却スロットは未実装）、stillValid で距離・存在チェック
 ├─ network/
@@ -948,12 +957,16 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ MarketSnapshotS2C.java     ✅
 │   ├─ TradeRequestC2S.java       ✅
 │   ├─ TradeResultS2C.java        ✅
+│   ├─ ConfigSyncS2C.java         ✅ … クライアントに同期する設定（G章）
+│   ├─ AccountS2C.java / BankRequestC2S.java / WalletWithdrawC2S.java ✅ … 段階12
 │   └─ ExchangeRequestC2S.java … 未実装（段階11）。MarketDeltaS2C は作らない（Q19）
 ├─ config/
 │   ├─ TradeExpansionConfig.java  ✅ … 全設定（カテゴリごとのクラス、Codec）
 │   ├─ ConfigManager.java         ✅ … 設定ファイルの読み書き・反映・コピー（設定画面用）
 │   ├─ ConfigValidator.java       ✅ … 範囲外の値を直す
 │   └─ ServerConfig.java          ✅ … コイン比率のロック（E-4）・クライアントへの同期・`/tradeex reload`
+├─ mixin/
+│   └─ ItemEntityMixin.java       ✅ … 拾ったコインを財布へ（E-6）
 ├─ worldgen/                       … フェーズ2：村への屋台配置
 ├─ entity/                         … フェーズ2：TraderEntity
 └─ command/
@@ -964,7 +977,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 
 src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ├─ TradeExpansionClient.java      ✅ … ClientModInitializer（MenuScreens.register、S2C受信の登録）
-├─ MarketScreen.java              ✅ … タブ・一覧・数量・プレビュー（一覧は画面クラス内で直接描画）
+├─ MarketScreen.java              ✅ … 購入・売却・銀行タブ、一覧・数量・プレビュー、支払い方法の切り替え（一覧は画面クラス内で直接描画）
 ├─ ClientMarketCache.java         ✅ … 受信したスナップショット（最新1件。切断時に破棄）
 ├─ ClientNetworkHandlers.java     ✅ … S2C受信処理（開いている MarketScreen に通知）
 ├─ WalletScreen.java              ✅ … 財布の取り出し画面（E-6）
@@ -1163,3 +1176,4 @@ test {
 | v0.9.1 | 2026-11-02 | Q32〜Q34 を決定（財布のレシピを革×5＋糸×2 に変更、容量・カードの扱いは既定案のとおり） |
 | v0.10 | 2026-11-02 | Q35 を決定：設定は Mod Menu から開く YACL の設定画面で変更する（G章に設定画面の仕様、4-2 `ModMenuIntegration`・`ConfigScreen`、`fabric.mod.json` の追加内容、5-1 段階8） |
 | v0.11 | 2026-11-02 | 段階8・12の実装結果を反映：設定ファイルの形式と読み込みの扱い（G章）、エメラルド貨の枚数設定の仕組み（E-5）、財布の自動収納は拾ったコインだけ・支払いは財布→コイン（E-6）、カード発行手数料は口座から（E-8）、F-2 パケットの状態と `ConfigSyncS2C`・スナップショットの市場レベル、Mixin の追加、`fabric.mod.json`・依存関係、4-2 実装状況、テスト一覧、5-1 段階8・12の状態 |
+| v0.11.1 | 2026-11-02 | ソースとの照合結果を反映：A-4 実装状況（銀行タブ・支払い方法・所持金表示）、B-5 結果コード `CARD_INVALID` と検証順序、E-6 複数の財布の扱い、E-8 カード手数料は購入時のみ、F-1・A-3 origin は実装済み、F-2 経済ログの ` (card)`、G章 設定画面のタブ構成・対応版・同期する値・権限レベル、4-2 クラス一覧（MarketClock・WalletMath・ItemEntityMixin・新しいパケット）。ソース側はベッドの数え方を水平距離に修正（D-4 のとおり） |
