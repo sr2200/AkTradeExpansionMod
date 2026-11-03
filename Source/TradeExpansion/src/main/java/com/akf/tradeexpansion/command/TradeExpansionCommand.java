@@ -14,6 +14,7 @@ import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketFactory;
+import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.trade.TradeService;
@@ -21,6 +22,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -99,7 +101,12 @@ public final class TradeExpansionCommand {
 						.then(withOptionalId(Commands.literal("reroll"), TradeExpansionCommand::marketReroll))
 						.then(Commands.literal("delete")
 								.then(Commands.argument("id", LongArgumentType.longArg(1))
-										.executes(TradeExpansionCommand::marketDelete)))));
+										.executes(TradeExpansionCommand::marketDelete)))
+						.then(Commands.literal("name")
+								.then(Commands.argument("id", LongArgumentType.longArg(1))
+										.then(Commands.literal("reset").executes(c -> marketName(c, null)))
+										.then(Commands.argument("name", StringArgumentType.greedyString())
+												.executes(c -> marketName(c, StringArgumentType.getString(c, "name"))))))));
 		dispatcher.register(Commands.literal("trade_expansion").redirect(root));
 	}
 
@@ -215,6 +222,8 @@ public final class TradeExpansionCommand {
 		source.sendSuccess(() -> Component.literal(String.format("Market #%d (%s) center=%s stalls=%d distance=%.0f",
 				market.id(), market.origin().getSerializedName(), market.center().toShortString(), market.stalls().size(),
 				market.horizontalDistanceTo(player.blockPosition()))), false);
+		source.sendSuccess(() -> Component.literal(" name=").append(MarketNames.name(market))
+				.append(market.namer() == null ? "" : " namer=" + market.namer()), false);
 		ServerLevel level = player.level();
 		boolean villagers = MarketFactory.usesVillagers(level);
 		long count = villagers ? MarketFactory.countVillagers(level, market.center()) : MarketFactory.countBeds(level, market.center());
@@ -295,6 +304,28 @@ public final class TradeExpansionCommand {
 			return 0;
 		}
 		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_deleted", id), true);
+		return 1;
+	}
+
+	/** C-4: {@code market name <id> <name>|reset}; administrators may rename any market. */
+	private static int marketName(CommandContext<CommandSourceStack> context, String raw) {
+		long id = LongArgumentType.getLong(context, "id");
+		MarketRegistry registry = MarketRegistry.get(context.getSource().getServer());
+		Market market = registry.get(id);
+		if (market == null) {
+			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			return 0;
+		}
+		String name = MarketNames.sanitize(raw);
+		if (raw != null && name == null) {
+			context.getSource().sendFailure(Component.translatable("command.trade_expansion.name_empty"));
+			return 0;
+		}
+		MarketNames.rename(market, name, null);
+		registry.setDirty();
+		context.getSource().sendSuccess(() -> name == null
+				? Component.translatable("command.trade_expansion.name_reset", id, MarketNames.name(market))
+				: Component.translatable("message.trade_expansion.renamed", id, name), true);
 		return 1;
 	}
 

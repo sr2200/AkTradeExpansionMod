@@ -11,6 +11,7 @@ import com.akf.tradeexpansion.network.ModPayloads;
 import com.akf.tradeexpansion.registry.ModBlockEntities;
 import com.akf.tradeexpansion.registry.ModBlocks;
 import com.akf.tradeexpansion.registry.ModDataComponents;
+import com.akf.tradeexpansion.registry.ModEntities;
 import com.akf.tradeexpansion.registry.ModCreativeTab;
 import com.akf.tradeexpansion.registry.ModItems;
 import com.akf.tradeexpansion.registry.ModMenus;
@@ -32,6 +33,7 @@ public class TradeExpansion implements ModInitializer {
 		ConfigManager.load();
 		ModDataComponents.init();
 		ModItems.init();
+		ModEntities.init();
 		ModBlocks.init();
 		ModBlockEntities.init();
 		ModMenus.init();

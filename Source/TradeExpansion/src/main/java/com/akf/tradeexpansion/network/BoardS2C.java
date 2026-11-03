@@ -2,6 +2,8 @@ package com.akf.tradeexpansion.network;
 
 import com.akf.tradeexpansion.TradeExpansion;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -29,11 +31,14 @@ public record BoardS2C(long marketId, List<Entry> markets) implements CustomPack
 				Good::new);
 	}
 
-	/** @param dx / dz offset of the market center from the current market's center */
-	public record Entry(long id, int level, int dx, int dz, List<Good> goods) {
+	/**
+	 * @param title  "name (level)" (C-4)
+	 * @param dx / dz offset of the market center from the current market's center
+	 */
+	public record Entry(long id, Component title, int dx, int dz, List<Good> goods) {
 		static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_LONG, Entry::id,
-				ByteBufCodecs.VAR_INT, Entry::level,
+				ComponentSerialization.STREAM_CODEC, Entry::title,
 				ByteBufCodecs.VAR_INT, Entry::dx,
 				ByteBufCodecs.VAR_INT, Entry::dz,
 				Good.CODEC.apply(ByteBufCodecs.list()), Entry::goods,

@@ -723,16 +723,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			for (int row = 0; row < ROWS && scroll + row < board.markets().size(); row++) {
 				BoardS2C.Entry e = board.markets().get(scroll + row);
 				int y = by + row * ROW_H + 5;
-				g.text(font, Component.translatable("container.trade_expansion.market_level", e.id(),
-						Component.translatable("market_level.trade_expansion." + e.level())), bx + 4, y, COLOR_WHITE);
 				String where = Component.translatable("screen.trade_expansion.board.where", direction(e.dx(), e.dz()),
 						(int) Math.round(Math.sqrt((double) e.dx() * e.dx() + (double) e.dz() * e.dz()))).getString();
 				g.text(font, where, bx + LIST_W - 5 - font.width(where), y, COLOR_GOLD);
+				g.text(font, font.plainSubstrByWidth(e.title().getString(), LIST_W - 14 - font.width(where)), bx + 4, y, COLOR_WHITE);
 			}
 			return;
 		}
-		g.text(font, Component.translatable("container.trade_expansion.market_level", entry.id(),
-				Component.translatable("market_level.trade_expansion." + entry.level())), leftPos + PANEL_X, topPos + 38, COLOR_TEXT, false);
+		g.textWithWordWrap(font, entry.title(), leftPos + PANEL_X, topPos + 38, PANEL_W, COLOR_TEXT, false);
 		g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 52, PANEL_W, COLOR_DARK, false);
 		List<BoardS2C.Good> goods = entry.goods();
 		for (int row = 0; row < ROWS && scroll + row < goods.size(); row++) {

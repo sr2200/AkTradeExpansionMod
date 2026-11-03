@@ -10,6 +10,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
+import com.akf.tradeexpansion.entity.TraderEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,16 +32,26 @@ public class MarketMenu extends AbstractContainerMenu {
 	public static final int SELL_SLOT_X = 26;
 	public static final int SELL_SLOT_Y = 176;
 
-	/** Sent to the client when the menu opens (Extended Menu Type). */
-	public record OpenData(long marketId, BlockPos stallPos) {
+	/**
+	 * Sent to the client when the menu opens (Extended Menu Type).
+	 *
+	 * @param traderId entity id of the trader NPC the screen was opened from (A-5), or {@code -1} for a stall
+	 */
+	public record OpenData(long marketId, BlockPos stallPos, int traderId) {
 		public static final StreamCodec<RegistryFriendlyByteBuf, OpenData> STREAM_CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_LONG, OpenData::marketId,
 				BlockPos.STREAM_CODEC, OpenData::stallPos,
+				ByteBufCodecs.VAR_INT, OpenData::traderId,
 				OpenData::new);
+
+		public OpenData(long marketId, BlockPos stallPos) {
+			this(marketId, stallPos, -1);
+		}
 	}
 
 	private final long marketId;
 	private final BlockPos stallPos;
+	private final int traderId;
 	private final SimpleContainer sellSlot = new SimpleContainer(1);
 	private final int sellSlotIndex;
 
@@ -47,6 +59,7 @@ public class MarketMenu extends AbstractContainerMenu {
 		super(ModMenus.MARKET, containerId);
 		this.marketId = data.marketId();
 		this.stallPos = data.stallPos();
+		this.traderId = data.traderId();
 		this.sellSlotIndex = slots.size();
 		addSlot(new Slot(sellSlot, 0, SELL_SLOT_X, SELL_SLOT_Y) {
 			@Override
@@ -99,10 +112,14 @@ public class MarketMenu extends AbstractContainerMenu {
 		clearContainer(player, sellSlot);
 	}
 
-	/** Closes automatically when the stall is broken or the player walks away (A-3, F-2). */
+	/** Closes automatically when the stall (or trader, A-5) is gone or the player walks away (A-3, F-2). */
 	@Override
 	public boolean stillValid(Player player) {
 		double max = TradeExpansionConfig.get().trade.maxDistance;
+		if (traderId >= 0) {
+			Entity trader = player.level().getEntity(traderId);
+			return trader instanceof TraderEntity && trader.isAlive() && player.distanceToSqr(trader) <= max * max;
+		}
 		return player.level().getBlockState(stallPos).is(ModBlocks.MARKET_STALL)
 				&& player.distanceToSqr(Vec3.atCenterOf(stallPos)) <= max * max;
 	}

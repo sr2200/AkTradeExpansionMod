@@ -1,6 +1,8 @@
 // Generates the village stall buildings (design stage 9): data/trade_expansion/structure/village/<type>/market_stall.nbt
 // Layout (7 x 5 x 7): floor at y=0, entrance jigsaw on the west edge (x=0, y=1, z=3) like vanilla desert houses,
 // stall in the middle facing the entrance, four fence posts, a striped wool awning, a barrel, a hay bale and a lantern.
+// A trader NPC (design A-5 ④) stands in front of the stall and links itself to it on its first tick; the vanilla
+// villager spawn point is behind the stall.
 const n = require('./nbt.js');
 const fs = require('fs');
 const path = require('path');
@@ -56,7 +58,7 @@ for (const [type, m] of Object.entries(types)) {
     joint: S('aligned'), final_state: S('minecraft:structure_void'), name: S('minecraft:building_entrance'),
     pool: S('minecraft:empty'), id: S('minecraft:jigsaw'), target: S('minecraft:building_entrance'),
   }));
-  set(2, 0, 3, state('minecraft:jigsaw', { orientation: 'up_north' }), C({
+  set(5, 0, 3, state('minecraft:jigsaw', { orientation: 'up_north' }), C({
     joint: S('rollable'), final_state: S(m.floor), name: S('minecraft:bottom'),
     pool: S(`minecraft:village/${type}/villagers`), id: S('minecraft:jigsaw'), target: S('minecraft:bottom'),
   }));
@@ -70,7 +72,11 @@ for (const [type, m] of Object.entries(types)) {
   }
   const root = C({
     size: L([I(W), I(H), I(D)], 3),
-    entities: L([], 10),
+    entities: L([C({
+      pos: L([2.5, 1.0, 3.5].map(v => ({ t: 6, v })), 6),
+      blockPos: L([2, 1, 3].map(I), 3),
+      nbt: C({ id: S('trade_expansion:trader'), link_nearby_stall: { t: 1, v: 1 }, Rotation: L([90, 0].map(v => ({ t: 5, v })), 5) }),
+    })], 10),
     blocks: L(blocks, 10),
     palette: L(palette, 10),
     DataVersion: I(DATA_VERSION),

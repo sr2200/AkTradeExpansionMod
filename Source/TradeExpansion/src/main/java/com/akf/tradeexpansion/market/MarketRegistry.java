@@ -44,7 +44,8 @@ public final class MarketRegistry extends SavedData {
 		TOO_CLOSE_TO_MARKET
 	}
 
-	public record Assignment(Market market, Rejection rejection, double nearestDistance) {
+	/** @param created a new market was founded for the stall */
+	public record Assignment(Market market, Rejection rejection, double nearestDistance, boolean created) {
 	}
 
 	private final List<Integer> currencyRatios;
@@ -116,16 +117,24 @@ public final class MarketRegistry extends SavedData {
 		if (nearest != null && nearestDistance <= config.distance.mergeRadius) {
 			nearest.stalls().add(pos.immutable());
 			setDirty();
-			return new Assignment(nearest, null, nearestDistance);
+			return new Assignment(nearest, null, nearestDistance, false);
 		}
 		if (origin == MarketOrigin.CRAFTED && nearestDistance < config.distance.minNewMarketDistance) {
-			return new Assignment(null, Rejection.TOO_CLOSE_TO_MARKET, nearestDistance);
+			return new Assignment(null, Rejection.TOO_CLOSE_TO_MARKET, nearestDistance, false);
 		}
 
 		Market market = createMarket(level, pos, origin, sameDimension);
 		market.stalls().add(pos.immutable());
 		setDirty();
-		return new Assignment(market, null, nearestDistance);
+		return new Assignment(market, null, nearestDistance, true);
+	}
+
+	/** Nearest market of the dimension within {@code radius} (horizontal), or {@code null}; never creates one (A-5). */
+	public Market nearestWithin(ResourceKey<Level> dimension, BlockPos pos, double radius) {
+		return inDimension(dimension).stream()
+				.filter(m -> m.horizontalDistanceTo(pos) <= radius)
+				.min(Comparator.comparingDouble((Market m) -> m.horizontalDistanceTo(pos)).thenComparingLong(Market::id))
+				.orElse(null);
 	}
 
 	public void removeStall(ResourceKey<Level> dimension, BlockPos pos, long marketId) {

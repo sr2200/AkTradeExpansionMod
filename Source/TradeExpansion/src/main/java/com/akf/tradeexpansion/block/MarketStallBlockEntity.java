@@ -6,7 +6,14 @@ import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.registry.ModBlockEntities;
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
+import com.akf.tradeexpansion.entity.TraderEntity;
+import com.akf.tradeexpansion.registry.ModEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -29,6 +36,8 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 	private long marketId = UNASSIGNED;
 	/** Natural until a player places it (A-3). */
 	private MarketOrigin origin = MarketOrigin.NATURAL;
+	/** The trader NPC linked to this stall (A-5), or {@code null}. */
+	private UUID trader;
 
 	public MarketStallBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.MARKET_STALL, pos, state);
@@ -61,8 +70,39 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 	 */
 	public MarketRegistry.Assignment resolveMarket(ServerLevel level) {
 		Market market = marketId == UNASSIGNED ? null : MarketRegistry.get(level.getServer()).get(marketId);
-		if (market != null) return new MarketRegistry.Assignment(market, null, 0);
+		if (market != null) return new MarketRegistry.Assignment(market, null, 0, false);
 		return assign(level, origin);
+	}
+
+	private TraderEntity linkedTrader(ServerLevel level) {
+		return trader != null && level.getEntity(trader) instanceof TraderEntity t && t.isAlive() ? t : null;
+	}
+
+	/**
+	 * A-5 ①: spawns a trader in front of the stall unless its linked trader is still there. Nothing happens when the
+	 * front is blocked (trading at the stall still works).
+	 */
+	public void ensureTrader(ServerLevel level, long market) {
+		if (linkedTrader(level) != null) return;
+		Direction facing = getBlockState().getValue(HorizontalDirectionalBlock.FACING);
+		BlockPos front = getBlockPos().relative(facing);
+		TraderEntity entity = ModEntities.TRADER.create(level, EntitySpawnReason.TRIGGERED);
+		if (entity == null) return;
+		entity.snapTo(front.getX() + 0.5, front.getY(), front.getZ() + 0.5, facing.toYRot(), 0.0f);
+		entity.setYHeadRot(facing.toYRot());
+		if (!level.noCollision(entity, entity.getBoundingBox()) || level.getBlockState(front.below()).getCollisionShape(level, front.below()).isEmpty()) return;
+		entity.linkTo(getBlockPos(), market);
+		level.addFreshEntity(entity);
+		trader = entity.getUUID();
+		setChanged();
+	}
+
+	/** A-5 ④: a village building's trader links itself here unless the stall already has a living trader. */
+	public boolean adoptTrader(ServerLevel level, TraderEntity entity) {
+		if (linkedTrader(level) != null) return false;
+		trader = entity.getUUID();
+		setChanged();
+		return true;
 	}
 
 	@Override
@@ -71,6 +111,7 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		marketId = input.getLongOr("market_id", UNASSIGNED);
 		// Stalls saved before stage 8 have no origin: assigned ones count as crafted (the safe side, A-3).
 		origin = input.read("origin", MarketOrigin.CODEC).orElse(marketId == UNASSIGNED ? MarketOrigin.NATURAL : MarketOrigin.CRAFTED);
+		trader = input.read("trader", UUIDUtil.CODEC).orElse(null);
 	}
 
 	@Override
@@ -78,13 +119,17 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		super.saveAdditional(output);
 		output.putLong("market_id", marketId);
 		output.store("origin", MarketOrigin.CODEC, origin);
+		if (trader != null) output.store("trader", UUIDUtil.CODEC, trader);
 	}
 
 	@Override
 	public void preRemoveSideEffects(BlockPos pos, BlockState state) {
 		super.preRemoveSideEffects(pos, state);
-		if (level instanceof ServerLevel serverLevel && marketId != UNASSIGNED) {
-			MarketRegistry.get(serverLevel.getServer()).removeStall(serverLevel.dimension(), pos, marketId);
+		if (level instanceof ServerLevel serverLevel) {
+			if (marketId != UNASSIGNED) MarketRegistry.get(serverLevel.getServer()).removeStall(serverLevel.dimension(), pos, marketId);
+			// A-3 / A-5: the linked trader leaves with its stall.
+			TraderEntity linked = linkedTrader(serverLevel);
+			if (linked != null) linked.discard();
 		}
 	}
 
@@ -94,7 +139,7 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		Market market = level instanceof ServerLevel serverLevel && marketId != UNASSIGNED
 				? MarketRegistry.get(serverLevel.getServer()).get(marketId) : null;
 		if (market == null) return Component.translatable("container.trade_expansion.market", marketId);
-		return Component.translatable("container.trade_expansion.market_level", marketId, levelName(market.level()));
+		return com.akf.tradeexpansion.market.MarketNames.title(market);
 	}
 
 	/** "Hamlet" .. "City" (D-4). */

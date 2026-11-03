@@ -13,6 +13,7 @@ import com.akf.tradeexpansion.quest.Request;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.UnaryOperator;
 
 /**
@@ -58,6 +60,14 @@ public final class Market {
 		).apply(i, Shortage::new));
 	}
 
+	/** C-4: name and namer (founder of a crafted market, or whoever named it first). */
+	private record Naming(Optional<String> name, Optional<UUID> namer) {
+		static final Codec<Naming> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.STRING.optionalFieldOf("name").forGetter(Naming::name),
+				UUIDUtil.CODEC.optionalFieldOf("namer").forGetter(Naming::namer)
+		).apply(i, Naming::new));
+	}
+
 	public static final Codec<Market> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.LONG.fieldOf("id").forGetter(Market::id),
 			Level.RESOURCE_KEY_CODEC.fieldOf("dimension").forGetter(Market::dimension),
@@ -73,7 +83,9 @@ public final class Market {
 			Codec.LONG.optionalFieldOf("last_request_refresh", Long.MIN_VALUE).forGetter(m -> m.lastRequestRefresh),
 			Codec.INT.optionalFieldOf("next_request_id", 1).forGetter(m -> m.nextRequestId),
 			Shortage.CODEC.listOf().optionalFieldOf("shortages", List.of()).forGetter(Market::shortageEntries),
-			Codec.LONG.optionalFieldOf("shortage_period", Long.MIN_VALUE).forGetter(m -> m.shortagePeriod)
+			Codec.LONG.optionalFieldOf("shortage_period", Long.MIN_VALUE).forGetter(m -> m.shortagePeriod),
+			Naming.CODEC.optionalFieldOf("naming", new Naming(Optional.empty(), Optional.empty()))
+					.forGetter(m -> new Naming(Optional.ofNullable(m.name), Optional.ofNullable(m.namer)))
 	).apply(i, Market::new));
 
 	private final long id;
@@ -94,10 +106,14 @@ public final class Market {
 	/** K: current shortages (goods id → base price multiplier) and the period they belong to. */
 	private final Map<Identifier, Double> shortages = new LinkedHashMap<>();
 	private long shortagePeriod;
+	/** C-4: custom name ({@code null} = automatic) and the player allowed to change it. */
+	private String name;
+	private UUID namer;
 
 	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
 			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods,
-			List<Request> requests, long lastRequestRefresh, int nextRequestId, List<Shortage> shortages, long shortagePeriod) {
+			List<Request> requests, long lastRequestRefresh, int nextRequestId, List<Shortage> shortages, long shortagePeriod,
+			Naming naming) {
 		this.id = id;
 		this.dimension = dimension;
 		this.center = center;
@@ -114,11 +130,13 @@ public final class Market {
 		this.nextRequestId = nextRequestId;
 		shortages.forEach(sh -> this.shortages.put(sh.goods(), sh.multiplier()));
 		this.shortagePeriod = shortagePeriod;
+		this.name = naming.name().orElse(null);
+		this.namer = naming.namer().orElse(null);
 	}
 
 	public Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, long gameTime) {
 		this(id, dimension, center, origin, Optional.empty(), MarketLevel.MIN_LEVEL, gameTime, List.of(), gameTime, List.of(),
-				List.of(), Long.MIN_VALUE, 1, List.of(), Long.MIN_VALUE);
+				List.of(), Long.MIN_VALUE, 1, List.of(), Long.MIN_VALUE, new Naming(Optional.empty(), Optional.empty()));
 	}
 
 	private List<Shortage> shortageEntries() {
@@ -161,6 +179,23 @@ public final class Market {
 		List<GoodEntry> list = new ArrayList<>(goods.size());
 		goods.forEach((goodsId, state) -> list.add(new GoodEntry(goodsId, state)));
 		return list;
+	}
+
+	/** C-4: custom name, or {@code null} for the automatic one (see {@link MarketNames}). */
+	public String name() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public UUID namer() {
+		return namer;
+	}
+
+	public void setNamer(UUID namer) {
+		this.namer = namer;
 	}
 
 	public long id() {

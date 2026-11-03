@@ -285,18 +285,21 @@ public final class TradeExpansionConfig {
 		public List<Integer> villagerThresholds = new ArrayList<>(List.of(3, 6, 12, 24));
 		public int levelRadius = 64;
 		public double levelCheckIntervalDays = 1.0;
+		/** C-4: who may rename a market. */
+		public RenamePermission renamePermission = RenamePermission.NAMER_OR_OP;
 
 		public Market() {
 		}
 
 		Market(int minGoods, int maxGoods, List<Integer> levelThresholds, List<Integer> villagerThresholds, int levelRadius,
-				double levelCheckIntervalDays) {
+				double levelCheckIntervalDays, RenamePermission renamePermission) {
 			this.minGoods = minGoods;
 			this.maxGoods = maxGoods;
 			this.levelThresholds = new ArrayList<>(levelThresholds);
 			this.villagerThresholds = new ArrayList<>(villagerThresholds);
 			this.levelRadius = levelRadius;
 			this.levelCheckIntervalDays = levelCheckIntervalDays;
+			this.renamePermission = renamePermission;
 		}
 
 		static final Codec<Market> CODEC = RecordCodecBuilder.create(i -> {
@@ -307,7 +310,8 @@ public final class TradeExpansionConfig {
 					Codec.INT.listOf().fieldOf("levelThresholds").orElse(d.levelThresholds).forGetter(c -> c.levelThresholds),
 					Codec.INT.listOf().fieldOf("villagerThresholds").orElse(d.villagerThresholds).forGetter(c -> c.villagerThresholds),
 					Codec.INT.fieldOf("levelRadius").orElse(d.levelRadius).forGetter(c -> c.levelRadius),
-					Codec.DOUBLE.fieldOf("levelCheckIntervalDays").orElse(d.levelCheckIntervalDays).forGetter(c -> c.levelCheckIntervalDays)
+					Codec.DOUBLE.fieldOf("levelCheckIntervalDays").orElse(d.levelCheckIntervalDays).forGetter(c -> c.levelCheckIntervalDays),
+					RenamePermission.CODEC.fieldOf("renamePermission").orElse(d.renamePermission).forGetter(c -> c.renamePermission)
 			).apply(i, Market::new);
 		});
 
@@ -471,6 +475,18 @@ public final class TradeExpansionConfig {
 		static final Codec<Vanilla> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.BOOL.fieldOf("disableVillagerTrades").orElse(false).forGetter(c -> c.disableVillagerTrades)
 		).apply(i, Vanilla::new));
+	}
+
+	/** C-4: who may rename a market. */
+	public enum RenamePermission implements StringRepresentable {
+		ANYONE, NAMER_OR_OP, OP_ONLY;
+
+		public static final Codec<RenamePermission> CODEC = StringRepresentable.fromEnum(RenamePermission::values);
+
+		@Override
+		public String getSerializedName() {
+			return name();
+		}
 	}
 
 	/** A-4: where the trade screen shows the cash / bank balance (the top-right corner is often used by other mods' buttons). */

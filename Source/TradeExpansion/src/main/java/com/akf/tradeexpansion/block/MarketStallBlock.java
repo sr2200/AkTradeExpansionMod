@@ -1,25 +1,25 @@
 package com.akf.tradeexpansion.block;
 
-import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
-import com.akf.tradeexpansion.market.MarketFactory;
+import com.akf.tradeexpansion.market.MarketAccess;
+import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.market.MarketOrigin;
 import com.akf.tradeexpansion.market.MarketRegistry;
-import com.akf.tradeexpansion.market.MarketUpkeep;
-import com.akf.tradeexpansion.network.MarketSnapshotS2C;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -86,9 +86,44 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 			player.sendSystemMessage(tooCloseMessage(assignment));
 			level.destroyBlock(pos, !player.isCreative());
 		} else {
-			player.sendSystemMessage(Component.translatable("message.trade_expansion.stall_joined", assignment.market().id())
+			Market market = assignment.market();
+			if (assignment.created()) {
+				// C-4: the founder may name the market; a renamed stall item names it right away.
+				market.setNamer(player.getUUID());
+				Component custom = stack.get(DataComponents.CUSTOM_NAME);
+				String name = custom == null ? null : MarketNames.sanitize(custom.getString());
+				if (name != null) MarketNames.rename(market, name, player);
+				MarketRegistry.get(serverLevel.getServer()).setDirty();
+			}
+			player.sendSystemMessage(Component.translatable("message.trade_expansion.stall_joined", MarketNames.name(market))
 					.withStyle(ChatFormatting.GRAY));
 		}
+	}
+
+	/** C-4: a renamed name tag names the stall's market (used up in survival); anything else opens the screen. */
+	@Override
+	protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+		if (!stack.is(Items.NAME_TAG) || !stack.has(DataComponents.CUSTOM_NAME)) return InteractionResult.TRY_WITH_EMPTY_HAND;
+		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer
+				&& level.getBlockEntity(pos) instanceof MarketStallBlockEntity stall) {
+			MarketRegistry.Assignment assignment = stall.resolveMarket(serverLevel);
+			Market market = assignment.market();
+			String name = MarketNames.sanitize(stack.get(DataComponents.CUSTOM_NAME).getString());
+			if (market == null) {
+				player.sendSystemMessage(tooCloseMessage(assignment));
+				return InteractionResult.FAIL;
+			}
+			if (name == null) return InteractionResult.TRY_WITH_EMPTY_HAND;
+			if (!MarketNames.canRename(serverPlayer, market)) {
+				player.sendOverlayMessage(Component.translatable("message.trade_expansion.rename_denied").withStyle(ChatFormatting.RED));
+				return InteractionResult.FAIL;
+			}
+			MarketNames.rename(market, name, serverPlayer);
+			MarketRegistry.get(serverLevel.getServer()).setDirty();
+			if (!player.hasInfiniteMaterials()) stack.shrink(1);
+			player.sendSystemMessage(Component.translatable("message.trade_expansion.renamed", market.id(), name).withStyle(ChatFormatting.GREEN));
+		}
+		return InteractionResult.SUCCESS;
 	}
 
 	private static Component tooCloseMessage(MarketRegistry.Assignment assignment) {
@@ -110,18 +145,8 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 				return InteractionResult.FAIL;
 			}
 
-			MarketRegistry registry = MarketRegistry.get(serverLevel.getServer());
-			if (MarketFactory.growIfDue(serverLevel, market, registry.inDimension(serverLevel.dimension()))) {
-				// D-4: tell the player the market has grown.
-				player.sendSystemMessage(Component.translatable("message.trade_expansion.market_grew", market.id(),
-						MarketStallBlockEntity.levelName(market.level())).withStyle(ChatFormatting.GREEN));
-			}
-			registry.setDirty();
-
-			serverPlayer.openMenu(stall);
-			long now = MarketUpkeep.touch(serverLevel, market);
-			ServerPlayNetworking.send(serverPlayer, MarketSnapshotS2C.of(market, now));
-			BankService.sendAccount(serverPlayer);
+			if (TradeExpansionConfig.get().trader.spawnOnOpen) stall.ensureTrader(serverLevel, market.id()); // A-5 ①
+			MarketAccess.open(serverPlayer, serverLevel, market, stall);
 		}
 		return InteractionResult.SUCCESS;
 	}

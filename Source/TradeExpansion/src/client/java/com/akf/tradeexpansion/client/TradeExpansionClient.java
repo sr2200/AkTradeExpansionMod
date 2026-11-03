@@ -12,6 +12,7 @@ public class TradeExpansionClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		MenuScreens.register(ModMenus.MARKET, MarketScreen::new);
+		net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(com.akf.tradeexpansion.registry.ModEntities.TRADER, TraderRenderer::new);
 		ClientNetworkHandlers.init();
 		ItemTooltips.init();
 

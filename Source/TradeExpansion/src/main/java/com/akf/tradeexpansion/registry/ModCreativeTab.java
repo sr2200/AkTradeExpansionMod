@@ -28,6 +28,7 @@ public final class ModCreativeTab {
 					}
 					output.accept(ModItems.EMERALD_COIN);
 					output.accept(ModItems.WALLET);
+					output.accept(ModEntities.TRADER_SPAWN_EGG);
 				})
 				.build());
 	}

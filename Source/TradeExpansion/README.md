@@ -12,7 +12,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | Mod ID | `trade_expansion` |
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
-| 状態 | 開発中（段階0〜9・11〜13 実装済み。下の「実装状況」を参照） |
+| 状態 | 開発中（段階0〜13 実装済み。下の「実装状況」を参照） |
 
 仕様の詳細は設計書を参照してください。
 
@@ -52,6 +52,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 2. 右クリックで交易画面を開き、「購入」「売却」タブで商品と数量を選んで取引する。
 
 - 新しく生成される村（平原・砂漠・サバンナ・雪原・タイガ）には、交易所の入った屋台の建物が建つことがあります。設定 `worldgen.protectNaturalStalls` を ON にすると、村の交易所をサバイバルで壊せなくなります（既定 OFF）。
+- **商人NPC**：交易所を開くと、交易所の前に商人が現れます（いなくなっていれば次に開いた時にまた現れます）。商人を右クリックしても同じ交易画面を開けます。商人は倒せず、その場から動きません。交易所を壊すと一緒に消えます。村の屋台の建物には最初から商人がいます。クリエイティブタブの「商人のスポーンエッグ」や `/summon trade_expansion:trader` で出した商人は、近く（64ブロック以内）の市場で取引できます（商人だけでは新しい市場は作れません）。消す時は `/kill`。
 - 左下の「売却枠」に品物を置くと、売却タブでその商品が選ばれます。置いた品も売却の対象になり、画面を閉じるとインベントリに戻ります。
 - Shift を押しながら確定すると、できる最大の数量（最大36スタック）でまとめて取引します。
 - 所持金（現金・銀行）はインベントリの右に表示します。マウスを乗せると内訳が出ます。表示位置は設定の「表示」タブ（`client.balancePosition`）で「売却枠の下」「右上」にも変えられます。
@@ -59,6 +60,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 設定 `trade.acceptDamaged` を ON にすると（または商品定義で `accept_damaged: true`）、耐久が減った道具・防具も残りの耐久の割合で安く買い取ってもらえます（既定 OFF）。
 
 - 半径64ブロック以内の交易所は同じ「市場」になり、在庫と相場を共有します。
+- **市場名**：金床で名前を付けた名札を持って交易所を右クリックすると、その市場に名前を付けられます（名札は1枚使います）。名前を付けた交易所を置いて新しい市場を作った時も、その名前になります。名前を変えられるのは、名付けた人（自分で作った市場なら作った人）と管理者だけです（名前の無い市場は誰でも。設定 `market.renamePermission` で変更可）。名前が無い市場は「平原の村 #12」のように表示されます。
 - 既存の市場から 64〜256ブロックの場所には新しい交易所を置けません（相場をリセットする抜け道を防ぐため）。
 - クリエイティブモードでは取引できません（無限のアイテムで経済が壊れるのを防ぐため）。試すときはサバイバルモードで行ってください。
 
@@ -119,6 +121,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | `/tradeex market advance <日数>` | 最寄りの市場の相場を、指定した日数分だけ回復させる（テスト用） |
 | `/tradeex market reset [ID]` | 市場の相場と在庫を初期値に戻す（商品構成・レベルはそのまま。ID 省略で最寄り） |
 | `/tradeex market reroll [ID]` | 今のデータパックとレベルで品揃えを選び直す |
+| `/tradeex market name <ID> <名前>` | 市場名を付ける・変える（`reset` で名前を消す） |
 | `/tradeex market delete <ID>` | 市場を削除（交易所は次に使われた時に割り当て直し） |
 | `/tradeex market setx <商品> <X>` | 最寄りの市場の相場のずれ X を直接設定する（テスト用） |
 | `/tradeex simulate <商品> <buy\|sell> <数>` | 取引せずに、最寄りの市場での価格の推移を表示 |
@@ -137,9 +140,170 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 設定は `config/trade_expansion.json` に保存されます（初回起動時に全項目が既定値で書き出されます）。
 
 - **Mod Menu ＋ YetAnotherConfigLib（YACL）** を入れていれば、Mod 一覧の Trade Expansion の「設定」ボタンから画面で変更できます。どちらも任意で、入っていなくても Mod は動きます。
-- シングルプレイでは保存した時点で反映されます。マルチプレイ中はサーバー側の項目は変更できません（サーバーの設定ファイルを編集して `/tradeex reload`）。
-- 範囲外の値は自動で範囲内に直されます（サーバーログに警告）。
-- 主な項目：コイン比率、価格（スプレッド・弾力性など）、回復の半減期、市場の距離、商品数とレベルの境目、財布の容量、銀行・カードの手数料、取引の上限、クリエイティブでの取引、掲示板・依頼・品不足の数値、村への屋台の生成など。一覧と説明は設計書 G章を参照してください。
+- シングルプレイでは保存した時点で反映されます。マルチプレイではサーバーの設定ファイルを編集して `/tradeex reload` を実行します（`client.*` は各プレイヤーが自分で変更できます）。
+- 範囲外の値は自動で範囲内に直されます（サーバーログに警告）。書かれていない項目は既定値になります。
+- 「**未実装**」の項目は、値を保存できるだけで今はまだ効果がありません。
+
+### 設定ファイルの書き方
+
+JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろが項目名です。変えたい項目だけ書けば、残りは既定値になります。
+
+```json
+{
+  "currency": { "exchangeFee": 0.02 },
+  "price": { "globalMultiplier": 1.5 },
+  "recovery": { "halfLifeDays": 1.0 },
+  "consumables": { "add": ["minecraft:sandstone"], "remove": [] },
+  "trade": { "allowCreative": true, "maxPerTransaction": 128 },
+  "worldgen": { "protectNaturalStalls": true },
+  "client": { "balancePosition": "INVENTORY_RIGHT" }
+}
+```
+
+### 設定値一覧
+
+「設定例」は、そのカテゴリの `{ }` の中に書く形です（例：`"currency": { "exchangeFee": 0.02 }`）。
+
+#### 通貨（currency）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `currency.ratios` | `[10, 10, 10, 10]` | 各 2〜100 | 銅→鉄、鉄→金、金→ダイヤ、ダイヤ→ネザライトの比率。ワールドを作る時に決める前提（変えると手持ちのコインの価値が変わる） | `"ratios": [10, 10, 10, 10]` |
+| `currency.ratioLocked` | `true` | true / false | ON の時、ワールド作成後に比率を変えても、そのワールドが作られた時の比率を使い続ける | `"ratioLocked": false`（比率の変更をワールドに反映する） |
+| `currency.allowMinting` | `true` | true / false | 銅ブロック×9 → 銅貨、鉄ブロック×9 → 鉄貨の鋳造レシピ。反映は再起動か `/reload` の後 | `"allowMinting": false`（鋳造を禁止） |
+| `currency.exchangeFee` | `0.0` | 0〜0.5 | 両替タブの手数料の割合 | `"exchangeFee": 0.02`（2%） |
+| `currency.startingMoney` | `0` | 0〜1,000,000,000 | 初めてログインした時に渡す金額（c）。**未実装** | `"startingMoney": 500` |
+| `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨） | `"mobDropCoins": false` |
+| `currency.sneakUseExchange` | `true` | true / false | コインを持ってスニーク＋右クリックで、1枚を下位のコインに崩す | `"sneakUseExchange": false` |
+| `currency.emeraldCoinsPerBlock` | `1` | 0〜64 | エメラルドブロック1個から石切台で作れるエメラルド貨の枚数。0 でレシピ無効。反映は再起動か `/reload` の後 | `"emeraldCoinsPerBlock": 2` |
+
+#### 価格（price）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `price.defaultSpread` | `0.4` | 0.05〜0.9 | 買値と売値の差の割合（商品定義に無い時の既定）。0.4 なら買値＝基準×1.2、売値＝基準×0.8 | `"defaultSpread": 0.3` |
+| `price.defaultElasticity` | `32` | 3〜10000 | 大きいほど売買しても値崩れしにくい（商品定義に無い時の既定） | `"defaultElasticity": 64` |
+| `price.minMultiplier` | `0.25` | 0.01〜1 | 売られすぎても、基準価格のこの倍率より下がらない | `"minMultiplier": 0.5` |
+| `price.maxMultiplier` | `3.0` | 1〜100 | 買われすぎても、基準価格のこの倍率より上がらない | `"maxMultiplier": 2.0` |
+| `price.jitter` | `0.15` | 0〜0.5 | 新しい市場の基準価格のばらつき（±15%）。既存の市場は変わらない | `"jitter": 0.3`（地域差を大きく） |
+| `price.defaultMaxStockMultiplier` | `2.0` | 1〜10 | 商品定義に `max_stock` が無い時の在庫上限＝目標在庫×この値 | `"defaultMaxStockMultiplier": 4.0` |
+| `price.globalMultiplier` | `1.0` | 0.01〜100 | すべての価格に掛ける倍率。既存の市場の価格もすぐ変わる | `"globalMultiplier": 2.0`（全部2倍） |
+
+#### 回復（recovery）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `recovery.halfLifeDays` | `2.0` | 0.05〜100 | 相場のずれがゲーム内何日で半分元に戻るか | `"halfLifeDays": 1.0` |
+| `recovery.restockMultiplier` | `1.0` | 0〜100 | 在庫の補充・消費の速さの全体倍率 | `"restockMultiplier": 2.0` |
+| `recovery.clock` | `"GAME_TIME"` | "GAME_TIME" / "DAY_TIME" | GAME_TIME：寝ても回復は進まない／DAY_TIME：寝て飛ばした時間も数える | `"clock": "DAY_TIME"` |
+| `recovery.consumableMultiplier` | `1.0` | 0〜10 | 消耗品（食料・松明・原木など）が在庫過多の時に1日に使われる量＝目標在庫×この値。1.0 なら1日で目標に戻る | `"consumableMultiplier": 0.5`（2日で戻る） |
+| `recovery.consumableHalfLifeDays` | `1.0` | 0.05〜100 | 消耗品の相場の半減期（日） | `"consumableHalfLifeDays": 0.5` |
+
+#### 消耗品（consumables）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/tradeex consumable add` でも追加できる | `"add": ["minecraft:sandstone", "minecraft:white_wool"]` |
+| `consumables.remove` | `[]` | アイテムIDの一覧 | タグや `add` にあっても消耗品として扱わないアイテム。`/tradeex consumable remove` でも指定できる | `"remove": ["minecraft:cobblestone"]` |
+
+#### 距離（distance）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `distance.mergeRadius` | `64` | 8〜512 | この距離（ブロック）以内の交易所は同じ市場になる | `"mergeRadius": 96` |
+| `distance.nearRadius` | `128` | mergeRadius〜100000 | この距離以内の市場は相場が100%連動する | `"nearRadius": 256` |
+| `distance.farRadius` | `1536` | nearRadius+1〜100000 | この距離より遠い市場には相場の変化が伝わらない | `"farRadius": 3000` |
+| `distance.falloffExponent` | `2.0` | 0.5〜5 | 距離による影響の減り方。1＝直線、2＝近場を出た直後に大きく下がる | `"falloffExponent": 1.0` |
+| `distance.linkNetherToOverworld` | `false` | true / false | ネザー座標×8 をオーバーワールド座標とみなして相場を連動させる。**未実装** | `"linkNetherToOverworld": true` |
+| `distance.minNewMarketDistance` | `256` | 0〜10000 | クラフトした交易所で新しい市場を作れるのは、既存の市場からこの距離以上離れた場所だけ | `"minNewMarketDistance": 128` |
+
+#### 市場（market）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `market.minGoods` | `10` | 1〜100 | レベル1の市場が扱う商品数 | `"minGoods": 8` |
+| `market.maxGoods` | `20` | minGoods〜100 | レベル5の市場が扱う商品数 | `"maxGoods": 30` |
+| `market.levelThresholds` | `[5, 10, 20, 40]` | 昇順の整数4つ | レベル2〜5になるベッドの数（オーバーワールド） | `"levelThresholds": [3, 8, 15, 30]` |
+| `market.villagerThresholds` | `[3, 6, 12, 24]` | 昇順の整数4つ | レベル2〜5になる村人の人数（ネザー・エンド） | `"villagerThresholds": [2, 4, 8, 16]` |
+| `market.levelRadius` | `64` | 16〜256 | ベッド・村人を数える水平半径 | `"levelRadius": 96` |
+| `market.levelCheckIntervalDays` | `1.0` | 0〜100 | 画面を開いた時、前回からこの日数以上たっていればレベルを測り直す | `"levelCheckIntervalDays": 0.5` |
+| `market.renamePermission` | `"NAMER_OR_OP"` | "ANYONE" / "NAMER_OR_OP" / "OP_ONLY" | 市場名を変えられる人。NAMER_OR_OP＝名付けた人と管理者（名前の無い市場は誰でも） | `"renamePermission": "OP_ONLY"` |
+
+#### 財布（wallet）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `wallet.capacity` | `100000` | 1000〜1,000,000,000 | 財布1つに入る金額（c） | `"capacity": 1000000` |
+| `wallet.autoCollect` | `true` | true / false | 財布を持っている間、拾ったコインを自動で財布に入れる | `"autoCollect": false` |
+
+#### 銀行（bank）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `bank.minMarketLevel` | `3` | 1〜5 | このレベル以上の市場の交易画面に銀行タブが出る | `"minMarketLevel": 1`（どの市場でも銀行） |
+| `bank.interestRatePerDay` | `0.0` | 0〜0.01 | 預金の利率（ゲーム内1日あたり）。**未実装** | `"interestRatePerDay": 0.001` |
+| `bank.cardFee` | `100` | 0〜1,000,000 | カード発行・再発行の手数料（c、口座から） | `"cardFee": 0` |
+| `bank.cardTransactionFee` | `0.0` | 0〜0.1 | カードで買う時、1回ごとに代金に上乗せする手数料の割合 | `"cardTransactionFee": 0.01`（1%） |
+
+#### 取引（trade）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `trade.maxDistance` | `8` | 2〜32 | 交易所（商人）からこの距離以内でないと取引できない | `"maxDistance": 12` |
+| `trade.acceptDamaged` | `false` | true / false | 耐久が減った品を残り耐久の割合で安く買い取る（商品定義の `accept_damaged` が優先） | `"acceptDamaged": true` |
+| `trade.priceTolerance` | `0.0` | 0〜0.2 | 確定時の価格がプレビューからこの割合以上ずれたら中止する。0 なら1cでも違えば中止 | `"priceTolerance": 0.05` |
+| `trade.maxPerTransaction` | `64` | 1〜2304 | 1回の取引で選べる最大の数量 | `"maxPerTransaction": 128` |
+| `trade.allowShiftAll` | `true` | true / false | Shift＋確定で、できる最大の数量（最大2,304）までまとめて取引する | `"allowShiftAll": false` |
+| `trade.allowCreative` | `false` | true / false | クリエイティブモードでの取引・銀行・両替を許可する | `"allowCreative": true`（テスト用） |
+
+#### 生成・商人（worldgen / trader）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `worldgen.spawnStallsInVillages` | `true` | true / false | 新しく生成される村に屋台の建物を建てる。反映はサーバー（ワールド）の再起動後 | `"spawnStallsInVillages": false` |
+| `worldgen.protectNaturalStalls` | `false` | true / false | 村の交易所をサバイバルで壊せなくする | `"protectNaturalStalls": true` |
+| `worldgen.spawnTraderNpc` | `true` | true / false | 村の屋台の建物に商人NPCを置く | `"spawnTraderNpc": false` |
+| `trader.spawnOnOpen` | `true` | true / false | 交易所を開いた時、紐付いた商人がいなければ交易所の前に出す | `"spawnOnOpen": false` |
+
+#### 掲示板・依頼・品不足（board / quest / demand）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `board.radius` | `512` | 64〜4096 | 掲示板に載せる市場の水平距離 | `"radius": 1024` |
+| `board.maxMarkets` | `20` | 1〜100 | 掲示板に載せる市場の最大数（近い順） | `"maxMarkets": 10` |
+| `quest.maxPerMarket` | `3` | 0〜10 | 1つの市場に同時に出る依頼の最大数。0 で依頼なし | `"maxPerMarket": 5` |
+| `quest.refreshDays` | `1.0` | 0.1〜30 | この日数ごとに空いた枠へ新しい依頼が出る | `"refreshDays": 0.5` |
+| `quest.durationDays` | `3.0` | 0.5〜30 | 依頼の期限（ゲーム内日） | `"durationDays": 5.0` |
+| `quest.rewardMultipliers` | `[1.2, 1.5, 2.0]` | 各 0.1〜10（3つ） | ★1〜★3 の報酬倍率（報酬＝基準価格×数量×倍率） | `"rewardMultipliers": [1.1, 1.3, 1.6]` |
+| `quest.difficultyThresholds` | `[200, 1000]` | 昇順の整数2つ | ★2・★3 になる依頼の金額（c） | `"difficultyThresholds": [300, 1500]` |
+| `demand.maxShortages` | `2` | 0〜10 | 1つの市場で同時に品不足になる商品の最大数。0 で無効 | `"maxShortages": 0`（品不足なし） |
+| `demand.durationDays` | `3.0` | 0.5〜30 | 品不足の商品を選び直す間隔（ゲーム内日） | `"durationDays": 7.0` |
+| `demand.minMultiplier` | `1.5` | 1〜5 | 品不足の商品の基準価格に掛ける倍率の下限 | `"minMultiplier": 1.2` |
+| `demand.maxMultiplier` | `2.0` | minMultiplier〜5 | 品不足の商品の基準価格に掛ける倍率の上限 | `"maxMultiplier": 1.5` |
+
+#### 村人（villager）※段階14で使う予定
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `villager.coinTrades` | `true` | true / false | 村人から買う時の代金をコインにする。**未実装** | `"coinTrades": false` |
+| `villager.emeraldPrice` | `30` | 1〜10000 | 村人の代金をコインにする時、エメラルド1個を何cとするか。**未実装** | `"emeraldPrice": 50` |
+
+#### その他（log / command / vanilla）
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `log.trades` | `true` | true / false | 誰が何をいくらで売買したか（銀行の出し入れも）をサーバーログに出す | `"trades": false` |
+| `command.permissionLevel` | `2` | 0〜4 | `/tradeex` の管理用コマンドに必要な権限レベル（2＝OP） | `"permissionLevel": 3` |
+| `vanilla.disableVillagerTrades` | `false` | true / false | バニラの村人との交易をできなくする | `"disableVillagerTrades": true` |
+
+#### 表示（client）※各プレイヤーのクライアント側の設定
+
+| キー | 既定値 | 範囲 | 説明 | 設定例 |
+|---|---|---|---|---|
+| `client.showDebugTooltip` | `false` | true / false | 交易画面のツールチップに基準価格などを出す。**未実装** | `"showDebugTooltip": true` |
+| `client.balancePosition` | `"INVENTORY_RIGHT"` | "INVENTORY_RIGHT" / "BELOW_SELL_SLOT" / "TOP_RIGHT" | 交易画面の所持金の表示位置（インベントリの右／売却枠の下／右上） | `"balancePosition": "TOP_RIGHT"` |
+
+詳しい計算方法や各項目の背景は、設計書（`docs/trade-mod-design.md`）の G章を参照してください。
 
 ---
 
@@ -223,7 +387,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 7 | 地域ごとの品揃え・市場レベル・エメラルド貨 | ✅ |
 | 8 | 設定ファイル・Mod Menu＋YACL の設定画面・管理コマンド（`market reset` / `reroll` / `delete`、`simulate`、`reload`） | ✅（ゲーム内の確認は進行中） |
 | 9 | 村への交易所（屋台の建物）の自然生成 | ✅（実際の村での見た目はゲーム内で確認中） |
-| 10 | 商人NPC | 未着手 |
+| 10 | 商人NPC | ✅（ゲーム内の確認は進行中） |
 | 11 | 両替タブ・敵モブのコインドロップ・銅貨と鉄貨の鋳造・減額買取・付加情報付きの商品・売却枠・Shift で全数・相場グラフ・屋台の形・`audit` など | ✅（ゲーム内の確認は進行中） |
 | 12 | 財布・銀行・クレジットカード | ✅（ゲーム内の確認は進行中） |
 | 13 | 掲示板・依頼・品不足 | ✅（ゲーム内の確認は進行中） |

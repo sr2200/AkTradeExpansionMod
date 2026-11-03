@@ -106,6 +106,12 @@ public final class ConfigScreen {
 				.option(intField("market.maxGoods", d.market.maxGoods, () -> market.maxGoods, v -> market.maxGoods = v, 1, 100));
 		thresholds(marketCat, "market.levelThresholds.", d.market.levelThresholds, market.levelThresholds);
 		thresholds(marketCat, "market.villagerThresholds.", d.market.villagerThresholds, market.villagerThresholds);
+		marketCat.option(server(Option.<TradeExpansionConfig.RenamePermission>createBuilder()
+				.name(Component.translatable(KEY + "market.renamePermission"))
+				.description(description("market.renamePermission"))
+				.binding(d.market.renamePermission, () -> market.renamePermission, v -> market.renamePermission = v)
+				.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.RenamePermission.class)
+						.formatValue(v -> Component.translatable(KEY + "market.renamePermission." + v.getSerializedName().toLowerCase(Locale.ROOT))))));
 		marketCat.option(intField("market.levelRadius", d.market.levelRadius, () -> market.levelRadius, v -> market.levelRadius = v, 16, 256))
 				.option(doubleField("market.levelCheckIntervalDays", d.market.levelCheckIntervalDays, () -> market.levelCheckIntervalDays, v -> market.levelCheckIntervalDays = v, 0, 100));
 
