@@ -1,0 +1,52 @@
+package com.akf.tradeexpansion.network;
+
+import com.akf.tradeexpansion.TradeExpansion;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+
+import java.util.List;
+
+/**
+ * Latest prices of nearby markets for the bulletin board (design I).
+ *
+ * @param marketId the market whose screen asked
+ */
+public record BoardS2C(long marketId, List<Entry> markets) implements CustomPacketPayload {
+	public static final Type<BoardS2C> TYPE = new Type<>(TradeExpansion.id("board"));
+
+	/** @param buy / sell price per trading unit, or -1 when not available (sold out, not bought, ...) */
+	public record Good(Identifier item, int unit, long buy, long sell, int stock, boolean shortage) {
+		static final StreamCodec<RegistryFriendlyByteBuf, Good> CODEC = StreamCodec.composite(
+				Identifier.STREAM_CODEC, Good::item,
+				ByteBufCodecs.VAR_INT, Good::unit,
+				ByteBufCodecs.VAR_LONG, Good::buy,
+				ByteBufCodecs.VAR_LONG, Good::sell,
+				ByteBufCodecs.VAR_INT, Good::stock,
+				ByteBufCodecs.BOOL, Good::shortage,
+				Good::new);
+	}
+
+	/** @param dx / dz offset of the market center from the current market's center */
+	public record Entry(long id, int level, int dx, int dz, List<Good> goods) {
+		static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_LONG, Entry::id,
+				ByteBufCodecs.VAR_INT, Entry::level,
+				ByteBufCodecs.VAR_INT, Entry::dx,
+				ByteBufCodecs.VAR_INT, Entry::dz,
+				Good.CODEC.apply(ByteBufCodecs.list()), Entry::goods,
+				Entry::new);
+	}
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, BoardS2C> CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_LONG, BoardS2C::marketId,
+			Entry.CODEC.apply(ByteBufCodecs.list()), BoardS2C::markets,
+			BoardS2C::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
+}

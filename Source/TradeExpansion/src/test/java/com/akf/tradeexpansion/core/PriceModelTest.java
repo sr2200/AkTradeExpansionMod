@@ -152,6 +152,17 @@ class PriceModelTest {
 	}
 
 	@Test
+	void damagedItemsSellCheaper() {
+		// Full price for plain items equals the normal sum.
+		assertEquals(PriceModel.sumSell(SWORD, 0, 3), PriceModel.sumSell(SWORD, 0, new double[]{1, 1, 1}));
+		// 720 + floor(676 × 0.5) = 720 + 338
+		assertEquals(1058, PriceModel.sumSell(SWORD, 0, new double[]{1, 0.5}));
+		// Never below 1c per item.
+		GoodParams cheap = new GoodParams(2, 128, 0.4, 64, 128, 32, 0.25, 3.0);
+		assertEquals(1, PriceModel.sumSell(cheap, 0, new double[]{0.01}));
+	}
+
+	@Test
 	void maxAffordable() {
 		assertEquals(0, PriceModel.maxAffordable(BREAD, 0, 23, 64));
 		assertEquals(1, PriceModel.maxAffordable(BREAD, 0, 24, 64));

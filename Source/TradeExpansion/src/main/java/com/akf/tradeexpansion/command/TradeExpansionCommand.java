@@ -15,6 +15,7 @@ import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketRegistry;
+import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.trade.TradeService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -36,6 +37,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionCheck;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -79,7 +81,14 @@ public final class TradeExpansionCommand {
 								.then(Commands.literal("sell")
 										.then(Commands.argument("count", IntegerArgumentType.integer(1, 2304))
 												.executes(c -> simulate(c, false))))))
+				.then(admin(Commands.literal("audit"))
+						.executes(TradeExpansionCommand::audit))
 				.then(admin(Commands.literal("market"))
+						.then(Commands.literal("setx")
+								.then(Commands.argument("goods", IdentifierArgument.id())
+										.suggests((c, b) -> SharedSuggestionProvider.suggestResource(GoodsCatalog.all().keySet(), b))
+										.then(Commands.argument("x", DoubleArgumentType.doubleArg(-10000, 10000))
+												.executes(TradeExpansionCommand::marketSetX))))
 						.then(Commands.literal("info")
 								.executes(TradeExpansionCommand::marketInfo))
 						.then(Commands.literal("advance")
@@ -200,8 +209,7 @@ public final class TradeExpansionCommand {
 			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
 			return 0;
 		}
-		long now = MarketClock.now(player.level());
-		market.refresh(now);
+		MarketUpkeep.touch(player.level(), market);
 		CommandSourceStack source = context.getSource();
 		source.sendSuccess(() -> Component.literal(String.format("Market #%d (%s) center=%s stalls=%d distance=%.0f",
 				market.id(), market.origin().getSerializedName(), market.center().toShortString(), market.stalls().size(),
@@ -211,6 +219,9 @@ public final class TradeExpansionCommand {
 		long count = villagers ? MarketFactory.countVillagers(level, market.center()) : MarketFactory.countBeds(level, market.center());
 		source.sendSuccess(() -> Component.literal(String.format(" profile=%s level=%d (%s now: %d) goods=%d",
 				market.profileId(), market.level(), villagers ? "villagers" : "beds", count, market.goods().size())), false);
+		if (!market.shortages().isEmpty() || !market.requests().isEmpty()) {
+			source.sendSuccess(() -> Component.literal(String.format(" shortages=%s requests=%s", market.shortages(), market.requests())), false);
+		}
 		market.goods().forEach((goodsId, state) -> {
 			GoodParams p = market.params(goodsId);
 			if (p == null) return;
@@ -266,6 +277,7 @@ public final class TradeExpansionCommand {
 			if (level == null) return 0;
 			MarketRegistry registry = MarketRegistry.get(context.getSource().getServer());
 			MarketFactory.reroll(level, market, registry.inDimension(market.dimension()));
+			MarketUpkeep.touch(level, market);
 			registry.setDirty();
 			TradeService.broadcast(context.getSource().getServer(), registry, Set.of(market.id()), MarketClock.now(level));
 			context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_rerolled",
@@ -283,6 +295,44 @@ public final class TradeExpansionCommand {
 		}
 		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_deleted", id), true);
 		return 1;
+	}
+
+	/** Sets X of one good at the nearest market (testing, clamped like trades, B-2). */
+	private static int marketSetX(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		ServerPlayer player = context.getSource().getPlayerOrException();
+		Market market = nearestMarket(player);
+		Identifier goodsId = IdentifierArgument.getId(context, "goods");
+		GoodState state = market == null ? null : market.good(goodsId);
+		GoodParams p = market == null ? null : market.params(goodsId);
+		if (state == null || p == null) {
+			context.getSource().sendFailure(Component.translatable("command.trade_expansion.not_traded", goodsId));
+			return 0;
+		}
+		long now = MarketUpkeep.touch(player.level(), market);
+		state.setPressure(p.clampPressure(DoubleArgumentType.getDouble(context, "x")));
+		MarketRegistry registry = MarketRegistry.get(player.level().getServer());
+		registry.setDirty();
+		TradeService.broadcast(player.level().getServer(), registry, Set.of(market.id()), now);
+		context.getSource().sendSuccess(() -> Component.literal(String.format("%s X=%.2f #%d", goodsId, state.pressure(), market.id())), true);
+		return 1;
+	}
+
+	/** Craft loops that profit inside the nearest market (B-6, 5-2). */
+	private static int audit(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		ServerPlayer player = context.getSource().getPlayerOrException();
+		Market market = nearestMarket(player);
+		if (market == null) {
+			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			return 0;
+		}
+		MarketUpkeep.touch(player.level(), market);
+		List<AuditCommand.Finding> findings = AuditCommand.audit(player.level(), market);
+		CommandSourceStack source = context.getSource();
+		source.sendSuccess(() -> Component.translatable("command.trade_expansion.audit", market.id(), findings.size()), false);
+		findings.stream().limit(15).forEach(f -> source.sendSuccess(() -> Component.literal(String.format(" %s: %s buy %s -> sell %s (+%s)%s",
+				f.recipe(), f.result(), CoinItem.formatCopper(f.cost()), CoinItem.formatCopper(f.sell()), CoinItem.formatCopper(f.profit()),
+				market.shortages().keySet().stream().anyMatch(id -> f.result().endsWith(" " + id)) ? " [shortage]" : "")), false));
+		return findings.size();
 	}
 
 	/** Price progression of n units at the nearest market without trading (5-2). */

@@ -2,6 +2,7 @@ package com.akf.tradeexpansion.config;
 
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.currency.CoinType;
+import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.network.ConfigSyncS2C;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -21,6 +22,8 @@ public final class ServerConfig {
 
 	public static void init() {
 		ServerLifecycleEvents.SERVER_STARTED.register(ServerConfig::applyRatioLock);
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> GoodsCatalog.setRegistries(server.registryAccess()));
+		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> GoodsCatalog.setRegistries(server.registryAccess()));
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> sender.sendPacket(ConfigSyncS2C.fromServer()));
 	}
 

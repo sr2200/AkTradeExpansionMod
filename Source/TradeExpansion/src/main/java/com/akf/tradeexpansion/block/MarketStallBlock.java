@@ -7,6 +7,7 @@ import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketOrigin;
 import com.akf.tradeexpansion.market.MarketRegistry;
+import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -28,11 +30,25 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.Map;
 
 /**
  * Market stall (design A-3). Right-click opens the trade screen.
  */
 public class MarketStallBlock extends HorizontalDirectionalBlock implements EntityBlock {
+	/** Outline of the stall model (counter, posts, awning), defined facing north and rotated per facing. */
+	private static final Map<Direction, VoxelShape> SHAPES = Shapes.rotateHorizontal(Shapes.or(
+			Block.box(0, 0, 0, 16, 10, 10),
+			Block.box(0, 10, 0.5, 1.5, 14, 2),
+			Block.box(14.5, 10, 0.5, 16, 14, 2),
+			Block.box(0, 0, 14, 1.5, 14, 15.5),
+			Block.box(14.5, 0, 14, 16, 14, 15.5),
+			Block.box(0, 12, 0, 16, 15.5, 16)));
+
 	public MarketStallBlock(Properties properties) {
 		super(properties);
 		registerDefaultState(defaultBlockState().setValue(FACING, Direction.NORTH));
@@ -46,6 +62,11 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
 		return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPES.get(state.getValue(FACING));
 	}
 
 	@Override
@@ -98,8 +119,7 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 			registry.setDirty();
 
 			serverPlayer.openMenu(stall);
-			long now = MarketClock.now(serverLevel);
-			market.refresh(now);
+			long now = MarketUpkeep.touch(serverLevel, market);
 			ServerPlayNetworking.send(serverPlayer, MarketSnapshotS2C.of(market, now));
 			BankService.sendAccount(serverPlayer);
 		}

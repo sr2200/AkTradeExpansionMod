@@ -41,7 +41,7 @@ public final class MarketFactory {
 	}
 
 	/** Seed of every random choice of a market: same place, same goods (D-1). */
-	private static long seed(ServerLevel level, BlockPos center) {
+	public static long seed(ServerLevel level, BlockPos center) {
 		return level.getSeed() ^ center.asLong() * 0x9E3779B97F4A7C15L;
 	}
 
@@ -57,6 +57,11 @@ public final class MarketFactory {
 	public static void reroll(ServerLevel level, Market market, List<Market> neighbors) {
 		int previous = market.level();
 		market.goods().clear();
+		// Shortages and requests depend on the goods, so they are chosen again too (K).
+		market.shortages().clear();
+		market.setShortagePeriod(Long.MIN_VALUE);
+		market.requests().clear();
+		market.setLastRequestRefresh(Long.MIN_VALUE);
 		populate(level, market, neighbors, previous);
 	}
 

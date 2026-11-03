@@ -34,6 +34,11 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 		super(ModBlockEntities.MARKET_STALL, pos, state);
 	}
 
+	/** Natural (village) or crafted stall (A-3); natural ones may be protected from breaking. */
+	public MarketOrigin origin() {
+		return origin;
+	}
+
 	public long marketId() {
 		return marketId;
 	}

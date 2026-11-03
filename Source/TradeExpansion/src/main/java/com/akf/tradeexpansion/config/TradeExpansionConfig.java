@@ -3,6 +3,7 @@ package com.akf.tradeexpansion.config;
 import com.akf.tradeexpansion.TradeExpansion;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.StringRepresentable;
 
@@ -30,6 +31,12 @@ public final class TradeExpansionConfig {
 	public Command command;
 	public Vanilla vanilla;
 	public Client client;
+	// Sections added after the 16-field limit of RecordCodecBuilder: decoded by EXTRA_CODEC and merged in.
+	public Board board = new Board();
+	public Quest quest = new Quest();
+	public Demand demand = new Demand();
+	public Trader trader = new Trader();
+	public Villager villager = new Villager();
 
 	public TradeExpansionConfig(Currency currency, Price price, Recovery recovery, Distance distance, Market market, Wallet wallet,
 			Bank bank, Trade trade, Worldgen worldgen, Log log, Command command, Vanilla vanilla, Client client) {
@@ -59,7 +66,7 @@ public final class TradeExpansionConfig {
 		return codec.fieldOf(name).orElse(defaults);
 	}
 
-	public static final Codec<TradeExpansionConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
+	private static final MapCodec<TradeExpansionConfig> MAIN_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 			section("currency", Currency.CODEC, new Currency()).forGetter(c -> c.currency),
 			section("price", Price.CODEC, new Price()).forGetter(c -> c.price),
 			section("recovery", Recovery.CODEC, new Recovery()).forGetter(c -> c.recovery),
@@ -74,6 +81,28 @@ public final class TradeExpansionConfig {
 			section("vanilla", Vanilla.CODEC, new Vanilla()).forGetter(c -> c.vanilla),
 			section("client", Client.CODEC, new Client()).forGetter(c -> c.client)
 	).apply(i, TradeExpansionConfig::new));
+
+	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
+	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager) {
+		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
+				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
+				section("demand", Demand.CODEC, new Demand()).forGetter(Extra::demand),
+				section("trader", Trader.CODEC, new Trader()).forGetter(Extra::trader),
+				section("villager", Villager.CODEC, new Villager()).forGetter(Extra::villager)
+		).apply(i, Extra::new));
+	}
+
+	public static final Codec<TradeExpansionConfig> CODEC = Codec.mapPair(MAIN_CODEC, Extra.CODEC).xmap(pair -> {
+		TradeExpansionConfig c = pair.getFirst();
+		Extra e = pair.getSecond();
+		c.board = e.board();
+		c.quest = e.quest();
+		c.demand = e.demand();
+		c.trader = e.trader();
+		c.villager = e.villager();
+		return c;
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -447,6 +476,119 @@ public final class TradeExpansionConfig {
 		static final Codec<Client> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.BOOL.fieldOf("showDebugTooltip").orElse(false).forGetter(c -> c.showDebugTooltip)
 		).apply(i, Client::new));
+	}
+
+	/** I: bulletin board. */
+	public static final class Board {
+		public int radius = 512;
+		public int maxMarkets = 20;
+
+		public Board() {
+		}
+
+		Board(int radius, int maxMarkets) {
+			this.radius = radius;
+			this.maxMarkets = maxMarkets;
+		}
+
+		static final Codec<Board> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.INT.fieldOf("radius").orElse(512).forGetter(c -> c.radius),
+				Codec.INT.fieldOf("maxMarkets").orElse(20).forGetter(c -> c.maxMarkets)
+		).apply(i, Board::new));
+	}
+
+	/** J: delivery requests. */
+	public static final class Quest {
+		public int maxPerMarket = 3;
+		public double refreshDays = 1.0;
+		public double durationDays = 3.0;
+		public List<Double> rewardMultipliers = new ArrayList<>(List.of(1.2, 1.5, 2.0));
+		public List<Integer> difficultyThresholds = new ArrayList<>(List.of(200, 1000));
+
+		public Quest() {
+		}
+
+		Quest(int maxPerMarket, double refreshDays, double durationDays, List<Double> rewardMultipliers, List<Integer> difficultyThresholds) {
+			this.maxPerMarket = maxPerMarket;
+			this.refreshDays = refreshDays;
+			this.durationDays = durationDays;
+			this.rewardMultipliers = new ArrayList<>(rewardMultipliers);
+			this.difficultyThresholds = new ArrayList<>(difficultyThresholds);
+		}
+
+		static final Codec<Quest> CODEC = RecordCodecBuilder.create(i -> {
+			Quest d = new Quest();
+			return i.group(
+					Codec.INT.fieldOf("maxPerMarket").orElse(d.maxPerMarket).forGetter(c -> c.maxPerMarket),
+					Codec.DOUBLE.fieldOf("refreshDays").orElse(d.refreshDays).forGetter(c -> c.refreshDays),
+					Codec.DOUBLE.fieldOf("durationDays").orElse(d.durationDays).forGetter(c -> c.durationDays),
+					Codec.DOUBLE.listOf().fieldOf("rewardMultipliers").orElse(d.rewardMultipliers).forGetter(c -> c.rewardMultipliers),
+					Codec.INT.listOf().fieldOf("difficultyThresholds").orElse(d.difficultyThresholds).forGetter(c -> c.difficultyThresholds)
+			).apply(i, Quest::new);
+		});
+	}
+
+	/** K: shortages. */
+	public static final class Demand {
+		public int maxShortages = 2;
+		public double durationDays = 3.0;
+		public double minMultiplier = 1.5;
+		public double maxMultiplier = 2.0;
+
+		public Demand() {
+		}
+
+		Demand(int maxShortages, double durationDays, double minMultiplier, double maxMultiplier) {
+			this.maxShortages = maxShortages;
+			this.durationDays = durationDays;
+			this.minMultiplier = minMultiplier;
+			this.maxMultiplier = maxMultiplier;
+		}
+
+		static final Codec<Demand> CODEC = RecordCodecBuilder.create(i -> {
+			Demand d = new Demand();
+			return i.group(
+					Codec.INT.fieldOf("maxShortages").orElse(d.maxShortages).forGetter(c -> c.maxShortages),
+					Codec.DOUBLE.fieldOf("durationDays").orElse(d.durationDays).forGetter(c -> c.durationDays),
+					Codec.DOUBLE.fieldOf("minMultiplier").orElse(d.minMultiplier).forGetter(c -> c.minMultiplier),
+					Codec.DOUBLE.fieldOf("maxMultiplier").orElse(d.maxMultiplier).forGetter(c -> c.maxMultiplier)
+			).apply(i, Demand::new);
+		});
+	}
+
+	/** A-5 (stage 10). */
+	public static final class Trader {
+		public boolean spawnOnOpen = true;
+
+		public Trader() {
+		}
+
+		Trader(boolean spawnOnOpen) {
+			this.spawnOnOpen = spawnOnOpen;
+		}
+
+		static final Codec<Trader> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.BOOL.fieldOf("spawnOnOpen").orElse(true).forGetter(c -> c.spawnOnOpen)
+		).apply(i, Trader::new));
+	}
+
+	/** H (stage 14). */
+	public static final class Villager {
+		public boolean coinTrades = true;
+		public int emeraldPrice = 30;
+
+		public Villager() {
+		}
+
+		Villager(boolean coinTrades, int emeraldPrice) {
+			this.coinTrades = coinTrades;
+			this.emeraldPrice = emeraldPrice;
+		}
+
+		static final Codec<Villager> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.BOOL.fieldOf("coinTrades").orElse(true).forGetter(c -> c.coinTrades),
+				Codec.INT.fieldOf("emeraldPrice").orElse(30).forGetter(c -> c.emeraldPrice)
+		).apply(i, Villager::new));
 	}
 
 	/** Logs under the mod prefix; used by {@link ConfigValidator}. */

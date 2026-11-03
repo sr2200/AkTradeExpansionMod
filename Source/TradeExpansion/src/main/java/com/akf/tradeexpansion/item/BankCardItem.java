@@ -5,8 +5,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 
 import java.util.function.Consumer;
 
@@ -19,8 +17,8 @@ public class BankCardItem extends Item {
 		super(properties);
 	}
 
-	@Override
-	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
+	/** Tooltip lines, added on the client through Fabric's ItemTooltipCallback (replaces the deprecated appendHoverText, E-1). */
+	public void addTooltip(ItemStack stack, Consumer<Component> tooltip) {
 		ModDataComponents.CardOwner owner = stack.get(ModDataComponents.CARD_OWNER);
 		if (owner == null) {
 			tooltip.accept(Component.translatable("tooltip.trade_expansion.card_blank").withStyle(ChatFormatting.RED));

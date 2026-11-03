@@ -2,8 +2,11 @@ package com.akf.tradeexpansion.client;
 
 import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.network.AccountS2C;
+import com.akf.tradeexpansion.network.BoardS2C;
 import com.akf.tradeexpansion.network.ConfigSyncS2C;
+import com.akf.tradeexpansion.network.ExchangeResultS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
+import com.akf.tradeexpansion.network.QuestResultS2C;
 import com.akf.tradeexpansion.network.TradeResultS2C;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -28,6 +31,21 @@ public final class ClientNetworkHandlers {
 		ClientPlayNetworking.registerGlobalReceiver(AccountS2C.TYPE, (payload, context) -> {
 			if (context.client().gui.screen() instanceof MarketScreen screen) {
 				screen.onAccount(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(BoardS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof MarketScreen screen) {
+				screen.onBoard(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(QuestResultS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof MarketScreen screen) {
+				screen.onQuestResult(payload);
+			}
+		});
+		ClientPlayNetworking.registerGlobalReceiver(ExchangeResultS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof MarketScreen screen) {
+				screen.onExchangeResult(payload);
 			}
 		});
 		// Server settings needed for previews (design G); local settings come back on disconnect.

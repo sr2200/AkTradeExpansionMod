@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.DistanceModel;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.GoodState;
+import com.akf.tradeexpansion.data.GoodsCatalog;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ public final class Propagation {
 			if (w <= 0) continue;
 
 			other.refresh(gameTime);
-			state.setPressure(params.clampPressure(state.pressure() + deltaX * w));
+			// C-2: × the good's link factor (D-2 `link`, default 1).
+			state.setPressure(params.clampPressure(state.pressure() + deltaX * w * GoodsCatalog.get(goodsId).link()));
 			affected.add(other);
 		}
 		return affected;

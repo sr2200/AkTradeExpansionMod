@@ -5,6 +5,7 @@ import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.data.condition.MarketCondition;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
@@ -21,6 +22,8 @@ import java.util.Optional;
  * @param acceptDamaged reduced-price buying of damaged items (stored; the trade logic comes later, A-4)
  * @param unit          items per trading unit (B-5, v0.6)
  * @param autoAdd       markets matching these conditions deal in this good outside the profile (D-1 step 0)
+ * @param link          propagation factor of X to other markets (C-2, default 1)
+ * @param components    item components a stack must have exactly (D-2); raw JSON, resolved with the server registries
  */
 public record GoodsDefinition(
 		Identifier item,
@@ -34,7 +37,9 @@ public record GoodsDefinition(
 		boolean sell,
 		Optional<Boolean> acceptDamaged,
 		int unit,
-		Optional<List<MarketCondition>> autoAdd
+		Optional<List<MarketCondition>> autoAdd,
+		double link,
+		Optional<Dynamic<?>> components
 ) {
 	public static final Codec<GoodsDefinition> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Identifier.CODEC.fieldOf("item").forGetter(GoodsDefinition::item),
@@ -48,8 +53,15 @@ public record GoodsDefinition(
 			Codec.BOOL.optionalFieldOf("sell", true).forGetter(GoodsDefinition::sell),
 			Codec.BOOL.optionalFieldOf("accept_damaged").forGetter(GoodsDefinition::acceptDamaged),
 			Codec.intRange(1, 64).optionalFieldOf("unit", 1).forGetter(GoodsDefinition::unit),
-			MarketCondition.CODEC.listOf().optionalFieldOf("auto_add").forGetter(GoodsDefinition::autoAdd)
+			MarketCondition.CODEC.listOf().optionalFieldOf("auto_add").forGetter(GoodsDefinition::autoAdd),
+			Codec.doubleRange(0, 10).optionalFieldOf("link", 1.0).forGetter(GoodsDefinition::link),
+			Codec.PASSTHROUGH.optionalFieldOf("components").forGetter(GoodsDefinition::components)
 	).apply(i, GoodsDefinition::new));
+
+	/** A-4: reduced-price buying of damaged items, falling back to {@code trade.acceptDamaged}. */
+	public boolean acceptsDamaged() {
+		return acceptDamaged.orElse(TradeExpansionConfig.get().trade.acceptDamaged);
+	}
 
 	/**
 	 * Resolves the effective params for a market (D-1):

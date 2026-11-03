@@ -62,6 +62,24 @@ public final class ConfigValidator {
 		t.maxPerTransaction = clamp("trade.maxPerTransaction", t.maxPerTransaction, 1, 2304);
 
 		c.command.permissionLevel = clamp("command.permissionLevel", c.command.permissionLevel, 0, 4);
+
+		c.board.radius = clamp("board.radius", c.board.radius, 64, 4096);
+		c.board.maxMarkets = clamp("board.maxMarkets", c.board.maxMarkets, 1, 100);
+
+		TradeExpansionConfig.Quest q = c.quest;
+		q.maxPerMarket = clamp("quest.maxPerMarket", q.maxPerMarket, 0, 10);
+		q.refreshDays = clamp("quest.refreshDays", q.refreshDays, 0.1, 30);
+		q.durationDays = clamp("quest.durationDays", q.durationDays, 0.5, 30);
+		q.rewardMultipliers = doubleList("quest.rewardMultipliers", q.rewardMultipliers, 3, 0.1, 10, List.of(1.2, 1.5, 2.0));
+		q.difficultyThresholds = intList("quest.difficultyThresholds", q.difficultyThresholds, 2, 0, 1_000_000_000, true, List.of(200, 1000));
+
+		TradeExpansionConfig.Demand dm = c.demand;
+		dm.maxShortages = clamp("demand.maxShortages", dm.maxShortages, 0, 10);
+		dm.durationDays = clamp("demand.durationDays", dm.durationDays, 0.5, 30);
+		dm.minMultiplier = clamp("demand.minMultiplier", dm.minMultiplier, 1, 5);
+		dm.maxMultiplier = clamp("demand.maxMultiplier", dm.maxMultiplier, dm.minMultiplier, 5);
+
+		c.villager.emeraldPrice = clamp("villager.emeraldPrice", c.villager.emeraldPrice, 1, 10000);
 		return c;
 	}
 
@@ -85,6 +103,17 @@ public final class ConfigValidator {
 
 	private static int clamp(String key, int value, int min, int max) {
 		return (int) clamp(key, (long) value, min, max);
+	}
+
+	/** Fixed-size double list, each element clamped; wrong size → defaults. */
+	private static List<Double> doubleList(String key, List<Double> values, int size, double min, double max, List<Double> defaults) {
+		if (values == null || values.size() != size) {
+			TradeExpansionConfig.warn("{} needs {} values, using {}", key, size, defaults);
+			return new ArrayList<>(defaults);
+		}
+		List<Double> fixed = new ArrayList<>(size);
+		for (int i = 0; i < size; i++) fixed.add(clamp(key + "[" + i + "]", values.get(i), min, max));
+		return fixed;
 	}
 
 	/** Fixed-size int list; each element clamped; optionally forced ascending. Wrong size → defaults. */

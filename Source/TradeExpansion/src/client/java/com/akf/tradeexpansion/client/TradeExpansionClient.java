@@ -13,6 +13,7 @@ public class TradeExpansionClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		MenuScreens.register(ModMenus.MARKET, MarketScreen::new);
 		ClientNetworkHandlers.init();
+		ItemTooltips.init();
 
 		// Using a wallet opens its screen on the client (E-6); the server side of the use does nothing.
 		UseItemCallback.EVENT.register((player, level, hand) -> {

@@ -14,6 +14,7 @@ import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketRegistry;
+import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.market.Propagation;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
@@ -24,6 +25,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
@@ -49,19 +51,23 @@ public final class TradeService {
 		BankService.sendAccount(player); // bank balance / card validity may have changed (E-7 / E-8)
 		if (result.result() != TradeResult.SUCCESS && market != null) {
 			// Show the latest prices / stock after a refused trade.
-			market.refresh(now);
+			now = MarketUpkeep.touch(player.level(), market);
 			ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, now));
 		}
 	}
+
+	/** Largest quantity of a Shift trade: a full main inventory of single items (B-5). */
+	public static final int MAX_ALL = 2304;
 
 	private static TradeResultS2C process(ServerPlayer player, MarketRegistry registry, Market market, TradeRequestC2S request, long now) {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		boolean buy = request.buy();
 		int qty = request.quantity();
 
-		// 1. Validation
+		// 1. Validation. Shift ("all") may exceed trade.maxPerTransaction up to a full inventory (A-4, Q13).
+		int limit = request.all() && config.trade.allowShiftAll ? MAX_ALL : config.trade.maxPerTransaction;
 		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()
-				|| qty <= 0 || qty > config.trade.maxPerTransaction) {
+				|| qty <= 0 || qty > limit) {
 			return fail(TradeResult.INVALID_REQUEST, request);
 		}
 		if (!menu.stillValid(player)) return fail(TradeResult.TOO_FAR, request);
@@ -77,11 +83,13 @@ public final class TradeService {
 			return fail(TradeResult.NOT_AVAILABLE, request);
 		}
 
-		// 2. Lazy recovery
-		market.refresh(now);
+		// 2. Lazy recovery, shortages (K) and requests (J)
+		MarketUpkeep.touch(player.level(), market);
 		GoodParams params = market.params(goodsId);
 		int unit = def.unit();
 		int itemCount = qty * unit; // qty counts trading units (B-5)
+		InventoryUtil.Match match = GoodsCatalog.match(goodsId); // components (D-2) and reduced-price damaged items (A-4)
+		Container sellSlot = menu.sellSlot(); // sold before the inventory (A-4 操作2)
 
 		// 3. Price + checks (all-or-nothing, B-5)
 		long total;
@@ -90,7 +98,8 @@ public final class TradeService {
 			total = PriceModel.sumBuy(params, state.pressure(), qty);
 		} else {
 			if (qty > PriceModel.sellCapacity(params, state)) return fail(TradeResult.STOCK_FULL, request);
-			total = PriceModel.sumSell(params, state.pressure(), qty);
+			double[] ratios = unit == 1 ? InventoryUtil.sellRatios(player, match, sellSlot, qty) : null;
+			total = ratios != null ? PriceModel.sumSell(params, state.pressure(), ratios) : PriceModel.sumSell(params, state.pressure(), qty);
 		}
 
 		// 4. Compare with the previewed amount (A-4)
@@ -105,20 +114,20 @@ public final class TradeService {
 			boolean affordable = card ? bank.balance(player.getUUID()) >= charge : WalletService.canPay(player, total);
 			if (!affordable) return fail(TradeResult.INSUFFICIENT_FUNDS, request);
 			// Coin slots count as free only when the coins are collected (cash payment, E-3).
-			if (InventoryUtil.freeSpaceFor(player, item, !card) < itemCount) return fail(TradeResult.INVENTORY_FULL, request);
+			if (InventoryUtil.freeSpaceFor(player, match, !card) < itemCount) return fail(TradeResult.INVENTORY_FULL, request);
 
 			if (card) {
 				bank.add(player.getUUID(), -charge);
-				InventoryUtil.give(player, item, itemCount);
+				InventoryUtil.give(player, match, itemCount);
 			} else {
 				long change = WalletService.take(player, total);
-				InventoryUtil.give(player, item, itemCount);
+				InventoryUtil.give(player, match, itemCount);
 				WalletService.give(player, change); // into the wallet; coins that do not fit are dropped (E-3)
 			}
 			PriceModel.applyBuy(params, state, qty);
 		} else {
-			if (InventoryUtil.countPlain(player, item) < itemCount) return fail(TradeResult.INSUFFICIENT_ITEMS, request);
-			InventoryUtil.removePlain(player, item, itemCount);
+			if (InventoryUtil.count(player, match, sellSlot) < itemCount) return fail(TradeResult.INSUFFICIENT_ITEMS, request);
+			InventoryUtil.remove(player, match, sellSlot, itemCount);
 			if (card) {
 				bank.add(player.getUUID(), total); // proceeds go to the account when paying by card (E-8)
 			} else {

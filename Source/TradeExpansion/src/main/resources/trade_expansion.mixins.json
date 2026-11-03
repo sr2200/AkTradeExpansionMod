@@ -3,7 +3,8 @@
   "package": "com.akf.tradeexpansion.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
-    "ItemEntityMixin"
+    "ItemEntityMixin",
+    "StructureTemplatePoolAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

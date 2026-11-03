@@ -19,7 +19,8 @@ public final class ModBlocks {
 					.setId(blockKey("market_stall"))
 					.mapColor(MapColor.WOOD)
 					.strength(2.5f)
-					.sound(SoundType.WOOD)));
+					.sound(SoundType.WOOD)
+					.noOcclusion()));
 
 	private ModBlocks() {
 	}

@@ -1,0 +1,11 @@
+{
+  "fabric:load_conditions": [
+    { "condition": "trade_expansion:minting_enabled" }
+  ],
+  "type": "trade_expansion:minting",
+  "category": "misc",
+  "pattern": ["###", "###", "###"],
+  "key": { "#": "minecraft:iron_block" },
+  "result": { "id": "trade_expansion:iron_coin" },
+  "value": 640
+}

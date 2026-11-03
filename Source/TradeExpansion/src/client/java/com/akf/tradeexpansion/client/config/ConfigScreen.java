@@ -125,6 +125,32 @@ public final class ConfigScreen {
 				.option(bool("worldgen.spawnTraderNpc", d.worldgen.spawnTraderNpc, () -> edit.worldgen.spawnTraderNpc, v -> edit.worldgen.spawnTraderNpc = v))
 				.option(bool("vanilla.disableVillagerTrades", d.vanilla.disableVillagerTrades, () -> edit.vanilla.disableVillagerTrades, v -> edit.vanilla.disableVillagerTrades = v));
 
+		TradeExpansionConfig.Quest quest = edit.quest;
+		TradeExpansionConfig.Demand demand = edit.demand;
+		ConfigCategory.Builder village = category("village")
+				.option(intField("board.radius", d.board.radius, () -> edit.board.radius, v -> edit.board.radius = v, 64, 4096))
+				.option(intField("board.maxMarkets", d.board.maxMarkets, () -> edit.board.maxMarkets, v -> edit.board.maxMarkets = v, 1, 100))
+				.option(intField("quest.maxPerMarket", d.quest.maxPerMarket, () -> quest.maxPerMarket, v -> quest.maxPerMarket = v, 0, 10))
+				.option(doubleField("quest.refreshDays", d.quest.refreshDays, () -> quest.refreshDays, v -> quest.refreshDays = v, 0.1, 30))
+				.option(doubleField("quest.durationDays", d.quest.durationDays, () -> quest.durationDays, v -> quest.durationDays = v, 0.5, 30));
+		for (int i = 0; i < 3; i++) {
+			int index = i;
+			village.option(doubleField("quest.rewardMultipliers." + i, d.quest.rewardMultipliers.get(i),
+					() -> quest.rewardMultipliers.get(index), v -> quest.rewardMultipliers.set(index, v), 0.1, 10));
+		}
+		for (int i = 0; i < 2; i++) {
+			int index = i;
+			village.option(intField("quest.difficultyThresholds." + i, d.quest.difficultyThresholds.get(i),
+					() -> quest.difficultyThresholds.get(index), v -> quest.difficultyThresholds.set(index, v), 0, 1_000_000_000));
+		}
+		village.option(intField("demand.maxShortages", d.demand.maxShortages, () -> demand.maxShortages, v -> demand.maxShortages = v, 0, 10))
+				.option(doubleField("demand.durationDays", d.demand.durationDays, () -> demand.durationDays, v -> demand.durationDays = v, 0.5, 30))
+				.option(doubleField("demand.minMultiplier", d.demand.minMultiplier, () -> demand.minMultiplier, v -> demand.minMultiplier = v, 1, 5))
+				.option(doubleField("demand.maxMultiplier", d.demand.maxMultiplier, () -> demand.maxMultiplier, v -> demand.maxMultiplier = v, 1, 5))
+				.option(bool("trader.spawnOnOpen", d.trader.spawnOnOpen, () -> edit.trader.spawnOnOpen, v -> edit.trader.spawnOnOpen = v))
+				.option(bool("villager.coinTrades", d.villager.coinTrades, () -> edit.villager.coinTrades, v -> edit.villager.coinTrades = v))
+				.option(intField("villager.emeraldPrice", d.villager.emeraldPrice, () -> edit.villager.emeraldPrice, v -> edit.villager.emeraldPrice = v, 1, 10000));
+
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")
 				.option(Option.<Boolean>createBuilder()
@@ -137,7 +163,7 @@ public final class ConfigScreen {
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.translatable(KEY + "title"))
 				.categories(List.of(currency.build(), priceCat.build(), recovery.build(), distance.build(), marketCat.build(),
-						wallet.build(), bank.build(), tradeCat.build(), other.build(), client.build()))
+						wallet.build(), bank.build(), tradeCat.build(), village.build(), other.build(), client.build()))
 				.save(this::save)
 				.build();
 	}
