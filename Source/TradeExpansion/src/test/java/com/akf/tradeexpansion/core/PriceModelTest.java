@@ -89,6 +89,22 @@ class PriceModelTest {
 		assertEquals(20, excess.stock(), 1e-12);
 	}
 
+	/** B-3: consumables drain T per day above the target and use their own half-life. */
+	@Test
+	void consumablesRecoverQuickly() {
+		GoodParams food = new GoodParams(20, 32, 0.4, 16, 32, 8, 0.25, 3.0, 16, 1.0);
+		GoodState full = new GoodState(1, 10, 32, 0);
+		PriceModel.recover(food, full, 0.5, 1.0);
+		assertEquals(24, full.stock(), 1e-12); // 16/day for half a day
+		assertEquals(10 * Math.pow(2, -0.5), full.pressure(), 1e-12); // half-life 1 day
+		PriceModel.recover(food, full, 1, 1.0);
+		assertEquals(16, full.stock(), 1e-12); // stops at T
+
+		// The short constructor keeps the old behaviour: drain r / 2, half-life 2 days.
+		assertEquals(4, BREAD.consumePerDay(), 1e-12);
+		assertEquals(2.0, BREAD.halfLifeDays(), 1e-12);
+	}
+
 	@Test
 	void breadBuyout() {
 		assertEquals(24, PriceModel.buyPrice(BREAD, 0));

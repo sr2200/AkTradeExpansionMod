@@ -96,8 +96,13 @@ public final class PriceModel {
 	 *
 	 * @param elapsedDays  in-game days since the last update; negative values (DAY_TIME clock going back) count as 0
 	 * @param halfLifeDays H
-	 * @param restockMultiplier global multiplier of r
+	 * @param restockMultiplier global multiplier of r and c
 	 */
+	public static void recover(GoodParams p, GoodState s, double elapsedDays, double restockMultiplier) {
+		recover(p, s, elapsedDays, p.halfLifeDays(), restockMultiplier);
+	}
+
+	/** As {@link #recover(GoodParams, GoodState, double, double)} with an explicit half-life. */
 	public static void recover(GoodParams p, GoodState s, double elapsedDays, double halfLifeDays, double restockMultiplier) {
 		double dt = Math.max(0.0, elapsedDays);
 		if (dt == 0.0) return;
@@ -105,13 +110,12 @@ public final class PriceModel {
 		s.setPressure(s.pressure() * Math.pow(2.0, -dt / halfLifeDays));
 
 		double target = p.targetStock();
-		double restock = p.restockPerDay() * restockMultiplier * dt;
 		double stock = s.stock();
 		if (stock < target) {
-			s.setStock(Math.min(target, stock + restock));
+			s.setStock(Math.min(target, stock + p.restockPerDay() * restockMultiplier * dt));
 		} else {
-			// Excess stock drains at half speed.
-			s.setStock(Math.max(target, stock - restock * 0.5));
+			// Excess stock is consumed by the market (r / 2 by default, faster for consumables).
+			s.setStock(Math.max(target, stock - p.consumePerDay() * restockMultiplier * dt));
 		}
 	}
 

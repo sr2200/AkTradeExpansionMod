@@ -266,7 +266,7 @@ public final class Market {
 		if (days > 0) {
 			goods.forEach((goodsId, state) -> {
 				GoodParams p = params(goodsId);
-				if (p != null) PriceModel.recover(p, state, days, config.recovery.halfLifeDays, config.recovery.restockMultiplier);
+				if (p != null) PriceModel.recover(p, state, days, config.recovery.restockMultiplier);
 			});
 		}
 		lastUpdateGameTime = gameTime;
@@ -279,7 +279,7 @@ public final class Market {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		goods.forEach((goodsId, state) -> {
 			GoodParams p = params(goodsId);
-			if (p != null) PriceModel.recover(p, state, days, config.recovery.halfLifeDays, config.recovery.restockMultiplier);
+			if (p != null) PriceModel.recover(p, state, days, config.recovery.restockMultiplier);
 		});
 	}
 

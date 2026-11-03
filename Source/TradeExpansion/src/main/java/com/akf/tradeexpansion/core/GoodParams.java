@@ -8,9 +8,11 @@ package com.akf.tradeexpansion.core;
  * @param spread        s: buy/sell spread ratio
  * @param targetStock   T: stock level the market returns to
  * @param maxStock      Scap: stock above which the market stops buying
- * @param restockPerDay r: stock recovery speed (items per in-game day)
+ * @param restockPerDay r: stock recovery speed below T (items per in-game day)
  * @param minMultiplier Vmin
  * @param maxMultiplier Vmax
+ * @param consumePerDay c: speed at which stock above T drains (items per in-game day; consumables drain fast, B-3)
+ * @param halfLifeDays  H: half-life of the pressure X in in-game days (B-3)
  */
 public record GoodParams(
 		double basePrice,
@@ -20,13 +22,22 @@ public record GoodParams(
 		double maxStock,
 		double restockPerDay,
 		double minMultiplier,
-		double maxMultiplier
+		double maxMultiplier,
+		double consumePerDay,
+		double halfLifeDays
 ) {
+	/** Default drain (r / 2) and half-life (2 days) of non-consumables. */
+	public GoodParams(double basePrice, double elasticity, double spread, double targetStock, double maxStock,
+			double restockPerDay, double minMultiplier, double maxMultiplier) {
+		this(basePrice, elasticity, spread, targetStock, maxStock, restockPerDay, minMultiplier, maxMultiplier, restockPerDay / 2, 2.0);
+	}
+
 	public GoodParams {
 		if (basePrice <= 0) throw new IllegalArgumentException("basePrice must be > 0");
 		if (elasticity <= 0) throw new IllegalArgumentException("elasticity must be > 0");
 		if (spread < 0 || spread >= 2) throw new IllegalArgumentException("spread must be in [0, 2)");
 		if (minMultiplier <= 0 || minMultiplier > maxMultiplier) throw new IllegalArgumentException("invalid multiplier bounds");
+		if (halfLifeDays <= 0) throw new IllegalArgumentException("halfLifeDays must be > 0");
 	}
 
 	/** Lowest allowed pressure (value is at Vmax). */
@@ -44,6 +55,6 @@ public record GoodParams(
 	}
 
 	public GoodParams withElasticity(double newElasticity) {
-		return new GoodParams(basePrice, newElasticity, spread, targetStock, maxStock, restockPerDay, minMultiplier, maxMultiplier);
+		return new GoodParams(basePrice, newElasticity, spread, targetStock, maxStock, restockPerDay, minMultiplier, maxMultiplier, consumePerDay, halfLifeDays);
 	}
 }

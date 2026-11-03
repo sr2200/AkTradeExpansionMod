@@ -37,6 +37,18 @@ class ConfigTest {
 		assertEquals(0.4, config.price.defaultSpread);
 	}
 
+	/** B-3: consumable overrides are normalized item ids; malformed and duplicate entries are dropped, lists stay editable. */
+	@Test
+	void consumableListsAreNormalized() throws IOException {
+		Path file = dir.resolve("trade_expansion.json");
+		Files.writeString(file, "{\"consumables\": {\"add\": [\"cobblestone\", \"minecraft:cobblestone\", \"Bad Id\"], \"remove\": [\"minecraft:coal\"]}}");
+		TradeExpansionConfig config = ConfigManager.read(file);
+		assertEquals(List.of("minecraft:cobblestone"), config.consumables.add);
+		assertEquals(List.of("minecraft:coal"), config.consumables.remove);
+		config.consumables.add.add("minecraft:sand");
+		assertEquals(List.of(), ConfigManager.read(dir.resolve("missing.json")).consumables.add);
+	}
+
 	@Test
 	void outOfRangeValuesAreCorrected() throws IOException {
 		Path file = dir.resolve("trade_expansion.json");

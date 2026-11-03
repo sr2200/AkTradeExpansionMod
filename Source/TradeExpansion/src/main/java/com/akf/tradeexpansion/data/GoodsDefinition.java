@@ -7,7 +7,11 @@ import com.akf.tradeexpansion.data.condition.MarketCondition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +28,10 @@ import java.util.Optional;
  * @param autoAdd       markets matching these conditions deal in this good outside the profile (D-1 step 0)
  * @param link          propagation factor of X to other markets (C-2, default 1)
  * @param components    item components a stack must have exactly (D-2); raw JSON, resolved with the server registries
+ * @param consumePerDay drain speed of stock above target; default r / 2, or T × {@code recovery.consumableMultiplier}
+ *                      for items in {@link #CONSUMABLES} (B-3)
+ * @param halfLifeDays  half-life of X; default {@code recovery.halfLifeDays}, or {@code recovery.consumableHalfLifeDays}
+ *                      for consumables (B-3)
  */
 public record GoodsDefinition(
 		Identifier item,
@@ -39,8 +47,13 @@ public record GoodsDefinition(
 		int unit,
 		Optional<List<MarketCondition>> autoAdd,
 		double link,
-		Optional<Dynamic<?>> components
+		Optional<Dynamic<?>> components,
+		Optional<Double> consumePerDay,
+		Optional<Double> halfLifeDays
 ) {
+	/** Consumables the market uses up (food, torches, fuel, logs and planks): stock and buying capacity recover quickly (B-3). */
+	public static final TagKey<Item> CONSUMABLES = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("trade_expansion", "consumables"));
+
 	public static final Codec<GoodsDefinition> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Identifier.CODEC.fieldOf("item").forGetter(GoodsDefinition::item),
 			Codec.doubleRange(0.01, 1e9).fieldOf("base_price").forGetter(GoodsDefinition::basePrice),
@@ -55,12 +68,26 @@ public record GoodsDefinition(
 			Codec.intRange(1, 64).optionalFieldOf("unit", 1).forGetter(GoodsDefinition::unit),
 			MarketCondition.CODEC.listOf().optionalFieldOf("auto_add").forGetter(GoodsDefinition::autoAdd),
 			Codec.doubleRange(0, 10).optionalFieldOf("link", 1.0).forGetter(GoodsDefinition::link),
-			Codec.PASSTHROUGH.optionalFieldOf("components").forGetter(GoodsDefinition::components)
+			Codec.PASSTHROUGH.optionalFieldOf("components").forGetter(GoodsDefinition::components),
+			Codec.doubleRange(0, 1e6).optionalFieldOf("consume_per_day").forGetter(GoodsDefinition::consumePerDay),
+			Codec.doubleRange(0.05, 100).optionalFieldOf("half_life_days").forGetter(GoodsDefinition::halfLifeDays)
 	).apply(i, GoodsDefinition::new));
 
 	/** A-4: reduced-price buying of damaged items, falling back to {@code trade.acceptDamaged}. */
 	public boolean acceptsDamaged() {
 		return acceptDamaged.orElse(TradeExpansionConfig.get().trade.acceptDamaged);
+	}
+
+	/** B-3: whether this good is a consumable (see {@link #isConsumable}). */
+	public boolean consumable(TradeExpansionConfig config) {
+		return isConsumable(item, config);
+	}
+
+	/** B-3: {@link #CONSUMABLES} plus {@code consumables.add}, minus {@code consumables.remove} (the tag is empty until tags load). */
+	public static boolean isConsumable(Identifier item, TradeExpansionConfig config) {
+		String id = item.toString();
+		if (config.consumables.remove.contains(id)) return false;
+		return config.consumables.add.contains(id) || BuiltInRegistries.ITEM.getValue(item).builtInRegistryHolder().is(CONSUMABLES);
 	}
 
 	/**
@@ -69,15 +96,19 @@ public record GoodsDefinition(
 	 */
 	public GoodParams params(double priceFactor, double profileMultiplier, TradeExpansionConfig config) {
 		double t = targetStock;
+		double restock = restockPerDay.orElse(t / 2);
+		boolean consumable = consumable(config);
 		GoodParams params = new GoodParams(
 				basePrice * profileMultiplier * priceFactor * config.price.globalMultiplier,
 				elasticity.orElse(config.price.defaultElasticity),
 				spread.orElse(config.price.defaultSpread),
 				t,
 				maxStock.orElse(t * config.price.defaultMaxStockMultiplier),
-				restockPerDay.orElse(t / 2),
+				restock,
 				config.price.minMultiplier,
-				config.price.maxMultiplier);
+				config.price.maxMultiplier,
+				consumePerDay.orElse(consumable ? t * config.recovery.consumableMultiplier : restock / 2),
+				halfLifeDays.orElse(consumable ? config.recovery.consumableHalfLifeDays : config.recovery.halfLifeDays));
 		return PriceModel.ensureExploitSafe(params);
 	}
 }

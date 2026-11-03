@@ -31,6 +31,8 @@ public final class ConfigValidator {
 		TradeExpansionConfig.Recovery r = c.recovery;
 		r.halfLifeDays = clamp("recovery.halfLifeDays", r.halfLifeDays, 0.05, 100);
 		r.restockMultiplier = clamp("recovery.restockMultiplier", r.restockMultiplier, 0, 100);
+		r.consumableMultiplier = clamp("recovery.consumableMultiplier", r.consumableMultiplier, 0, 10);
+		r.consumableHalfLifeDays = clamp("recovery.consumableHalfLifeDays", r.consumableHalfLifeDays, 0.05, 100);
 
 		TradeExpansionConfig.Distance d = c.distance;
 		d.mergeRadius = clamp("distance.mergeRadius", d.mergeRadius, 8, 512);
@@ -80,6 +82,9 @@ public final class ConfigValidator {
 		dm.maxMultiplier = clamp("demand.maxMultiplier", dm.maxMultiplier, dm.minMultiplier, 5);
 
 		c.villager.emeraldPrice = clamp("villager.emeraldPrice", c.villager.emeraldPrice, 1, 10000);
+
+		c.consumables.add = itemIds("consumables.add", c.consumables.add);
+		c.consumables.remove = itemIds("consumables.remove", c.consumables.remove);
 		return c;
 	}
 
@@ -106,6 +111,17 @@ public final class ConfigValidator {
 	}
 
 	/** Fixed-size double list, each element clamped; wrong size → defaults. */
+	/** Normalizes item ids ("carrot" → "minecraft:carrot"), dropping malformed and duplicate entries. Unknown items are kept (other mods may load later). */
+	private static List<String> itemIds(String key, List<String> values) {
+		java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
+		for (String value : values) {
+			net.minecraft.resources.Identifier id = value == null ? null : net.minecraft.resources.Identifier.tryParse(value.trim());
+			if (id == null) TradeExpansionConfig.warn("{}: '{}' is not an item id, ignored", key, value);
+			else ids.add(id.toString());
+		}
+		return new java.util.ArrayList<>(ids);
+	}
+
 	private static List<Double> doubleList(String key, List<Double> values, int size, double min, double max, List<Double> defaults) {
 		if (values == null || values.size() != size) {
 			TradeExpansionConfig.warn("{} needs {} values, using {}", key, size, defaults);

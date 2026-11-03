@@ -346,7 +346,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (minecraft != null && minecraft.level != null && snapshot != null) {
 			double days = (MarketClock.now(minecraft.level) - snapshot.gameTime()) / (double) PriceModel.TICKS_PER_DAY;
 			TradeExpansionConfig config = TradeExpansionConfig.get();
-			PriceModel.recover(view.params(), state, days, config.recovery.halfLifeDays, config.recovery.restockMultiplier);
+			PriceModel.recover(view.params(), state, days, config.recovery.restockMultiplier);
 		}
 		return state;
 	}
@@ -760,23 +760,67 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
 		g.text(font, title, 8, 6, COLOR_TEXT, false);
 		Player player = player();
-		if (player != null) {
-			// Cash = coins + wallets (E-6); the bank balance is shown once known (E-7).
-			Component balance = account == null
-					? Component.translatable("screen.trade_expansion.balance", CoinItem.formatCopper(WalletService.balance(player)))
-					: Component.translatable("screen.trade_expansion.balance_bank", CoinItem.formatCopper(WalletService.balance(player)),
-					CoinItem.formatCopper(account.bankBalance()));
-			int bx = imageWidth - 8 - font.width(balance);
-			g.text(font, balance, bx, 6, COLOR_TEXT, false);
-			int mx = mouseX - leftPos;
-			int my = mouseY - topPos;
-			if (mx >= bx && mx < imageWidth - 8 && my >= 5 && my < 15) {
-				g.setTooltipForNextFrame(font, balanceBreakdown(player), Optional.empty(), mouseX, mouseY);
-			}
-		}
+		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
 		g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,
 				statusColor == COLOR_GREEN ? 0xFF207020 : statusColor == COLOR_RED ? 0xFFA02020 : COLOR_TEXT, false);
 		g.text(font, Component.translatable("screen.trade_expansion.sell_slot"), MarketMenu.SELL_SLOT_X - 6, MarketMenu.SELL_SLOT_Y - 11, COLOR_TEXT, false);
+	}
+
+	/**
+	 * Cash = coins + wallets (E-6); the bank balance is shown once known (E-7). Position: {@code client.balancePosition}
+	 * (A-4). Hovering shows the breakdown (Q17).
+	 */
+	private void extractBalance(GuiGraphicsExtractor g, Player player, int mx, int my, int mouseX, int mouseY) {
+		long cash = WalletService.balance(player);
+		int x0;
+		int y0;
+		int x1;
+		int y1;
+		TradeExpansionConfig.BalancePosition position = TradeExpansionConfig.get().client.balancePosition;
+		if (position == TradeExpansionConfig.BalancePosition.TOP_RIGHT) {
+			Component balance = account == null
+					? Component.translatable("screen.trade_expansion.balance", CoinItem.formatCopper(cash))
+					: Component.translatable("screen.trade_expansion.balance_bank", CoinItem.formatCopper(cash), CoinItem.formatCopper(account.bankBalance()));
+			x0 = imageWidth - 8 - font.width(balance);
+			x1 = imageWidth - 8;
+			y0 = 5;
+			y1 = 15;
+			g.text(font, balance, x0, 6, COLOR_TEXT, false);
+		} else {
+			// Two-line column: right of the player inventory (A, default) or below the sell slot (B).
+			boolean right = position == TradeExpansionConfig.BalancePosition.INVENTORY_RIGHT;
+			x0 = right ? MarketMenu.INVENTORY_X + 9 * 18 + 4 : 8;
+			x1 = right ? imageWidth - 6 : MarketMenu.INVENTORY_X - 4;
+			y0 = right ? MarketMenu.INVENTORY_Y + 4 : MarketMenu.SELL_SLOT_Y + 22;
+			int width = x1 - x0;
+			int y = y0;
+			g.text(font, Component.translatable("screen.trade_expansion.cash_label"), x0, y, COLOR_DARK, false);
+			g.text(font, fit(cash, width), x0, y + 10, COLOR_TEXT, false);
+			y += 20;
+			if (account != null) {
+				g.text(font, Component.translatable("screen.trade_expansion.bank_label"), x0, y, COLOR_DARK, false);
+				g.text(font, fit(account.bankBalance(), width), x0, y + 10, COLOR_TEXT, false);
+				y += 20;
+			}
+			y1 = y;
+		}
+		if (mx >= x0 && mx < x1 && my >= y0 && my < y1) {
+			g.setTooltipForNextFrame(font, balanceBreakdown(player), Optional.empty(), mouseX, mouseY);
+		}
+	}
+
+	/** The amount as "12,345c", or shortened ("1.2Mc") when it does not fit {@code width}; the tooltip has the exact value. */
+	private String fit(long copper, int width) {
+		String full = CoinItem.formatCopper(copper);
+		if (font.width(full) <= width) return full;
+		String[] suffixes = {"k", "M", "G", "T"};
+		double value = copper;
+		int i = -1;
+		while (Math.abs(value) >= 1000 && i < suffixes.length - 1) {
+			value /= 1000;
+			i++;
+		}
+		return (i < 0 ? String.valueOf(copper) : String.format(Locale.ROOT, value < 100 ? "%.1f%s" : "%.0f%s", value, suffixes[i])) + "c";
 	}
 
 	/** Q17: what the cash is made of. */

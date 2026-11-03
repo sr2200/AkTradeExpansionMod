@@ -70,6 +70,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeDouble(params.restockPerDay());
 			buf.writeDouble(params.minMultiplier());
 			buf.writeDouble(params.maxMultiplier());
+			buf.writeDouble(params.consumePerDay());
+			buf.writeDouble(params.halfLifeDays());
 			buf.writeDouble(pressure);
 			buf.writeDouble(stock);
 			buf.writeBoolean(buy);
@@ -85,7 +87,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			Identifier item = Identifier.STREAM_CODEC.decode(buf);
 			int unit = buf.readVarInt();
 			GoodParams params = new GoodParams(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
-					buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble());
+					buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble());
 			double pressure = buf.readDouble();
 			double stock = buf.readDouble();
 			boolean buy = buf.readBoolean();

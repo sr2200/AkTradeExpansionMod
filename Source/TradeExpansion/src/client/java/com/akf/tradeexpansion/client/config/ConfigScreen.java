@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.config.ServerConfig;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import dev.isxander.yacl3.api.ConfigCategory;
+import dev.isxander.yacl3.api.ListOption;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
@@ -11,6 +12,7 @@ import dev.isxander.yacl3.api.controller.DoubleFieldControllerBuilder;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
 import dev.isxander.yacl3.api.controller.IntegerFieldControllerBuilder;
 import dev.isxander.yacl3.api.controller.LongFieldControllerBuilder;
+import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -18,7 +20,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -77,11 +81,17 @@ public final class ConfigScreen {
 		ConfigCategory.Builder recovery = category("recovery")
 				.option(doubleField("recovery.halfLifeDays", d.recovery.halfLifeDays, () -> rec.halfLifeDays, v -> rec.halfLifeDays = v, 0.05, 100))
 				.option(doubleField("recovery.restockMultiplier", d.recovery.restockMultiplier, () -> rec.restockMultiplier, v -> rec.restockMultiplier = v, 0, 100))
+				.option(doubleField("recovery.consumableMultiplier", d.recovery.consumableMultiplier, () -> rec.consumableMultiplier, v -> rec.consumableMultiplier = v, 0, 10))
+				.option(doubleField("recovery.consumableHalfLifeDays", d.recovery.consumableHalfLifeDays, () -> rec.consumableHalfLifeDays, v -> rec.consumableHalfLifeDays = v, 0.05, 100))
 				.option(server(Option.<TradeExpansionConfig.RecoveryClock>createBuilder()
 						.name(Component.translatable(KEY + "recovery.clock"))
 						.description(description("recovery.clock"))
 						.binding(d.recovery.clock, () -> rec.clock, v -> rec.clock = v)
 						.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.RecoveryClock.class))));
+
+		// B-3: consumables added to / removed from the #trade_expansion:consumables tag (item ids).
+		recovery.group(itemList("consumables.add", () -> edit.consumables.add, v -> edit.consumables.add = new ArrayList<>(v)))
+				.group(itemList("consumables.remove", () -> edit.consumables.remove, v -> edit.consumables.remove = new ArrayList<>(v)));
 
 		ConfigCategory.Builder distance = category("distance")
 				.option(doubleField("distance.mergeRadius", d.distance.mergeRadius, () -> dist.mergeRadius, v -> dist.mergeRadius = v, 8, 512))
@@ -158,6 +168,13 @@ public final class ConfigScreen {
 						.description(OptionDescription.of(Component.translatable(KEY + "client.showDebugTooltip.desc")))
 						.binding(d.client.showDebugTooltip, () -> edit.client.showDebugTooltip, v -> edit.client.showDebugTooltip = v)
 						.controller(TickBoxControllerBuilder::create)
+						.build())
+				.option(Option.<TradeExpansionConfig.BalancePosition>createBuilder()
+						.name(Component.translatable(KEY + "client.balancePosition"))
+						.description(OptionDescription.of(Component.translatable(KEY + "client.balancePosition.desc")))
+						.binding(d.client.balancePosition, () -> edit.client.balancePosition, v -> edit.client.balancePosition = v)
+						.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.BalancePosition.class)
+								.formatValue(v -> Component.translatable(KEY + "client.balancePosition." + v.getSerializedName().toLowerCase(Locale.ROOT))))
 						.build());
 
 		return YetAnotherConfigLib.createBuilder()
@@ -209,6 +226,19 @@ public final class ConfigScreen {
 			int index = i;
 			category.option(intField(prefix + i, defaults.get(i), () -> values.get(index), v -> values.set(index, v), 0, 100000));
 		}
+	}
+
+	/** Editable list of item ids (e.g. minecraft:cobblestone); grayed out while connected to a remote server. */
+	private ListOption<String> itemList(String key, Supplier<List<String>> get, Consumer<List<String>> set) {
+		return ListOption.<String>createBuilder()
+				.name(Component.translatable(KEY + key))
+				.description(description(key))
+				.binding(List.of(), get, set)
+				.controller(StringControllerBuilder::create)
+				.initial("minecraft:")
+				.collapsed(true)
+				.available(!serverLocked)
+				.build();
 	}
 
 	private Option<Boolean> bool(String key, boolean def, Supplier<Boolean> get, Consumer<Boolean> set) {

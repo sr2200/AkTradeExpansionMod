@@ -76,7 +76,8 @@ public final class QuestService {
 		List<Identifier> others = new ArrayList<>();
 		for (Map.Entry<Identifier, GoodsDefinition> e : GoodsCatalog.all().entrySet()) {
 			GoodsDefinition def = e.getValue();
-			if (taken.contains(e.getKey()) || def.unit() != 1 || def.autoAdd().isPresent()) continue; // no tokens
+			// No tokens (unit / auto_add) and only plain items (J: deliveries take items without components).
+			if (taken.contains(e.getKey()) || def.unit() != 1 || def.autoAdd().isPresent() || def.components().isPresent()) continue;
 			boolean soldHere = market.good(e.getKey()) != null && def.buy();
 			(soldHere ? others : preferred).add(e.getKey());
 		}

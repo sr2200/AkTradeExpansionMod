@@ -81,6 +81,7 @@ public final class TradeExpansionCommand {
 								.then(Commands.literal("sell")
 										.then(Commands.argument("count", IntegerArgumentType.integer(1, 2304))
 												.executes(c -> simulate(c, false))))))
+				.then(ConsumableCommand.build(admin(Commands.literal("consumable"))))
 				.then(admin(Commands.literal("audit"))
 						.executes(TradeExpansionCommand::audit))
 				.then(admin(Commands.literal("market"))

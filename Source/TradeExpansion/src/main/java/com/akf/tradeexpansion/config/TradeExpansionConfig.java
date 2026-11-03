@@ -37,6 +37,7 @@ public final class TradeExpansionConfig {
 	public Demand demand = new Demand();
 	public Trader trader = new Trader();
 	public Villager villager = new Villager();
+	public Consumables consumables = new Consumables();
 
 	public TradeExpansionConfig(Currency currency, Price price, Recovery recovery, Distance distance, Market market, Wallet wallet,
 			Bank bank, Trade trade, Worldgen worldgen, Log log, Command command, Vanilla vanilla, Client client) {
@@ -83,13 +84,14 @@ public final class TradeExpansionConfig {
 	).apply(i, TradeExpansionConfig::new));
 
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
-	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager) {
+	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
 				section("demand", Demand.CODEC, new Demand()).forGetter(Extra::demand),
 				section("trader", Trader.CODEC, new Trader()).forGetter(Extra::trader),
-				section("villager", Villager.CODEC, new Villager()).forGetter(Extra::villager)
+				section("villager", Villager.CODEC, new Villager()).forGetter(Extra::villager),
+				section("consumables", Consumables.CODEC, new Consumables()).forGetter(Extra::consumables)
 		).apply(i, Extra::new));
 	}
 
@@ -101,8 +103,9 @@ public final class TradeExpansionConfig {
 		c.demand = e.demand();
 		c.trader = e.trader();
 		c.villager = e.villager();
+		c.consumables = e.consumables();
 		return c;
-	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager))).codec();
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -213,14 +216,20 @@ public final class TradeExpansionConfig {
 		public double halfLifeDays = 2.0;
 		public double restockMultiplier = 1.0;
 		public RecoveryClock clock = RecoveryClock.GAME_TIME;
+		/** B-3: consumables (#trade_expansion:consumables) consume T × this per day above the target stock. */
+		public double consumableMultiplier = 1.0;
+		/** B-3: half-life of X for consumables. */
+		public double consumableHalfLifeDays = 1.0;
 
 		public Recovery() {
 		}
 
-		Recovery(double halfLifeDays, double restockMultiplier, RecoveryClock clock) {
+		Recovery(double halfLifeDays, double restockMultiplier, RecoveryClock clock, double consumableMultiplier, double consumableHalfLifeDays) {
 			this.halfLifeDays = halfLifeDays;
 			this.restockMultiplier = restockMultiplier;
 			this.clock = clock;
+			this.consumableMultiplier = consumableMultiplier;
+			this.consumableHalfLifeDays = consumableHalfLifeDays;
 		}
 
 		static final Codec<Recovery> CODEC = RecordCodecBuilder.create(i -> {
@@ -228,7 +237,9 @@ public final class TradeExpansionConfig {
 			return i.group(
 					Codec.DOUBLE.fieldOf("halfLifeDays").orElse(d.halfLifeDays).forGetter(c -> c.halfLifeDays),
 					Codec.DOUBLE.fieldOf("restockMultiplier").orElse(d.restockMultiplier).forGetter(c -> c.restockMultiplier),
-					RecoveryClock.CODEC.fieldOf("clock").orElse(d.clock).forGetter(c -> c.clock)
+					RecoveryClock.CODEC.fieldOf("clock").orElse(d.clock).forGetter(c -> c.clock),
+					Codec.DOUBLE.fieldOf("consumableMultiplier").orElse(d.consumableMultiplier).forGetter(c -> c.consumableMultiplier),
+					Codec.DOUBLE.fieldOf("consumableHalfLifeDays").orElse(d.consumableHalfLifeDays).forGetter(c -> c.consumableHalfLifeDays)
 			).apply(i, Recovery::new);
 		});
 	}
@@ -462,19 +473,34 @@ public final class TradeExpansionConfig {
 		).apply(i, Vanilla::new));
 	}
 
+	/** A-4: where the trade screen shows the cash / bank balance (the top-right corner is often used by other mods' buttons). */
+	public enum BalancePosition implements StringRepresentable {
+		INVENTORY_RIGHT, BELOW_SELL_SLOT, TOP_RIGHT;
+
+		public static final Codec<BalancePosition> CODEC = StringRepresentable.fromEnum(BalancePosition::values);
+
+		@Override
+		public String getSerializedName() {
+			return name();
+		}
+	}
+
 	/** Client-only settings: read from each client's own file, never synced. */
 	public static final class Client {
 		public boolean showDebugTooltip = false;
+		public BalancePosition balancePosition = BalancePosition.INVENTORY_RIGHT;
 
 		public Client() {
 		}
 
-		Client(boolean showDebugTooltip) {
+		Client(boolean showDebugTooltip, BalancePosition balancePosition) {
 			this.showDebugTooltip = showDebugTooltip;
+			this.balancePosition = balancePosition;
 		}
 
 		static final Codec<Client> CODEC = RecordCodecBuilder.create(i -> i.group(
-				Codec.BOOL.fieldOf("showDebugTooltip").orElse(false).forGetter(c -> c.showDebugTooltip)
+				Codec.BOOL.fieldOf("showDebugTooltip").orElse(false).forGetter(c -> c.showDebugTooltip),
+				BalancePosition.CODEC.fieldOf("balancePosition").orElse(BalancePosition.INVENTORY_RIGHT).forGetter(c -> c.balancePosition)
 		).apply(i, Client::new));
 	}
 
@@ -589,6 +615,28 @@ public final class TradeExpansionConfig {
 				Codec.BOOL.fieldOf("coinTrades").orElse(true).forGetter(c -> c.coinTrades),
 				Codec.INT.fieldOf("emeraldPrice").orElse(30).forGetter(c -> c.emeraldPrice)
 		).apply(i, Villager::new));
+	}
+
+	/**
+	 * B-3: changes to the consumables tag ({@code #trade_expansion:consumables}) without a datapack, as item ids.
+	 * {@code remove} wins over {@code add} and the tag. Edited by {@code /tradeex consumable} and the config screen.
+	 */
+	public static final class Consumables {
+		public List<String> add = new ArrayList<>();
+		public List<String> remove = new ArrayList<>();
+
+		public Consumables() {
+		}
+
+		Consumables(List<String> add, List<String> remove) {
+			this.add = new ArrayList<>(add);
+			this.remove = new ArrayList<>(remove);
+		}
+
+		static final Codec<Consumables> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.STRING.listOf().fieldOf("add").orElse(List.of()).forGetter(c -> c.add),
+				Codec.STRING.listOf().fieldOf("remove").orElse(List.of()).forGetter(c -> c.remove)
+		).apply(i, Consumables::new));
 	}
 
 	/** Logs under the mod prefix; used by {@link ConfigValidator}. */
