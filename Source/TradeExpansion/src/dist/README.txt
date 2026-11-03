@@ -1,5 +1,5 @@
 ==============================================================
- Trade Expansion  バージョン @VERSION@
+ AK Trade Expansion  バージョン @VERSION@
  Minecraft Java Edition 26.3 / Fabric
 ==============================================================
 
@@ -24,7 +24,8 @@
 ■ 導入方法
  1. Fabric Loader をインストールし、Minecraft 26.3 の Fabric の起動構成を作る
  2. Fabric API を mods フォルダに入れる
- 3. この zip の中の trade_expansion-@VERSION@.jar を mods フォルダに入れる
+ 3. この zip の中の ak_trade_expansion-@VERSION@.jar を mods フォルダに入れる
+    （古いバージョンの jar（trade_expansion-*.jar や ak_trade_expansion-*.jar）が mods フォルダにあれば、先に消してください）
  4. （任意）Mod Menu と YACL を mods フォルダに入れる
  5. Fabric の起動構成で Minecraft を起動する
 

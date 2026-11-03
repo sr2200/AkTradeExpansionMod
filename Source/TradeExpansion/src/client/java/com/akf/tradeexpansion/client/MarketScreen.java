@@ -537,7 +537,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				extractRequests(g, lx, ly, mouseX, mouseY);
 				extractRequestPanel(g, x + PANEL_X, y);
 			}
-			case BOARD -> extractBoard(g, lx, ly);
+			case BOARD -> extractBoard(g, lx, ly, mouseX, mouseY);
 			default -> {
 				if (snapshot == null) {
 					g.text(font, Component.translatable("screen.trade_expansion.loading"), lx + 4, ly + 4, COLOR_WHITE);
@@ -707,8 +707,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		g.text(font, Component.translatable("screen.trade_expansion.quest.held", held), px, y + 84, held >= r.request().quantity() ? 0xFF207020 : 0xFFA02020, false);
 	}
 
-	/** I: nearby markets, or the goods of the chosen one. */
-	private void extractBoard(GuiGraphicsExtractor g, int bx, int by) {
+	private static final int COLOR_DEAL_BUY = 0xFF55FFFF;
+	private static final int COLOR_DEAL_SELL = 0xFFFF88FF;
+
+	/** I: nearby markets (with their deals, v0.24), or the goods of the chosen one. */
+	private void extractBoard(GuiGraphicsExtractor g, int bx, int by, int mouseX, int mouseY) {
 		if (board == null) {
 			g.text(font, Component.translatable("screen.trade_expansion.loading"), bx + 4, by + 4, COLOR_WHITE);
 			return;
@@ -720,18 +723,42 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 						bx + 4, by + 4, LIST_W - 8, COLOR_WHITE, false);
 				return;
 			}
+			BoardS2C.Entry hovered = null;
 			for (int row = 0; row < ROWS && scroll + row < board.markets().size(); row++) {
 				BoardS2C.Entry e = board.markets().get(scroll + row);
-				int y = by + row * ROW_H + 5;
+				int rowY = by + row * ROW_H;
+				if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= rowY && mouseY < rowY + ROW_H) {
+					hovered = e;
+					g.fill(bx, rowY, bx + LIST_W, rowY + ROW_H, 0xFF9B9B9B);
+				}
+				int y = rowY + 5;
 				String where = Component.translatable("screen.trade_expansion.board.where", direction(e.dx(), e.dz()),
 						(int) Math.round(Math.sqrt((double) e.dx() * e.dx() + (double) e.dz() * e.dz()))).getString();
-				g.text(font, where, bx + LIST_W - 5 - font.width(where), y, COLOR_GOLD);
-				g.text(font, font.plainSubstrByWidth(e.title().getString(), LIST_W - 14 - font.width(where)), bx + 4, y, COLOR_WHITE);
+				int right = bx + LIST_W - 5 - font.width(where);
+				g.text(font, where, right, y, COLOR_GOLD);
+				// Deal counts: cheaper to buy than here (cyan) / pays more than here (pink).
+				long buyDeals = e.goods().stream().filter(gd -> gd.buyDeal() > 0).count();
+				long sellDeals = e.goods().stream().filter(gd -> gd.sellDeal() > 0).count();
+				int x = right - 4;
+				if (sellDeals > 0) {
+					String text = Component.translatable("screen.trade_expansion.board.deal_sell_count", sellDeals).getString();
+					x -= font.width(text);
+					g.text(font, text, x, y, COLOR_DEAL_SELL);
+					x -= 3;
+				}
+				if (buyDeals > 0) {
+					String text = Component.translatable("screen.trade_expansion.board.deal_buy_count", buyDeals).getString();
+					x -= font.width(text);
+					g.text(font, text, x, y, COLOR_DEAL_BUY);
+					x -= 3;
+				}
+				g.text(font, font.plainSubstrByWidth(e.title().getString(), x - bx - 4), bx + 4, y, COLOR_WHITE);
 			}
+			extractDeals(g, hovered);
 			return;
 		}
 		g.textWithWordWrap(font, entry.title(), leftPos + PANEL_X, topPos + 38, PANEL_W, COLOR_TEXT, false);
-		g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 52, PANEL_W, COLOR_DARK, false);
+		g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 62, PANEL_W, COLOR_DARK, false);
 		List<BoardS2C.Good> goods = entry.goods();
 		for (int row = 0; row < ROWS && scroll + row < goods.size(); row++) {
 			BoardS2C.Good good = goods.get(scroll + row);
@@ -739,11 +766,54 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(good.item()));
 			g.item(stack, bx + 2, y + 1);
 			g.text(font, font.plainSubstrByWidth(stack.getHoverName().getString(), 64), bx + 20, y + 5, good.shortage() ? COLOR_ORANGE : COLOR_WHITE);
-			String buy = good.buy() < 0 ? "-" : CoinItem.formatCopper(good.buy());
-			String sell = good.sell() < 0 ? "-" : CoinItem.formatCopper(good.sell());
-			g.text(font, buy, bx + 130 - font.width(buy), y + 5, COLOR_GOLD);
-			g.text(font, sell, bx + LIST_W - 5 - font.width(sell), y + 5, COLOR_GREEN);
+			String buy = good.buy() < 0 ? "-" : (good.buyDeal() > 0 ? "\u2193" : "") + CoinItem.formatCopper(good.buy());
+			String sell = good.sell() < 0 ? "-" : (good.sellDeal() > 0 ? "\u2191" : "") + CoinItem.formatCopper(good.sell());
+			g.text(font, buy, bx + 130 - font.width(buy), y + 5, good.buyDeal() > 0 ? COLOR_DEAL_BUY : COLOR_GOLD);
+			g.text(font, sell, bx + LIST_W - 5 - font.width(sell), y + 5, good.sellDeal() > 0 ? COLOR_DEAL_SELL : COLOR_GREEN);
+			if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= y && mouseY < y + ROW_H && (good.buyDeal() > 0 || good.sellDeal() > 0)) {
+				List<Component> lines = new ArrayList<>();
+				lines.add(stack.getHoverName());
+				if (good.buyDeal() > 0) lines.add(Component.translatable("screen.trade_expansion.board.deal_buy", good.buyDeal()));
+				if (good.sellDeal() > 0) lines.add(Component.translatable("screen.trade_expansion.board.deal_sell", good.sellDeal()));
+				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+			}
 		}
+	}
+
+	/** I (v0.24): the best deals (2 each) of the market under the mouse, in the right panel. */
+	private void extractDeals(GuiGraphicsExtractor g, BoardS2C.Entry entry) {
+		int px = leftPos + PANEL_X;
+		int y = topPos + 38;
+		if (entry == null) {
+			g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.deal_hint"), px, y, PANEL_W, COLOR_DARK, false);
+			return;
+		}
+		List<BoardS2C.Good> cheap = entry.goods().stream().filter(gd -> gd.buyDeal() > 0)
+				.sorted(java.util.Comparator.comparingInt(BoardS2C.Good::buyDeal).reversed()).limit(2).toList();
+		List<BoardS2C.Good> dear = entry.goods().stream().filter(gd -> gd.sellDeal() > 0)
+				.sorted(java.util.Comparator.comparingInt(BoardS2C.Good::sellDeal).reversed()).limit(2).toList();
+		if (cheap.isEmpty() && dear.isEmpty()) {
+			g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.deal_none"), px, y, PANEL_W, COLOR_DARK, false);
+			return;
+		}
+		g.text(font, Component.translatable("screen.trade_expansion.board.deal_buy_title"), px, y, 0xFF1F6F7F, false);
+		y = extractDealLines(g, cheap, true, px, y + 10);
+		g.text(font, Component.translatable("screen.trade_expansion.board.deal_sell_title"), px, y + 2, 0xFF8F2F7F, false);
+		extractDealLines(g, dear, false, px, y + 12);
+	}
+
+	private int extractDealLines(GuiGraphicsExtractor g, List<BoardS2C.Good> goods, boolean buy, int px, int y) {
+		if (goods.isEmpty()) {
+			g.text(font, "-", px + 2, y + 4, COLOR_DARK, false);
+			return y + 16;
+		}
+		for (BoardS2C.Good good : goods) {
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(good.item())), px, y);
+			String text = buy ? "-" + good.buyDeal() + "%" : "+" + good.sellDeal() + "%";
+			g.text(font, text, px + 18, y + 4, buy ? 0xFF1F6F7F : 0xFF8F2F7F, false);
+			y += 16;
+		}
+		return y;
 	}
 
 	private static String direction(int dx, int dz) {

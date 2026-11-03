@@ -30,13 +30,18 @@ public abstract class MerchantResultSlotMixin {
 
 	@Shadow protected abstract void checkTakeAchievements(ItemStack stack);
 
-	/** The result of a coin trade can only be taken while the player can still pay for it. */
+	/**
+	 * Vanilla only lets the result be taken while the payment slots hold the full cost (emeralds included). A coin
+	 * trade can be taken while the player can pay the coin price and the payment slots hold the non-emerald part.
+	 */
 	@Inject(method = "mayPickup", at = @At("HEAD"), cancellable = true)
 	private void tradeExpansion$canPay(Player taker, CallbackInfoReturnable<Boolean> cir) {
 		MerchantOffer offer = slots.getActiveOffer();
 		if (offer == null || !VillagerCoins.active(player)) return;
 		long price = VillagerCoins.price(player, merchant.getOffers().indexOf(offer));
-		if (price >= 0 && !com.akf.tradeexpansion.currency.WalletService.canPay(player, price)) cir.setReturnValue(false);
+		if (price < 0) return;
+		cir.setReturnValue(com.akf.tradeexpansion.currency.WalletService.canPay(player, price)
+				&& VillagerCoins.otherCostPaid(offer, slots.getItem(0), slots.getItem(1)));
 	}
 
 	@Inject(method = "onTake", at = @At("HEAD"), cancellable = true)

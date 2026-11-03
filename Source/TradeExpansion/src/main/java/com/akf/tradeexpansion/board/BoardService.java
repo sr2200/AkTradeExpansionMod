@@ -20,7 +20,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Bulletin board (design I): latest prices of the other markets within {@code board.radius}.
+ * Bulletin board (design I): latest prices of the other markets within {@code board.radius}, with deals (v0.24): goods at
+ * least {@code board.dealThreshold} cheaper to buy, or paid that much more, than at the current market.
  */
 public final class BoardService {
 	private BoardService() {
@@ -38,6 +39,8 @@ public final class BoardService {
 				.sorted(Comparator.comparingDouble(m -> m.horizontalDistanceTo(here.center())))
 				.limit(config.maxMarkets)
 				.toList());
+		MarketUpkeep.touch(player.level(), here);
+		double threshold = config.dealThreshold;
 		List<BoardS2C.Entry> entries = new ArrayList<>();
 		for (Market m : nearby) {
 			MarketUpkeep.touch(player.level(), m); // latest prices (I)
@@ -46,7 +49,7 @@ public final class BoardService {
 				GoodParams p = m.params(goodsId);
 				GoodsDefinition def = GoodsCatalog.get(goodsId);
 				if (p == null || def == null) return;
-				goods.add(good(def, p, state, m.shortages().containsKey(goodsId)));
+				goods.add(good(here, goodsId, def, p, state, m.shortages().containsKey(goodsId), threshold));
 			});
 			entries.add(new BoardS2C.Entry(m.id(), com.akf.tradeexpansion.market.MarketNames.title(m), m.center().getX() - here.center().getX(),
 					m.center().getZ() - here.center().getZ(), goods));
@@ -54,9 +57,22 @@ public final class BoardService {
 		ServerPlayNetworking.send(player, new BoardS2C(here.id(), entries));
 	}
 
-	private static BoardS2C.Good good(GoodsDefinition def, GoodParams p, GoodState state, boolean shortage) {
+	private static BoardS2C.Good good(Market here, net.minecraft.resources.Identifier goodsId, GoodsDefinition def, GoodParams p, GoodState state,
+			boolean shortage, double threshold) {
 		long buy = def.buy() && PriceModel.canBuy(state) ? PriceModel.buyPrice(p, state.pressure()) : -1;
 		long sell = def.sell() && PriceModel.canSell(p, state) ? PriceModel.sellPrice(p, state.pressure()) : -1;
-		return new BoardS2C.Good(def.item(), def.unit(), buy, sell, (int) Math.floor(state.stock()), shortage);
+		// I (v0.24): compared with the current market, or with the standard price when the current market does not deal in it.
+		GoodParams refParams = here.params(goodsId);
+		GoodState refState = here.good(goodsId);
+		if (refParams == null || refState == null) {
+			refParams = def.params(1.0, 1.0, TradeExpansionConfig.get());
+			refState = null;
+		}
+		double refX = refState == null ? 0 : refState.pressure();
+		long refBuy = PriceModel.buyPrice(refParams, refX);
+		long refSell = PriceModel.sellPrice(refParams, refX);
+		int buyDeal = buy > 0 && refBuy > 0 && buy <= refBuy * (1 - threshold) ? (int) Math.round((1 - (double) buy / refBuy) * 100) : 0;
+		int sellDeal = sell > 0 && refSell > 0 && sell >= refSell * (1 + threshold) ? (int) Math.round(((double) sell / refSell - 1) * 100) : 0;
+		return new BoardS2C.Good(def.item(), def.unit(), buy, sell, (int) Math.floor(state.stock()), shortage, buyDeal, sellDeal);
 	}
 }

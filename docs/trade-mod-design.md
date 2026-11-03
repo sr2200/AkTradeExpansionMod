@@ -1,10 +1,11 @@
-# Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
+# AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.23（段階0〜14の実装結果、確認事項 Q1〜Q49 の決定（Q38・Q39 は保留）、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-03（改版履歴は付録B）
+- 版：v0.26（段階0〜14の実装結果、確認事項 Q1〜Q51 の決定（Q38・Q39・Q51 は保留）、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-03（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
-- Mod名：**Trade Expansion**
+- Mod名：**AK Trade Expansion**（v0.25 で「Trade Expansion」から変更。Mod ID・アイテムID・コマンド・設定ファイル名・パッケージ名は変えていない）
+- 配布ファイル：jar は `ak_trade_expansion-<バージョン>.jar`、配布用 zip は `AKTradeExpansion-<バージョン>.zip`（v0.25）
 - ライセンス：GNU LGPL v2.1 のみ（`LGPL-2.1-only`。リポジトリ直下の [LICENSE](../LICENSE)）
 - Mod ID：`trade_expansion`（名前空間。アイテムIDは `trade_expansion:copper_coin` 等）
 - パッケージ：`com.akf.tradeexpansion`　／　コマンド：`/tradeex`（別名 `/trade_expansion`）
@@ -31,11 +32,11 @@ NeoForge を選ぶべきなのは「Create 等の NeoForge 専用大型Modと同
 
 ## 1. 確認事項（質問リスト）
 
-v0.22 時点で Q38・Q39 を除き決定済み（Q44〜Q49 は実装時の決定を後から記録したもの）（Q38・Q39 は保留で、L章に案を記録）。「今後変更予定」は当面の仕様として決定し、将来のバージョンで見直す項目。新たな未決事項が出た場合はこの表に追記し、決まるまでは **【既定案】** で進める。
+v0.25 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時の決定を後から記録したもの）（Q38・Q39 は保留で、L章に案を記録）。「今後変更予定」は当面の仕様として決定し、将来のバージョンで見直す項目。新たな未決事項が出た場合はこの表に追記し、決まるまでは **【既定案】** で進める。
 
 | # | 質問 | 決定／既定案 | 反映先 |
 |---|---|---|---|
-| Q1 | Mod名・Mod ID は？ | **決定**：Trade Expansion／`trade_expansion` | — |
+| Q1 | Mod名・Mod ID は？ | **決定**：Trade Expansion／`trade_expansion`。【v0.25】表示名を「AK Trade Expansion」に変更し、jar を `ak_trade_expansion-<バージョン>.jar`、配布用 zip を `AKTradeExpansion-<バージョン>.zip` にした（B案）。Mod ID `trade_expansion`・アイテムID・`/tradeex`・設定ファイル名 `trade_expansion.json`・パッケージ `com.akf.tradeexpansion` は変えない（今のワールドと設定をそのまま使えるようにするため） | — |
 | Q2 | 開発経験・想定プレイ・併用Modは？ | **決定**：Java経験あり／Mod開発は初めて。**ソロプレイとマルチプレイの兼用**（シングルの内部サーバーと専用サーバーの両方で同じ処理が動く設計にする、F-2）。併用Modは想定しない | F-2、5-2 |
 | Q3 | 交易窓口は「交易ブロック（屋台）」先行で良いか？ | **決定**：屋台を先行。商人NPCは今後のバージョンアップで追加（フェーズ2） | A-2 |
 | Q4 | NeoForge専用Modと併用する予定はあるか？ | **決定**：当面は Fabric 専用 | 0章 |
@@ -83,6 +84,8 @@ v0.22 時点で Q38・Q39 を除き決定済み（Q44〜Q49 は実装時の決�
 | Q46 | 【v0.15追加】市場に名前を付けられるようにするか？ | **決定**：名札・名前付きの交易所・管理コマンドで名付ける。変えられるのは名付け親と OP（名前の無い市場は誰でも、設定 `market.renamePermission`）。名札は1枚使う | C-4 |
 | Q48 | 【v0.18追加】村でない場所に、クラフトした交易所で新しい市場を作れるようにするか？ | **決定**：設定 `market.newMarketRequires` で切り替える。1：村の構造物の中だけ／2：ベッドの数／3：村人の数／4：ベッドと村人の数（ベッド ≧ 村人）。既定は4。Q12 の「無い場所では新しい市場を作る」に条件を付けた | C-1、G章 |
 | Q49 | 【v0.20追加】村人交易のコイン化（段階14）の支払い方法・エメラルドの扱い・抜け道対策・進め方は？ | **決定**：①代金は財布・コインから自動で引き落とす（支払い欄にコインは置かない）②コイン化している間、代金のエメラルド分はエメラルドでは払えない ③抜け道対策（H-2 案A）を最初の段階（14a）から入れる ④14a→14b→14c と段階ごとに作り、ゲーム内で確認しながら進める | H章 |
+| Q50 | 【v0.24.1追加】村人ゾンビを治療した時などの値引きを、コインの代金にどう効かせるか？ | **決定**：今のまま。値引き後のエメラルドの数で代金を計算するので、エメラルドの交易と同じ割合で安くなる。ただし、①もともとエメラルド1個の取引はバニラと同じくそれ以上安くならず、②市場の商品と同じ品は抜け道対策の下限（H-3）が優先される。下限にも値引きを効かせる案・1エメラルド未満まで細かく値引きする案は採らない | H-3 |
+| Q51 | 【v0.25.1追加】Mod ID も「AK Trade Expansion」に合わせて変えるか（C案）？ | **保留（TODO）**：最終的には C案（Mod ID の変更）にする。v0.25 では B案（表示名とファイル名だけ）にした。作業の内容と注意は L-3 | L-3 |
 | Q47 | 【v0.17追加】商品に花を追加するか？ | **決定**：20種を追加し、すべて消耗品にする（価格は別紙 2-12）。花に限らず、商品の値は設定 `goods` と `/tradeex goods` で後から変えられるようにする | D-2、G章、goods-design |
 
 ---
@@ -554,7 +557,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 #### D-3. 同梱する初期データ（目安）
 
-> 具体的な商品一覧（80種の価格・弾力性・在庫）と各プロファイルの候補・重み・`min_level` は別紙 [goods-design.md](goods-design.md)（商品・品揃え設計書）にまとめる。別紙は v0.7 で採用し、その検討事項 G1〜G3 を本書に反映済み。
+> 具体的な商品一覧（82種の価格・弾力性・在庫）と各プロファイルの候補・重み・`min_level` は別紙 [goods-design.md](goods-design.md)（商品・品揃え設計書）にまとめる。別紙は v0.7 で採用し、その検討事項 G1〜G3 を本書に反映済み。
 
 既定プロファイル：
 
@@ -564,7 +567,7 @@ w(d) = 1                                  (d ≤ Rnear)
 - エンド：エンダーパール・シュルカー殻など＝`default_the_end`
 - 他Modの次元：`default`
 
-商品数：初期 80種（ネザー8種・エンド4種・花20種を含む。別紙 2章。花は v0.17 で追加）。ほかに村の市場共通のエメラルド貨（E-5）。エメラルドそのもの（`minecraft:emerald`）は商品にしない（Q24）。1市場が扱うのはそのうち 10〜20種（D-4）なので、各プロファイルの候補は最大レベルの商品数（20）以上を用意する。
+商品数：初期 82種（ネザー8種・エンド4種・花20種・生の肉と魚5種を含む。別紙 2章。花は v0.17、肉を生に切り替え・魚の追加は v0.26）。ほかに村の市場共通のエメラルド貨（E-5）。エメラルドそのもの（`minecraft:emerald`）は商品にしない（Q24）。1市場が扱うのはそのうち 10〜20種（D-4）なので、各プロファイルの候補は最大レベルの商品数（20）以上を用意する。
 
 #### D-4. 市場の規模（レベル）【v0.5 追加】
 
@@ -830,7 +833,7 @@ MarketRegistry
 | `AccountS2C` | S→C | 銀行残高, 有効なカードを持っているか, 直前の銀行操作の結果 | 画面を開いた時／取引・銀行操作の後に本人へ | 実装済 |
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
 | `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も） | ログイン時／`/tradeex reload` 時 | 実装済 |
-| `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・商品の価格と在庫・不足の印） | 掲示板タブを開いた時 | 実装済（段階13） |
+| `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 報酬額 | 依頼タブの「納品する」 | 実装済（段階13） |
 
 - 【v0.9】`TradeRequestC2S` に支払い方法（カード／現金）を追加した（段階12、実装済）。カードを選んだのに有効なカードが無い時は新しい結果コード `CARD_INVALID`。
@@ -847,7 +850,7 @@ MarketRegistry
 
 ファイル：`config/trade_expansion.json`（サーバー側。クライアントには表示用に必要な値のみ同期）。`/tradeex reload` で再読込。
 
-**設定画面（v0.10、Q35）**：Mod Menu の Mod 一覧で Trade Expansion の「設定」ボタンを押すと、YetAnotherConfigLib（YACL）で作った設定画面が開く。
+**設定画面（v0.10、Q35）**：Mod Menu の Mod 一覧で AK Trade Expansion の「設定」ボタンを押すと、YetAnotherConfigLib（YACL）で作った設定画面が開く。
 
 - 画面はカテゴリごとのタブに分ける：「通貨」「価格」「回復」「距離」「市場」「財布」「銀行」「取引」「掲示板・依頼・需要」（v0.14。商人・村人の項目もここに置く）「その他」（生成・ログ・管理・バニラをまとめる）「表示」。消耗品の一覧（`consumables.*`）は「回復」タブ（v0.14.2）。各項目に説明文と範囲を出す。範囲外の値は入力できないようにする（YACL の入力欄の範囲指定）。
 - 保存すると `config/trade_expansion.json` に書き込む。**シングルプレイ**では内部サーバーが同じファイルを使うので、保存した時点で反映する（`/tradeex reload` と同じ処理を呼ぶ）。
@@ -939,6 +942,7 @@ MarketRegistry
 | バニラ | `vanilla.disableVillagerTrades` | false | bool | バニラ村人の交易を無効化（フェーズ3） |
 | 掲示板 | `board.radius` | 512 | 64〜4096 | 掲示板に出す市場の水平距離（I章） |
 | 掲示板 | `board.maxMarkets` | 20 | 1〜100 | 掲示板に出す市場の最大数 |
+| 掲示板 | `board.dealThreshold` | 0.1 | 0.01〜1 | 【v0.24】お買い得とみなす差（今いる市場よりこの割合以上安い・高い、I章） |
 | 依頼 | `quest.maxPerMarket` | 3 | 0〜10 | 1市場の依頼の最大数（0 で依頼なし、J章） |
 | 依頼 | `quest.refreshDays` | 1.0 | 0.1〜30 | 依頼の枠を埋め直す間隔（ゲーム内日） |
 | 依頼 | `quest.durationDays` | 3.0 | 0.5〜30 | 依頼の期限（ゲーム内日） |
@@ -994,15 +998,16 @@ MarketRegistry
 | 代金 | `エメラルドの数（値引き・値上げ後） × villager.emeraldPrice`。ただし、その品が商品なら次の2つの大きい方を下限にする（H-2 案A）：①近くの市場（同じ次元の `distance.farRadius` 以内で一番近く、その商品を売っている市場）の**今の買値 × 個数**（14a）②**商品の基準価格 × `villager.minGoodsPriceMultiplier`（既定 1.4）× 個数**（14c。近くに市場が無くても効く） |
 | 代金の計算と送信 | 村人の取引一覧をプレイヤーに送る時（画面を開いた時など）に、サーバーが取引ごとの代金を計算し `VillagerPricesS2C`（画面のID・取引ごとの代金。コイン化しない取引は -1）で送る。クライアントは同じ値で結果欄の予測と表示を行う |
 | 支払い欄 | 一覧で取引を選んでも、エメラルドは支払い欄に移さない（エメラルド以外の材料だけ移す）。所持金で足り、エメラルド以外の材料が支払い欄にあれば、結果欄に品物が出る。支払い欄にエメラルドを置いても、コイン化した取引には使えない |
-| 受け取り | 品物を取ると、サーバーで財布 → コインの順に代金を引き（お釣りは財布へ）、エメラルド以外の材料を支払い欄から使う。取引回数・統計・経験値はバニラと同じく増える。所持金が足りない時は品物を取れない |
+| 受け取り | 品物を取ると、サーバーで財布 → コインの順に代金を引き（お釣りは財布へ）、エメラルド以外の材料を支払い欄から使う。取引回数・統計・経験値はバニラと同じく増える。所持金が足りない時は品物を取れない。26.3 のバニラは「支払い欄に代金（エメラルドを含む）が揃っている時だけ取れる」判定（`MerchantResultSlot.mayPickup`）を持つので、コイン化した取引ではこれを「所持金で払え、エメラルド以外の材料が支払い欄にある時に取れる」に置き換える（v0.23.1。それまでは結果欄に品物が出ても取れなかった） |
 | 表示 | 取引一覧のエメラルドの上にコインでの代金（例：150c、1.9kc）を重ねて描き、支払い欄の下に「代金 150c（所持 1,234c）」を出す（足りない時は赤） |
 | ログ | `log.trades` が ON なら `[TradeExpansion] Steve VILLAGER minecraft:bread x6 total=120c` |
 | 切り替え | `villager.coinTrades` が OFF なら、代金を送らず、バニラどおりエメラルドで払う |
 | Mixin | `MerchantContainerMixin`（結果欄の判定）、`MerchantResultSlotMixin`（受け取り・取れるかの判定）、`MerchantMenuMixin`（エメラルドを支払い欄に移さない）、`MerchantMenuAccessor`、`ServerPlayerMixin`（代金の送信）、クライアントの `MerchantScreenMixin`（表示） |
 
 - 【v0.21、14b】**特殊な取引**：26.3 の取引定義（`data/minecraft/villager_trade`、391件）の代金の形は「エメラルドだけ」「エメラルド＋他の品（例：エメラルドとコンパスで探検家の地図、エメラルドと本でエンチャントの本）」「他の品＋エメラルド（例：生鱈とエメラルドで焼き鱈）」「品物→エメラルド（村人に売る）」の4つだけで、どれも上の仕組みでそのまま扱える。地図やエンチャント付きの品のように付加情報のある品物は商品にならないので、市場の買値の下限はかからない。
-- 【v0.22、14c】**抜け道対策の仕上げ**：取引定義を全件調べると、商品と同じ品を売る村人・行商人の取引は37件あり、1エメラルド＝30c のままでは11件が「村人から買って市場で売ると儲かる」状態だった（例：農民のパン6個＝30c → 市場の売値 96c、肉屋の焼き鳥8個＝30c → 136c、行商人の原木8個＝30c → 48c）。①の下限は近くに市場が無い所では効かないため、②の下限を足した。1.4 は、市場の売値の最大（基準価格 × 地域の倍率 1.5 × ばらつき 1.15 × 0.8 ≒ 1.38）より少し上で、不足品（K章、認めている例外）を除けば儲からない。
+- 【v0.22、14c】**抜け道対策の仕上げ**：取引定義を全件調べると、商品と同じ品を売る村人・行商人の取引は37件あり、1エメラルド＝30c のままでは11件が「村人から買って市場で売ると儲かる」状態だった（例：農民のパン6個＝30c → 市場の売値 96c、肉屋の焼き鳥8個＝30c → 136c、行商人の原木8個＝30c → 48c。焼き鳥は v0.26 で商品から外れた）。①の下限は近くに市場が無い所では効かないため、②の下限を足した。1.4 は、市場の売値の最大（基準価格 × 地域の倍率 1.5 × ばらつき 1.15 × 0.8 ≒ 1.38）より少し上で、不足品（K章、認めている例外）を除けば儲からない。
 - 【v0.22、14c】**調整用のコマンド** `/tradeex audit villagers`：周り32ブロックの村人・行商人のコインで買える取引のうち、同じ次元の市場（`farRadius` 以内）で売ると代金より高く売れるものを、利益の大きい順に最大15件表示する。`villager.emeraldPrice` と `villager.minGoodsPriceMultiplier` の調整に使う。
+- 【v0.24.1、Q50】**値引き**：村人ゾンビの治療・村の英雄・評判による値引きと需要による値上げは、バニラが計算したエメラルドの数（`getCostA`・`getCostB`）に入っているので、コインの代金にも同じ割合で効く（例：エメラルド10個 → 治療で4個の取引は 300c → 120c）。ただし、①もともとエメラルド1個の取引はバニラと同じく1個より安くならないので、コインの代金も変わらない。②市場の商品と同じ品（パン・焼き鳥・原木など）は、抜け道対策の下限（基準価格 × `villager.minGoodsPriceMultiplier`、近くの市場の買値）の方が高ければ下限が優先され、値引きが見た目に表れない（治療した村人から安く買って市場で売る抜け道を防ぐため）。
 - 代金は画面を開いた時点の値で、開いている間は変わらない（値引き・需要は村人側でも開いた時に決まるため）。
 - 他の村人系 Mod（取引内容や取引画面を変えるもの）とは、同じ処理に手を入れるため相性が悪いことがある。
 
@@ -1029,6 +1034,7 @@ MarketRegistry
 | 商品 | その市場の**すべての商品**（買値・売値・在庫の状態・不足品の印 K） |
 | 表示 | 市場ごとに「麦の里（町）・北東 340m」のように市場名（C-4）・レベル名・方角と距離を出し、選ぶと商品の一覧を表示 |
 | 通信 | タブを開いた時に `BoardRequestC2S`（市場ID）→ `BoardS2C`（市場ごとの商品と価格）。開いている間は更新しない（再度開くと最新） |
+| お買い得（v0.24） | 各商品について、**今いる市場**の値段（今いる市場が扱っていない品は標準の値段＝定義の基準価格での買値・売値）と比べ、`board.dealThreshold`（既定 10%）以上安く買える品・高く売れる品を「お買い得」とする。市場の一覧には市場ごとに「安n（安く買える品の数・水色）」「高n（高く売れる品の数・桃色）」を出し、市場にマウスを乗せると右側に一番お得な品を2つずつ（アイコンと差の割合）出す。市場を選んだ後の商品一覧では、お買い得の値段を色と矢印（↓安く買える・↑高く売れる）で示し、マウスを乗せると「ここより20%安く買える」のように出す。割合はサーバーが計算して送る |
 | 費用 | 無料 |
 
 - 価格だけを見る機能で、離れた市場とは取引できない。
@@ -1101,6 +1107,34 @@ MarketRegistry
 - 何に効くか。**価格の割引に使う場合**はプレイヤーごとに価格が変わるため、スナップショット（F-2）を人ごとに送る作りに変える必要がある。また割引で買値と売値の差が縮むと、B-6（同じ市場での往復で儲からない条件）が崩れることがあるので、割引に上限が必要。
 - 価格以外の効果（依頼の解放、銀行・カードの手数料など）なら、今の仕組みとぶつからない。
 - バニラの村人の評判（ゴシップ）とは別のものとする。
+
+#### L-3. Mod ID の変更（Q51、TODO：C案）
+
+最終的には、表示名「AK Trade Expansion」に合わせて Mod ID も変える（C案）。v0.25 では表示名と配布ファイル名だけを変えた（B案、Q1）。
+
+**決めること**
+- 新しい Mod ID（案：`ak_trade_expansion`）。Mod ID はアイテムID・データパックの名前空間にもなる
+- コマンド `/tradeex` と設定ファイル名 `trade_expansion.json` も変えるか
+- Java のパッケージ名 `com.akf.tradeexpansion` も変えるか（遊ぶ人には見えないので、変えなくてもよい）
+- 既存のワールドを引き継ぐか（下の「既存のワールド」）
+
+**変える所**（Mod ID を含む名前はすべて書き換える）
+
+| 区分 | 内容 |
+|---|---|
+| 設定 | `fabric.mod.json` の `id`、`TradeExpansion.MOD_ID`、`build.gradle` の `loom { mods { … } }`、`settings.gradle` の `rootProject.name`、Mixin 設定ファイル名（`trade_expansion.mixins.json`・`trade_expansion.client.mixins.json`） |
+| 登録するもの | アイテム（コイン・エメラルド貨・財布・カード・スポーンエッグ）、ブロック（交易所）、ブロックエンティティ、エンティティ（商人）、メニュー、データコンポーネント（`wallet_balance`・`card_owner`）、レシピの種類（`minting`・`emerald_coin`）、読み込み条件（`minting_enabled`・`emerald_coin_enabled`）、パケット、クリエイティブタブ |
+| 保存データ | `trade_expansion:markets`、`trade_expansion:bank` |
+| リソース | `assets/trade_expansion/`（翻訳・モデル・テクスチャ・アイコン）、`data/trade_expansion/`（商品・プロファイル・レシピ・タグ・構造物・ルートテーブル） |
+| 中身に Mod ID を含むファイル | 翻訳のキー（`item.trade_expansion.*` など）、商品定義・プロファイルの ID（`trade_expansion:bread` など）、タグ（`#trade_expansion:consumables`・`drops_coins`）、レシピ、構造物NBT の中の交易所と商人の ID（`tools/structures/genstall.js` で作り直す） |
+| 文書 | 設計書・商品設計書・README・投稿ページの下書き・チェックリスト・`src/dist/README.txt`・`tools/docs/goodslist.js` |
+
+**既存のワールド**
+- そのまま変えると、古い ID のアイテム・ブロック・商人・市場と銀行の保存データが読み込まれず消える。
+- 引き継ぐ場合は、①登録の別名（古い ID を新しい ID に読み替える仕組み。26.3 の登録の別名機能があるか要確認）、②保存データの古い名前のファイルを読んで新しい名前で保存し直す処理、③設定ファイルの古い名前を読む処理 が要る。
+- 公開前に変えれば、引き継ぎの処理は不要（開発用のワールドは作り直す）。**公開（配布）前に済ませるのが望ましい**。公開後に変える場合は、①〜③を入れて、配布ページで「古いワールドの引き継ぎ方」を案内する。
+
+**進め方の目安**：新しい ID と上の「決めること」を決める → ソース・リソースを一括で書き換える → ビルドとテスト → 新しいワールドで公開前チェックリスト（`docs/release/ingame-checklist.md`）を一通り → 文書を更新。
 
 ---
 
@@ -1308,7 +1342,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
   "schemaVersion": 1,
   "id": "trade_expansion",
   "version": "${version}",
-  "name": "Trade Expansion",
+  "name": "AK Trade Expansion",
   "description": "Dynamic market trading with coins, regional goods and distance-based price propagation.",
   "authors": [
     "akf"
@@ -1349,7 +1383,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 - テンプレートからの変更点：`id`/`name`/`entrypoints`/アイコンのパス、`settings.gradle` の `rootProject.name = 'trade_expansion'`、`build.gradle` の `loom { mods { "trade_expansion" { ... } } }`、`gradle.properties` の `group=com.akf.tradeexpansion`、mixin設定ファイル名（`modid.mixins.json` → `trade_expansion.mixins.json` など、中の `package` も変更）。
 - Mixin：v0.20（段階14）で村人交易のコイン化のために `Merchant*` 系の Mixin とクライアント用の設定 `trade_expansion.client.mixins.json` を追加した。v0.11（段階12）で財布の自動収納のために `trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`、`ItemEntityMixin`）を追加した。v0.14（段階9）で村のテンプレートプールに建物を足すための `StructureTemplatePoolAccessor` を追加した（Fabric API に同等の機能が無いため）。
 - 【v0.11】`fabric.mod.json` に `"suggests": { "modmenu": "*", "yet_another_config_lib_v3": "*" }`、`entrypoints` の `"modmenu": ["com.akf.tradeexpansion.client.config.ModMenuIntegration"]`、`"mixins": ["trade_expansion.mixins.json"]` を追加済み。開発用の依存は `build.gradle` で YACL `3.9.7+26.3-fabric`・Mod Menu `21.0.0` を `compileOnly` ＋ `localRuntime`（配布物には含まれない）。
-- **配布物（v0.23）**：`gradlew build` で、jar のほかに配布用 zip `build/distributions/TradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）も作る（`releaseZip` タスク）。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat` は `gradle.properties` の `version` の末尾と README のバージョン表記を1つ上げてからビルドする（`release.bat nobump` で上げずにビルド、残りの引数は Gradle に渡す）。
+- **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat` は `gradle.properties` の `version` の末尾と README のバージョン表記を1つ上げてからビルドする（`release.bat nobump` で上げずにビルド、残りの引数は Gradle に渡す）。
 - `authors` は `akf`。ライセンスは **GNU LGPL v2.1 のみ**（v2.1 以降ではない）。`fabric.mod.json` の `license` は `LGPL-2.1-only`。本文はリポジトリ直下の `LICENSE` だけで、v0.23 から `build.gradle` がこれを jar（`LICENSE_trade_expansion`）と配布用 zip に入れる。
 
 リソース（v0.22 時点。✅ は作成済み）：
@@ -1370,7 +1404,7 @@ src/main/resources/
     ├─ trade_expansion/tags/item/consumables.json, tags/entity_type/drops_coins.json ✅（消耗品 B-3、コインを落とすモブ E-2）
     ├─ trade_expansion/loot_table/blocks/market_stall.json ✅
     ├─ minecraft/tags/block/mineable/axe.json              ✅
-    └─ trade_expansion/trade_expansion/goods/*.json（81件。花20種を含む）, market_profile/*.json（12件） ✅
+    └─ trade_expansion/trade_expansion/goods/*.json（83件。花20種・生の肉と魚を含む）, market_profile/*.json（12件） ✅
 ```
 
 ### 4-3. データフロー（売却の例）
@@ -1569,3 +1603,10 @@ test {
 | v0.22 | 2026-11-03 | 段階14c を実装：取引定義の全件調査で見つかった抜け道（村人から買って市場で売ると儲かる11件）を、商品の基準価格による下限 `villager.minGoodsPriceMultiplier`（既定1.4）で塞いだ。調整用の `/tradeex audit villagers` を追加（H-3・H-4・G章・4-2・5-1・5-2） |
 | v0.22.1 | 2026-11-03 | ソースとの照合結果を反映：版の概要（段階0〜14）、各所の「時点」の表記、`fabric.mod.json` の抜粋を今のファイルに、jar にライセンス文が入っていないことを 4-2 に記録、リソース一覧と Mixin の説明に段階14のクライアント用 Mixin 設定を追加。設定項目（キー・既定値）・クラス一覧・テスト件数・未実装の項目は一致を確認 |
 | v0.23 | 2026-11-03 | 配布の準備：ビルド時に配布用 zip を作る `releaseZip`、バージョンを上げてビルドする `release.bat`、jar にライセンス文を同梱、Mod のアイコンを作成（4-2） |
+| v0.23.1 | 2026-11-03 | 不具合修正：村人からコインで買えなかった（結果欄に品物が出ても取れない）。バニラの `mayPickup` がエメラルドの支払いを求めていたため、コイン化した取引では所持金で判定するようにした（H-3） |
+| v0.24 | 2026-11-03 | 掲示板にお買い得情報を追加：今いる市場と比べて安く買える品・高く売れる品の数と上位の品、商品一覧での印（I章・F-2・G章 `board.dealThreshold`） |
+| v0.24.1 | 2026-11-03 | 村人ゾンビの治療などの値引きとコインの代金の関係を記録（Q50、H-3）。仕様は変更なし |
+| v0.25 | 2026-11-03 | Mod の表示名を「AK Trade Expansion」に変更（Q1）。jar のファイル名を `ak_trade_expansion-<バージョン>.jar`（`build.gradle` の `base.archivesName`）、配布用 zip を `AKTradeExpansion-<バージョン>.zip` に。Mod ID などは変更なし |
+| v0.25.1 | 2026-11-03 | Mod ID の変更（C案）を TODO として記録（Q51、L-3） |
+| v0.25.2 | 2026-11-03 | 配布用 zip を普段のビルドでは作らず、`release.bat`（または `gradlew releaseZip`）の時だけ作るように変更（4-2） |
+| v0.26 | 2026-11-03 | 肉を焼いた物（ステーキ・焼き豚・焼き鳥）から生（牛肉・豚肉・鶏肉）に切り替え、生の魚（鱈・鮭）を追加。焼いた肉・魚は商品にしない（別紙 goods-design v0.5）。既存の市場の焼いた肉は、データパックに定義が無くなるので非表示になる（`market reroll` で選び直せる） |

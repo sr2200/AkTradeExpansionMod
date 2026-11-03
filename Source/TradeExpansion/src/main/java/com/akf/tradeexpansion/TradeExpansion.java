@@ -49,7 +49,7 @@ public class TradeExpansion implements ModInitializer {
 		ServerConfig.init();
 		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> TradeExpansionCommand.register(dispatcher));
 
-		LOGGER.info("Trade Expansion initialized");
+		LOGGER.info("AK Trade Expansion initialized");
 	}
 
 	public static Identifier id(String path) {

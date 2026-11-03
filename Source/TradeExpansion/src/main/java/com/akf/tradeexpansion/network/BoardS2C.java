@@ -19,8 +19,12 @@ import java.util.List;
 public record BoardS2C(long marketId, List<Entry> markets) implements CustomPacketPayload {
 	public static final Type<BoardS2C> TYPE = new Type<>(TradeExpansion.id("board"));
 
-	/** @param buy / sell price per trading unit, or -1 when not available (sold out, not bought, ...) */
-	public record Good(Identifier item, int unit, long buy, long sell, int stock, boolean shortage) {
+	/**
+	 * @param buy / sell price per trading unit, or -1 when not available (sold out, not bought, ...)
+	 * @param buyDeal  % cheaper to buy than at the current market (or the standard price when it does not deal in it), 0 = no deal
+	 * @param sellDeal % more paid than at the current market (or the standard price), 0 = no deal
+	 */
+	public record Good(Identifier item, int unit, long buy, long sell, int stock, boolean shortage, int buyDeal, int sellDeal) {
 		static final StreamCodec<RegistryFriendlyByteBuf, Good> CODEC = StreamCodec.composite(
 				Identifier.STREAM_CODEC, Good::item,
 				ByteBufCodecs.VAR_INT, Good::unit,
@@ -28,6 +32,8 @@ public record BoardS2C(long marketId, List<Entry> markets) implements CustomPack
 				ByteBufCodecs.VAR_LONG, Good::sell,
 				ByteBufCodecs.VAR_INT, Good::stock,
 				ByteBufCodecs.BOOL, Good::shortage,
+				ByteBufCodecs.VAR_INT, Good::buyDeal,
+				ByteBufCodecs.VAR_INT, Good::sellDeal,
 				Good::new);
 	}
 

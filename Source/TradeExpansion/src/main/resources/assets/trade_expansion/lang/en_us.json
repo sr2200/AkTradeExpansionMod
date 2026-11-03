@@ -1,5 +1,5 @@
 {
-  "itemGroup.trade_expansion": "Trade Expansion",
+  "itemGroup.trade_expansion": "AK Trade Expansion",
   "item.trade_expansion.copper_coin": "Copper Coin",
   "item.trade_expansion.iron_coin": "Iron Coin",
   "item.trade_expansion.gold_coin": "Gold Coin",
@@ -59,7 +59,7 @@
   "command.trade_expansion.not_traded": "The nearest market does not trade %s",
   "command.trade_expansion.no_market": "There is no market in this dimension",
   "command.trade_expansion.advanced": "Advanced market #%s by %s days",
-  "config.trade_expansion.title": "Trade Expansion Settings",
+  "config.trade_expansion.title": "AK Trade Expansion Settings",
   "config.trade_expansion.server_locked": "Cannot be changed while connected to a server. Edit the server's config/trade_expansion.json and run /tradeex reload",
   "config.trade_expansion.category.currency": "Currency",
   "config.trade_expansion.category.price": "Price",
@@ -226,7 +226,7 @@
   "screen.trade_expansion.board.back": "All markets",
   "screen.trade_expansion.board.none": "No other markets within %s blocks",
   "screen.trade_expansion.board.where": "%s %sm",
-  "screen.trade_expansion.board.columns": "Left: buy (yellow) / right: sell (green). Orange = shortage",
+  "screen.trade_expansion.board.columns": "Left: buy / right: sell. Cyan ↓ = cheaper than here, pink ↑ = pays more than here. Orange name = shortage",
   "screen.trade_expansion.exchange.done": "Exchanged",
   "screen.trade_expansion.exchange.help": "↓ break  ↑ combine (fee %s%%)",
   "screen.trade_expansion.shift_all": "Shift+confirm: all",
@@ -369,5 +369,15 @@
   "config.trade_expansion.villager.wanderingTraderCoins.desc": "While villager coin trades are on, buying from the wandering trader is paid in coins too",
   "command.trade_expansion.audit_villagers": "%s villagers / wandering traders nearby, %s coin trades, %s of them profit when resold at a market (largest first, up to 15)",
   "config.trade_expansion.villager.minGoodsPriceMultiplier": "Minimum price of goods sold by villagers",
-  "config.trade_expansion.villager.minGoodsPriceMultiplier.desc": "When villagers or wandering traders sell an item that is also market goods, the price is at least base price × this × count (even far from markets). 0 = off. 1.4 is a little above the highest market sell price with variance and regional multipliers"
+  "config.trade_expansion.villager.minGoodsPriceMultiplier.desc": "When villagers or wandering traders sell an item that is also market goods, the price is at least base price × this × count (even far from markets). 0 = off. 1.4 is a little above the highest market sell price with variance and regional multipliers",
+  "screen.trade_expansion.board.deal_buy_count": "B%s",
+  "screen.trade_expansion.board.deal_sell_count": "S%s",
+  "screen.trade_expansion.board.deal_hint": "Hover a market to see its deals (B: goods cheaper to buy than here, S: goods that sell for more)",
+  "screen.trade_expansion.board.deal_none": "No deals at this market",
+  "screen.trade_expansion.board.deal_buy_title": "Buy cheap",
+  "screen.trade_expansion.board.deal_sell_title": "Sell high",
+  "screen.trade_expansion.board.deal_buy": "%s%% cheaper than here",
+  "screen.trade_expansion.board.deal_sell": "Pays %s%% more than here",
+  "config.trade_expansion.board.dealThreshold": "Deal threshold",
+  "config.trade_expansion.board.dealThreshold.desc": "The board marks goods at least this much cheaper to buy, or paying this much more, than at the current market (or the standard price) as deals. 0.1 = 10%"
 }

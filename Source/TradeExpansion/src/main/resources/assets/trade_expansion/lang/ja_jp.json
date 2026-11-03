@@ -1,5 +1,5 @@
 {
-  "itemGroup.trade_expansion": "Trade Expansion",
+  "itemGroup.trade_expansion": "AK Trade Expansion",
   "item.trade_expansion.copper_coin": "銅貨",
   "item.trade_expansion.iron_coin": "鉄貨",
   "item.trade_expansion.gold_coin": "金貨",
@@ -59,7 +59,7 @@
   "command.trade_expansion.not_traded": "最寄りの市場は %s を扱っていません",
   "command.trade_expansion.no_market": "この次元に市場がありません",
   "command.trade_expansion.advanced": "市場 #%s の時間を %s 日進めました",
-  "config.trade_expansion.title": "Trade Expansion の設定",
+  "config.trade_expansion.title": "AK Trade Expansion の設定",
   "config.trade_expansion.server_locked": "サーバーに接続中のため変更できません。サーバーの config/trade_expansion.json を編集して /tradeex reload を実行してください",
   "config.trade_expansion.category.currency": "通貨",
   "config.trade_expansion.category.price": "価格",
@@ -226,7 +226,7 @@
   "screen.trade_expansion.board.back": "市場一覧へ",
   "screen.trade_expansion.board.none": "半径 %s ブロック以内にほかの市場はありません",
   "screen.trade_expansion.board.where": "%s %sm",
-  "screen.trade_expansion.board.columns": "左：買値（黄）／右：売値（緑）。オレンジは品不足",
+  "screen.trade_expansion.board.columns": "左：買値／右：売値。水色↓はここより安く買える、桃色↑はここより高く売れる。オレンジの名前は品不足",
   "screen.trade_expansion.exchange.done": "両替しました",
   "screen.trade_expansion.exchange.help": "↓崩す ↑まとめる（手数料 %s%%）",
   "screen.trade_expansion.shift_all": "Shift+確定で全数",
@@ -369,5 +369,15 @@
   "config.trade_expansion.villager.wanderingTraderCoins.desc": "村人のコイン化（上の項目）が ON の時、行商人から買う代金もコインにする",
   "command.trade_expansion.audit_villagers": "周りの村人・行商人 %s人、コインで買える取引 %s件のうち、買って市場で売ると儲かる取引 %s件（利益の大きい順、最大15件）",
   "config.trade_expansion.villager.minGoodsPriceMultiplier": "村人が売る商品の最低価格",
-  "config.trade_expansion.villager.minGoodsPriceMultiplier.desc": "村人・行商人が市場の商品と同じ品を売る時、代金を「商品の基準価格×この値×個数」より安くしない（近くに市場が無くても効く）。0 で無効。1.4 は市場のばらつきと地域の倍率を合わせた最高の売値より少し上"
+  "config.trade_expansion.villager.minGoodsPriceMultiplier.desc": "村人・行商人が市場の商品と同じ品を売る時、代金を「商品の基準価格×この値×個数」より安くしない（近くに市場が無くても効く）。0 で無効。1.4 は市場のばらつきと地域の倍率を合わせた最高の売値より少し上",
+  "screen.trade_expansion.board.deal_buy_count": "安%s",
+  "screen.trade_expansion.board.deal_sell_count": "高%s",
+  "screen.trade_expansion.board.deal_hint": "市場にマウスを乗せると、お買い得の品が出ます（安：ここより安く買える品の数、高：ここより高く売れる品の数）",
+  "screen.trade_expansion.board.deal_none": "この市場にお買い得の品はありません",
+  "screen.trade_expansion.board.deal_buy_title": "安く買える",
+  "screen.trade_expansion.board.deal_sell_title": "高く売れる",
+  "screen.trade_expansion.board.deal_buy": "ここより %s%% 安く買える",
+  "screen.trade_expansion.board.deal_sell": "ここより %s%% 高く売れる",
+  "config.trade_expansion.board.dealThreshold": "お買い得とみなす差",
+  "config.trade_expansion.board.dealThreshold.desc": "掲示板で、今いる市場（扱っていなければ標準の値段）よりこの割合以上安く買える・高く売れる品をお買い得として表示する。0.1 なら10%"
 }

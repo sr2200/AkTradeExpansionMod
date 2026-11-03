@@ -67,6 +67,7 @@ public final class ConfigValidator {
 
 		c.board.radius = clamp("board.radius", c.board.radius, 64, 4096);
 		c.board.maxMarkets = clamp("board.maxMarkets", c.board.maxMarkets, 1, 100);
+		c.board.dealThreshold = clamp("board.dealThreshold", c.board.dealThreshold, 0.01, 1);
 
 		TradeExpansionConfig.Quest q = c.quest;
 		q.maxPerMarket = clamp("quest.maxPerMarket", q.maxPerMarket, 0, 10);

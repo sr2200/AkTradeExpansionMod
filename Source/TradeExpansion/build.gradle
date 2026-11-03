@@ -71,6 +71,11 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+// File names (B案, v0.25): the jar is ak_trade_expansion-<version>.jar; the mod ID stays trade_expansion.
+base {
+	archivesName = "ak_trade_expansion"
+}
+
 // The license text lives at the repository root (../../LICENSE).
 def licenseFile = rootProject.file("../../LICENSE")
 
@@ -84,13 +89,14 @@ jar {
 }
 
 // Distribution zip for mod sites (Crafters Colony etc.): the mod jar, the install guide (src/dist/README.txt with @VERSION@
-// replaced) and the license. Made by every build: build/distributions/TradeExpansion-<version>.zip
+// replaced) and the license: build/distributions/AKTradeExpansion-<version>.zip. Not part of "build"; made by
+// release.bat (or "gradlew releaseZip").
 def releaseZip = tasks.register("releaseZip", Zip) {
 	group = "distribution"
 	description = "Packs the mod jar, install guide and license for distribution."
 	def version = project.version
 	inputs.property "version", version
-	archiveFileName = "TradeExpansion-${version}.zip"
+	archiveFileName = "AKTradeExpansion-${version}.zip"
 	destinationDirectory = layout.buildDirectory.dir("distributions")
 	from(tasks.named("jar"))
 	from(licenseFile)
@@ -103,9 +109,6 @@ def releaseZip = tasks.register("releaseZip", Zip) {
 	}
 }
 
-tasks.named("build") {
-	dependsOn releaseZip
-}
 
 // configure the maven publication
 publishing {

@@ -1,8 +1,8 @@
 @echo off
-rem Trade Expansion: release build.
+rem AK Trade Expansion: release build.
 rem   1. Raises the last number of "version" in gradle.properties (0.0.7 -> 0.0.8) and the version line of README.md
 rem      (skip with: release.bat nobump)
-rem   2. Runs "gradlew build": tests, the mod jar (build\libs) and the distribution zip (build\distributions)
+rem   2. Runs "gradlew build releaseZip": tests, the mod jar (build\libs) and the distribution zip (build\distributions)
 rem   Other arguments go to Gradle (e.g. release.bat --offline, release.bat nobump --offline)
 setlocal
 cd /d "%~dp0"
@@ -31,7 +31,7 @@ if errorlevel 1 (
 
 :build
 rem Full path: some environments do not run programs from the current folder (NoDefaultCurrentDirectoryInExePath).
-call "%~dp0gradlew.bat" build %1 %2 %3 %4
+call "%~dp0gradlew.bat" build releaseZip %1 %2 %3 %4
 if errorlevel 1 (
   echo Build failed.
   exit /b 1

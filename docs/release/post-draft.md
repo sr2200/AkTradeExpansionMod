@@ -5,15 +5,15 @@
 > - 【スクリーンショット：…】：撮影した画像に置き換える
 > - 【ソースコードのURL】：GitHub のリポジトリを公開する場合は `https://github.com/sr2200/AkTradeExpansionMod`。非公開のままなら、その行を消して「ソースコードはご連絡ください」などにする
 
-**タイトル案**：【Java版26.3/Fabric】Trade Expansion ― 相場が動く市場と、コインで回る経済を追加
+**タイトル案**：【Java版26.3/Fabric】AK Trade Expansion ― 相場が動く市場と、コインで回る経済を追加
 
 **カテゴリ**：Java版 ＞ MOD
 
-**配布ファイル**：`TradeExpansion-【バージョン】.zip`（`Source/TradeExpansion/build/distributions` にできるもの）
+**配布ファイル**：`AKTradeExpansion-【バージョン】.zip`（`Source/TradeExpansion/build/distributions` にできるもの）
 
 ---
 
-## Trade Expansion とは
+## AK Trade Expansion とは
 
 コインと屋台で取引する、**相場が動く経済**を追加する MOD です。
 
@@ -71,7 +71,7 @@
 
 1. Fabric Loader をインストールし、Minecraft 26.3 の Fabric の起動構成を作ります
 2. Fabric API を `mods` フォルダに入れます
-3. ダウンロードした zip を展開し、中の `trade_expansion-【バージョン】.jar` を `mods` フォルダに入れます
+3. ダウンロードした zip を展開し、中の `ak_trade_expansion-【バージョン】.jar` を `mods` フォルダに入れます
 4. （任意）Mod Menu と YACL を `mods` フォルダに入れます
 5. Fabric の起動構成で Minecraft を起動します
 

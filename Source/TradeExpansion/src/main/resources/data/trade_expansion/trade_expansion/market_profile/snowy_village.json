@@ -51,6 +51,10 @@
         {
           "goods": "trade_expansion:lily_of_the_valley",
           "weight": 4
+        },
+        {
+          "goods": "trade_expansion:salmon",
+          "weight": 5
         }
       ]
     },
@@ -93,15 +97,15 @@
           "weight": 5
         },
         {
-          "goods": "trade_expansion:cooked_beef",
+          "goods": "trade_expansion:beef",
           "weight": 5
         },
         {
-          "goods": "trade_expansion:cooked_porkchop",
+          "goods": "trade_expansion:porkchop",
           "weight": 5
         },
         {
-          "goods": "trade_expansion:cooked_chicken",
+          "goods": "trade_expansion:chicken",
           "weight": 5
         },
         {
@@ -136,6 +140,14 @@
           "goods": "trade_expansion:book",
           "weight": 3,
           "min_level": 2
+        },
+        {
+          "goods": "trade_expansion:cod",
+          "weight": 2
+        },
+        {
+          "goods": "trade_expansion:salmon",
+          "weight": 2
         }
       ]
     },

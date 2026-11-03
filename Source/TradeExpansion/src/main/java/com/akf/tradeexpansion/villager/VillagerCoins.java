@@ -82,6 +82,14 @@ public final class VillagerCoins {
 		return b.isPresent() && !isEmerald(b.get()) ? offer.getCostB() : null;
 	}
 
+	/** Whether the payment slots hold the non-emerald part of the cost (always true when there is none). */
+	public static boolean otherCostPaid(MerchantOffer offer, ItemStack slotA, ItemStack slotB) {
+		ItemCost other = otherItemCost(offer);
+		if (other == null) return true;
+		int need = otherCost(offer).getCount();
+		return (other.test(slotA) && slotA.getCount() >= need) || (other.test(slotB) && slotB.getCount() >= need);
+	}
+
 	public static @Nullable ItemCost otherItemCost(MerchantOffer offer) {
 		if (!isEmerald(offer.getItemCostA())) return offer.getItemCostA();
 		return offer.getItemCostB().filter(b -> !isEmerald(b)).orElse(null);

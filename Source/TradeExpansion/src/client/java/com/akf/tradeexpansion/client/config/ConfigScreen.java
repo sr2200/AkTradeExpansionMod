@@ -155,6 +155,7 @@ public final class ConfigScreen {
 		ConfigCategory.Builder village = category("village")
 				.option(intField("board.radius", d.board.radius, () -> edit.board.radius, v -> edit.board.radius = v, 64, 4096))
 				.option(intField("board.maxMarkets", d.board.maxMarkets, () -> edit.board.maxMarkets, v -> edit.board.maxMarkets = v, 1, 100))
+				.option(doubleField("board.dealThreshold", d.board.dealThreshold, () -> edit.board.dealThreshold, v -> edit.board.dealThreshold = v, 0.01, 1))
 				.option(intField("quest.maxPerMarket", d.quest.maxPerMarket, () -> quest.maxPerMarket, v -> quest.maxPerMarket = v, 0, 10))
 				.option(doubleField("quest.refreshDays", d.quest.refreshDays, () -> quest.refreshDays, v -> quest.refreshDays = v, 0.1, 30))
 				.option(doubleField("quest.durationDays", d.quest.durationDays, () -> quest.durationDays, v -> quest.durationDays = v, 0.5, 30));

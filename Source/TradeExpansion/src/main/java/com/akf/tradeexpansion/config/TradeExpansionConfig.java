@@ -561,18 +561,22 @@ public final class TradeExpansionConfig {
 	public static final class Board {
 		public int radius = 512;
 		public int maxMarkets = 20;
+		/** I (v0.24): a price this much better than at the current market counts as a deal. */
+		public double dealThreshold = 0.1;
 
 		public Board() {
 		}
 
-		Board(int radius, int maxMarkets) {
+		Board(int radius, int maxMarkets, double dealThreshold) {
 			this.radius = radius;
 			this.maxMarkets = maxMarkets;
+			this.dealThreshold = dealThreshold;
 		}
 
 		static final Codec<Board> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.INT.fieldOf("radius").orElse(512).forGetter(c -> c.radius),
-				Codec.INT.fieldOf("maxMarkets").orElse(20).forGetter(c -> c.maxMarkets)
+				Codec.INT.fieldOf("maxMarkets").orElse(20).forGetter(c -> c.maxMarkets),
+				Codec.DOUBLE.fieldOf("dealThreshold").orElse(0.1).forGetter(c -> c.dealThreshold)
 		).apply(i, Board::new));
 	}
 

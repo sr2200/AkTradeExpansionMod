@@ -44,7 +44,7 @@ class BundledDataTest {
 	@Test
 	void goodsDecode() throws IOException {
 		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);
-		assertEquals(81, goods.size());
+		assertEquals(83, goods.size());
 		GoodsDefinition emerald = goods.get("emerald_coin");
 		assertEquals(10, emerald.unit());
 		assertFalse(emerald.buy());

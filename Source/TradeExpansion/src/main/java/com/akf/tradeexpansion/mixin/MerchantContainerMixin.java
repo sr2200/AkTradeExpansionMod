@@ -6,7 +6,6 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.trading.ItemCost;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
@@ -44,11 +43,7 @@ public abstract class MerchantContainerMixin {
 		MerchantOffer offer = offers.get(selectionHint);
 		activeOffer = null;
 		futureXp = 0;
-		ItemCost other = VillagerCoins.otherItemCost(offer);
-		ItemStack otherStack = VillagerCoins.otherCost(offer);
-		boolean otherOk = other == null
-				|| (other.test(itemStacks.get(0)) && itemStacks.get(0).getCount() >= otherStack.getCount())
-				|| (other.test(itemStacks.get(1)) && itemStacks.get(1).getCount() >= otherStack.getCount());
+		boolean otherOk = VillagerCoins.otherCostPaid(offer, itemStacks.get(0), itemStacks.get(1));
 		if (offer.isOutOfStock() || !otherOk || !WalletService.canPay(player, price)) {
 			setItem(2, ItemStack.EMPTY);
 			return;

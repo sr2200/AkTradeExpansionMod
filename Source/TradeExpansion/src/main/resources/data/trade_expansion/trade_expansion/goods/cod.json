@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:cod",
+  "base_price": 8,
+  "elasticity": 64,
+  "target_stock": 32
+}

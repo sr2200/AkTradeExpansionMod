@@ -32,7 +32,7 @@
           "weight": 6
         },
         {
-          "goods": "trade_expansion:cooked_beef",
+          "goods": "trade_expansion:beef",
           "weight": 5
         },
         {
@@ -112,7 +112,7 @@
       "multiplier": 1.3
     },
     {
-      "item": "minecraft:cooked_beef",
+      "item": "minecraft:beef",
       "multiplier": 1.3
     },
     {
