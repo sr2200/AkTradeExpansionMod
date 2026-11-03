@@ -97,6 +97,11 @@
           "goods": "trade_expansion:netherite_scrap",
           "weight": 1,
           "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:wither_rose",
+          "weight": 3,
+          "min_level": 2
         }
       ]
     }

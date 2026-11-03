@@ -78,6 +78,14 @@ public record GoodsDefinition(
 		return acceptDamaged.orElse(TradeExpansionConfig.get().trade.acceptDamaged);
 	}
 
+	/** D-2 / G: this definition with the config file's values for this good. */
+	public GoodsDefinition with(com.akf.tradeexpansion.config.GoodsOverride o) {
+		return new GoodsDefinition(item, o.basePrice().orElse(basePrice), o.elasticity().or(() -> elasticity), o.targetStock().orElse(targetStock),
+				o.maxStock().or(() -> maxStock), o.restockPerDay().or(() -> restockPerDay), o.spread().or(() -> spread),
+				o.buy().orElse(buy), o.sell().orElse(sell), acceptDamaged, unit, autoAdd, link, components,
+				o.consumePerDay().or(() -> consumePerDay), o.halfLifeDays().or(() -> halfLifeDays));
+	}
+
 	/** B-3: whether this good is a consumable (see {@link #isConsumable}). */
 	public boolean consumable(TradeExpansionConfig config) {
 		return isConsumable(item, config);

@@ -47,6 +47,10 @@
         {
           "goods": "trade_expansion:sweet_berries",
           "weight": 4
+        },
+        {
+          "goods": "trade_expansion:lily_of_the_valley",
+          "weight": 4
         }
       ]
     },
@@ -215,6 +219,21 @@
           "goods": "trade_expansion:diamond_sword",
           "weight": 1,
           "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:torchflower",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "trade_expansion:pitcher_plant",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "trade_expansion:wither_rose",
+          "weight": 1,
+          "min_level": 4
         }
       ]
     }

@@ -71,13 +71,40 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
+// The license text lives at the repository root (../../LICENSE).
+def licenseFile = rootProject.file("../../LICENSE")
+
 jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
 
-	from("LICENSE") {
+	from(licenseFile) {
 		rename { "${it}_$projectName"}
 	}
+}
+
+// Distribution zip for mod sites (Crafters Colony etc.): the mod jar, the install guide (src/dist/README.txt with @VERSION@
+// replaced) and the license. Made by every build: build/distributions/TradeExpansion-<version>.zip
+def releaseZip = tasks.register("releaseZip", Zip) {
+	group = "distribution"
+	description = "Packs the mod jar, install guide and license for distribution."
+	def version = project.version
+	inputs.property "version", version
+	archiveFileName = "TradeExpansion-${version}.zip"
+	destinationDirectory = layout.buildDirectory.dir("distributions")
+	from(tasks.named("jar"))
+	from(licenseFile)
+	from("src/dist") {
+		filteringCharset = "UTF-8"
+		// Plain token replacement (a Groovy template would treat the backslashes in Windows paths as escapes).
+		filesMatching("README.txt") {
+			filter { String line -> line.replace("@VERSION@", version.toString()) }
+		}
+	}
+}
+
+tasks.named("build") {
+	dependsOn releaseZip
 }
 
 // configure the maven publication

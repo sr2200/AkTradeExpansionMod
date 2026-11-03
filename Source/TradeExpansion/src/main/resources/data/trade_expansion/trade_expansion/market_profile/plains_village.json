@@ -47,6 +47,66 @@
         {
           "goods": "trade_expansion:cooked_beef",
           "weight": 6
+        },
+        {
+          "goods": "trade_expansion:dandelion",
+          "weight": 5
+        },
+        {
+          "goods": "trade_expansion:poppy",
+          "weight": 5
+        },
+        {
+          "goods": "trade_expansion:oxeye_daisy",
+          "weight": 4
+        },
+        {
+          "goods": "trade_expansion:azure_bluet",
+          "weight": 4
+        },
+        {
+          "goods": "trade_expansion:cornflower",
+          "weight": 4
+        },
+        {
+          "goods": "trade_expansion:allium",
+          "weight": 3
+        },
+        {
+          "goods": "trade_expansion:red_tulip",
+          "weight": 3
+        },
+        {
+          "goods": "trade_expansion:orange_tulip",
+          "weight": 3
+        },
+        {
+          "goods": "trade_expansion:white_tulip",
+          "weight": 3
+        },
+        {
+          "goods": "trade_expansion:pink_tulip",
+          "weight": 3
+        },
+        {
+          "goods": "trade_expansion:sunflower",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "trade_expansion:lilac",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "trade_expansion:rose_bush",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "trade_expansion:peony",
+          "weight": 2,
+          "min_level": 2
         }
       ]
     },
@@ -215,6 +275,21 @@
           "goods": "trade_expansion:diamond_sword",
           "weight": 1,
           "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:torchflower",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "trade_expansion:pitcher_plant",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "trade_expansion:wither_rose",
+          "weight": 1,
+          "min_level": 4
         }
       ]
     }

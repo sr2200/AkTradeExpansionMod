@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:dandelion",
+  "base_price": 3,
+  "elasticity": 128,
+  "target_stock": 64
+}

@@ -26,6 +26,14 @@
         {
           "goods": "trade_expansion:cobblestone",
           "weight": 6
+        },
+        {
+          "goods": "trade_expansion:dandelion",
+          "weight": 3
+        },
+        {
+          "goods": "trade_expansion:poppy",
+          "weight": 3
         }
       ]
     },
@@ -194,6 +202,21 @@
           "goods": "trade_expansion:diamond_sword",
           "weight": 1,
           "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:torchflower",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "trade_expansion:pitcher_plant",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "trade_expansion:wither_rose",
+          "weight": 1,
+          "min_level": 4
         }
       ]
     }

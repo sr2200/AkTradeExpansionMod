@@ -23,6 +23,7 @@ public final class ModPayloads {
 		PayloadTypeRegistry.clientboundPlay().register(ConfigSyncS2C.TYPE, ConfigSyncS2C.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(AccountS2C.TYPE, AccountS2C.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BoardS2C.TYPE, BoardS2C.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(VillagerPricesS2C.TYPE, VillagerPricesS2C.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ExchangeResultS2C.TYPE, ExchangeResultS2C.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ExchangeRequestC2S.TYPE, ExchangeRequestC2S.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(QuestResultS2C.TYPE, QuestResultS2C.CODEC);

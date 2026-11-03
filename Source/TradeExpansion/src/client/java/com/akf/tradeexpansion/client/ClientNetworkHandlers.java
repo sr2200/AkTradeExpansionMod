@@ -49,6 +49,13 @@ public final class ClientNetworkHandlers {
 			}
 		});
 		// Server settings needed for previews (design G); local settings come back on disconnect.
+		// Stage 14a (design H): coin prices of the villager trade screen; an empty array means coin trades are off.
+		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.VillagerPricesS2C.TYPE, (payload, context) -> {
+			java.util.UUID id = context.player().getUUID();
+			if (payload.prices().length == 0) com.akf.tradeexpansion.villager.VillagerCoins.clear(id);
+			else com.akf.tradeexpansion.villager.VillagerCoins.put(id, new com.akf.tradeexpansion.villager.VillagerCoins.Prices(payload.containerId(), payload.prices()));
+			if (context.player().containerMenu instanceof net.minecraft.world.inventory.MerchantMenu menu) menu.updateSellItem();
+		});
 		ClientPlayNetworking.registerGlobalReceiver(ConfigSyncS2C.TYPE, (payload, context) -> payload.applyOnClient());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			ClientMarketCache.clear();

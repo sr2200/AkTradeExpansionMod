@@ -127,6 +127,7 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 	}
 
 	private static Component tooCloseMessage(MarketRegistry.Assignment assignment) {
+		if (assignment.reason() != null) return assignment.reason().copy().withStyle(ChatFormatting.RED); // C-1: distance or newMarketRequires
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		return Component.translatable("message.trade_expansion.stall_too_close",
 				(int) assignment.nearestDistance(), (int) config.distance.mergeRadius, (int) config.distance.minNewMarketDistance)

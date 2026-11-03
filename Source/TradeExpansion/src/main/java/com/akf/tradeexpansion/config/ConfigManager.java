@@ -74,6 +74,7 @@ public final class ConfigManager {
 	public static void apply(TradeExpansionConfig config) {
 		TradeExpansionConfig.set(config);
 		CoinType.setRatios(config.currency.ratioArray());
+		com.akf.tradeexpansion.data.GoodsCatalog.applyOverrides(); // D-2 / G: goods values of the config file
 	}
 
 	/** Deep copy through the codec (the config screen edits a copy). */

@@ -81,10 +81,14 @@ public final class ConfigValidator {
 		dm.minMultiplier = clamp("demand.minMultiplier", dm.minMultiplier, 1, 5);
 		dm.maxMultiplier = clamp("demand.maxMultiplier", dm.maxMultiplier, dm.minMultiplier, 5);
 
+		c.market.newMarketMinBeds = clamp("market.newMarketMinBeds", c.market.newMarketMinBeds, 0, 1000);
+		c.market.newMarketMinVillagers = clamp("market.newMarketMinVillagers", c.market.newMarketMinVillagers, 0, 1000);
+		c.villager.minGoodsPriceMultiplier = clamp("villager.minGoodsPriceMultiplier", c.villager.minGoodsPriceMultiplier, 0, 10);
 		c.villager.emeraldPrice = clamp("villager.emeraldPrice", c.villager.emeraldPrice, 1, 10000);
 
 		c.consumables.add = itemIds("consumables.add", c.consumables.add);
 		c.consumables.remove = itemIds("consumables.remove", c.consumables.remove);
+		c.goods = goodsOverrides(c.goods);
 		return c;
 	}
 
@@ -111,6 +115,23 @@ public final class ConfigValidator {
 	}
 
 	/** Fixed-size double list, each element clamped; wrong size → defaults. */
+	/** D-2: goods ids normalized ("dandelion" → "trade_expansion:dandelion"), values clamped to the goods JSON ranges, empty entries dropped. */
+	private static java.util.Map<String, GoodsOverride> goodsOverrides(java.util.Map<String, GoodsOverride> values) {
+		java.util.TreeMap<String, GoodsOverride> result = new java.util.TreeMap<>();
+		values.forEach((key, value) -> {
+			String raw = key == null ? "" : key.trim();
+			net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(raw.contains(":") ? raw : "trade_expansion:" + raw);
+			if (id == null) {
+				TradeExpansionConfig.warn("goods: '{}' is not a goods id, ignored", key);
+				return;
+			}
+			GoodsOverride clamped = value.clamped();
+			if (!clamped.equals(value)) TradeExpansionConfig.warn("goods.{}: values out of range were corrected", id);
+			if (!clamped.isEmpty()) result.put(id.toString(), clamped);
+		});
+		return result;
+	}
+
 	/** Normalizes item ids ("carrot" → "minecraft:carrot"), dropping malformed and duplicate entries. Unknown items are kept (other mods may load later). */
 	private static List<String> itemIds(String key, List<String> values) {
 		java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();

@@ -7,7 +7,7 @@
 	"authors": [
 		"akf"
 	],
-	"license": "CC0-1.0",
+	"license": "LGPL-2.1-only",
 	"icon": "assets/trade_expansion/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -32,6 +32,10 @@
 		"yet_another_config_lib_v3": "*"
 	},
 	"mixins": [
-		"trade_expansion.mixins.json"
+		"trade_expansion.mixins.json",
+		{
+			"config": "trade_expansion.client.mixins.json",
+			"environment": "client"
+		}
 	]
 }

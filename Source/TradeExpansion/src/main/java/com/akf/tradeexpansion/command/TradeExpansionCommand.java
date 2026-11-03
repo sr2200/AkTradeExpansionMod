@@ -83,9 +83,15 @@ public final class TradeExpansionCommand {
 								.then(Commands.literal("sell")
 										.then(Commands.argument("count", IntegerArgumentType.integer(1, 2304))
 												.executes(c -> simulate(c, false))))))
+				.then(Commands.literal("where")
+						.executes(c -> where(c, 0))
+						.then(Commands.literal("show").executes(c -> where(c, 1)))
+						.then(Commands.literal("hide").executes(c -> where(c, 2))))
 				.then(ConsumableCommand.build(admin(Commands.literal("consumable"))))
+				.then(GoodsCommand.build(admin(Commands.literal("goods"))))
 				.then(admin(Commands.literal("audit"))
-						.executes(TradeExpansionCommand::audit))
+						.executes(TradeExpansionCommand::audit)
+						.then(Commands.literal("villagers").executes(c -> VillagerAudit.run(c.getSource()))))
 				.then(admin(Commands.literal("market"))
 						.then(Commands.literal("setx")
 								.then(Commands.argument("goods", IdentifierArgument.id())
@@ -304,6 +310,20 @@ public final class TradeExpansionCommand {
 			return 0;
 		}
 		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_deleted", id), true);
+		return 1;
+	}
+
+	/** C-1 (v0.19): {@code where} describes the spot, {@code show} draws the ranges, {@code hide} stops drawing. Open to everyone. */
+	private static int where(CommandContext<CommandSourceStack> context, int action) throws CommandSyntaxException {
+		ServerPlayer player = context.getSource().getPlayerOrException();
+		switch (action) {
+			case 1 -> {
+				com.akf.tradeexpansion.market.PlacementGuide.show(player);
+				context.getSource().sendSuccess(() -> Component.translatable("message.trade_expansion.where.shown"), false);
+			}
+			case 2 -> com.akf.tradeexpansion.market.PlacementGuide.hide(player);
+			default -> com.akf.tradeexpansion.market.PlacementGuide.describe(player).forEach(line -> context.getSource().sendSuccess(() -> line, false));
+		}
 		return 1;
 	}
 

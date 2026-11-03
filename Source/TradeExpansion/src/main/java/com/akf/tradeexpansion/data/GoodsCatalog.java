@@ -20,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * (the file id, e.g. {@code trade_expansion:bread}). Replaced on every data pack (re)load.
  */
 public final class GoodsCatalog {
+	/** As loaded from the data packs. */
+	private static Map<Identifier, GoodsDefinition> loaded = Map.of();
+	/** {@link #loaded} with the config file's {@code goods} values applied (D-2 / G). */
 	private static Map<Identifier, GoodsDefinition> goods = Map.of();
 	/** {@code components} decoded with the server registries; filled lazily, cleared on reload. */
 	private static final Map<Identifier, DataComponentPatch> PATCHES = new ConcurrentHashMap<>();
@@ -37,9 +40,26 @@ public final class GoodsCatalog {
 		return goods;
 	}
 
-	static void replace(Map<Identifier, GoodsDefinition> loaded) {
-		goods = Collections.unmodifiableMap(new LinkedHashMap<>(loaded));
+	/** The data pack's definition without the config file's values, or {@code null}. */
+	public static GoodsDefinition loaded(Identifier goodsId) {
+		return loaded.get(goodsId);
+	}
+
+	static void replace(Map<Identifier, GoodsDefinition> definitions) {
+		loaded = Collections.unmodifiableMap(new LinkedHashMap<>(definitions));
+		applyOverrides();
 		PATCHES.clear();
+	}
+
+	/** Re-applies {@code goods} of the config file (on data pack load and on every config change). */
+	public static void applyOverrides() {
+		Map<String, com.akf.tradeexpansion.config.GoodsOverride> overrides = com.akf.tradeexpansion.config.TradeExpansionConfig.get().goods;
+		Map<Identifier, GoodsDefinition> result = new LinkedHashMap<>();
+		loaded.forEach((id, def) -> {
+			com.akf.tradeexpansion.config.GoodsOverride o = overrides.get(id.toString());
+			result.put(id, o == null ? def : def.with(o));
+		});
+		goods = Collections.unmodifiableMap(result);
 	}
 
 	public static void setRegistries(HolderLookup.Provider provider) {

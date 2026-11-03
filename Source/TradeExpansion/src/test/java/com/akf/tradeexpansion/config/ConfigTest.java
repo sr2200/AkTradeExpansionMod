@@ -23,7 +23,7 @@ class ConfigTest {
 		assertDoesNotThrow(() -> assertTrue(Files.readString(file).contains("\"halfLifeDays\": 2.0"), "every value is written"));
 		assertEquals(2.0, config.recovery.halfLifeDays);
 		assertEquals(List.of(10, 10, 10, 10), config.currency.ratios);
-		assertEquals(100_000, config.wallet.capacity);
+		assertEquals(20_000, config.wallet.capacity);
 	}
 
 	@Test
@@ -47,6 +47,34 @@ class ConfigTest {
 		assertEquals(List.of("minecraft:coal"), config.consumables.remove);
 		config.consumables.add.add("minecraft:sand");
 		assertEquals(List.of(), ConfigManager.read(dir.resolve("missing.json")).consumables.add);
+	}
+
+	/** D-2 / G: per-goods values; ids get the mod namespace, values are clamped, empty entries dropped. */
+	@Test
+	void goodsOverridesAreNormalized() throws IOException {
+		Path file = dir.resolve("trade_expansion.json");
+		Files.writeString(file, """
+				{"goods": {"dandelion": {"base_price": 5, "sell": false},
+				           "trade_expansion:poppy": {"spread": 5.0},
+				           "trade_expansion:empty": {}}}
+				""");
+		TradeExpansionConfig config = ConfigManager.read(file);
+		assertEquals(5.0, config.goods.get("trade_expansion:dandelion").basePrice().orElseThrow());
+		assertFalse(config.goods.get("trade_expansion:dandelion").sell().orElseThrow());
+		assertEquals(1.9, config.goods.get("trade_expansion:poppy").spread().orElseThrow());
+		assertFalse(config.goods.containsKey("trade_expansion:empty"));
+	}
+
+	/** C-1: where new markets may be founded; default 4 (beds and villagers). */
+	@Test
+	void newMarketRequirement() throws IOException {
+		assertEquals(TradeExpansionConfig.NewMarketRequires.BEDS_AND_VILLAGERS, TradeExpansionConfig.defaults().market.newMarketRequires);
+		Path file = dir.resolve("trade_expansion.json");
+		Files.writeString(file, "{\"market\": {\"newMarketRequires\": \"VILLAGE\", \"newMarketMinBeds\": -5}}");
+		TradeExpansionConfig config = ConfigManager.read(file);
+		assertEquals(TradeExpansionConfig.NewMarketRequires.VILLAGE, config.market.newMarketRequires);
+		assertEquals(0, config.market.newMarketMinBeds);
+		assertEquals(3, config.market.newMarketMinVillagers);
 	}
 
 	@Test

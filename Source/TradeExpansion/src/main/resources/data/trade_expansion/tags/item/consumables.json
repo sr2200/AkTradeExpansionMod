@@ -45,6 +45,26 @@
     "minecraft:stick",
     "minecraft:cobblestone",
     "minecraft:sand",
-    "minecraft:glass"
+    "minecraft:glass",
+    "minecraft:dandelion",
+    "minecraft:poppy",
+    "minecraft:oxeye_daisy",
+    "minecraft:azure_bluet",
+    "minecraft:cornflower",
+    "minecraft:red_tulip",
+    "minecraft:orange_tulip",
+    "minecraft:white_tulip",
+    "minecraft:pink_tulip",
+    "minecraft:lily_of_the_valley",
+    "minecraft:blue_orchid",
+    "minecraft:allium",
+    "minecraft:cactus_flower",
+    "minecraft:sunflower",
+    "minecraft:lilac",
+    "minecraft:rose_bush",
+    "minecraft:peony",
+    "minecraft:torchflower",
+    "minecraft:pitcher_plant",
+    "minecraft:wither_rose"
   ]
 }

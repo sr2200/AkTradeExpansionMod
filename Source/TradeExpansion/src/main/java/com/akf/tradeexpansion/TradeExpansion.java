@@ -44,6 +44,7 @@ public class TradeExpansion implements ModInitializer {
 		CoinDrops.init();
 		VillagerTradeToggle.init();
 		VillageStalls.init();
+		com.akf.tradeexpansion.market.PlacementGuide.init();
 		DataReloadListener.init();
 		ServerConfig.init();
 		CommandRegistrationCallback.EVENT.register((dispatcher, buildContext, selection) -> TradeExpansionCommand.register(dispatcher));

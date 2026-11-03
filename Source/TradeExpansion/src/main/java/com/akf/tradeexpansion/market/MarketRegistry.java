@@ -6,6 +6,7 @@ import com.akf.tradeexpansion.currency.CoinType;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -41,11 +42,17 @@ public final class MarketRegistry extends SavedData {
 	/** Why a stall could not get a market. */
 	public enum Rejection {
 		/** C-1: a crafted stall may only found a new market far enough from existing ones. */
-		TOO_CLOSE_TO_MARKET
+		TOO_CLOSE_TO_MARKET,
+		/** C-1: the place does not meet {@code market.newMarketRequires} (village / beds / villagers). */
+		NOT_A_SETTLEMENT
 	}
 
 	/** @param created a new market was founded for the stall */
-	public record Assignment(Market market, Rejection rejection, double nearestDistance, boolean created) {
+	public record Assignment(Market market, Rejection rejection, double nearestDistance, boolean created, Component reason) {
+		public Assignment(Market market, Rejection rejection, double nearestDistance, boolean created) {
+			this(market, rejection, nearestDistance, created, null);
+		}
+
 	}
 
 	private final List<Integer> currencyRatios;
@@ -106,27 +113,45 @@ public final class MarketRegistry extends SavedData {
 	 * Crafted stalls may found a new market only {@code minNewMarketDistance} away from every other market.
 	 */
 	public Assignment assignStall(ServerLevel level, BlockPos pos, MarketOrigin origin) {
-		TradeExpansionConfig config = TradeExpansionConfig.get();
-		List<Market> sameDimension = inDimension(level.dimension());
-
-		Market nearest = sameDimension.stream()
-				.min(Comparator.comparingDouble((Market m) -> m.horizontalDistanceTo(pos)).thenComparingLong(Market::id))
-				.orElse(null);
-		double nearestDistance = nearest == null ? Double.POSITIVE_INFINITY : nearest.horizontalDistanceTo(pos);
-
-		if (nearest != null && nearestDistance <= config.distance.mergeRadius) {
-			nearest.stalls().add(pos.immutable());
+		Preview preview = preview(level, pos, origin);
+		if (preview.kind() == Preview.Kind.JOIN) {
+			preview.market().stalls().add(pos.immutable());
 			setDirty();
-			return new Assignment(nearest, null, nearestDistance, false);
+			return new Assignment(preview.market(), null, preview.nearestDistance(), false);
 		}
-		if (origin == MarketOrigin.CRAFTED && nearestDistance < config.distance.minNewMarketDistance) {
-			return new Assignment(null, Rejection.TOO_CLOSE_TO_MARKET, nearestDistance, false);
+		if (preview.kind() == Preview.Kind.REFUSED) {
+			return new Assignment(null, preview.rejection(), preview.nearestDistance(), false, preview.reason());
 		}
-
-		Market market = createMarket(level, pos, origin, sameDimension);
+		Market market = createMarket(level, pos, origin, inDimension(level.dimension()));
+		double nearestDistance = preview.nearestDistance();
 		market.stalls().add(pos.immutable());
 		setDirty();
 		return new Assignment(market, null, nearestDistance, true);
+	}
+
+	/**
+	 * What placing a stall at {@code pos} would do, without changing anything (C-1): join the nearest market within
+	 * {@code mergeRadius}, found a new one, or be refused (too close to a market, or {@code market.newMarketRequires}).
+	 */
+	public record Preview(Kind kind, Market market, double nearestDistance, Rejection rejection, Component reason) {
+		public enum Kind { JOIN, NEW, REFUSED }
+	}
+
+	public Preview preview(ServerLevel level, BlockPos pos, MarketOrigin origin) {
+		TradeExpansionConfig config = TradeExpansionConfig.get();
+		Market nearest = nearestWithin(level.dimension(), pos, Double.MAX_VALUE);
+		double nearestDistance = nearest == null ? Double.POSITIVE_INFINITY : nearest.horizontalDistanceTo(pos);
+		if (nearest != null && nearestDistance <= config.distance.mergeRadius) return new Preview(Preview.Kind.JOIN, nearest, nearestDistance, null, null);
+		if (origin == MarketOrigin.CRAFTED && nearestDistance < config.distance.minNewMarketDistance) {
+			Component reason = Component.translatable("message.trade_expansion.stall_too_close",
+					(int) nearestDistance, (int) config.distance.mergeRadius, (int) config.distance.minNewMarketDistance);
+			return new Preview(Preview.Kind.REFUSED, null, nearestDistance, Rejection.TOO_CLOSE_TO_MARKET, reason);
+		}
+		if (origin == MarketOrigin.CRAFTED) {
+			Component reason = SettlementRule.check(level, pos);
+			if (reason != null) return new Preview(Preview.Kind.REFUSED, null, nearestDistance, Rejection.NOT_A_SETTLEMENT, reason);
+		}
+		return new Preview(Preview.Kind.NEW, null, nearestDistance, null, null);
 	}
 
 	/** Nearest market of the dimension within {@code radius} (horizontal), or {@code null}; never creates one (A-5). */

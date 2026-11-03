@@ -112,6 +112,14 @@ public final class ConfigScreen {
 				.binding(d.market.renamePermission, () -> market.renamePermission, v -> market.renamePermission = v)
 				.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.RenamePermission.class)
 						.formatValue(v -> Component.translatable(KEY + "market.renamePermission." + v.getSerializedName().toLowerCase(Locale.ROOT))))));
+		marketCat.option(server(Option.<TradeExpansionConfig.NewMarketRequires>createBuilder()
+				.name(Component.translatable(KEY + "market.newMarketRequires"))
+				.description(description("market.newMarketRequires"))
+				.binding(d.market.newMarketRequires, () -> market.newMarketRequires, v -> market.newMarketRequires = v)
+				.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.NewMarketRequires.class)
+						.formatValue(v -> Component.translatable(KEY + "market.newMarketRequires." + v.getSerializedName().toLowerCase(Locale.ROOT))))))
+				.option(intField("market.newMarketMinBeds", d.market.newMarketMinBeds, () -> market.newMarketMinBeds, v -> market.newMarketMinBeds = v, 0, 1000))
+				.option(intField("market.newMarketMinVillagers", d.market.newMarketMinVillagers, () -> market.newMarketMinVillagers, v -> market.newMarketMinVillagers = v, 0, 1000));
 		marketCat.option(intField("market.levelRadius", d.market.levelRadius, () -> market.levelRadius, v -> market.levelRadius = v, 16, 256))
 				.option(doubleField("market.levelCheckIntervalDays", d.market.levelCheckIntervalDays, () -> market.levelCheckIntervalDays, v -> market.levelCheckIntervalDays = v, 0, 100));
 
@@ -130,6 +138,7 @@ public final class ConfigScreen {
 				.option(intField("trade.maxPerTransaction", d.trade.maxPerTransaction, () -> trade.maxPerTransaction, v -> trade.maxPerTransaction = v, 1, 2304))
 				.option(doubleField("trade.priceTolerance", d.trade.priceTolerance, () -> trade.priceTolerance, v -> trade.priceTolerance = v, 0, 0.2))
 				.option(bool("trade.allowCreative", d.trade.allowCreative, () -> trade.allowCreative, v -> trade.allowCreative = v))
+				.option(bool("trade.showPlacementHint", d.trade.showPlacementHint, () -> trade.showPlacementHint, v -> trade.showPlacementHint = v))
 				.option(bool("trade.allowShiftAll", d.trade.allowShiftAll, () -> trade.allowShiftAll, v -> trade.allowShiftAll = v))
 				.option(bool("trade.acceptDamaged", d.trade.acceptDamaged, () -> trade.acceptDamaged, v -> trade.acceptDamaged = v));
 
@@ -165,7 +174,9 @@ public final class ConfigScreen {
 				.option(doubleField("demand.maxMultiplier", d.demand.maxMultiplier, () -> demand.maxMultiplier, v -> demand.maxMultiplier = v, 1, 5))
 				.option(bool("trader.spawnOnOpen", d.trader.spawnOnOpen, () -> edit.trader.spawnOnOpen, v -> edit.trader.spawnOnOpen = v))
 				.option(bool("villager.coinTrades", d.villager.coinTrades, () -> edit.villager.coinTrades, v -> edit.villager.coinTrades = v))
-				.option(intField("villager.emeraldPrice", d.villager.emeraldPrice, () -> edit.villager.emeraldPrice, v -> edit.villager.emeraldPrice = v, 1, 10000));
+				.option(bool("villager.wanderingTraderCoins", d.villager.wanderingTraderCoins, () -> edit.villager.wanderingTraderCoins, v -> edit.villager.wanderingTraderCoins = v))
+				.option(intField("villager.emeraldPrice", d.villager.emeraldPrice, () -> edit.villager.emeraldPrice, v -> edit.villager.emeraldPrice = v, 1, 10000))
+				.option(doubleField("villager.minGoodsPriceMultiplier", d.villager.minGoodsPriceMultiplier, () -> edit.villager.minGoodsPriceMultiplier, v -> edit.villager.minGoodsPriceMultiplier = v, 0, 10));
 
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")

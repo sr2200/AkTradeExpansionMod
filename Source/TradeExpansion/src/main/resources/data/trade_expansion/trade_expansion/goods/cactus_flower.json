@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:cactus_flower",
+  "base_price": 5,
+  "elasticity": 64,
+  "target_stock": 32
+}

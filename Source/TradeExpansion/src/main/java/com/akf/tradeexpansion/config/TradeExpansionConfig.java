@@ -9,6 +9,8 @@ import net.minecraft.util.StringRepresentable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Settings of design chapter G, stored in {@code config/trade_expansion.json} as one JSON object per category
@@ -38,6 +40,8 @@ public final class TradeExpansionConfig {
 	public Trader trader = new Trader();
 	public Villager villager = new Villager();
 	public Consumables consumables = new Consumables();
+	/** D-2: per-goods values replacing the goods definition (goods id → values). */
+	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
 	public TradeExpansionConfig(Currency currency, Price price, Recovery recovery, Distance distance, Market market, Wallet wallet,
 			Bank bank, Trade trade, Worldgen worldgen, Log log, Command command, Vanilla vanilla, Client client) {
@@ -84,14 +88,16 @@ public final class TradeExpansionConfig {
 	).apply(i, TradeExpansionConfig::new));
 
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
-	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables) {
+	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
+			Map<String, GoodsOverride> goods) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
 				section("demand", Demand.CODEC, new Demand()).forGetter(Extra::demand),
 				section("trader", Trader.CODEC, new Trader()).forGetter(Extra::trader),
 				section("villager", Villager.CODEC, new Villager()).forGetter(Extra::villager),
-				section("consumables", Consumables.CODEC, new Consumables()).forGetter(Extra::consumables)
+				section("consumables", Consumables.CODEC, new Consumables()).forGetter(Extra::consumables),
+				section("goods", Codec.unboundedMap(Codec.STRING, GoodsOverride.CODEC), Map.<String, GoodsOverride>of()).forGetter(Extra::goods)
 		).apply(i, Extra::new));
 	}
 
@@ -104,8 +110,9 @@ public final class TradeExpansionConfig {
 		c.trader = e.trader();
 		c.villager = e.villager();
 		c.consumables = e.consumables();
+		c.goods = new TreeMap<>(e.goods());
 		return c;
-	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables))).codec();
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -287,12 +294,17 @@ public final class TradeExpansionConfig {
 		public double levelCheckIntervalDays = 1.0;
 		/** C-4: who may rename a market. */
 		public RenamePermission renamePermission = RenamePermission.NAMER_OR_OP;
+		/** C-1: where a crafted stall may found a new market. */
+		public NewMarketRequires newMarketRequires = NewMarketRequires.BEDS_AND_VILLAGERS;
+		public int newMarketMinBeds = 3;
+		public int newMarketMinVillagers = 3;
 
 		public Market() {
 		}
 
 		Market(int minGoods, int maxGoods, List<Integer> levelThresholds, List<Integer> villagerThresholds, int levelRadius,
-				double levelCheckIntervalDays, RenamePermission renamePermission) {
+				double levelCheckIntervalDays, RenamePermission renamePermission, NewMarketRequires newMarketRequires,
+				int newMarketMinBeds, int newMarketMinVillagers) {
 			this.minGoods = minGoods;
 			this.maxGoods = maxGoods;
 			this.levelThresholds = new ArrayList<>(levelThresholds);
@@ -300,6 +312,9 @@ public final class TradeExpansionConfig {
 			this.levelRadius = levelRadius;
 			this.levelCheckIntervalDays = levelCheckIntervalDays;
 			this.renamePermission = renamePermission;
+			this.newMarketRequires = newMarketRequires;
+			this.newMarketMinBeds = newMarketMinBeds;
+			this.newMarketMinVillagers = newMarketMinVillagers;
 		}
 
 		static final Codec<Market> CODEC = RecordCodecBuilder.create(i -> {
@@ -311,7 +326,10 @@ public final class TradeExpansionConfig {
 					Codec.INT.listOf().fieldOf("villagerThresholds").orElse(d.villagerThresholds).forGetter(c -> c.villagerThresholds),
 					Codec.INT.fieldOf("levelRadius").orElse(d.levelRadius).forGetter(c -> c.levelRadius),
 					Codec.DOUBLE.fieldOf("levelCheckIntervalDays").orElse(d.levelCheckIntervalDays).forGetter(c -> c.levelCheckIntervalDays),
-					RenamePermission.CODEC.fieldOf("renamePermission").orElse(d.renamePermission).forGetter(c -> c.renamePermission)
+					RenamePermission.CODEC.fieldOf("renamePermission").orElse(d.renamePermission).forGetter(c -> c.renamePermission),
+					NewMarketRequires.CODEC.fieldOf("newMarketRequires").orElse(d.newMarketRequires).forGetter(c -> c.newMarketRequires),
+					Codec.INT.fieldOf("newMarketMinBeds").orElse(d.newMarketMinBeds).forGetter(c -> c.newMarketMinBeds),
+					Codec.INT.fieldOf("newMarketMinVillagers").orElse(d.newMarketMinVillagers).forGetter(c -> c.newMarketMinVillagers)
 			).apply(i, Market::new);
 		});
 
@@ -326,7 +344,7 @@ public final class TradeExpansionConfig {
 
 	/** E-6 (stage 12). */
 	public static final class Wallet {
-		public long capacity = 100_000;
+		public long capacity = 20_000;
 		public boolean autoCollect = true;
 
 		public Wallet() {
@@ -381,18 +399,21 @@ public final class TradeExpansionConfig {
 		public int maxPerTransaction = 64;
 		public boolean allowShiftAll = true;
 		public boolean allowCreative = false;
+		/** C-1: action bar hint while holding a stall. */
+		public boolean showPlacementHint = true;
 
 		public Trade() {
 		}
 
 		Trade(double maxDistance, boolean acceptDamaged, double priceTolerance, int maxPerTransaction, boolean allowShiftAll,
-				boolean allowCreative) {
+				boolean allowCreative, boolean showPlacementHint) {
 			this.maxDistance = maxDistance;
 			this.acceptDamaged = acceptDamaged;
 			this.priceTolerance = priceTolerance;
 			this.maxPerTransaction = maxPerTransaction;
 			this.allowShiftAll = allowShiftAll;
 			this.allowCreative = allowCreative;
+			this.showPlacementHint = showPlacementHint;
 		}
 
 		static final Codec<Trade> CODEC = RecordCodecBuilder.create(i -> {
@@ -403,7 +424,8 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("priceTolerance").orElse(d.priceTolerance).forGetter(c -> c.priceTolerance),
 					Codec.INT.fieldOf("maxPerTransaction").orElse(d.maxPerTransaction).forGetter(c -> c.maxPerTransaction),
 					Codec.BOOL.fieldOf("allowShiftAll").orElse(d.allowShiftAll).forGetter(c -> c.allowShiftAll),
-					Codec.BOOL.fieldOf("allowCreative").orElse(d.allowCreative).forGetter(c -> c.allowCreative)
+					Codec.BOOL.fieldOf("allowCreative").orElse(d.allowCreative).forGetter(c -> c.allowCreative),
+					Codec.BOOL.fieldOf("showPlacementHint").orElse(d.showPlacementHint).forGetter(c -> c.showPlacementHint)
 			).apply(i, Trade::new);
 		});
 	}
@@ -475,6 +497,21 @@ public final class TradeExpansionConfig {
 		static final Codec<Vanilla> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.BOOL.fieldOf("disableVillagerTrades").orElse(false).forGetter(c -> c.disableVillagerTrades)
 		).apply(i, Vanilla::new));
+	}
+
+	/**
+	 * C-1: where a crafted stall may found a new market. 1 VILLAGE = inside a village structure, 2 BEDS = enough beds,
+	 * 3 VILLAGERS = enough villagers, 4 BEDS_AND_VILLAGERS = enough villagers and at least as many beds as villagers.
+	 */
+	public enum NewMarketRequires implements StringRepresentable {
+		VILLAGE, BEDS, VILLAGERS, BEDS_AND_VILLAGERS;
+
+		public static final Codec<NewMarketRequires> CODEC = StringRepresentable.fromEnum(NewMarketRequires::values);
+
+		@Override
+		public String getSerializedName() {
+			return name();
+		}
 	}
 
 	/** C-4: who may rename a market. */
@@ -618,18 +655,26 @@ public final class TradeExpansionConfig {
 	public static final class Villager {
 		public boolean coinTrades = true;
 		public int emeraldPrice = 30;
+		/** H-4 14b: the wandering trader also takes coins (only while coinTrades is on). */
+		public boolean wanderingTraderCoins = true;
+		/** H-2 14c: villagers never sell goods below base_price × this (0 = off). */
+		public double minGoodsPriceMultiplier = 1.4;
 
 		public Villager() {
 		}
 
-		Villager(boolean coinTrades, int emeraldPrice) {
+		Villager(boolean coinTrades, int emeraldPrice, boolean wanderingTraderCoins, double minGoodsPriceMultiplier) {
 			this.coinTrades = coinTrades;
 			this.emeraldPrice = emeraldPrice;
+			this.wanderingTraderCoins = wanderingTraderCoins;
+			this.minGoodsPriceMultiplier = minGoodsPriceMultiplier;
 		}
 
 		static final Codec<Villager> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.BOOL.fieldOf("coinTrades").orElse(true).forGetter(c -> c.coinTrades),
-				Codec.INT.fieldOf("emeraldPrice").orElse(30).forGetter(c -> c.emeraldPrice)
+				Codec.INT.fieldOf("emeraldPrice").orElse(30).forGetter(c -> c.emeraldPrice),
+				Codec.BOOL.fieldOf("wanderingTraderCoins").orElse(true).forGetter(c -> c.wanderingTraderCoins),
+				Codec.DOUBLE.fieldOf("minGoodsPriceMultiplier").orElse(1.4).forGetter(c -> c.minGoodsPriceMultiplier)
 		).apply(i, Villager::new));
 	}
 
