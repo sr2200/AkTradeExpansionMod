@@ -89,6 +89,7 @@ final class AuditCommand {
 	}
 
 	/** Sum of the cheapest choice of every ingredient; {@code -1} if one cannot be bought. */
+	@SuppressWarnings("deprecation") // Ingredient.items() is the only way to list the choices on the server
 	private static long cost(List<Ingredient> ingredients, java.util.function.ToLongFunction<Item> price) {
 		long cost = 0;
 		for (Ingredient ingredient : ingredients) {

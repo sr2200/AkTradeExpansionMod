@@ -32,7 +32,7 @@ public final class CoinDrops {
 			if (table.unwrapKey().map(k -> !k.identifier().getPath().startsWith("entities/")).orElse(true)) return;
 			Entity entity = context.getOptional(LootContextParams.THIS_ENTITY);
 			Player killer = context.getOptional(LootContextParams.LAST_DAMAGE_PLAYER);
-			if (entity == null || killer == null || !entity.getType().builtInRegistryHolder().is(DROPS_COINS)) return;
+			if (entity == null || killer == null || !net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()).is(DROPS_COINS)) return;
 
 			RandomSource random = context.getRandom();
 			int looting = context.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).get(Enchantments.LOOTING)

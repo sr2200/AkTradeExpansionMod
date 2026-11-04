@@ -18,7 +18,7 @@ import java.util.UUID;
  * Wallet auto-collect (design E-6): coins a player picks up go straight into their wallet.
  * Respects the pickup delay and the item's target player like vanilla; what does not fit is picked up normally.
  */
-@Mixin(ItemEntity.class)
+@Mixin(value = ItemEntity.class, remap = false)
 public abstract class ItemEntityMixin {
 	@Shadow
 	private UUID target;

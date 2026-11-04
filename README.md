@@ -15,7 +15,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.11（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに末尾を上げる） |
+| バージョン | 0.0.14（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -56,7 +56,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 - 半径64ブロック以内の交易所は同じ「市場」になり、在庫と相場を共有します。
 - 既存の市場から 64〜256ブロックの場所には新しい交易所を置けません（相場をリセットする抜け道を防ぐため）。
-- 256ブロック以上離れた場所に新しい市場を作るには、周り（半径64ブロック）に**村人が3人以上いて、ベッドが3個以上かつ村人の数以上**あることが必要です（既定）。条件は設定 `market.newMarketRequires` で「村の中だけ」「ベッドの数」「村人の数」に変えられます。ネザー・エンドでは村人の数だけで判定します。
+- 256ブロック以上離れた場所に新しい市場を作るには、周り（半径64ブロック）に**村人が3人以上いて、ベッドが3個以上かつ村人の数以上**あることが必要です（既定）。ただし**ベッドが5個以上あれば、村人の方が多くても作れます**（設定 `market.newMarketEnoughBeds`）。条件は設定 `market.newMarketRequires` で「村の中だけ」「ベッドの数」「村人の数」に変えられます。ネザー・エンドでは村人の数だけで判定します。
 - クリエイティブモードでは取引できません（無限のアイテムで経済が壊れるのを防ぐため）。試すときはサバイバルモードで行ってください（設定 `trade.allowCreative` で許可もできます）。
 - **置き場所の確認**：交易所を手に持つと、画面下に「置くと◯◯に加わる／新しい市場ができる／置けない理由」が出ます。`/tradeex where` で今いる場所の情報（村の範囲内か・近くの市場・ベッドと村人の数・置いた時の結果）、`/tradeex where show` で範囲を30秒間パーティクルで表示できます（緑：村、黄：同じ市場になる範囲、赤：新しい市場を作れない範囲、青：ベッド・村人を数える範囲）。
 - **村の屋台**：新しく生成される村（平原・砂漠・サバンナ・雪原・タイガ）には、交易所の入った屋台の建物が建つことがあります。設定 `worldgen.protectNaturalStalls` を ON にすると、村の交易所をサバイバルで壊せなくなります（既定 OFF）。
@@ -75,16 +75,18 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 左下の「売却枠」に品物を置くと、売却タブでその商品が選ばれます。置いた品も売却の対象になり、画面を閉じるとインベントリに戻ります。
 - Shift を押しながら確定すると、できる最大の数量（最大36スタック）でまとめて取引します。
 - 所持金（現金・銀行）はインベントリの右に表示します。マウスを乗せると内訳が出ます。表示位置は設定の「表示」タブ（`client.balancePosition`）で「売却枠の下」「右上」にも変えられます。
-- 一覧の ▲▼ は画面を開いた時からの値動き、右端のメーターは基準価格からのずれ（右・赤＝高い、左・緑＝安い）です。行にマウスを乗せると直近14日の価格グラフが出ます。品不足の商品はオレンジ色です。
+- 一覧の ▲▼ は画面を開いた時からの値動き、右端のメーターは基準価格からのずれ（右・赤＝高い、左・緑＝安い）です。行にマウスを乗せると直近14日の価格グラフが出ます。品不足の商品はオレンジ色、**本日の掘り出し物**は★付きの水色です。
+- 売り切れ・買取停止の商品は、行が赤みがかった灰色になります。マウスを乗せると理由と「入荷まで約○分」「買取再開まで約○分」が出ます。売却枠に置いた品が買取停止のときは、売却枠が赤い枠で囲まれます。
+- **まとめ買い割引**：1回に16個以上買うと5%引き、64個以上で10%引きになります（売却には付きません。設定 `trade.bulkDiscounts`）。割引が効く数量では、合計金額の下に「まとめ買い −10%」のように出ます。値段の安い商品やスプレッドの小さい商品では、売り戻して儲からないよう割引率が小さくなることがあります。
 - 設定 `trade.acceptDamaged` を ON にすると（または商品定義で `accept_damaged: true`）、耐久が減った道具・防具も残りの耐久の割合で安く買い取ってもらえます（既定 OFF）。
 
 ### 相場の動き方
 
-- 売るたびに価格が少しずつ下がり、買うたびに上がります。まとめて取引しても1個ずつ取引しても合計は同じです。
+- 売るたびに価格が少しずつ下がり、買うたびに上がります。まとめて取引しても1個ずつ取引しても合計は同じです（購入はまとめ買い割引の分だけ、まとめて買う方が安くなります）。
 - 同じ市場で売ってすぐ買い戻しても儲からないように、買値と売値には差があります。
 - ずれた相場はゲーム内2日で半分元に戻ります。在庫も時間で補充されます。
 - 売りすぎて在庫が上限に達すると「買取停止」になりますが、市場が在庫を少しずつ使うので、時間がたつとまた買い取ってもらえます。
-- 食料・松明・燃料・原木・木材・丸石・砂・ガラス・花などの**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります。消耗品は後から追加・削除できます（管理コマンド `/tradeex consumable add|remove <アイテム>`、設定の `consumables.add`・`consumables.remove`、データパックのアイテムタグ `#trade_expansion:consumables`）。
+- 食料・松明・燃料・原木・木材・丸石・砂・ガラス・花などの**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります。消耗品は後から追加・削除できます（設定画面の「商品」タブ →「追加の商品と消耗品」でアイコンから選ぶ、管理コマンド `/tradeex consumable add|remove <アイテム>`、設定の `consumables.add`・`consumables.remove`、データパックのアイテムタグ `#trade_expansion:consumables`）。
 - 取引の影響は近くの市場にも伝わります（128ブロック以内は100%、1,536ブロックで0%）。在庫は伝わりません。
 
 ### 品揃えと市場の規模
@@ -92,7 +94,8 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 市場を作った場所によって、扱う商品が変わります。
   - オーバーワールド：平原・砂漠・サバンナ・雪原・タイガの村、ジャングル、沼地、プレイヤーが作った市場
   - ネザー（金・ネザー素材）、エンド（エンダーパール・シュルカーの殻など）
-- 商品は全部で82種（食料（生の肉と魚を含む）・木材・建材・鉱物・モブの素材・道具・花20種・ネザーとエンドの品）と、補助コインのエメラルド貨です。1つの市場が扱うのはそのうち10〜20種です。
+- 商品は全部で95種（食料（生の肉と魚を含む）・オーバーワールドの原木すべて・建材・鉱物・モブの素材・道具とダイヤの装備・花20種・ネザーとエンドの品）と、補助コインのエメラルド貨です。1つの市場が扱うのはそのうち10〜20種です。
+- 設定画面の「商品」タブ →「追加の商品と消耗品」で、アイコンからアイテムを選び、基準価格を入れて**商品を追加**できます。追加した商品は、下の「本日の掘り出し物」として市場に並ぶことがあります。
 - 市場には「規模（レベル）」があり、レベルが高いほど商品が多く、高級品も並びます。
 
 | レベル | 名前 | ベッド数 | ネザー・エンドの村人数 | 商品数 |
@@ -104,7 +107,9 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 5 | 都市 | 40〜 | 24〜 | 20 |
 
 - 市場の中心から半径64ブロック以内のベッドの数で測ります。ネザー・エンドではベッドが使えないので、連れて来た村人の人数で測ります。
-- 画面を開いた時にレベルを測り直し（ゲーム内1日に1回まで）、上がっていれば商品が増えます。レベルは下がりません。
+- 画面を開いた時にレベルを測り直し（ゲーム内1日に1回まで）、上がっていれば商品が増えます。
+- ベッドや村人が減ってレベルが下がると、最後に並んだ商品から外れて品揃えが減ります。外れた商品の値段と在庫は覚えていて、レベルが戻ると同じ商品が戻ります（設定 `market.shrinkOnLevelDown` を OFF にすると、レベルは下がらず品揃えも減りません）。
+- **本日の掘り出し物**：毎日（ゲーム内1日ごと）、その市場がふだん扱わない商品が並びます。レベル1〜2の市場で1品、3以上で2品。価格は2割高く、在庫は少なめで、次の日には入れ替わります（設定 `market.specialGoods` など）。
 
 ### 掲示板・依頼・品不足
 
@@ -134,7 +139,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 ## 商品一覧
 
-同梱の商品は80種と、補助コインのエメラルド貨です。1つの市場が扱うのはこのうち10〜20種で、どれが並ぶかは市場の種類（地域・次元）と規模（レベル）で抽選されます。
+同梱の商品は95種と、補助コインのエメラルド貨です。1つの市場が扱うのはこのうち10〜20種で、どれが並ぶかは市場の種類（地域・次元）と規模（レベル）で抽選されます。肉と魚は生のものだけを扱います（焼いた物は扱いません）。ほかに毎日1〜2品、その市場がふだん扱わない商品が「本日の掘り出し物」として並びます。
 
 - **買値／売値** は平常時（相場のずれが0）の目安です。実際の価格は市場ごとのばらつき（±15%）、地域の価格倍率、品不足、売買による相場の動きで変わります。
 - **在庫** は平常時の在庫（目標在庫）です。上限はその2倍（ダイヤの剣・エメラルド貨は個別に設定）。
@@ -169,7 +174,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | スイレンの葉 | `minecraft:lily_pad` | 5c | 6c / 4c | 32 |  | 沼地 |
 | 氷 | `minecraft:ice` | 6c | 8c / 4c | 32 |  | 雪原 |
 
-### 木材（5種）
+### 木材（10種）
 
 | 名前 | ID | 基準 | 買値 / 売値 | 在庫 | 消耗品 | 並ぶ市場 |
 |---|---|---|---|---|---|---|
@@ -178,6 +183,11 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | アカシアの原木 | `minecraft:acacia_log` | 8c | 10c / 6c | 64 | ○ | サバンナ |
 | ジャングルの原木 | `minecraft:jungle_log` | 8c | 10c / 6c | 64 | ○ | ジャングル |
 | マングローブの原木 | `minecraft:mangrove_log` | 8c | 10c / 6c | 64 | ○ | 沼地 |
+| シラカバの原木 | `minecraft:birch_log` | 8c | 10c / 6c | 64 | ○ | 平原・開拓地・既定 |
+| ダークオークの原木 | `minecraft:dark_oak_log` | 8c | 10c / 6c | 64 | ○ | 平原・開拓地・既定 |
+| サクラの原木 | `minecraft:cherry_log` | 8c | 10c / 6c | 64 | ○ | 平原・開拓地・既定 |
+| ペールオークの原木 | `minecraft:pale_oak_log` | 8c | 10c / 6c | 64 | ○ | 平原・開拓地・既定 |
+| ポプラの原木 | `minecraft:poplar_log` | 8c | 10c / 6c | 64 | ○ | 平原・開拓地・既定 |
 
 ### 建材（4種）
 
@@ -213,7 +223,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | スライムボール | `minecraft:slime_ball` | 25c | 30c / 20c | 16 |  | 沼地 |
 | 腐った肉 | `minecraft:rotten_flesh` | 2c | 買えない / 1c | 64 |  | オーバーワールドの全市場・ネザー・エンド |
 
-### 道具・装備・日用品（8種）
+### 道具・装備・日用品（16種）
 
 | 名前 | ID | 基準 | 買値 / 売値 | 在庫 | 消耗品 | 並ぶ市場 |
 |---|---|---|---|---|---|---|
@@ -223,6 +233,14 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 盾 | `minecraft:shield` | 78c | 94c / 62c | 8 |  | オーバーワールドの全市場（レベル2〜） |
 | 鉄の剣 | `minecraft:iron_sword` | 130c | 156c / 104c | 4 |  | オーバーワールドの全市場（レベル3〜） |
 | ダイヤの剣 | `minecraft:diamond_sword` | 900c | 1,080c / 720c | 8 |  | オーバーワールドの全市場（レベル5〜） |
+| ダイヤのヘルメット | `minecraft:diamond_helmet` | 2,250c | 2,700c / 1,800c | 4 |  | オーバーワールドの全市場（レベル5〜） |
+| ダイヤのチェストプレート | `minecraft:diamond_chestplate` | 3,600c | 4,320c / 2,880c | 4 |  | オーバーワールドの全市場（レベル5〜） |
+| ダイヤのレギンス | `minecraft:diamond_leggings` | 3,150c | 3,780c / 2,520c | 4 |  | オーバーワールドの全市場（レベル5〜） |
+| ダイヤのブーツ | `minecraft:diamond_boots` | 1,800c | 2,160c / 1,440c | 4 |  | オーバーワールドの全市場（レベル5〜） |
+| ダイヤのツルハシ | `minecraft:diamond_pickaxe` | 1,350c | 1,620c / 1,080c | 8 |  | オーバーワールドの全市場（レベル4〜） |
+| ダイヤの斧 | `minecraft:diamond_axe` | 1,350c | 1,620c / 1,080c | 8 |  | オーバーワールドの全市場（レベル4〜） |
+| ダイヤのクワ | `minecraft:diamond_hoe` | 900c | 1,080c / 720c | 8 |  | オーバーワールドの全市場（レベル4〜） |
+| ダイヤのシャベル | `minecraft:diamond_shovel` | 450c | 540c / 360c | 8 |  | オーバーワールドの全市場（レベル4〜） |
 | 鞍 | `minecraft:saddle` | 130c | 156c / 104c | 2 |  | オーバーワールドの全市場（レベル3〜） |
 | 白色のベッド | `minecraft:white_bed` | 44c | 53c / 35c | 8 |  | オーバーワールドの全市場 |
 
@@ -371,7 +389,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 |---|---|---|---|---|
 | `currency.ratios` | `[10, 10, 10, 10]` | 各 2〜100 | 銅→鉄、鉄→金、金→ダイヤ、ダイヤ→ネザライトの比率。ワールドを作る時に決める前提（変えると手持ちのコインの価値が変わる） | `"ratios": [10, 10, 10, 10]` |
 | `currency.ratioLocked` | `true` | true / false | ON の時、ワールド作成後に比率を変えても、そのワールドが作られた時の比率を使い続ける | `"ratioLocked": false`（比率の変更をワールドに反映する） |
-| `currency.allowMinting` | `true` | true / false | 銅ブロック×9 → 銅貨、鉄ブロック×9 → 鉄貨の鋳造レシピ。反映は再起動か `/reload` の後 | `"allowMinting": false`（鋳造を禁止） |
+| `currency.allowMinting` | `true` | true / false | 銅ブロック×9 → 銅貨の鋳造レシピ（鉄ブロックは下の `allowIronMinting` も必要）。反映は再起動か `/reload` の後 | `"allowMinting": false`（鋳造を禁止） |
+| `currency.allowIronMinting` | `false` | true / false | 鉄ブロック×9 → 鉄貨の鋳造レシピ。アイアンゴーレムトラップで鉄がいくらでも手に入り、お金が無限に増えるため既定は OFF。`allowMinting` も ON の時だけ有効。反映は再起動か `/reload` の後 | `"allowIronMinting": true`（鉄の鋳造を許可） |
 | `currency.exchangeFee` | `0.0` | 0〜0.5 | 両替タブの手数料の割合 | `"exchangeFee": 0.02`（2%） |
 | `currency.startingMoney` | `0` | 0〜1,000,000,000 | 初めてログインした時に渡す金額（c）。**未実装** | `"startingMoney": 500` |
 | `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨） | `"mobDropCoins": false` |
@@ -404,14 +423,14 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
-| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/tradeex consumable add` でも追加できる | `"add": ["minecraft:sandstone", "minecraft:white_wool"]` |
+| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/tradeex consumable add` や設定画面の「追加の商品と消耗品」でも追加できる | `"add": ["minecraft:sandstone", "minecraft:white_wool"]` |
 | `consumables.remove` | `[]` | アイテムIDの一覧 | タグや `add` にあっても消耗品として扱わないアイテム。`/tradeex consumable remove` でも指定できる | `"remove": ["minecraft:cobblestone"]` |
 
 #### 商品ごとの値（goods）
 
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
-| `goods` | `{}` | 商品ID → 値 | 商品定義（データパック）の値を商品ごとに上書きする。書ける項目は `base_price`（基準価格）・`elasticity`（弾力性）・`target_stock`（目標在庫）・`max_stock`（在庫上限）・`restock_per_day`（補充速度）・`consume_per_day`（消費量）・`half_life_days`（相場の半減期）・`spread`（スプレッド）・`buy`・`sell`。`buy` と `sell` を両方 `false` にするとその商品を扱わなくなる。名前空間を省くと `trade_expansion:`。`/tradeex goods set` でも変更できる | `"goods": { "dandelion": { "base_price": 5 }, "wither_rose": { "buy": false, "sell": false } }` |
+| `goods` | `{}` | 商品ID → 値 | 商品定義（データパック）の値を商品ごとに上書きする。書ける項目は `base_price`（基準価格）・`elasticity`（弾力性）・`target_stock`（目標在庫）・`max_stock`（在庫上限）・`restock_per_day`（補充速度）・`consume_per_day`（消費量）・`half_life_days`（相場の半減期）・`spread`（スプレッド）・`buy`・`sell`。`buy` と `sell` を両方 `false` にするとその商品を扱わなくなる。名前空間を省くと `trade_expansion:`。`/tradeex goods set` でも変更できる。データパックに無い商品IDに `item`（アイテムID）と `base_price` を書くと**商品を追加**する（設定画面の「追加の商品と消耗品」でアイコンから追加できる） | `"goods": { "dandelion": { "base_price": 5 }, "melon": { "item": "minecraft:melon", "base_price": 12 } }` |
 
 #### 距離（distance）
 
@@ -434,9 +453,14 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `market.villagerThresholds` | `[3, 6, 12, 24]` | 昇順の整数4つ | レベル2〜5になる村人の人数（ネザー・エンド） | `"villagerThresholds": [2, 4, 8, 16]` |
 | `market.levelRadius` | `64` | 16〜256 | ベッド・村人を数える水平半径 | `"levelRadius": 96` |
 | `market.levelCheckIntervalDays` | `1.0` | 0〜100 | 画面を開いた時、前回からこの日数以上たっていればレベルを測り直す | `"levelCheckIntervalDays": 0.5` |
-| `market.newMarketRequires` | `"BEDS_AND_VILLAGERS"` | `"VILLAGE"` / `"BEDS"` / `"VILLAGERS"` / `"BEDS_AND_VILLAGERS"` | クラフトした交易所で新しい市場を作れる場所。1 VILLAGE＝村の構造物の中だけ、2 BEDS＝ベッドが一定数以上、3 VILLAGERS＝村人が一定数以上、4 BEDS_AND_VILLAGERS＝村人が一定数以上かつベッドが一定数以上で、ベッド≧村人。既存の市場に加わる時と村の屋台には関係しない。ネザー・エンドではベッドの条件を外す | `"newMarketRequires": "VILLAGE"` |
+| `market.shrinkOnLevelDown` | `true` | true / false | レベルが下がった時に品揃えを減らす（外した商品はレベルが戻ると元の値段・在庫で戻る）。OFF にするとレベルは最高到達値のまま | `"shrinkOnLevelDown": false` |
+| `market.specialGoods` | `[1, 1, 2, 2, 2]` | 0〜10 の整数5つ | レベル1〜5の市場に毎日並ぶ「本日の掘り出し物」の数。0 で並ばない | `"specialGoods": [0, 1, 1, 2, 3]` |
+| `market.specialPriceMultiplier` | `1.2` | 0.5〜5 | 掘り出し物の基準価格に掛ける倍率 | `"specialPriceMultiplier": 1.5` |
+| `market.specialStockRatio` | `0.5` | 0.01〜1 | 掘り出し物の最初の在庫（目標在庫に対する割合、最低1個） | `"specialStockRatio": 0.25` |
+| `market.newMarketRequires` | `"BEDS_AND_VILLAGERS"` | `"VILLAGE"` / `"BEDS"` / `"VILLAGERS"` / `"BEDS_AND_VILLAGERS"` | クラフトした交易所で新しい市場を作れる場所。1 VILLAGE＝村の構造物の中だけ、2 BEDS＝ベッドが一定数以上、3 VILLAGERS＝村人が一定数以上、4 BEDS_AND_VILLAGERS＝村人が一定数以上かつベッドが一定数以上で、ベッド≧村人（ベッドが `newMarketEnoughBeds` 個以上ならベッド＜村人でもよい）。既存の市場に加わる時と村の屋台には関係しない。ネザー・エンドではベッドの条件を外す | `"newMarketRequires": "VILLAGE"` |
 | `market.newMarketMinBeds` | `3` | 0〜1000 | 新しい市場に必要なベッドの数（規模を測る半径の中） | `"newMarketMinBeds": 5` |
 | `market.newMarketMinVillagers` | `3` | 0〜1000 | 新しい市場に必要な村人の数（規模を測る半径の中） | `"newMarketMinVillagers": 1` |
+| `market.newMarketEnoughBeds` | `5` | 0〜1000 | 条件が `BEDS_AND_VILLAGERS` の時、ベッドがこの数以上あれば村人の方が多くても新しい市場を作れる。0 にすると常に「ベッド≧村人」が必要 | `"newMarketEnoughBeds": 8` |
 | `market.renamePermission` | `"NAMER_OR_OP"` | "ANYONE" / "NAMER_OR_OP" / "OP_ONLY" | 市場名を変えられる人。NAMER_OR_OP＝名付けた人と管理者（名前の無い市場は誰でも） | `"renamePermission": "OP_ONLY"` |
 
 #### 財布（wallet）
@@ -465,6 +489,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `trade.maxPerTransaction` | `64` | 1〜2304 | 1回の取引で選べる最大の数量 | `"maxPerTransaction": 128` |
 | `trade.allowShiftAll` | `true` | true / false | Shift＋確定で、できる最大の数量（最大2,304）までまとめて取引する | `"allowShiftAll": false` |
 | `trade.showPlacementHint` | `true` | true / false | 交易所を手に持っている間、置いた時の結果（市場に加わる／新しい市場ができる／置けない理由）を画面下に出す | `"showPlacementHint": false` |
+| `trade.bulkDiscounts` | 16個以上 5%、64個以上 10% | 個数 2〜2304、割引率 0〜0.5 | まとめ買い割引の段階（購入だけ）。売り戻して儲からないよう、商品ごとに割引率の上限が自動で付く。`[]` で割引なし | `"bulkDiscounts": [{"minQuantity": 32, "rate": 0.05}, {"minQuantity": 128, "rate": 0.15}]` |
 | `trade.allowCreative` | `false` | true / false | クリエイティブモードでの取引・銀行・両替を許可する | `"allowCreative": true`（テスト用） |
 
 #### 生成・商人（worldgen / trader）
@@ -549,7 +574,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 主な項目：`base_price`（基準価格）、`elasticity`（大きいほど値崩れしにくい）、`target_stock`（目標在庫）、`max_stock`（在庫上限。これ以上は買い取らない）、`unit`（取引単位）、`auto_add`（条件に合う市場に自動で追加）、`link`（近くの市場への相場の伝わりやすさ、既定 1.0）、`consume_per_day`（在庫が目標より多い時に1日に減る数）、`half_life_days`（相場の半減期）、`components`（エンチャントなど付加情報付きの品。例：`{"minecraft:enchantments": {"minecraft:sharpness": 1}}`）。
 
-市場プロファイルでは、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。同梱データ（商品82種（花20種を含む）＋エメラルド貨、プロファイル12種）は `Source/TradeExpansion/src/main/resources/data/trade_expansion/trade_expansion/` にあります。
+市場プロファイルでは、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。同梱データ（商品95種（花20種を含む）＋エメラルド貨、プロファイル12種）は `Source/TradeExpansion/src/main/resources/data/trade_expansion/trade_expansion/` にあります。
 
 ---
 
@@ -566,8 +591,9 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 | コマンド | 内容 |
 |---|---|
-| `release.bat` | **配布用のビルド**。`gradle.properties` のバージョンの末尾（とこの README の表記）を1つ上げてから `gradlew build releaseZip` を実行し、jar と**配布用 zip**（`build/distributions/AKTradeExpansion-<version>.zip`：jar・導入方法 README.txt・LICENSE）を作る。`release.bat nobump` で上げずにビルド、残りの引数（`--offline` など）は Gradle に渡す |
-| `./gradlew build` | 普段のビルド。テストと Mod の jar（`build/libs/ak_trade_expansion-<version>.jar`）を作る。バージョンは上がらず、配布用 zip も作らない |
+| `build.bat` | **普段のビルド**。`gradle.properties` のバージョンの末尾（とこの README の表記）を1つ上げてから（0.1.2 → 0.1.3）`gradlew build` を実行し、テストと Mod の jar（`build/libs/ak_trade_expansion-<version>.jar`）を作る。配布用 zip は作らない。`build.bat nobump` で上げずにビルド、残りの引数（`--offline` など）は Gradle に渡す |
+| `release.bat` | **配布用のビルド**。`gradle.properties` のバージョンの真ん中を1つ上げて末尾を0に戻してから（0.1.3 → 0.2.0。この README の表記も）`gradlew build releaseZip` を実行し、jar と**配布用 zip**（`build/distributions/AKTradeExpansion-<version>.zip`：jar・導入方法 README.txt・LICENSE）を作る。`release.bat nobump` で上げずにビルド、残りの引数（`--offline` など）は Gradle に渡す |
+| `./gradlew build` | バージョンを上げずにビルドする（`build.bat nobump` と同じ）。配布用 zip は作らない |
 | `./gradlew releaseZip` | 今のバージョンのまま配布用 zip だけを作る |
 | `./gradlew test` | 単体テスト（ゲームを起動せずに実行できる） |
 | `./gradlew runClient` | 開発用クライアントを起動（Mod Menu と YACL も開発用に読み込まれる） |

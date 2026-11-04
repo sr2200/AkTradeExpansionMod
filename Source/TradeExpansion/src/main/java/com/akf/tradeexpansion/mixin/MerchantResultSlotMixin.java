@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * uses up only the non-emerald part of the cost; the rest of the vanilla bookkeeping (uses, stats, experience)
  * stays the same.
  */
-@Mixin(MerchantResultSlot.class)
+@Mixin(value = MerchantResultSlot.class, remap = false)
 public abstract class MerchantResultSlotMixin {
 	@Shadow @Final private MerchantContainer slots;
 	@Shadow @Final private Player player;

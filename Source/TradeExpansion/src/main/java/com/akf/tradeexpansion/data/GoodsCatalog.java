@@ -40,6 +40,11 @@ public final class GoodsCatalog {
 		return goods;
 	}
 
+	/** Whether the good was added by the config file (v0.27) rather than a data pack. */
+	public static boolean fromConfig(Identifier goodsId) {
+		return goods.containsKey(goodsId) && !loaded.containsKey(goodsId);
+	}
+
 	/** The data pack's definition without the config file's values, or {@code null}. */
 	public static GoodsDefinition loaded(Identifier goodsId) {
 		return loaded.get(goodsId);
@@ -58,6 +63,17 @@ public final class GoodsCatalog {
 		loaded.forEach((id, def) -> {
 			com.akf.tradeexpansion.config.GoodsOverride o = overrides.get(id.toString());
 			result.put(id, o == null ? def : def.with(o));
+		});
+		// v0.27: goods added by the config file (item + base_price, not in the data packs). Unknown items are skipped.
+		overrides.forEach((key, o) -> {
+			Identifier id = Identifier.tryParse(key);
+			Identifier item = o.item().map(Identifier::tryParse).orElse(null);
+			if (id == null || result.containsKey(id) || !o.addsGood() || item == null) return;
+			if (!BuiltInRegistries.ITEM.containsKey(item)) {
+				TradeExpansion.LOGGER.warn("goods.{}: unknown item {}, not added", key, item);
+				return;
+			}
+			result.put(id, GoodsDefinition.fromConfig(item, o));
 		});
 		goods = Collections.unmodifiableMap(result);
 	}

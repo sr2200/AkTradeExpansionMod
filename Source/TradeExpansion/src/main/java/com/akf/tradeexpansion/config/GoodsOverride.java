@@ -9,6 +9,9 @@ import java.util.Optional;
  * Per-goods values set in the config file (design D-2 / G, {@code goods}): they replace the data pack's goods
  * definition, key by key, without editing a data pack. Keys and ranges are the same as in the goods JSON.
  * {@code buy: false} and {@code sell: false} together stop a market from dealing in the good.
+ * <p>
+ * v0.27: an entry whose goods id is not in the data packs adds a new good when it has {@code item} and
+ * {@code base_price} (config screen "goods and consumables"); the other values fall back to the defaults.
  */
 public record GoodsOverride(
 		Optional<Double> basePrice,
@@ -20,10 +23,11 @@ public record GoodsOverride(
 		Optional<Double> halfLifeDays,
 		Optional<Double> spread,
 		Optional<Boolean> buy,
-		Optional<Boolean> sell
+		Optional<Boolean> sell,
+		Optional<String> item
 ) {
 	public static final GoodsOverride EMPTY = new GoodsOverride(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-			Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+			Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 
 	public static final Codec<GoodsOverride> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Codec.DOUBLE.optionalFieldOf("base_price").forGetter(GoodsOverride::basePrice),
@@ -35,7 +39,8 @@ public record GoodsOverride(
 			Codec.DOUBLE.optionalFieldOf("half_life_days").forGetter(GoodsOverride::halfLifeDays),
 			Codec.DOUBLE.optionalFieldOf("spread").forGetter(GoodsOverride::spread),
 			Codec.BOOL.optionalFieldOf("buy").forGetter(GoodsOverride::buy),
-			Codec.BOOL.optionalFieldOf("sell").forGetter(GoodsOverride::sell)
+			Codec.BOOL.optionalFieldOf("sell").forGetter(GoodsOverride::sell),
+			Codec.STRING.optionalFieldOf("item").forGetter(GoodsOverride::item)
 	).apply(i, GoodsOverride::new));
 
 	/** Number keys, their JSON names and allowed ranges (same as the goods JSON, D-2). */
@@ -83,15 +88,24 @@ public record GoodsOverride(
 				key == NumberKey.CONSUME_PER_DAY ? value : consumePerDay,
 				key == NumberKey.HALF_LIFE_DAYS ? value : halfLifeDays,
 				key == NumberKey.SPREAD ? value : spread,
-				buy, sell);
+				buy, sell, item);
 	}
 
 	public GoodsOverride withBuy(Optional<Boolean> value) {
-		return new GoodsOverride(basePrice, elasticity, targetStock, maxStock, restockPerDay, consumePerDay, halfLifeDays, spread, value, sell);
+		return new GoodsOverride(basePrice, elasticity, targetStock, maxStock, restockPerDay, consumePerDay, halfLifeDays, spread, value, sell, item);
 	}
 
 	public GoodsOverride withSell(Optional<Boolean> value) {
-		return new GoodsOverride(basePrice, elasticity, targetStock, maxStock, restockPerDay, consumePerDay, halfLifeDays, spread, buy, value);
+		return new GoodsOverride(basePrice, elasticity, targetStock, maxStock, restockPerDay, consumePerDay, halfLifeDays, spread, buy, value, item);
+	}
+
+	public GoodsOverride withItem(Optional<String> value) {
+		return new GoodsOverride(basePrice, elasticity, targetStock, maxStock, restockPerDay, consumePerDay, halfLifeDays, spread, buy, sell, value);
+	}
+
+	/** A new good added by the config file (not a change to a data pack good). */
+	public boolean addsGood() {
+		return item.isPresent() && basePrice.isPresent();
 	}
 
 	public boolean isEmpty() {

@@ -1,0 +1,8 @@
+{
+  "item": "minecraft:diamond_helmet",
+  "base_price": 2250,
+  "elasticity": 16,
+  "target_stock": 4,
+  "max_stock": 12,
+  "restock_per_day": 2
+}

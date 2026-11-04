@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Stage 14 (design H): sends the coin prices right after a villager's or wandering trader's offers (screen open / refresh). */
-@Mixin(ServerPlayer.class)
+@Mixin(value = ServerPlayer.class, remap = false)
 public abstract class ServerPlayerMixin {
 	@Inject(method = "sendMerchantOffers", at = @At("TAIL"))
 	private void tradeExpansion$sendCoinPrices(int containerId, MerchantOffers offers, int level, int xp, boolean showProgress,

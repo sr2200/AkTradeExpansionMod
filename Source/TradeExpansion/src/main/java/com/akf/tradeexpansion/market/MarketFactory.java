@@ -51,12 +51,15 @@ public final class MarketFactory {
 	}
 
 	/**
-	 * {@code /tradeex market reroll}: profile and goods again with the current data packs. The level is kept at least at
-	 * its previous value (Q21); price factors and pressure start over.
+	 * {@code /tradeex market reroll}: profile and goods again with the current data packs, at the measured level (kept at
+	 * least at its previous value when {@code market.shrinkOnLevelDown} is off, Q21); price factors and pressure start over.
 	 */
 	public static void reroll(ServerLevel level, Market market, List<Market> neighbors) {
-		int previous = market.level();
+		int previous = TradeExpansionConfig.get().market.shrinkOnLevelDown ? MarketLevel.MIN_LEVEL : market.level();
 		market.goods().clear();
+		market.clearShelved();
+		market.specials().clear();
+		market.setSpecialDay(Long.MIN_VALUE); // D-5: chosen again by the next upkeep
 		// Shortages and requests depend on the goods, so they are chosen again too (K).
 		market.shortages().clear();
 		market.setShortagePeriod(Long.MIN_VALUE);
@@ -101,37 +104,53 @@ public final class MarketFactory {
 	}
 
 	/**
-	 * Re-measures the level when the check interval has passed and adds goods on level-up (D-4).
+	 * Re-measures the level when the check interval has passed (D-4). Growing brings back shelved goods first, then adds
+	 * new ones; shrinking (v0.27, Q21) shelves the most recently listed goods, keeping their state.
 	 *
-	 * @return {@code true} if the market grew
+	 * @return {@code 1} if the market grew, {@code -1} if it shrank, {@code 0} otherwise
 	 */
-	public static boolean growIfDue(ServerLevel level, Market market, List<Market> neighbors) {
+	public static int resizeIfDue(ServerLevel level, Market market, List<Market> neighbors) {
 		long now = MarketClock.now(level);
-		double interval = TradeExpansionConfig.get().market.levelCheckIntervalDays * PriceModel.TICKS_PER_DAY;
-		if (now - market.lastLevelCheckGameTime() < interval) return false;
+		TradeExpansionConfig config = TradeExpansionConfig.get();
+		double interval = config.market.levelCheckIntervalDays * PriceModel.TICKS_PER_DAY;
+		if (now - market.lastLevelCheckGameTime() < interval) return 0;
 		market.setLastLevelCheckGameTime(now);
 
 		int measured = measureLevel(level, market.center());
-		if (measured <= market.level()) return false; // Q21: the level never goes down
+		if (measured == market.level() || measured < market.level() && !config.market.shrinkOnLevelDown) return 0;
+		boolean grew = measured > market.level();
+		market.refresh(now); // shelved / restored goods carry their state as of now
 		market.setLevel(measured);
+		int target = MarketLevel.goodsCount(measured, config.market.minGoods, config.market.maxGoods);
+		if (grew) {
+			grow(level, market, neighbors, target, now);
+		} else {
+			List<Identifier> regular = market.regularGoods();
+			for (int i = regular.size() - 1; i >= target; i--) market.shelve(regular.get(i));
+		}
+		TradeExpansion.LOGGER.info("Market #{} {} to level {}", market.id(), grew ? "grew" : "shrank", measured);
+		return grew ? 1 : -1;
+	}
 
+	private static void grow(ServerLevel level, Market market, List<Market> neighbors, int target, long now) {
+		// Goods shelved when the market shrank come back first (last shelved, first back), with their old state.
+		List<Identifier> shelved = market.shelvedGoods();
+		for (int i = shelved.size() - 1; i >= 0 && market.regularGoods().size() < target; i--) {
+			Identifier goodsId = shelved.get(i);
+			if (market.isSpecial(goodsId)) market.removeGood(goodsId); // listed today as a special: the shelved state wins
+			market.unshelve(goodsId);
+		}
 		Identifier profileId = market.profileId() != null ? market.profileId() : MarketProfiles.defaultFor(level.dimension());
 		MarketProfile profile = MarketProfiles.get(profileId);
-		if (profile != null) {
-			TradeExpansionConfig config = TradeExpansionConfig.get();
-			int target = MarketLevel.goodsCount(measured, config.market.minGoods, config.market.maxGoods);
-			Set<String> existing = new HashSet<>();
-			market.goods().keySet().forEach(id -> {
-				GoodsDefinition def = GoodsCatalog.get(id);
-				if (def == null || def.autoAdd().isEmpty()) existing.add(id.toString()); // auto_add goods are outside N
-			});
-			Random random = new Random(seed(level, market.center()) ^ measured);
-			for (String goodsId : GoodsSelector.grow(existing, profile.selectorPools(), measured, target, random)) {
-				addGood(market, Identifier.parse(goodsId), random, neighbors, now);
-			}
+		if (profile == null) return;
+		Set<String> existing = new HashSet<>();
+		market.regularGoods().forEach(id -> existing.add(id.toString())); // auto_add goods and specials are outside N
+		Random random = new Random(seed(level, market.center()) ^ market.level());
+		for (String goodsId : GoodsSelector.grow(existing, profile.selectorPools(), market.level(), target, random)) {
+			Identifier id = Identifier.parse(goodsId);
+			// A special chosen for good becomes a regular good with its current state (D-5).
+			if (!market.specials().remove(id)) addGood(market, id, random, neighbors, now);
 		}
-		TradeExpansion.LOGGER.info("Market #{} grew to level {}", market.id(), measured);
-		return true;
 	}
 
 	/** D-4: beds around the center, or villagers in the Nether / End where beds explode. */
@@ -160,6 +179,42 @@ public final class MarketFactory {
 		AABB box = new AABB(center).inflate(radius, VILLAGER_HEIGHT, radius);
 		return level.getEntitiesOfClass(Villager.class, box,
 				v -> DistanceModel.horizontalDistance(v.getX(), v.getZ(), center.getX() + 0.5, center.getZ() + 0.5) <= radius).size();
+	}
+
+	/**
+	 * D-5: once per in-game day, replaces today's specials: goods outside the market's list, a few per level, with a
+	 * higher price and a small stock. They are not counted in N, not shortages and gone the next day.
+	 *
+	 * @return {@code true} if they changed
+	 */
+	public static boolean refreshSpecials(ServerLevel level, Market market, long now) {
+		long day = Math.floorDiv(now, PriceModel.TICKS_PER_DAY);
+		if (day == market.specialDay()) return false;
+		market.setSpecialDay(day);
+		for (Identifier old : List.copyOf(market.specials())) market.removeGood(old);
+
+		TradeExpansionConfig config = TradeExpansionConfig.get();
+		int count = config.market.specialGoodsAt(market.level());
+		List<Identifier> candidates = new ArrayList<>();
+		Set<Identifier> shelved = new HashSet<>(market.shelvedGoods());
+		for (Map.Entry<Identifier, GoodsDefinition> e : GoodsCatalog.all().entrySet()) {
+			GoodsDefinition def = e.getValue();
+			// Buyable plain goods only; tokens such as the emerald coin (auto_add / unit > 1) are excluded.
+			if (!def.buy() || def.unit() != 1 || def.autoAdd().isPresent()) continue;
+			if (market.good(e.getKey()) != null || shelved.contains(e.getKey())) continue;
+			candidates.add(e.getKey());
+		}
+		candidates.sort(null); // stable order for the seeded choice
+		Random random = new Random(seed(level, market.center()) ^ (day * 0x2545F4914F6CDD1DL));
+		for (int i = 0; i < count && !candidates.isEmpty(); i++) {
+			Identifier pick = candidates.remove(random.nextInt(candidates.size()));
+			double priceFactor = 1 + (random.nextDouble() * 2 - 1) * config.price.jitter;
+			market.addGood(pick, new GoodState(priceFactor, 0, 0, now));
+			market.specials().add(pick);
+			GoodParams params = market.params(pick);
+			market.good(pick).setStock(Math.max(1, Math.floor(params.targetStock() * config.market.specialStockRatio)));
+		}
+		return true;
 	}
 
 	/** Adds one good with a rolled priceFactor, the C-1 initial pressure and stock T. */

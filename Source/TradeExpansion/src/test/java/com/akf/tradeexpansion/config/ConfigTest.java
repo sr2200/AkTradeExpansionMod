@@ -126,4 +126,16 @@ class ConfigTest {
 		assertEquals(10, original.currency.ratios.get(0));
 		assertEquals(8, original.trade.maxDistance);
 	}
+
+	/** D-5: specials per level; a short list repeats its last entry, a wrong size falls back to the defaults. */
+	@Test
+	void specialGoodsPerLevel() throws IOException {
+		TradeExpansionConfig.Market market = TradeExpansionConfig.defaults().market;
+		assertEquals(1, market.specialGoodsAt(1));
+		assertEquals(2, market.specialGoodsAt(3));
+		assertEquals(2, market.specialGoodsAt(9));
+		Path file = dir.resolve("trade_expansion.json");
+		Files.writeString(file, "{\"market\": {\"specialGoods\": [3, 3]}}");
+		assertEquals(java.util.List.of(1, 1, 2, 2, 2), ConfigManager.read(file).market.specialGoods);
+	}
 }

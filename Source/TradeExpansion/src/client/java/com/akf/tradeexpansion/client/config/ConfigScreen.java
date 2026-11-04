@@ -3,8 +3,8 @@ package com.akf.tradeexpansion.client.config;
 import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.config.ServerConfig;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import dev.isxander.yacl3.api.ButtonOption;
 import dev.isxander.yacl3.api.ConfigCategory;
-import dev.isxander.yacl3.api.ListOption;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
@@ -12,7 +12,6 @@ import dev.isxander.yacl3.api.controller.DoubleFieldControllerBuilder;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
 import dev.isxander.yacl3.api.controller.IntegerFieldControllerBuilder;
 import dev.isxander.yacl3.api.controller.LongFieldControllerBuilder;
-import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -23,6 +22,7 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -65,6 +65,7 @@ public final class ConfigScreen {
 				.option(intField("currency.emeraldCoinsPerBlock", d.currency.emeraldCoinsPerBlock, () -> cur.emeraldCoinsPerBlock, v -> cur.emeraldCoinsPerBlock = v, 0, 64))
 				.option(bool("currency.sneakUseExchange", d.currency.sneakUseExchange, () -> cur.sneakUseExchange, v -> cur.sneakUseExchange = v))
 				.option(bool("currency.allowMinting", d.currency.allowMinting, () -> cur.allowMinting, v -> cur.allowMinting = v))
+				.option(bool("currency.allowIronMinting", d.currency.allowIronMinting, () -> cur.allowIronMinting, v -> cur.allowIronMinting = v))
 				.option(doubleField("currency.exchangeFee", d.currency.exchangeFee, () -> cur.exchangeFee, v -> cur.exchangeFee = v, 0, 0.5))
 				.option(longField("currency.startingMoney", d.currency.startingMoney, () -> cur.startingMoney, v -> cur.startingMoney = v, 0, 1_000_000_000L))
 				.option(bool("currency.mobDropCoins", d.currency.mobDropCoins, () -> cur.mobDropCoins, v -> cur.mobDropCoins = v));
@@ -89,9 +90,15 @@ public final class ConfigScreen {
 						.binding(d.recovery.clock, () -> rec.clock, v -> rec.clock = v)
 						.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.RecoveryClock.class))));
 
-		// B-3: consumables added to / removed from the #trade_expansion:consumables tag (item ids).
-		recovery.group(itemList("consumables.add", () -> edit.consumables.add, v -> edit.consumables.add = new ArrayList<>(v)))
-				.group(itemList("consumables.remove", () -> edit.consumables.remove, v -> edit.consumables.remove = new ArrayList<>(v)));
+		// v0.27: goods added by the config file and the consumables lists (B-3) are picked from icons on their own screen.
+		ConfigCategory.Builder goods = category("goods")
+				.option(ButtonOption.createBuilder()
+						.name(Component.translatable(KEY + "goods_manager.open"))
+						.text(Component.translatable(KEY + "goods_manager.open.button"))
+						.description(description("goods_manager.open"))
+						.action((screen, option) -> Minecraft.getInstance().gui.setScreen(new GoodsManagerScreen(screen, edit, this::saveGoodsLists)))
+						.available(!serverLocked)
+						.build());
 
 		ConfigCategory.Builder distance = category("distance")
 				.option(doubleField("distance.mergeRadius", d.distance.mergeRadius, () -> dist.mergeRadius, v -> dist.mergeRadius = v, 8, 512))
@@ -119,9 +126,18 @@ public final class ConfigScreen {
 				.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.NewMarketRequires.class)
 						.formatValue(v -> Component.translatable(KEY + "market.newMarketRequires." + v.getSerializedName().toLowerCase(Locale.ROOT))))))
 				.option(intField("market.newMarketMinBeds", d.market.newMarketMinBeds, () -> market.newMarketMinBeds, v -> market.newMarketMinBeds = v, 0, 1000))
-				.option(intField("market.newMarketMinVillagers", d.market.newMarketMinVillagers, () -> market.newMarketMinVillagers, v -> market.newMarketMinVillagers = v, 0, 1000));
+				.option(intField("market.newMarketMinVillagers", d.market.newMarketMinVillagers, () -> market.newMarketMinVillagers, v -> market.newMarketMinVillagers = v, 0, 1000))
+				.option(intField("market.newMarketEnoughBeds", d.market.newMarketEnoughBeds, () -> market.newMarketEnoughBeds, v -> market.newMarketEnoughBeds = v, 0, 1000));
 		marketCat.option(intField("market.levelRadius", d.market.levelRadius, () -> market.levelRadius, v -> market.levelRadius = v, 16, 256))
-				.option(doubleField("market.levelCheckIntervalDays", d.market.levelCheckIntervalDays, () -> market.levelCheckIntervalDays, v -> market.levelCheckIntervalDays = v, 0, 100));
+				.option(doubleField("market.levelCheckIntervalDays", d.market.levelCheckIntervalDays, () -> market.levelCheckIntervalDays, v -> market.levelCheckIntervalDays = v, 0, 100))
+				.option(bool("market.shrinkOnLevelDown", d.market.shrinkOnLevelDown, () -> market.shrinkOnLevelDown, v -> market.shrinkOnLevelDown = v));
+		// D-5: today's specials per level, price and stock.
+		for (int i = 0; i < 5; i++) {
+			int index = i;
+			marketCat.option(intField("market.specialGoods." + i, d.market.specialGoods.get(i), () -> market.specialGoods.get(index), v -> market.specialGoods.set(index, v), 0, 10));
+		}
+		marketCat.option(doubleField("market.specialPriceMultiplier", d.market.specialPriceMultiplier, () -> market.specialPriceMultiplier, v -> market.specialPriceMultiplier = v, 0.5, 5))
+				.option(doubleField("market.specialStockRatio", d.market.specialStockRatio, () -> market.specialStockRatio, v -> market.specialStockRatio = v, 0.01, 1));
 
 		ConfigCategory.Builder wallet = category("wallet")
 				.option(longField("wallet.capacity", d.wallet.capacity, () -> edit.wallet.capacity, v -> edit.wallet.capacity = v, 1000, 1_000_000_000L))
@@ -141,6 +157,15 @@ public final class ConfigScreen {
 				.option(bool("trade.showPlacementHint", d.trade.showPlacementHint, () -> trade.showPlacementHint, v -> trade.showPlacementHint = v))
 				.option(bool("trade.allowShiftAll", d.trade.allowShiftAll, () -> trade.allowShiftAll, v -> trade.allowShiftAll = v))
 				.option(bool("trade.acceptDamaged", d.trade.acceptDamaged, () -> trade.acceptDamaged, v -> trade.acceptDamaged = v));
+		// B-5: bulk discount steps (as many as the file has; add or remove steps in the file).
+		for (int i = 0; i < trade.bulkDiscounts.size(); i++) {
+			int index = i;
+			TradeExpansionConfig.BulkTier def = index < d.trade.bulkDiscounts.size() ? d.trade.bulkDiscounts.get(index) : trade.bulkDiscounts.get(index);
+			tradeCat.option(intField("trade.bulkDiscounts.minQuantity", def.minQuantity(), () -> trade.bulkDiscounts.get(index).minQuantity(),
+							v -> trade.bulkDiscounts.set(index, new TradeExpansionConfig.BulkTier(v, trade.bulkDiscounts.get(index).rate())), 2, 2304))
+					.option(doubleField("trade.bulkDiscounts.rate", def.rate(), () -> trade.bulkDiscounts.get(index).rate(),
+							v -> trade.bulkDiscounts.set(index, new TradeExpansionConfig.BulkTier(trade.bulkDiscounts.get(index).minQuantity(), v)), 0, 0.5));
+		}
 
 		ConfigCategory.Builder other = category("other")
 				.option(bool("log.trades", d.log.trades, () -> edit.log.trades, v -> edit.log.trades = v))
@@ -197,7 +222,7 @@ public final class ConfigScreen {
 
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.translatable(KEY + "title"))
-				.categories(List.of(currency.build(), priceCat.build(), recovery.build(), distance.build(), marketCat.build(),
+				.categories(List.of(currency.build(), priceCat.build(), goods.build(), recovery.build(), distance.build(), marketCat.build(),
 						wallet.build(), bank.build(), tradeCat.build(), village.build(), other.build(), client.build()))
 				.save(this::save)
 				.build();
@@ -215,6 +240,18 @@ public final class ConfigScreen {
 			return;
 		}
 		ConfigManager.save(edit);
+		IntegratedServer server = Minecraft.getInstance().getSingleplayerServer();
+		if (server != null) server.execute(() -> ServerConfig.reload(server));
+	}
+
+	/** Goods manager "Done": writes only the goods and consumables lists to the file and reloads (like {@link #save}). */
+	private void saveGoodsLists() {
+		TradeExpansionConfig file = ConfigManager.read(ConfigManager.path());
+		file.goods = new TreeMap<>(edit.goods);
+		file.consumables = new TradeExpansionConfig.Consumables();
+		file.consumables.add = new ArrayList<>(edit.consumables.add);
+		file.consumables.remove = new ArrayList<>(edit.consumables.remove);
+		ConfigManager.save(file);
 		IntegratedServer server = Minecraft.getInstance().getSingleplayerServer();
 		if (server != null) server.execute(() -> ServerConfig.reload(server));
 	}
@@ -244,19 +281,6 @@ public final class ConfigScreen {
 			int index = i;
 			category.option(intField(prefix + i, defaults.get(i), () -> values.get(index), v -> values.set(index, v), 0, 100000));
 		}
-	}
-
-	/** Editable list of item ids (e.g. minecraft:cobblestone); grayed out while connected to a remote server. */
-	private ListOption<String> itemList(String key, Supplier<List<String>> get, Consumer<List<String>> set) {
-		return ListOption.<String>createBuilder()
-				.name(Component.translatable(KEY + key))
-				.description(description(key))
-				.binding(List.of(), get, set)
-				.controller(StringControllerBuilder::create)
-				.initial("minecraft:")
-				.collapsed(true)
-				.available(!serverLocked)
-				.build();
 	}
 
 	private Option<Boolean> bool(String key, boolean def, Supplier<Boolean> get, Consumer<Boolean> set) {

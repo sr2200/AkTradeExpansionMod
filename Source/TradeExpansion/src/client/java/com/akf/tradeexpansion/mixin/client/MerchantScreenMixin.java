@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Stage 14a (design H): shows the coin price over the emerald cost of each coin trade in the list, and the price and
  * the player's cash under the payment slots.
  */
-@Mixin(MerchantScreen.class)
+@Mixin(value = MerchantScreen.class, remap = false)
 public abstract class MerchantScreenMixin extends AbstractContainerScreen<MerchantMenu> {
 	/** Same layout as vanilla: 7 visible offers, 20 px apart. */
 	private static final int TRADE_EXPANSION$ROWS = 7;

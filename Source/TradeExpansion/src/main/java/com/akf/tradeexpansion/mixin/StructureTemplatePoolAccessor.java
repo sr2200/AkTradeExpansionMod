@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import java.util.List;
 
 /** Lets {@link com.akf.tradeexpansion.worldgen.VillageStalls} add the stall building to vanilla village pools (design stage 9). */
-@Mixin(StructureTemplatePool.class)
+@Mixin(value = StructureTemplatePool.class, remap = false)
 public interface StructureTemplatePoolAccessor {
 	/** Weighted list the pool draws from: each element appears {@code weight} times. */
 	@Accessor("templates")

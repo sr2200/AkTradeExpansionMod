@@ -10,6 +10,7 @@ import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.data.GoodsCatalog;
+import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
@@ -402,7 +403,9 @@ public final class TradeExpansionCommand {
 		market.refresh(MarketClock.now(player.level()));
 		double x = state.pressure();
 		long first = buy ? PriceModel.buyPrice(p, x) : PriceModel.sellPrice(p, x);
-		long total = buy ? PriceModel.sumBuy(p, x, count) : PriceModel.sumSell(p, x, count);
+		GoodsDefinition simulated = GoodsCatalog.get(goodsId);
+		int unit = simulated == null ? 1 : simulated.unit();
+		long total = buy ? PriceModel.sumBuy(p, x, count, unit, TradeExpansionConfig.get().trade.bulkDiscount()) : PriceModel.sumSell(p, x, count);
 		double after = p.clampPressure(x + (buy ? -count : count));
 		long last = buy ? PriceModel.buyPrice(p, p.clampPressure(x - (count - 1))) : PriceModel.sellPrice(p, p.clampPressure(x + (count - 1)));
 		long next = buy ? PriceModel.buyPrice(p, after) : PriceModel.sellPrice(p, after);

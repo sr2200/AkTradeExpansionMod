@@ -111,6 +111,26 @@
         {
           "goods": "trade_expansion:cod",
           "weight": 4
+        },
+        {
+          "goods": "trade_expansion:birch_log",
+          "weight": 2
+        },
+        {
+          "goods": "trade_expansion:dark_oak_log",
+          "weight": 2
+        },
+        {
+          "goods": "trade_expansion:cherry_log",
+          "weight": 2
+        },
+        {
+          "goods": "trade_expansion:pale_oak_log",
+          "weight": 2
+        },
+        {
+          "goods": "trade_expansion:poplar_log",
+          "weight": 2
         }
       ]
     },
@@ -300,6 +320,46 @@
         },
         {
           "goods": "trade_expansion:wither_rose",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_helmet",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_chestplate",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_leggings",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_boots",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_pickaxe",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_axe",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_hoe",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_shovel",
           "weight": 1,
           "min_level": 4
         }

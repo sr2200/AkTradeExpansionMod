@@ -95,7 +95,7 @@ public final class TradeService {
 		long total;
 		if (buy) {
 			if (qty > Math.floor(state.stock())) return fail(TradeResult.INSUFFICIENT_STOCK, request);
-			total = PriceModel.sumBuy(params, state.pressure(), qty);
+			total = PriceModel.sumBuy(params, state.pressure(), qty, unit, config.trade.bulkDiscount()); // B-5: bulk discount
 		} else {
 			if (qty > PriceModel.sellCapacity(params, state)) return fail(TradeResult.STOCK_FULL, request);
 			double[] ratios = unit == 1 ? InventoryUtil.sellRatios(player, match, sellSlot, qty) : null;

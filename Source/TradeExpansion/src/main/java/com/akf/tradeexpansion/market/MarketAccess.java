@@ -18,10 +18,11 @@ public final class MarketAccess {
 
 	public static void open(ServerPlayer player, ServerLevel level, Market market, ExtendedMenuProvider<MarketMenu.OpenData> provider) {
 		MarketRegistry registry = MarketRegistry.get(level.getServer());
-		if (MarketFactory.growIfDue(level, market, registry.inDimension(level.dimension()))) {
-			// D-4: tell the player the market has grown.
-			player.sendSystemMessage(Component.translatable("message.trade_expansion.market_grew", market.id(),
-					MarketStallBlockEntity.levelName(market.level())).withStyle(ChatFormatting.GREEN));
+		int resized = MarketFactory.resizeIfDue(level, market, registry.inDimension(level.dimension()));
+		if (resized != 0) {
+			// D-4: tell the player the market has grown / shrunk.
+			player.sendSystemMessage(Component.translatable(resized > 0 ? "message.trade_expansion.market_grew" : "message.trade_expansion.market_shrank",
+					market.id(), MarketStallBlockEntity.levelName(market.level())).withStyle(resized > 0 ? ChatFormatting.GREEN : ChatFormatting.YELLOW));
 		}
 		registry.setDirty();
 

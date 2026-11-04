@@ -67,6 +67,34 @@ public final class PriceModel {
 		return total;
 	}
 
+	/** Total for buying n trading units of {@code unit} items with the bulk discount (B-5, v0.27): ceil(sumBuy × (1 − rate)). */
+	public static long sumBuy(GoodParams p, double pressure, int n, int unit, BulkDiscount discount) {
+		return discounted(sumBuy(p, pressure, n), discount.rate(p, n, unit));
+	}
+
+	private static long discounted(long total, double rate) {
+		if (rate <= 0) return total;
+		return Math.max(1L, (long) Math.ceil(total * (1 - rate) - ROUNDING_EPSILON));
+	}
+
+	/**
+	 * Largest n with the discounted total &lt;= funds, capped by maxCount. A discount tier can make n + 1 affordable when n
+	 * is not, so every n is tried (until even the largest discount cannot help).
+	 */
+	public static int maxAffordable(GoodParams p, double pressure, long funds, int maxCount, int unit, BulkDiscount discount) {
+		long total = 0;
+		double x = pressure;
+		double maxRate = BulkDiscount.safeRate(p);
+		int best = 0;
+		for (int k = 1; k <= maxCount; k++) {
+			total += buyPrice(p, x);
+			x = p.clampPressure(x - 1);
+			if (total * (1 - maxRate) > funds) break;
+			if (discounted(total, discount.rate(p, k, unit)) <= funds) best = k;
+		}
+		return best;
+	}
+
 	/** Largest n with sumBuy(n) &lt;= funds, capped by maxCount. */
 	public static int maxAffordable(GoodParams p, double pressure, long funds, int maxCount) {
 		long total = 0;
@@ -137,6 +165,15 @@ public final class PriceModel {
 		if (canBuy(s)) return 0.0;
 		double r = p.restockPerDay() * restockMultiplier;
 		return r <= 0 ? Double.POSITIVE_INFINITY : (1.0 - s.stock()) / r;
+	}
+
+	/** In-game days until the market takes one item again: (S - (Scap - 1)) / c. 0 if it already can (A-4 買取停止). */
+	public static double daysUntilBuying(GoodParams p, GoodState s, double restockMultiplier) {
+		if (sellCapacity(p, s) >= 1) return 0.0;
+		double c = p.consumePerDay() * restockMultiplier;
+		// Consumption stops at T: if T itself leaves no room, buying never resumes on its own.
+		if (c <= 0 || p.targetStock() > p.maxStock() - 1) return Double.POSITIVE_INFINITY;
+		return Math.max(0.0, s.stock() - (p.maxStock() - 1)) / c;
 	}
 
 	/**

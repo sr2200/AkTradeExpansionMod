@@ -1,6 +1,8 @@
 package com.akf.tradeexpansion.network;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.core.BulkDiscount;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.data.GoodsCatalog;
@@ -28,9 +30,10 @@ import java.util.List;
  * @param gameTime server game time the state was refreshed to; the client extrapolates recovery from it
  * @param level    market level (D-4); the bank tab shows from {@code bank.minMarketLevel} (E-7)
  * @param requests open delivery requests of the market (J)
+ * @param bulkDiscount the server's {@code trade.bulkDiscounts} (B-5), so the preview matches the server
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
-		List<RequestView> requests) implements CustomPacketPayload {
+		List<RequestView> requests, BulkDiscount bulkDiscount) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -39,19 +42,20 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param item     item shown and moved
 	 * @param unit     items per trading unit; params, stock and quantities count units (B-5)
 	 * @param shortage the good is short in this market (K); its B already includes the multiplier
+	 * @param special  today's special (D-5); its B already includes market.specialPriceMultiplier
 	 * @param patch         components a stack must have (D-2), empty for plain goods
 	 * @param acceptDamaged damaged items are bought at reduced prices (A-4)
 	 * @param history       X of the last days, oldest first, for the price graph (A-4)
 	 */
 	public record GoodView(Identifier goods, Identifier item, int unit, GoodParams params, double pressure, double stock, boolean buy, boolean sell,
-			boolean shortage, DataComponentPatch patch, boolean acceptDamaged, List<Double> history) {
+			boolean shortage, boolean special, DataComponentPatch patch, boolean acceptDamaged, List<Double> history) {
 		/** Which stacks count as this good (client-side counting and preview). */
 		public InventoryUtil.Match match() {
 			return new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(item), patch, acceptDamaged);
 		}
 
 		public ItemStack displayStack() {
-			return new ItemStack(BuiltInRegistries.ITEM.getValue(item).builtInRegistryHolder(), 1, patch);
+			return new ItemStack(BuiltInRegistries.ITEM.wrapAsHolder(BuiltInRegistries.ITEM.getValue(item)), 1, patch);
 		}
 
 		public GoodState state() {
@@ -77,6 +81,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeBoolean(buy);
 			buf.writeBoolean(sell);
 			buf.writeBoolean(shortage);
+			buf.writeBoolean(special);
 			DataComponentPatch.STREAM_CODEC.encode(buf, patch);
 			buf.writeBoolean(acceptDamaged);
 			ByteBufCodecs.DOUBLE.apply(ByteBufCodecs.list()).encode(buf, history);
@@ -93,10 +98,11 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			boolean buy = buf.readBoolean();
 			boolean sell = buf.readBoolean();
 			boolean shortage = buf.readBoolean();
+			boolean special = buf.readBoolean();
 			DataComponentPatch patch = DataComponentPatch.STREAM_CODEC.decode(buf);
 			boolean acceptDamaged = buf.readBoolean();
 			List<Double> history = ByteBufCodecs.DOUBLE.apply(ByteBufCodecs.list()).decode(buf);
-			return new GoodView(goods, item, unit, params, pressure, stock, buy, sell, shortage, patch, acceptDamaged, history);
+			return new GoodView(goods, item, unit, params, pressure, stock, buy, sell, shortage, special, patch, acceptDamaged, history);
 		}
 	}
 
@@ -116,7 +122,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
 			if (params == null || def == null) return;
 			views.add(new GoodView(goodsId, def.item(), def.unit(), params, state.pressure(), state.stock(), def.buy(), def.sell(),
-					market.shortages().containsKey(goodsId), GoodsCatalog.patch(goodsId), def.acceptsDamaged() && def.unit() == 1,
+					market.shortages().containsKey(goodsId), market.isSpecial(goodsId), GoodsCatalog.patch(goodsId), def.acceptsDamaged() && def.unit() == 1,
 					List.copyOf(state.history())));
 		});
 		List<RequestView> requests = new ArrayList<>();
@@ -124,7 +130,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			GoodsDefinition def = GoodsCatalog.get(r.goods());
 			if (def != null) requests.add(new RequestView(r, def.item()));
 		}
-		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests);
+		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
+				TradeExpansionConfig.get().trade.bulkDiscount());
 	}
 
 	private void write(RegistryFriendlyByteBuf buf) {
@@ -135,6 +142,11 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		buf.writeVarInt(goods.size());
 		goods.forEach(g -> g.write(buf));
 		RequestView.CODEC.apply(ByteBufCodecs.list()).encode(buf, requests);
+		buf.writeVarInt(bulkDiscount.tiers().size());
+		for (BulkDiscount.Tier tier : bulkDiscount.tiers()) {
+			buf.writeVarInt(tier.minQuantity());
+			buf.writeDouble(tier.rate());
+		}
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -146,7 +158,10 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		List<GoodView> goods = new ArrayList<>(size);
 		for (int i = 0; i < size; i++) goods.add(GoodView.read(buf));
 		List<RequestView> requests = RequestView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
-		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests);
+		int tierCount = buf.readVarInt();
+		List<BulkDiscount.Tier> tiers = new ArrayList<>(tierCount);
+		for (int i = 0; i < tierCount; i++) tiers.add(new BulkDiscount.Tier(buf.readVarInt(), buf.readDouble()));
+		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers));
 	}
 
 	@Override

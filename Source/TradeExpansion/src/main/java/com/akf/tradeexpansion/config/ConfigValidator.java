@@ -48,6 +48,9 @@ public final class ConfigValidator {
 		m.villagerThresholds = intList("market.villagerThresholds", m.villagerThresholds, 4, 0, 100000, true, List.of(3, 6, 12, 24));
 		m.levelRadius = clamp("market.levelRadius", m.levelRadius, 16, 256);
 		m.levelCheckIntervalDays = clamp("market.levelCheckIntervalDays", m.levelCheckIntervalDays, 0, 100);
+		m.specialGoods = intList("market.specialGoods", m.specialGoods, 5, 0, 10, false, List.of(1, 1, 2, 2, 2));
+		m.specialPriceMultiplier = clamp("market.specialPriceMultiplier", m.specialPriceMultiplier, 0.5, 5);
+		m.specialStockRatio = clamp("market.specialStockRatio", m.specialStockRatio, 0.01, 1);
 
 		TradeExpansionConfig.Wallet w = c.wallet;
 		w.capacity = clamp("wallet.capacity", w.capacity, 1000, 1_000_000_000L);
@@ -62,6 +65,13 @@ public final class ConfigValidator {
 		t.maxDistance = clamp("trade.maxDistance", t.maxDistance, 2, 32);
 		t.priceTolerance = clamp("trade.priceTolerance", t.priceTolerance, 0, 0.2);
 		t.maxPerTransaction = clamp("trade.maxPerTransaction", t.maxPerTransaction, 1, 2304);
+		List<TradeExpansionConfig.BulkTier> tiers = new ArrayList<>();
+		for (TradeExpansionConfig.BulkTier tier : t.bulkDiscounts) {
+			tiers.add(new TradeExpansionConfig.BulkTier(clamp("trade.bulkDiscounts.minQuantity", tier.minQuantity(), 2, 2304),
+					clamp("trade.bulkDiscounts.rate", tier.rate(), 0, 0.5)));
+		}
+		tiers.sort(java.util.Comparator.comparingInt(TradeExpansionConfig.BulkTier::minQuantity));
+		t.bulkDiscounts = tiers;
 
 		c.command.permissionLevel = clamp("command.permissionLevel", c.command.permissionLevel, 0, 4);
 
@@ -84,6 +94,7 @@ public final class ConfigValidator {
 
 		c.market.newMarketMinBeds = clamp("market.newMarketMinBeds", c.market.newMarketMinBeds, 0, 1000);
 		c.market.newMarketMinVillagers = clamp("market.newMarketMinVillagers", c.market.newMarketMinVillagers, 0, 1000);
+		c.market.newMarketEnoughBeds = clamp("market.newMarketEnoughBeds", c.market.newMarketEnoughBeds, 0, 1000);
 		c.villager.minGoodsPriceMultiplier = clamp("villager.minGoodsPriceMultiplier", c.villager.minGoodsPriceMultiplier, 0, 10);
 		c.villager.emeraldPrice = clamp("villager.emeraldPrice", c.villager.emeraldPrice, 1, 10000);
 
@@ -126,8 +137,10 @@ public final class ConfigValidator {
 				TradeExpansionConfig.warn("goods: '{}' is not a goods id, ignored", key);
 				return;
 			}
-			GoodsOverride clamped = value.clamped();
-			if (!clamped.equals(value)) TradeExpansionConfig.warn("goods.{}: values out of range were corrected", id);
+			// v0.27: "item" of a config-added good, normalized like the consumables lists.
+			GoodsOverride clamped = value.clamped().withItem(value.item().map(String::trim).map(s -> s.contains(":") ? s : "minecraft:" + s)
+					.filter(s -> net.minecraft.resources.Identifier.tryParse(s) != null));
+			if (!value.clamped().equals(value)) TradeExpansionConfig.warn("goods.{}: values out of range were corrected", id);
 			if (!clamped.isEmpty()) result.put(id.toString(), clamped);
 		});
 		return result;

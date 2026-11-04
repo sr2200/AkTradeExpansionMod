@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Stage 14a (design H): choosing a coin trade in the list does not move emeralds into the payment slots (only the
  * non-emerald part of the cost), and the result is recomputed even when nothing was moved.
  */
-@Mixin(MerchantMenu.class)
+@Mixin(value = MerchantMenu.class, remap = false)
 public abstract class MerchantMenuMixin {
 	@Shadow @Final private Merchant trader;
 	@Shadow @Final private MerchantContainer tradeContainer;

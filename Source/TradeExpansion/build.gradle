@@ -35,6 +35,10 @@ dependencies {
 	// Optional: Mod Menu's config button opens a YACL screen (design G, Q35). Not required at runtime.
 	compileOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	// Only the client source set uses them; declaring them there too lets the IDE (which scopes dependencies per
+	// source set) resolve them in src/client.
+	clientCompileOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
+	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	localRuntime "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 
@@ -59,6 +63,9 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
+	// No annotation processors: Minecraft 26.3 is not obfuscated, so Mixin needs no refmap. Without this the IDE finds
+	// Mixin's processor on the classpath and reports "Unable to locate obfuscation mapping".
+	it.options.compilerArgs.add("-proc:none")
 }
 
 java {

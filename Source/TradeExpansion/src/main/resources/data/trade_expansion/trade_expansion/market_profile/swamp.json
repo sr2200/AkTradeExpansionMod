@@ -247,6 +247,46 @@
           "goods": "trade_expansion:wither_rose",
           "weight": 1,
           "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_helmet",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_chestplate",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_leggings",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_boots",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "trade_expansion:diamond_pickaxe",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_axe",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_hoe",
+          "weight": 1,
+          "min_level": 4
+        },
+        {
+          "goods": "trade_expansion:diamond_shovel",
+          "weight": 1,
+          "min_level": 4
         }
       ]
     }

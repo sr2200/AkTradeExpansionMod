@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * and coins and has the non-emerald part of the cost in the payment slots. Runs on both sides (the client predicts
  * with the prices the server sent). Emeralds never pay for a coin trade.
  */
-@Mixin(MerchantContainer.class)
+@Mixin(value = MerchantContainer.class, remap = false)
 public abstract class MerchantContainerMixin {
 	@Shadow @Final private Merchant merchant;
 	@Shadow @Final private NonNullList<ItemStack> itemStacks;

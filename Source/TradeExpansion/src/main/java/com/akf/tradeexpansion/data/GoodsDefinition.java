@@ -86,6 +86,12 @@ public record GoodsDefinition(
 				o.consumePerDay().or(() -> consumePerDay), o.halfLifeDays().or(() -> halfLifeDays));
 	}
 
+	/** v0.27: a good added by the config file ({@code goods.<id>.item} and {@code base_price}); other values are the defaults. */
+	public static GoodsDefinition fromConfig(Identifier item, com.akf.tradeexpansion.config.GoodsOverride o) {
+		return new GoodsDefinition(item, o.basePrice().orElse(1.0), Optional.empty(), 16.0, Optional.empty(), Optional.empty(), Optional.empty(),
+				true, true, Optional.empty(), 1, Optional.empty(), 1.0, Optional.empty(), Optional.empty(), Optional.empty()).with(o);
+	}
+
 	/** B-3: whether this good is a consumable (see {@link #isConsumable}). */
 	public boolean consumable(TradeExpansionConfig config) {
 		return isConsumable(item, config);
@@ -95,7 +101,7 @@ public record GoodsDefinition(
 	public static boolean isConsumable(Identifier item, TradeExpansionConfig config) {
 		String id = item.toString();
 		if (config.consumables.remove.contains(id)) return false;
-		return config.consumables.add.contains(id) || BuiltInRegistries.ITEM.getValue(item).builtInRegistryHolder().is(CONSUMABLES);
+		return config.consumables.add.contains(id) || BuiltInRegistries.ITEM.wrapAsHolder(BuiltInRegistries.ITEM.getValue(item)).is(CONSUMABLES);
 	}
 
 	/**

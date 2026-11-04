@@ -152,7 +152,7 @@ public final class InventoryUtil {
 		int remaining = qty;
 		while (remaining > 0) {
 			int n = Math.min(remaining, maxStack);
-			inventory.placeItemBackInInventory(new ItemStack(match.item().builtInRegistryHolder(), n, match.patch()), Prediction.SERVER_ONLY);
+			inventory.placeItemBackInInventory(new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.wrapAsHolder(match.item()), n, match.patch()), Prediction.SERVER_ONLY);
 			remaining -= n;
 		}
 		inventory.setChanged();

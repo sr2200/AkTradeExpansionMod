@@ -32,6 +32,11 @@ public final class SettlementRule {
 				.orElse(null);
 	}
 
+	/** v0.27.1: villages often have more villagers than beds; this many beds are enough whatever the villager count. */
+	private static boolean enoughBeds(long beds, TradeExpansionConfig.Market config) {
+		return config.newMarketEnoughBeds > 0 && beds >= config.newMarketEnoughBeds;
+	}
+
 	/** {@code null} if a new market may be founded at {@code pos}, otherwise the reason shown to the player. */
 	public static @Nullable Component check(ServerLevel level, BlockPos pos) {
 		TradeExpansionConfig.Market config = TradeExpansionConfig.get().market;
@@ -46,7 +51,7 @@ public final class SettlementRule {
 			case BEDS -> noBeds ? MarketFactory.countVillagers(level, pos) >= config.newMarketMinVillagers : beds >= config.newMarketMinBeds;
 			case VILLAGERS -> villagers >= config.newMarketMinVillagers;
 			case BEDS_AND_VILLAGERS -> villagers >= config.newMarketMinVillagers
-					&& (noBeds || (beds >= config.newMarketMinBeds && beds >= villagers));
+					&& (noBeds || (beds >= config.newMarketMinBeds && (beds >= villagers || enoughBeds(beds, config))));
 			case VILLAGE -> true;
 		};
 		if (ok) return null;
@@ -58,6 +63,9 @@ public final class SettlementRule {
 			case VILLAGERS -> Component.translatable("message.trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers);
 			default -> noBeds
 					? Component.translatable("message.trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers)
+					: config.newMarketEnoughBeds > 0
+					? Component.translatable("message.trade_expansion.new_market.beds_and_villagers.enough", radius, config.newMarketMinBeds,
+					config.newMarketMinVillagers, Math.max(config.newMarketMinBeds, config.newMarketEnoughBeds), beds, villagers)
 					: Component.translatable("message.trade_expansion.new_market.beds_and_villagers", radius, config.newMarketMinBeds,
 					config.newMarketMinVillagers, beds, villagers);
 		};

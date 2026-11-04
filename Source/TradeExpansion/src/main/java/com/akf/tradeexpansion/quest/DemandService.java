@@ -39,7 +39,8 @@ public final class DemandService {
 		for (Identifier goodsId : market.goods().keySet()) {
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
 			// Sellable goods only; tokens such as the emerald coin (unit > 1 / auto_add) are excluded.
-			if (def != null && def.sell() && def.unit() == 1 && def.autoAdd().isEmpty()) candidates.add(goodsId);
+			// Today's specials (D-5) leave the next day, so they are not short either.
+			if (def != null && def.sell() && def.unit() == 1 && def.autoAdd().isEmpty() && !market.isSpecial(goodsId)) candidates.add(goodsId);
 		}
 		Random random = new Random(MarketFactory.seed(level, market.center()) ^ (period * 0x632BE59BD9B4E019L));
 		for (int i = 0; i < config.maxShortages && !candidates.isEmpty(); i++) {

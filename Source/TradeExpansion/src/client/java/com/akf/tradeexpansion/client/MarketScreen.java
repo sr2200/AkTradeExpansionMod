@@ -35,6 +35,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -77,6 +78,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final int COLOR_GREEN = 0xFF55FF55;
 	private static final int COLOR_GOLD = 0xFFFFD700;
 	private static final int COLOR_ORANGE = 0xFFFFAA33;
+	private static final int COLOR_WARNING = 0xFFA02020;
+	private static final int COLOR_UNAVAILABLE_ROW = 0xFF7E6A6A;
+	private static final int COLOR_SPECIAL = 0xFF8FE3FF;
 
 	private static final long[] BANK_AMOUNTS = {100, 1_000, 10_000, -1}; // -1 = everything
 
@@ -378,7 +382,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			long funds = useCard()
 					? (long) Math.floor(account.bankBalance() / (1 + TradeExpansionConfig.get().bank.cardTransactionFee))
 					: WalletService.balance(player);
-			return PriceModel.maxAffordable(params, state.pressure(), funds, max);
+			return PriceModel.maxAffordable(params, state.pressure(), funds, max, view.unit(), snapshot.bulkDiscount());
 		}
 		int held = InventoryUtil.count(player, match, menu.sellSlot()) / view.unit();
 		return Math.min(limit, Math.min(held, PriceModel.sellCapacity(params, state)));
@@ -391,7 +395,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	private long previewTotal(GoodView view, int qty) {
 		GoodState state = currentState(view);
-		if (tab == Tab.BUY) return PriceModel.sumBuy(view.params(), state.pressure(), qty);
+		if (tab == Tab.BUY) return PriceModel.sumBuy(view.params(), state.pressure(), qty, view.unit(), snapshot.bulkDiscount());
 		Player player = player();
 		double[] ratios = player != null && view.unit() == 1 ? InventoryUtil.sellRatios(player, view.match(), menu.sellSlot(), qty) : null;
 		return ratios != null ? PriceModel.sumSell(view.params(), state.pressure(), ratios) : PriceModel.sumSell(view.params(), state.pressure(), qty);
@@ -525,6 +529,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			g.fill(x + slot.x, y + slot.y, x + slot.x + 16, y + slot.y + 16, COLOR_LIST_BG);
 		}
 
+		if (sellSlotNotBuying()) {
+			// A-4: red frame around the sell slot when the market does not take its item right now.
+			int sx = x + MarketMenu.SELL_SLOT_X;
+			int sy = y + MarketMenu.SELL_SLOT_Y;
+			g.outline(sx - 2, sy - 2, 20, 20, COLOR_RED);
+		}
+
 		g.fill(x + LIST_X - 1, y + LIST_Y - 1, x + LIST_X + LIST_W + 1, y + LIST_Y + ROWS * ROW_H + 1, COLOR_DARK);
 		g.fill(x + LIST_X, y + LIST_Y, x + LIST_X + LIST_W, y + LIST_Y + ROWS * ROW_H, COLOR_LIST_BG);
 
@@ -554,6 +565,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		extractScrollbar(g, lx, ly);
 	}
 
+	/** The item in the sell slot is a good of this market that it does not take right now (stock at Scap). */
+	private boolean sellSlotNotBuying() {
+		ItemStack inSlot = menu.sellSlotItem();
+		if (inSlot.isEmpty() || snapshot == null) return false;
+		for (GoodView view : snapshot.goods()) {
+			InventoryUtil.Match match = view.match();
+			if (view.sell() && (match.exact(inSlot) || match.damagedRatio(inSlot) >= 0)) {
+				return PriceModel.sellCapacity(view.params(), currentState(view)) < 1;
+			}
+		}
+		return false;
+	}
+
 	private void extractScrollbar(GuiGraphicsExtractor g, int lx, int ly) {
 		int rows = rowCount();
 		if (rows <= ROWS) return;
@@ -567,23 +591,27 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		GoodParams params = view.params();
 		GoodState state = currentState(view);
 		boolean buy = tab == Tab.BUY;
-		boolean available = buy ? PriceModel.canBuy(state) : PriceModel.canSell(params, state);
+		boolean available = buy ? PriceModel.canBuy(state) : PriceModel.sellCapacity(params, state) >= 1;
 		boolean hovered = mouseX >= rx && mouseX < rx + LIST_W && mouseY >= ry && mouseY < ry + ROW_H;
 
 		if (view.goods().equals(selected)) g.fill(rx, ry, rx + LIST_W, ry + ROW_H, 0xFF6F6F9F);
 		else if (hovered) g.fill(rx, ry, rx + LIST_W, ry + ROW_H, 0xFF9B9B9B);
+		else if (!available) g.fill(rx, ry, rx + LIST_W, ry + ROW_H, COLOR_UNAVAILABLE_ROW); // A-4: sold out / not buying at a glance
 
 		ItemStack stack = view.displayStack();
 		g.item(stack, rx + 2, ry + 1);
 		int textY = ry + 5;
-		int textColor = !available ? COLOR_GRAY : view.shortage() ? COLOR_ORANGE : COLOR_WHITE; // K: shortages in orange
-		g.text(font, font.plainSubstrByWidth(stack.getHoverName().getString(), 70), rx + 20, textY, textColor);
+		// K: shortages in orange; D-5: today's specials in light blue with a star.
+		int textColor = !available ? COLOR_GRAY : view.shortage() ? COLOR_ORANGE : view.special() ? COLOR_SPECIAL : COLOR_WHITE;
+		String name = (view.special() ? "★" : "") + stack.getHoverName().getString();
 
 		long unitPrice = buy ? PriceModel.buyPrice(params, state.pressure()) : PriceModel.sellPrice(params, state.pressure());
 		String price = !available
 				? Component.translatable(buy ? "screen.trade_expansion.sold_out" : "screen.trade_expansion.not_buying").getString()
 				: CoinItem.formatCopper(unitPrice) + (view.unit() > 1 ? "/" + view.unit() : "");
 		g.text(font, price, rx + 136 - font.width(price), textY, available ? COLOR_GOLD : COLOR_RED);
+		// The name uses the space up to the price and shrinks when it does not fit.
+		fitText(g, name, rx + 20, textY, 136 - 20 - font.width(price) - 4, textColor, true);
 
 		// Q17: change since the screen opened.
 		Long base = (buy ? baselineBuy : baselineSell).get(view.goods());
@@ -606,6 +634,60 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		g.fill(center, ry + 6, center + 1, ry + 12, COLOR_LIGHT);
 
 		if (hovered && mouseX < rx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
+		else if (hovered && !available) g.setTooltipForNextFrame(font, unavailableReason(view, buy), Optional.empty(), mouseX, mouseY);
+		else if (hovered && view.special()) {
+			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.trade_expansion.special.tooltip")), Optional.empty(), mouseX, mouseY);
+		}
+	}
+
+	/** A-4: why a good cannot be bought / sold right now, and when that ends. */
+	private List<Component> unavailableReason(GoodView view, boolean buy) {
+		GoodState state = currentState(view);
+		double restock = TradeExpansionConfig.get().recovery.restockMultiplier;
+		double days = buy ? PriceModel.daysUntilRestock(view.params(), state, restock) : PriceModel.daysUntilBuying(view.params(), state, restock);
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable(buy ? "screen.trade_expansion.sold_out.reason" : "screen.trade_expansion.not_buying.reason"));
+		if (Double.isFinite(days)) {
+			lines.add(Component.translatable(buy ? "screen.trade_expansion.restock_in" : "screen.trade_expansion.buying_in", minutes(days)));
+		}
+		return lines;
+	}
+
+	/** Smallest scale a name is shrunk to before it is cut with "…". */
+	private static final float MIN_TEXT_SCALE = 0.6f;
+
+	/**
+	 * Draws {@code text} within {@code maxWidth}: as is when it fits, otherwise shrunk (down to {@link #MIN_TEXT_SCALE},
+	 * vertically centered on the normal line), and cut with "…" only when even that is too wide.
+	 */
+	private void fitText(GuiGraphicsExtractor g, String text, int x, int y, int maxWidth, int color, boolean shadow) {
+		int width = font.width(text);
+		if (width <= maxWidth) {
+			g.text(font, text, x, y, color, shadow);
+			return;
+		}
+		float scale = Math.max(MIN_TEXT_SCALE, maxWidth / (float) width);
+		String shown = text;
+		if (width * scale > maxWidth) {
+			int room = (int) (maxWidth / scale) - font.width("…");
+			shown = font.plainSubstrByWidth(text, room) + "…";
+		}
+		g.pose().pushMatrix();
+		g.pose().translate(x, y + font.lineHeight * (1 - scale) / 2);
+		g.pose().scale(scale, scale);
+		g.text(font, shown, 0, 0, color, shadow);
+		g.pose().popMatrix();
+	}
+
+	/** 0.1 → "10", 0.093 → "9.3". */
+	private static String percent(double rate) {
+		double value = Math.round(rate * 1000) / 10.0;
+		return value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value);
+	}
+
+	/** In-game days as real minutes (1 day = 20 minutes), rounded up. */
+	private static int minutes(double days) {
+		return (int) Math.ceil(days * 20);
 	}
 
 	private void extractPanel(GuiGraphicsExtractor g, int px, int y) {
@@ -618,19 +700,48 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		GoodState state = currentState(view);
 		ItemStack stack = view.displayStack();
 		g.item(stack, px, y + 36);
-		g.text(font, font.plainSubstrByWidth(stack.getHoverName().getString(), PANEL_W - 18), px + 18, y + 40, COLOR_TEXT, false);
+		// Long names wrap onto a second line (each line shrinks if it still does not fit).
+		List<FormattedCharSequence> nameLines = font.split(stack.getHoverName(), PANEL_W - 18);
+		if (nameLines.size() <= 1) {
+			fitText(g, stack.getHoverName().getString(), px + 18, y + 40, PANEL_W - 18, COLOR_TEXT, false);
+		} else {
+			String full = stack.getHoverName().getString();
+			String first = font.plainSubstrByWidth(full, PANEL_W - 18);
+			g.text(font, first, px + 18, y + 35, COLOR_TEXT, false);
+			fitText(g, full.substring(first.length()), px + 18, y + 45, PANEL_W - 18, COLOR_TEXT, false);
+		}
 
 		boolean all = shiftAll();
 		int qty = all ? maxQuantity(true) : quantity;
 		String qtyText = view.unit() > 1 ? qty + " (" + qty * view.unit() + ")" : String.valueOf(qty);
 		g.text(font, qtyText, px + 39 - font.width(qtyText) / 2, y + 63, all ? 0xFF2050A0 : COLOR_TEXT, false);
 
-		g.text(font, Component.translatable("screen.trade_expansion.total", CoinItem.formatCopper(previewTotal(view, Math.max(1, qty)))), px, y + 98, COLOR_TEXT, false);
+		// Three lines between the quantity buttons (to y + 92) and the confirm button (from y + 122).
+		int line1 = y + 95;
+		int line2 = y + 104;
+		int line3 = y + 113;
+		fitText(g, Component.translatable("screen.trade_expansion.total", CoinItem.formatCopper(previewTotal(view, Math.max(1, qty)))).getString(),
+				px, line1, PANEL_W, COLOR_TEXT, false);
+		if (tab == Tab.BUY) {
+			// B-5: bulk discount reached by this quantity
+			double rate = snapshot.bulkDiscount().rate(params, Math.max(1, qty), view.unit());
+			if (rate > 0) {
+				fitText(g, Component.translatable("screen.trade_expansion.bulk_discount", percent(rate)).getString(), px, line3, PANEL_W, 0xFF207020, false);
+			}
+		}
+		double restock = TradeExpansionConfig.get().recovery.restockMultiplier;
 		if (tab == Tab.BUY && !PriceModel.canBuy(state)) {
-			double minutes = PriceModel.daysUntilRestock(params, state, TradeExpansionConfig.get().recovery.restockMultiplier) * 20;
-			g.text(font, Component.translatable("screen.trade_expansion.restock_in", (int) Math.ceil(minutes)), px, y + 110, 0xFFA02020, false);
+			fitText(g, Component.translatable("screen.trade_expansion.restock_in", minutes(PriceModel.daysUntilRestock(params, state, restock))).getString(),
+					px, line2, PANEL_W, COLOR_WARNING, false);
+		} else if (tab == Tab.SELL && PriceModel.sellCapacity(params, state) < 1) {
+			// A-4: the market is full; say so instead of "max: 0".
+			double days = PriceModel.daysUntilBuying(params, state, restock);
+			fitText(g, Component.translatable("screen.trade_expansion.not_buying").getString(), px, line2, PANEL_W, COLOR_WARNING, false);
+			if (Double.isFinite(days)) {
+				fitText(g, Component.translatable("screen.trade_expansion.buying_in", minutes(days)).getString(), px, line3, PANEL_W, COLOR_WARNING, false);
+			}
 		} else {
-			g.text(font, Component.translatable("screen.trade_expansion.max_quantity", maxQuantity(false)), px, y + 110, COLOR_DARK, false);
+			fitText(g, Component.translatable("screen.trade_expansion.max_quantity", maxQuantity(false)).getString(), px, line2, PANEL_W, COLOR_DARK, false);
 		}
 		if (TradeExpansionConfig.get().trade.allowShiftAll) {
 			g.text(font, Component.translatable("screen.trade_expansion.shift_all"), px, y + 141, COLOR_DARK, false);
@@ -678,7 +789,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			if (r.request().id() == selectedRequest) g.fill(rx, y, rx + LIST_W, y + ROW_H, 0xFF6F6F9F);
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(r.item()));
 			g.item(stack, rx + 2, y + 1);
-			g.text(font, font.plainSubstrByWidth(stack.getHoverName().getString(), 80) + " ×" + r.request().quantity(), rx + 20, y + 5, COLOR_WHITE);
+			fitText(g, stack.getHoverName().getString() + " ×" + r.request().quantity(), rx + 20, y + 5, 110, COLOR_WHITE, true);
 			g.text(font, "★".repeat(r.request().difficulty()), rx + 132, y + 5, COLOR_GOLD);
 			String reward = CoinItem.formatCopper(r.request().reward());
 			g.text(font, reward, rx + LIST_W - 5 - font.width(reward), y + 5, COLOR_GOLD);
@@ -765,7 +876,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			int y = by + row * ROW_H;
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(good.item()));
 			g.item(stack, bx + 2, y + 1);
-			g.text(font, font.plainSubstrByWidth(stack.getHoverName().getString(), 64), bx + 20, y + 5, good.shortage() ? COLOR_ORANGE : COLOR_WHITE);
+			fitText(g, stack.getHoverName().getString(), bx + 20, y + 5, 64, good.shortage() ? COLOR_ORANGE : COLOR_WHITE, true);
 			String buy = good.buy() < 0 ? "-" : (good.buyDeal() > 0 ? "\u2193" : "") + CoinItem.formatCopper(good.buy());
 			String sell = good.sell() < 0 ? "-" : (good.sellDeal() > 0 ? "\u2191" : "") + CoinItem.formatCopper(good.sell());
 			g.text(font, buy, bx + 130 - font.width(buy), y + 5, good.buyDeal() > 0 ? COLOR_DEAL_BUY : COLOR_GOLD);

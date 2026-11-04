@@ -185,4 +185,50 @@ class PriceModelTest {
 		assertEquals(16, PriceModel.maxAffordable(BREAD, 0, 497, 16));
 		assertEquals(15, PriceModel.maxAffordable(BREAD, 0, 496, 64));
 	}
+
+	/** A-4: a full market (S = Scap = 24) takes items again once consumption (c = r/2 = 2 per day) brings S to 23. */
+	@Test
+	void daysUntilBuyingAgain() {
+		assertEquals(0.5, PriceModel.daysUntilBuying(SWORD, new GoodState(1, 0, 24, 0), 1.0), 1e-9);
+		assertEquals(0.25, PriceModel.daysUntilBuying(SWORD, new GoodState(1, 0, 23.5, 0), 1.0), 1e-9);
+		assertEquals(0.0, PriceModel.daysUntilBuying(SWORD, new GoodState(1, 0, 20, 0), 1.0));
+	}
+
+	private static final BulkDiscount BULK = new BulkDiscount(java.util.List.of(new BulkDiscount.Tier(64, 0.10), new BulkDiscount.Tier(16, 0.05)));
+
+	/** B-5 (v0.27): 16 items or more 5% off, 64 or more 10% off; fewer items pay the plain total. */
+	@Test
+	void bulkDiscountTiers() {
+		assertEquals(PriceModel.sumBuy(BREAD, 0, 15), PriceModel.sumBuy(BREAD, 0, 15, 1, BULK));
+		assertEquals((long) Math.ceil(PriceModel.sumBuy(BREAD, 0, 16) * 0.95 - 1e-9), PriceModel.sumBuy(BREAD, 0, 16, 1, BULK));
+		assertEquals((long) Math.ceil(PriceModel.sumBuy(BREAD, 0, 64) * 0.90 - 1e-9), PriceModel.sumBuy(BREAD, 0, 64, 1, BULK));
+		// Tiers count items, not trading units: 4 units of 16 reach the 64-item tier.
+		assertEquals(0.10, BULK.rate(BREAD, 4, 16), 1e-9);
+	}
+
+	/** Buying with the largest discount and selling straight back never profits (B-6). */
+	@Test
+	void bulkDiscountIsCappedAgainstRoundTrips() {
+		GoodParams thin = new GoodParams(20, 200, 0.05, 64, 128, 8, 0.25, 3.0); // small spread: break-even below 10%
+		assertTrue(BulkDiscount.safeRate(thin) < 0.10);
+		for (GoodParams p : new GoodParams[] {thin, BREAD, SWORD}) {
+			long paid = PriceModel.sumBuy(p, 0, 64, 1, BULK);
+			long back = PriceModel.sumSell(p, p.clampPressure(-64), 64);
+			assertTrue(back < paid, "round trip profits for " + p);
+		}
+	}
+
+	/** maxAffordable with a discount = the largest n whose discounted total fits, checked by brute force. */
+	@Test
+	void maxAffordableWithDiscount() {
+		for (GoodParams p : new GoodParams[] {BREAD, SWORD}) {
+			for (long funds : new long[] {0, 100, 500, 1_000, 5_000, 20_000, 100_000}) {
+				int expected = 0;
+				for (int n = 1; n <= 64; n++) {
+					if (PriceModel.sumBuy(p, 0, n, 1, BULK) <= funds) expected = n;
+				}
+				assertEquals(expected, PriceModel.maxAffordable(p, 0, funds, 64, 1, BULK), "funds " + funds);
+			}
+		}
+	}
 }

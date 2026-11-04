@@ -23,7 +23,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Minting (design E-2, Q20): a shaped recipe whose output is defined by copper value, so changing the coin ratios
  * changes the number of coins but not their worth. Count = value ÷ coin value (rounded down, 1..64), computed when
- * recipes load. Disabled through the {@code minting_enabled} load condition when {@code currency.allowMinting} is off.
+ * recipes load. Disabled through the {@code minting_enabled} load condition when {@code currency.allowMinting} is off;
+ * the iron block recipe also needs {@code currency.allowIronMinting} ({@code iron_minting_enabled}, v0.27.3).
  */
 public class MintingRecipe extends ShapedRecipe {
 	private final CommonInfo info;
@@ -60,6 +61,9 @@ public class MintingRecipe extends ShapedRecipe {
 	public static final ResourceConditionType<Enabled> ENABLED = ResourceConditionType.create(
 			TradeExpansion.id("minting_enabled"), MapCodec.unit(new Enabled()));
 
+	public static final ResourceConditionType<IronEnabled> IRON_ENABLED = ResourceConditionType.create(
+			TradeExpansion.id("iron_minting_enabled"), MapCodec.unit(new IronEnabled()));
+
 	@Override
 	public RecipeSerializer<ShapedRecipe> getSerializer() {
 		return SERIALIZER;
@@ -77,8 +81,23 @@ public class MintingRecipe extends ShapedRecipe {
 		}
 	}
 
+	/** v0.27.3: iron golem farms give unlimited iron, so iron minting is a separate switch (off by default). */
+	public record IronEnabled() implements ResourceCondition {
+		@Override
+		public ResourceConditionType<?> getType() {
+			return IRON_ENABLED;
+		}
+
+		@Override
+		public boolean test(RegistryOps.@Nullable RegistryInfoLookup registryInfo) {
+			TradeExpansionConfig.Currency currency = TradeExpansionConfig.get().currency;
+			return currency.allowMinting && currency.allowIronMinting;
+		}
+	}
+
 	public static void init() {
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, TradeExpansion.id("minting"), SERIALIZER);
 		ResourceConditions.register(ENABLED);
+		ResourceConditions.register(IRON_ENABLED);
 	}
 }

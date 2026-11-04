@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.config;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.core.BulkDiscount;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.datafixers.util.Pair;
@@ -135,12 +136,14 @@ public final class TradeExpansionConfig {
 		public boolean mobDropCoins = true;
 		public boolean sneakUseExchange = true;
 		public int emeraldCoinsPerBlock = 1;
+		/** E-2 (v0.27.3): iron block → iron coins; off by default because iron golem farms give unlimited iron. */
+		public boolean allowIronMinting = false;
 
 		public Currency() {
 		}
 
 		Currency(List<Integer> ratios, boolean ratioLocked, boolean allowMinting, double exchangeFee, long startingMoney,
-				boolean mobDropCoins, boolean sneakUseExchange, int emeraldCoinsPerBlock) {
+				boolean mobDropCoins, boolean sneakUseExchange, int emeraldCoinsPerBlock, boolean allowIronMinting) {
 			this.ratios = new ArrayList<>(ratios);
 			this.ratioLocked = ratioLocked;
 			this.allowMinting = allowMinting;
@@ -149,6 +152,7 @@ public final class TradeExpansionConfig {
 			this.mobDropCoins = mobDropCoins;
 			this.sneakUseExchange = sneakUseExchange;
 			this.emeraldCoinsPerBlock = emeraldCoinsPerBlock;
+			this.allowIronMinting = allowIronMinting;
 		}
 
 		static final Codec<Currency> CODEC = RecordCodecBuilder.create(i -> {
@@ -161,7 +165,8 @@ public final class TradeExpansionConfig {
 					Codec.LONG.fieldOf("startingMoney").orElse(d.startingMoney).forGetter(c -> c.startingMoney),
 					Codec.BOOL.fieldOf("mobDropCoins").orElse(d.mobDropCoins).forGetter(c -> c.mobDropCoins),
 					Codec.BOOL.fieldOf("sneakUseExchange").orElse(d.sneakUseExchange).forGetter(c -> c.sneakUseExchange),
-					Codec.INT.fieldOf("emeraldCoinsPerBlock").orElse(d.emeraldCoinsPerBlock).forGetter(c -> c.emeraldCoinsPerBlock)
+					Codec.INT.fieldOf("emeraldCoinsPerBlock").orElse(d.emeraldCoinsPerBlock).forGetter(c -> c.emeraldCoinsPerBlock),
+					Codec.BOOL.fieldOf("allowIronMinting").orElse(d.allowIronMinting).forGetter(c -> c.allowIronMinting)
 			).apply(i, Currency::new);
 		});
 
@@ -298,13 +303,23 @@ public final class TradeExpansionConfig {
 		public NewMarketRequires newMarketRequires = NewMarketRequires.BEDS_AND_VILLAGERS;
 		public int newMarketMinBeds = 3;
 		public int newMarketMinVillagers = 3;
+		/** C-1 (v0.27.1): with BEDS_AND_VILLAGERS, this many beds allow more villagers than beds (0 = beds must always be at least the villagers). */
+		public int newMarketEnoughBeds = 5;
+		/** D-4 (v0.27, Q21): the market loses goods when its level goes down. */
+		public boolean shrinkOnLevelDown = true;
+		/** D-5: number of today's specials for levels 1..5 (0 = none). */
+		public List<Integer> specialGoods = new ArrayList<>(List.of(1, 1, 2, 2, 2));
+		public double specialPriceMultiplier = 1.2;
+		/** D-5: a special starts with this share of its target stock (at least 1). */
+		public double specialStockRatio = 0.5;
 
 		public Market() {
 		}
 
 		Market(int minGoods, int maxGoods, List<Integer> levelThresholds, List<Integer> villagerThresholds, int levelRadius,
 				double levelCheckIntervalDays, RenamePermission renamePermission, NewMarketRequires newMarketRequires,
-				int newMarketMinBeds, int newMarketMinVillagers) {
+				int newMarketMinBeds, int newMarketMinVillagers, int newMarketEnoughBeds, boolean shrinkOnLevelDown, List<Integer> specialGoods,
+				double specialPriceMultiplier, double specialStockRatio) {
 			this.minGoods = minGoods;
 			this.maxGoods = maxGoods;
 			this.levelThresholds = new ArrayList<>(levelThresholds);
@@ -315,6 +330,11 @@ public final class TradeExpansionConfig {
 			this.newMarketRequires = newMarketRequires;
 			this.newMarketMinBeds = newMarketMinBeds;
 			this.newMarketMinVillagers = newMarketMinVillagers;
+			this.newMarketEnoughBeds = newMarketEnoughBeds;
+			this.shrinkOnLevelDown = shrinkOnLevelDown;
+			this.specialGoods = new ArrayList<>(specialGoods);
+			this.specialPriceMultiplier = specialPriceMultiplier;
+			this.specialStockRatio = specialStockRatio;
 		}
 
 		static final Codec<Market> CODEC = RecordCodecBuilder.create(i -> {
@@ -329,7 +349,12 @@ public final class TradeExpansionConfig {
 					RenamePermission.CODEC.fieldOf("renamePermission").orElse(d.renamePermission).forGetter(c -> c.renamePermission),
 					NewMarketRequires.CODEC.fieldOf("newMarketRequires").orElse(d.newMarketRequires).forGetter(c -> c.newMarketRequires),
 					Codec.INT.fieldOf("newMarketMinBeds").orElse(d.newMarketMinBeds).forGetter(c -> c.newMarketMinBeds),
-					Codec.INT.fieldOf("newMarketMinVillagers").orElse(d.newMarketMinVillagers).forGetter(c -> c.newMarketMinVillagers)
+					Codec.INT.fieldOf("newMarketMinVillagers").orElse(d.newMarketMinVillagers).forGetter(c -> c.newMarketMinVillagers),
+					Codec.INT.fieldOf("newMarketEnoughBeds").orElse(d.newMarketEnoughBeds).forGetter(c -> c.newMarketEnoughBeds),
+					Codec.BOOL.fieldOf("shrinkOnLevelDown").orElse(d.shrinkOnLevelDown).forGetter(c -> c.shrinkOnLevelDown),
+					Codec.INT.listOf().fieldOf("specialGoods").orElse(d.specialGoods).forGetter(c -> c.specialGoods),
+					Codec.DOUBLE.fieldOf("specialPriceMultiplier").orElse(d.specialPriceMultiplier).forGetter(c -> c.specialPriceMultiplier),
+					Codec.DOUBLE.fieldOf("specialStockRatio").orElse(d.specialStockRatio).forGetter(c -> c.specialStockRatio)
 			).apply(i, Market::new);
 		});
 
@@ -339,6 +364,12 @@ public final class TradeExpansionConfig {
 
 		public int[] villagerThresholdArray() {
 			return villagerThresholds.stream().mapToInt(Integer::intValue).toArray();
+		}
+
+		/** D-5: number of specials at {@code level} (the last entry repeats for higher levels). */
+		public int specialGoodsAt(int level) {
+			if (specialGoods.isEmpty()) return 0;
+			return Math.max(0, specialGoods.get(Math.clamp(level - 1, 0, specialGoods.size() - 1)));
 		}
 	}
 
@@ -401,12 +432,14 @@ public final class TradeExpansionConfig {
 		public boolean allowCreative = false;
 		/** C-1: action bar hint while holding a stall. */
 		public boolean showPlacementHint = true;
+		/** B-5 (v0.27): discount on buying at least minQuantity items in one trade. */
+		public List<BulkTier> bulkDiscounts = new ArrayList<>(List.of(new BulkTier(16, 0.05), new BulkTier(64, 0.10)));
 
 		public Trade() {
 		}
 
 		Trade(double maxDistance, boolean acceptDamaged, double priceTolerance, int maxPerTransaction, boolean allowShiftAll,
-				boolean allowCreative, boolean showPlacementHint) {
+				boolean allowCreative, boolean showPlacementHint, List<BulkTier> bulkDiscounts) {
 			this.maxDistance = maxDistance;
 			this.acceptDamaged = acceptDamaged;
 			this.priceTolerance = priceTolerance;
@@ -414,6 +447,7 @@ public final class TradeExpansionConfig {
 			this.allowShiftAll = allowShiftAll;
 			this.allowCreative = allowCreative;
 			this.showPlacementHint = showPlacementHint;
+			this.bulkDiscounts = new ArrayList<>(bulkDiscounts);
 		}
 
 		static final Codec<Trade> CODEC = RecordCodecBuilder.create(i -> {
@@ -425,9 +459,22 @@ public final class TradeExpansionConfig {
 					Codec.INT.fieldOf("maxPerTransaction").orElse(d.maxPerTransaction).forGetter(c -> c.maxPerTransaction),
 					Codec.BOOL.fieldOf("allowShiftAll").orElse(d.allowShiftAll).forGetter(c -> c.allowShiftAll),
 					Codec.BOOL.fieldOf("allowCreative").orElse(d.allowCreative).forGetter(c -> c.allowCreative),
-					Codec.BOOL.fieldOf("showPlacementHint").orElse(d.showPlacementHint).forGetter(c -> c.showPlacementHint)
+					Codec.BOOL.fieldOf("showPlacementHint").orElse(d.showPlacementHint).forGetter(c -> c.showPlacementHint),
+					BulkTier.CODEC.listOf().fieldOf("bulkDiscounts").orElse(d.bulkDiscounts).forGetter(c -> c.bulkDiscounts)
 			).apply(i, Trade::new);
 		});
+
+		public BulkDiscount bulkDiscount() {
+			return new BulkDiscount(bulkDiscounts.stream().map(t -> new BulkDiscount.Tier(t.minQuantity(), t.rate())).toList());
+		}
+	}
+
+	/** One step of {@code trade.bulkDiscounts}: {@code {"minQuantity": 64, "rate": 0.1}}. */
+	public record BulkTier(int minQuantity, double rate) {
+		static final Codec<BulkTier> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.INT.fieldOf("minQuantity").forGetter(BulkTier::minQuantity),
+				Codec.DOUBLE.fieldOf("rate").forGetter(BulkTier::rate)
+		).apply(i, BulkTier::new));
 	}
 
 	public static final class Worldgen {
@@ -501,7 +548,8 @@ public final class TradeExpansionConfig {
 
 	/**
 	 * C-1: where a crafted stall may found a new market. 1 VILLAGE = inside a village structure, 2 BEDS = enough beds,
-	 * 3 VILLAGERS = enough villagers, 4 BEDS_AND_VILLAGERS = enough villagers and at least as many beds as villagers.
+	 * 3 VILLAGERS = enough villagers, 4 BEDS_AND_VILLAGERS = enough villagers and at least as many beds as villagers
+	 * (or at least {@code newMarketEnoughBeds} beds).
 	 */
 	public enum NewMarketRequires implements StringRepresentable {
 		VILLAGE, BEDS, VILLAGERS, BEDS_AND_VILLAGERS;
