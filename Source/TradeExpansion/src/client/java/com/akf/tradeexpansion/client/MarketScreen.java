@@ -84,6 +84,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final int COLOR_SPECIAL = 0xFF8FE3FF;
 	/** Height of the header line above a market's goods on the board tab. */
 	private static final int BOARD_HEADER_H = 10;
+	/** Width kept free at the right end of the title row (other mods may put buttons there, A-4). */
+	private static final int TITLE_RIGHT_RESERVE = 24;
 
 	private static final long[] BANK_AMOUNTS = {100, 1_000, 10_000, -1}; // -1 = everything
 
@@ -1039,18 +1041,27 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	@Override
 	protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
-		int titleWidth = imageWidth - 16;
+		// Title, then (M) the player's reputation right after it: "市場名（町）│ 評判：常連". The right end stays free for
+		// buttons other mods add there; a long title shrinks so the reputation always shows.
+		int room = imageWidth - 16 - TITLE_RIGHT_RESERVE;
+		String titleText = title.getString();
 		if (snapshot != null && snapshot.reputation().enabled()) {
-			// M (v0.29): the player's reputation with this market, details on hover.
 			String label = Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString();
-			int lx = imageWidth - 8 - font.width(label);
-			g.text(font, label, lx, 6, 0xFF6040A0, false);
-			titleWidth = lx - 12;
+			String separator = " │ ";
+			int labelWidth = font.width(separator + label);
+			int titleWidth = Math.min(font.width(titleText), room - labelWidth);
+			fitText(g, titleText, 8, 6, titleWidth, COLOR_TEXT, false);
+			int lx = 8 + titleWidth;
+			g.text(font, separator, lx, 6, COLOR_GRAY, false);
+			int rx = lx + font.width(separator);
+			g.text(font, label, rx, 6, 0xFF6040A0, false);
+			// Details on hover.
 			int mx = mouseX - leftPos;
 			int my = mouseY - topPos;
-			if (mx >= lx && mx < imageWidth - 8 && my >= 4 && my < 16) g.setTooltipForNextFrame(font, reputationTooltip(), Optional.empty(), mouseX, mouseY);
+			if (mx >= rx && mx < rx + font.width(label) && my >= 4 && my < 16) g.setTooltipForNextFrame(font, reputationTooltip(), Optional.empty(), mouseX, mouseY);
+		} else {
+			fitText(g, titleText, 8, 6, room, COLOR_TEXT, false);
 		}
-		fitText(g, title.getString(), 8, 6, titleWidth, COLOR_TEXT, false);
 		Player player = player();
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
 		g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,

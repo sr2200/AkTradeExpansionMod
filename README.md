@@ -15,7 +15,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.21（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.0.22（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -124,7 +124,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 ### 評判
 
-村（市場）ごとに、あなたの**評判**があります。交易画面の右上に「評判：常連」のように出て、マウスを乗せると効果と次のレベルまでのポイントが見られます。
+村（市場）ごとに、あなたの**評判**があります。交易画面のタイトル（市場名）のすぐ後ろに「│ 評判：常連」のように出て、マウスを乗せると効果と次のレベルまでのポイントが見られます。
 
 | レベル | 名前 | 必要なポイント |
 |---|---|---|
