@@ -18,6 +18,7 @@ import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
+import com.akf.tradeexpansion.market.Reputation;
 import com.akf.tradeexpansion.trade.TradeService;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -84,6 +85,11 @@ public final class TradeExpansionCommand {
 								.then(Commands.literal("sell")
 										.then(Commands.argument("count", IntegerArgumentType.integer(1, 2304))
 												.executes(c -> simulate(c, false))))))
+				.then(Commands.literal("reputation")
+						.executes(TradeExpansionCommand::reputation)
+						.then(admin(Commands.literal("set"))
+								.then(Commands.argument("points", DoubleArgumentType.doubleArg(0, 1_000_000))
+										.executes(TradeExpansionCommand::reputationSet))))
 				.then(Commands.literal("where")
 						.executes(c -> where(c, 0))
 						.then(Commands.literal("show").executes(c -> where(c, 1)))
@@ -215,6 +221,36 @@ public final class TradeExpansionCommand {
 		return MarketRegistry.get(player.level().getServer()).inDimension(player.level().dimension()).stream()
 				.min(Comparator.comparingDouble(m -> m.horizontalDistanceTo(player.blockPosition())))
 				.orElse(null);
+	}
+
+	/** M (v0.29): the player's reputation with the nearest market. */
+	private static int reputation(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		ServerPlayer player = context.getSource().getPlayerOrException();
+		Market market = nearestMarket(player);
+		if (market == null) {
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
+			return 0;
+		}
+		long now = MarketClock.now(player.level());
+		int level = Reputation.level(market, player.getUUID(), now);
+		double points = Reputation.points(market, player.getUUID(), now);
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.reputation", MarketNames.title(market),
+				Component.translatable("screen.ak_trade_expansion.reputation.level." + level), level, (long) Math.floor(points)), false);
+		return level;
+	}
+
+	private static int reputationSet(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		ServerPlayer player = context.getSource().getPlayerOrException();
+		Market market = nearestMarket(player);
+		if (market == null) {
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
+			return 0;
+		}
+		long now = MarketClock.now(player.level());
+		double points = DoubleArgumentType.getDouble(context, "points");
+		market.setStanding(new Market.Standing(player.getUUID(), points, now));
+		MarketRegistry.get(player.level().getServer()).setDirty();
+		return reputation(context);
 	}
 
 	private static int marketInfo(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

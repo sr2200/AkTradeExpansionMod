@@ -15,6 +15,7 @@ import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
+import com.akf.tradeexpansion.market.Reputation;
 import com.akf.tradeexpansion.market.Propagation;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
@@ -52,7 +53,7 @@ public final class TradeService {
 		if (result.result() != TradeResult.SUCCESS && market != null) {
 			// Show the latest prices / stock after a refused trade.
 			now = MarketUpkeep.touch(player.level(), market);
-			ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, now));
+			ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
 		}
 	}
 
@@ -79,13 +80,14 @@ public final class TradeService {
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		GoodState state = market.good(goodsId);
 		Item item = def == null ? Items.AIR : BuiltInRegistries.ITEM.getValue(def.item());
-		if (def == null || state == null || item == Items.AIR || (buy ? !def.buy() : !def.sell())) {
+		if (def == null || state == null || item == Items.AIR || (buy ? !def.buy() : !def.sell())
+				|| !Reputation.canSee(market, player.getUUID(), goodsId, now)) { // M: bonus specials need the reputation
 			return fail(TradeResult.NOT_AVAILABLE, request);
 		}
 
 		// 2. Lazy recovery, shortages (K) and requests (J)
 		MarketUpkeep.touch(player.level(), market);
-		GoodParams params = market.params(goodsId);
+		GoodParams params = Reputation.params(market, player.getUUID(), goodsId, now); // M: the player's price bonus
 		int unit = def.unit();
 		int itemCount = qty * unit; // qty counts trading units (B-5)
 		InventoryUtil.Match match = GoodsCatalog.match(goodsId); // components (D-2) and reduced-price damaged items (A-4)
@@ -136,6 +138,8 @@ public final class TradeService {
 			PriceModel.applySell(params, state, qty);
 		}
 		state.setLastTradeGameTime(now);
+		// M: reputation for the trade (selling a good the market is short of counts more)
+		Reputation.onTrade(market, player.getUUID(), total, !buy && market.shortages().containsKey(goodsId), now);
 
 		// 6-7. Propagate X to nearby markets (C-2)
 		double deltaX = buy ? -qty : qty;
@@ -168,7 +172,7 @@ public final class TradeService {
 				Market m = registry.get(menu.marketId());
 				if (m == null) continue;
 				m.refresh(now);
-				ServerPlayNetworking.send(viewer, MarketSnapshotS2C.of(m, now));
+				ServerPlayNetworking.send(viewer, MarketSnapshotS2C.of(m, viewer, now));
 			}
 		}
 	}

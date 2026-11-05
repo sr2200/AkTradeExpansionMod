@@ -80,12 +80,27 @@ public final class Market {
 		).apply(i, Shelved::new));
 	}
 
-	/** Fields added after the 16-field limit of RecordCodecBuilder (v0.27): shelved goods and today's specials. */
-	private record Assortment(List<Shelved> shelved, List<Identifier> specials, long specialDay) {
+	/** M (Q39): one player's reputation points and the market-clock time they were last brought up to date. */
+	public record Standing(UUID player, double points, long since) {
+		static final Codec<Standing> CODEC = RecordCodecBuilder.create(i -> i.group(
+				UUIDUtil.CODEC.fieldOf("player").forGetter(Standing::player),
+				Codec.DOUBLE.fieldOf("points").forGetter(Standing::points),
+				Codec.LONG.fieldOf("since").forGetter(Standing::since)
+		).apply(i, Standing::new));
+	}
+
+	/**
+	 * Fields added after the 16-field limit of RecordCodecBuilder: shelved goods and today's specials (v0.27), reputation
+	 * and the specials shown only to players with a good reputation (v0.29).
+	 */
+	private record Assortment(List<Shelved> shelved, List<Identifier> specials, long specialDay, List<Standing> reputation,
+			List<Identifier> bonusSpecials) {
 		static final MapCodec<Assortment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Shelved.CODEC.listOf().optionalFieldOf("shelved", List.of()).forGetter(Assortment::shelved),
 				Identifier.CODEC.listOf().optionalFieldOf("specials", List.of()).forGetter(Assortment::specials),
-				Codec.LONG.optionalFieldOf("special_day", Long.MIN_VALUE).forGetter(Assortment::specialDay)
+				Codec.LONG.optionalFieldOf("special_day", Long.MIN_VALUE).forGetter(Assortment::specialDay),
+				Standing.CODEC.listOf().optionalFieldOf("reputation", List.of()).forGetter(Assortment::reputation),
+				Identifier.CODEC.listOf().optionalFieldOf("bonus_specials", List.of()).forGetter(Assortment::bonusSpecials)
 		).apply(i, Assortment::new));
 	}
 
@@ -115,8 +130,11 @@ public final class Market {
 		a.shelved().forEach(sh -> m.shelved.put(sh.goods(), sh));
 		m.specials.addAll(a.specials());
 		m.specialDay = a.specialDay();
+		a.reputation().forEach(st -> m.reputation.put(st.player(), st));
+		m.bonusSpecials.addAll(a.bonusSpecials());
 		return m;
-	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay))).codec();
+	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
+			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials)))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -144,6 +162,10 @@ public final class Market {
 	/** D-5: today's specials (goods outside the profile, kept for one in-game day) and the day they belong to. */
 	private final Set<Identifier> specials = new LinkedHashSet<>();
 	private long specialDay = Long.MIN_VALUE;
+	/** D-5 / M: the part of {@link #specials} shown only to players with a good reputation. */
+	private final Set<Identifier> bonusSpecials = new LinkedHashSet<>();
+	/** M (Q39): reputation of each player with this market (decay applied lazily, see {@code Reputation}). */
+	private final Map<UUID, Standing> reputation = new LinkedHashMap<>();
 
 	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
 			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods,
@@ -357,6 +379,21 @@ public final class Market {
 		goods.remove(goodsId);
 		shortages.remove(goodsId);
 		specials.remove(goodsId);
+		bonusSpecials.remove(goodsId);
+	}
+
+	/** D-5 / M: specials shown only to players with a good reputation (a subset of {@link #specials()}, mutable). */
+	public Set<Identifier> bonusSpecials() {
+		return bonusSpecials;
+	}
+
+	/** M: stored standing of a player, or {@code null}. */
+	public Standing standing(UUID player) {
+		return reputation.get(player);
+	}
+
+	public void setStanding(Standing standing) {
+		reputation.put(standing.player(), standing);
 	}
 
 	/** Schema 1 → 2: goods were keyed by item id; the built-in goods ids share the item's path. */

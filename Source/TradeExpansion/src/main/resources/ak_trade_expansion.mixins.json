@@ -9,7 +9,8 @@
     "MerchantResultSlotMixin",
     "MerchantMenuMixin",
     "MerchantMenuAccessor",
-    "ServerPlayerMixin"
+    "ServerPlayerMixin",
+    "AbstractVillagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -98,6 +98,23 @@ public final class ConfigValidator {
 		c.villager.minGoodsPriceMultiplier = clamp("villager.minGoodsPriceMultiplier", c.villager.minGoodsPriceMultiplier, 0, 10);
 		c.villager.emeraldPrice = clamp("villager.emeraldPrice", c.villager.emeraldPrice, 1, 10000);
 
+		TradeExpansionConfig.Reputation rp = c.reputation;
+		rp.levelThresholds = intList("reputation.levelThresholds", rp.levelThresholds, 5, 1, 1_000_000, true, List.of(50, 150, 400, 1000, 2500));
+		rp.halfLifeDays = clamp("reputation.halfLifeDays", rp.halfLifeDays, 0, 1000);
+		rp.pointsPerCoin = clamp("reputation.pointsPerCoin", rp.pointsPerCoin, 0, 10);
+		rp.shortageMultiplier = clamp("reputation.shortageMultiplier", rp.shortageMultiplier, 1, 10);
+		rp.questPoints = intList("reputation.questPoints", rp.questPoints, 3, 0, 100_000, false, List.of(10, 25, 50));
+		rp.acceptedQuestMultiplier = clamp("reputation.acceptedQuestMultiplier", rp.acceptedQuestMultiplier, 1, 10);
+		rp.villagerTradePoints = clamp("reputation.villagerTradePoints", rp.villagerTradePoints, 0, 1000);
+		rp.attackPenalty = clamp("reputation.attackPenalty", rp.attackPenalty, 0, 100_000);
+		rp.killPenalty = clamp("reputation.killPenalty", rp.killPenalty, 0, 100_000);
+		rp.questFailPenalty = clamp("reputation.questFailPenalty", rp.questFailPenalty, 0, 100_000);
+		rp.priceBonusPerLevel = clamp("reputation.priceBonusPerLevel", rp.priceBonusPerLevel, 0, 0.05);
+		rp.rewardBonusPerLevel = clamp("reputation.rewardBonusPerLevel", rp.rewardBonusPerLevel, 0, 1);
+		rp.hardQuestLevel = clamp("reputation.hardQuestLevel", rp.hardQuestLevel, 0, 5);
+		rp.specialBonusLevel = clamp("reputation.specialBonusLevel", rp.specialBonusLevel, 0, 5);
+		rp.specialBonusCount = clamp("reputation.specialBonusCount", rp.specialBonusCount, 0, 5);
+
 		c.consumables.add = itemIds("consumables.add", c.consumables.add);
 		c.consumables.remove = itemIds("consumables.remove", c.consumables.remove);
 		c.goods = goodsOverrides(c.goods);

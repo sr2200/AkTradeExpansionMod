@@ -41,6 +41,7 @@ public final class TradeExpansionConfig {
 	public Trader trader = new Trader();
 	public Villager villager = new Villager();
 	public Consumables consumables = new Consumables();
+	public Reputation reputation = new Reputation();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -90,7 +91,7 @@ public final class TradeExpansionConfig {
 
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
-			Map<String, GoodsOverride> goods) {
+			Map<String, GoodsOverride> goods, Reputation reputation) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -98,7 +99,8 @@ public final class TradeExpansionConfig {
 				section("trader", Trader.CODEC, new Trader()).forGetter(Extra::trader),
 				section("villager", Villager.CODEC, new Villager()).forGetter(Extra::villager),
 				section("consumables", Consumables.CODEC, new Consumables()).forGetter(Extra::consumables),
-				section("goods", Codec.unboundedMap(Codec.STRING, GoodsOverride.CODEC), Map.<String, GoodsOverride>of()).forGetter(Extra::goods)
+				section("goods", Codec.unboundedMap(Codec.STRING, GoodsOverride.CODEC), Map.<String, GoodsOverride>of()).forGetter(Extra::goods),
+				section("reputation", Reputation.CODEC, new Reputation()).forGetter(Extra::reputation)
 		).apply(i, Extra::new));
 	}
 
@@ -112,8 +114,9 @@ public final class TradeExpansionConfig {
 		c.villager = e.villager();
 		c.consumables = e.consumables();
 		c.goods = new TreeMap<>(e.goods());
+		c.reputation = e.reputation();
 		return c;
-	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods))).codec();
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -138,12 +141,14 @@ public final class TradeExpansionConfig {
 		public int emeraldCoinsPerBlock = 1;
 		/** E-2 (v0.27.3): iron block → iron coins; off by default because iron golem farms give unlimited iron. */
 		public boolean allowIronMinting = false;
+		/** E-3 / Q16: change dropped at the player's feet can only be picked up by that player. */
+		public boolean changeOwnerOnly = false;
 
 		public Currency() {
 		}
 
 		Currency(List<Integer> ratios, boolean ratioLocked, boolean allowMinting, double exchangeFee, long startingMoney,
-				boolean mobDropCoins, boolean sneakUseExchange, int emeraldCoinsPerBlock, boolean allowIronMinting) {
+				boolean mobDropCoins, boolean sneakUseExchange, int emeraldCoinsPerBlock, boolean allowIronMinting, boolean changeOwnerOnly) {
 			this.ratios = new ArrayList<>(ratios);
 			this.ratioLocked = ratioLocked;
 			this.allowMinting = allowMinting;
@@ -153,6 +158,7 @@ public final class TradeExpansionConfig {
 			this.sneakUseExchange = sneakUseExchange;
 			this.emeraldCoinsPerBlock = emeraldCoinsPerBlock;
 			this.allowIronMinting = allowIronMinting;
+			this.changeOwnerOnly = changeOwnerOnly;
 		}
 
 		static final Codec<Currency> CODEC = RecordCodecBuilder.create(i -> {
@@ -166,7 +172,8 @@ public final class TradeExpansionConfig {
 					Codec.BOOL.fieldOf("mobDropCoins").orElse(d.mobDropCoins).forGetter(c -> c.mobDropCoins),
 					Codec.BOOL.fieldOf("sneakUseExchange").orElse(d.sneakUseExchange).forGetter(c -> c.sneakUseExchange),
 					Codec.INT.fieldOf("emeraldCoinsPerBlock").orElse(d.emeraldCoinsPerBlock).forGetter(c -> c.emeraldCoinsPerBlock),
-					Codec.BOOL.fieldOf("allowIronMinting").orElse(d.allowIronMinting).forGetter(c -> c.allowIronMinting)
+					Codec.BOOL.fieldOf("allowIronMinting").orElse(d.allowIronMinting).forGetter(c -> c.allowIronMinting),
+					Codec.BOOL.fieldOf("changeOwnerOnly").orElse(d.changeOwnerOnly).forGetter(c -> c.changeOwnerOnly)
 			).apply(i, Currency::new);
 		});
 
@@ -754,6 +761,90 @@ public final class TradeExpansionConfig {
 				Codec.STRING.listOf().fieldOf("add").orElse(List.of()).forGetter(c -> c.add),
 				Codec.STRING.listOf().fieldOf("remove").orElse(List.of()).forGetter(c -> c.remove)
 		).apply(i, Consumables::new));
+	}
+
+/** L-2 / M (Q39): reputation of each player with each market. */
+	public static final class Reputation {
+		/** Reputation on / off (off: everyone is at level 0, nothing changes it). */
+		public boolean enabled = true;
+		/** Points for levels 1..5. */
+		public List<Integer> levelThresholds = new ArrayList<>(List.of(50, 150, 400, 1000, 2500));
+		/** Points halve over this many in-game days (0 = no decay). */
+		public double halfLifeDays = 30.0;
+		/** Points per copper of a trade at the market (100c = 1 point). */
+		public double pointsPerCoin = 0.01;
+		/** Trade points for selling a good that is short (K) are multiplied by this. */
+		public double shortageMultiplier = 2.0;
+		/** Points for delivering a request of difficulty 1..3. */
+		public List<Integer> questPoints = new ArrayList<>(List.of(10, 25, 50));
+		/** Delivering a request you accepted multiplies its points by this. */
+		public double acceptedQuestMultiplier = 1.5;
+		/** Points per trade with a villager near the market. */
+		public double villagerTradePoints = 1.0;
+		/** Points lost per hit on a villager or trader near the market. */
+		public double attackPenalty = 20.0;
+		/** Points lost for killing a villager or trader near the market. */
+		public double killPenalty = 100.0;
+		/** Points lost per star when an accepted request expires undelivered. */
+		public double questFailPenalty = 10.0;
+		/** Buy prices cheaper / sell prices higher by this per level (capped per good, B-6). */
+		public double priceBonusPerLevel = 0.01;
+		/** Request rewards higher by this per level. */
+		public double rewardBonusPerLevel = 0.04;
+		/** Level needed to deliver 3-star requests (0 = anyone). */
+		public int hardQuestLevel = 3;
+		/** Level from which the extra specials of the market are shown. */
+		public int specialBonusLevel = 4;
+		/** Extra specials (D-5) shown only to players at specialBonusLevel or above. */
+		public int specialBonusCount = 1;
+
+		public Reputation() {
+		}
+
+		Reputation(boolean enabled, List<Integer> levelThresholds, double halfLifeDays, double pointsPerCoin, double shortageMultiplier, List<Integer> questPoints, double acceptedQuestMultiplier, double villagerTradePoints, double attackPenalty, double killPenalty, double questFailPenalty, double priceBonusPerLevel, double rewardBonusPerLevel, int hardQuestLevel, int specialBonusLevel, int specialBonusCount) {
+			this.enabled = enabled;
+			this.levelThresholds = new ArrayList<>(levelThresholds);
+			this.halfLifeDays = halfLifeDays;
+			this.pointsPerCoin = pointsPerCoin;
+			this.shortageMultiplier = shortageMultiplier;
+			this.questPoints = new ArrayList<>(questPoints);
+			this.acceptedQuestMultiplier = acceptedQuestMultiplier;
+			this.villagerTradePoints = villagerTradePoints;
+			this.attackPenalty = attackPenalty;
+			this.killPenalty = killPenalty;
+			this.questFailPenalty = questFailPenalty;
+			this.priceBonusPerLevel = priceBonusPerLevel;
+			this.rewardBonusPerLevel = rewardBonusPerLevel;
+			this.hardQuestLevel = hardQuestLevel;
+			this.specialBonusLevel = specialBonusLevel;
+			this.specialBonusCount = specialBonusCount;
+		}
+
+		static final Codec<Reputation> CODEC = RecordCodecBuilder.create(i -> {
+			Reputation d = new Reputation();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.INT.listOf().fieldOf("levelThresholds").orElse(d.levelThresholds).forGetter(c -> c.levelThresholds),
+					Codec.DOUBLE.fieldOf("halfLifeDays").orElse(d.halfLifeDays).forGetter(c -> c.halfLifeDays),
+					Codec.DOUBLE.fieldOf("pointsPerCoin").orElse(d.pointsPerCoin).forGetter(c -> c.pointsPerCoin),
+					Codec.DOUBLE.fieldOf("shortageMultiplier").orElse(d.shortageMultiplier).forGetter(c -> c.shortageMultiplier),
+					Codec.INT.listOf().fieldOf("questPoints").orElse(d.questPoints).forGetter(c -> c.questPoints),
+					Codec.DOUBLE.fieldOf("acceptedQuestMultiplier").orElse(d.acceptedQuestMultiplier).forGetter(c -> c.acceptedQuestMultiplier),
+					Codec.DOUBLE.fieldOf("villagerTradePoints").orElse(d.villagerTradePoints).forGetter(c -> c.villagerTradePoints),
+					Codec.DOUBLE.fieldOf("attackPenalty").orElse(d.attackPenalty).forGetter(c -> c.attackPenalty),
+					Codec.DOUBLE.fieldOf("killPenalty").orElse(d.killPenalty).forGetter(c -> c.killPenalty),
+					Codec.DOUBLE.fieldOf("questFailPenalty").orElse(d.questFailPenalty).forGetter(c -> c.questFailPenalty),
+					Codec.DOUBLE.fieldOf("priceBonusPerLevel").orElse(d.priceBonusPerLevel).forGetter(c -> c.priceBonusPerLevel),
+					Codec.DOUBLE.fieldOf("rewardBonusPerLevel").orElse(d.rewardBonusPerLevel).forGetter(c -> c.rewardBonusPerLevel),
+					Codec.INT.fieldOf("hardQuestLevel").orElse(d.hardQuestLevel).forGetter(c -> c.hardQuestLevel),
+					Codec.INT.fieldOf("specialBonusLevel").orElse(d.specialBonusLevel).forGetter(c -> c.specialBonusLevel),
+					Codec.INT.fieldOf("specialBonusCount").orElse(d.specialBonusCount).forGetter(c -> c.specialBonusCount)
+			).apply(i, Reputation::new);
+		});
+
+		public int[] levelThresholdArray() {
+			return levelThresholds.stream().mapToInt(Integer::intValue).toArray();
+		}
 	}
 
 	/** Logs under the mod prefix; used by {@link ConfigValidator}. */

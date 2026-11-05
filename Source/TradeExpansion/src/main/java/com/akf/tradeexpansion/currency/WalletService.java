@@ -1,5 +1,6 @@
 package com.akf.tradeexpansion.currency;
 
+import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.CoinMath;
 import com.akf.tradeexpansion.core.WalletMath;
 import com.akf.tradeexpansion.item.CoinItem;
@@ -7,6 +8,7 @@ import com.akf.tradeexpansion.item.WalletItem;
 import com.akf.tradeexpansion.registry.ModItems;
 import net.minecraft.util.Prediction;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -109,7 +111,10 @@ public final class WalletService {
 		giveCoins(player, CoinMath.decompose(deposit.leftover(), CoinType.valueTable()));
 	}
 
-	/** Puts coins into the inventory, largest first; whatever does not fit is dropped at the player's feet. */
+	/**
+	 * Puts coins into the inventory, largest first; whatever does not fit is dropped at the player's feet (E-3). With
+	 * {@code currency.changeOwnerOnly} only that player can pick the dropped change up (Q16).
+	 */
 	public static void giveCoins(Player player, long[] counts) {
 		Inventory inventory = player.getInventory();
 		for (int i = counts.length - 1; i >= 0; i--) {
@@ -118,11 +123,19 @@ public final class WalletService {
 			int maxStack = item.getDefaultMaxStackSize();
 			while (remaining > 0) {
 				int n = (int) Math.min(remaining, maxStack);
-				inventory.placeItemBackInInventory(new ItemStack(item, n), Prediction.SERVER_ONLY);
+				giveOrDrop(player, new ItemStack(item, n));
 				remaining -= n;
 			}
 		}
 		inventory.setChanged();
+	}
+
+	private static void giveOrDrop(Player player, ItemStack stack) {
+		Inventory inventory = player.getInventory();
+		inventory.add(stack); // leaves in "stack" what did not fit
+		if (stack.isEmpty()) return;
+		ItemEntity dropped = player.drop(stack, false, Prediction.SERVER_ONLY);
+		if (dropped != null && TradeExpansionConfig.get().currency.changeOwnerOnly) dropped.setTarget(player.getUUID());
 	}
 
 	/**

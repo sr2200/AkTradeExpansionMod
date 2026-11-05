@@ -3,6 +3,10 @@ package com.akf.tradeexpansion.network;
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.BulkDiscount;
+import com.akf.tradeexpansion.core.ReputationMath;
+import com.akf.tradeexpansion.market.Reputation;
+import net.minecraft.server.level.ServerPlayer;
+import java.util.UUID;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.data.GoodsCatalog;
@@ -31,9 +35,11 @@ import java.util.List;
  * @param level    market level (D-4); the bank tab shows from {@code bank.minMarketLevel} (E-7)
  * @param requests open delivery requests of the market (J)
  * @param bulkDiscount the server's {@code trade.bulkDiscounts} (B-5), so the preview matches the server
+ * @param reputation   the receiving player's reputation with the market (M, v0.29); prices, rewards and the goods list
+ *                     are already those of that player
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
-		List<RequestView> requests, BulkDiscount bulkDiscount) implements CustomPacketPayload {
+		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -106,19 +112,56 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		}
 	}
 
-	/** A request with the item to show (J). */
-	public record RequestView(Request request, Identifier item) {
+	/**
+	 * A request with the item to show (J). The reward includes the player's reputation bonus (M).
+	 *
+	 * @param accepted the player accepted it
+	 * @param locked   3-star request the player cannot deliver yet (reputation.hardQuestLevel)
+	 */
+	public record RequestView(Request request, Identifier item, boolean accepted, boolean locked) {
 		static final StreamCodec<RegistryFriendlyByteBuf, RequestView> CODEC = StreamCodec.composite(
 				Request.STREAM_CODEC, RequestView::request,
 				Identifier.STREAM_CODEC, RequestView::item,
+				ByteBufCodecs.BOOL, RequestView::accepted,
+				ByteBufCodecs.BOOL, RequestView::locked,
 				RequestView::new);
 	}
 
-	/** Builds a snapshot; the caller must have refreshed the market to {@code gameTime}. */
-	public static MarketSnapshotS2C of(Market market, long gameTime) {
+	/**
+	 * The receiving player's reputation with the market (M).
+	 *
+	 * @param next        points needed for the next level, -1 at the top
+	 * @param priceBonus  nominal price bonus of the level (capped per good)
+	 * @param rewardBonus request reward bonus of the level
+	 */
+	public record ReputationView(boolean enabled, int level, double points, int next, double priceBonus, double rewardBonus,
+			int hardQuestLevel, int specialBonusLevel) {
+		static final StreamCodec<RegistryFriendlyByteBuf, ReputationView> CODEC = StreamCodec.ofMember(ReputationView::write, ReputationView::read);
+
+		private void write(RegistryFriendlyByteBuf buf) {
+			buf.writeBoolean(enabled);
+			buf.writeVarInt(level);
+			buf.writeDouble(points);
+			buf.writeVarInt(next);
+			buf.writeDouble(priceBonus);
+			buf.writeDouble(rewardBonus);
+			buf.writeVarInt(hardQuestLevel);
+			buf.writeVarInt(specialBonusLevel);
+		}
+
+		private static ReputationView read(RegistryFriendlyByteBuf buf) {
+			return new ReputationView(buf.readBoolean(), buf.readVarInt(), buf.readDouble(), buf.readVarInt(), buf.readDouble(),
+					buf.readDouble(), buf.readVarInt(), buf.readVarInt());
+		}
+	}
+
+	/** Builds the snapshot {@code player} sees; the caller must have refreshed the market to {@code gameTime}. */
+	public static MarketSnapshotS2C of(Market market, ServerPlayer player, long gameTime) {
+		UUID uuid = player.getUUID();
 		List<GoodView> views = new ArrayList<>();
 		market.goods().forEach((goodsId, state) -> {
-			GoodParams params = market.params(goodsId);
+			if (!Reputation.canSee(market, uuid, goodsId, gameTime)) return; // M: bonus specials
+			GoodParams params = Reputation.params(market, uuid, goodsId, gameTime);
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
 			if (params == null || def == null) return;
 			views.add(new GoodView(goodsId, def.item(), def.unit(), params, state.pressure(), state.stock(), def.buy(), def.sell(),
@@ -128,10 +171,17 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		List<RequestView> requests = new ArrayList<>();
 		for (Request r : market.requests()) {
 			GoodsDefinition def = GoodsCatalog.get(r.goods());
-			if (def != null) requests.add(new RequestView(r, def.item()));
+			if (def == null) continue;
+			requests.add(new RequestView(r.withReward(Reputation.reward(market, uuid, r, gameTime)), def.item(), r.accepted().contains(uuid),
+					!Reputation.canDeliver(market, uuid, r, gameTime)));
 		}
+		TradeExpansionConfig.Reputation rc = TradeExpansionConfig.get().reputation;
+		int level = Reputation.level(market, uuid, gameTime);
+		ReputationView reputation = new ReputationView(rc.enabled, level, Reputation.points(market, uuid, gameTime),
+				ReputationMath.nextThreshold(level, rc.levelThresholdArray()), Reputation.priceBonus(level), Reputation.rewardBonus(level),
+				rc.hardQuestLevel, rc.specialBonusLevel);
 		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
-				TradeExpansionConfig.get().trade.bulkDiscount());
+				TradeExpansionConfig.get().trade.bulkDiscount(), reputation);
 	}
 
 	private void write(RegistryFriendlyByteBuf buf) {
@@ -147,6 +197,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeVarInt(tier.minQuantity());
 			buf.writeDouble(tier.rate());
 		}
+		ReputationView.CODEC.encode(buf, reputation);
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -161,7 +212,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		int tierCount = buf.readVarInt();
 		List<BulkDiscount.Tier> tiers = new ArrayList<>(tierCount);
 		for (int i = 0; i < tierCount; i++) tiers.add(new BulkDiscount.Tier(buf.readVarInt(), buf.readDouble()));
-		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers));
+		ReputationView reputation = ReputationView.CODEC.decode(buf);
+		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation);
 	}
 
 	@Override

@@ -28,7 +28,7 @@ public final class MarketAccess {
 
 		player.openMenu(provider);
 		long now = MarketUpkeep.touch(level, market);
-		ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, now));
+		ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
 		BankService.sendAccount(player);
 	}
 }

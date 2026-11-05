@@ -15,12 +15,13 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.17（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.0.18（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
 - [設計書（trade-mod-design.md）](docs/trade-mod-design.md)
 - [商品・品揃え設計書（goods-design.md）](docs/goods-design.md)
+- [TODO（docs/TODO）](docs/TODO)：未解決の項目・今後の予定（VS Code 拡張機能「Todo+」の書式）
 
 ---
 
@@ -117,9 +118,27 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | タブ | 内容 |
 |---|---|
 | **掲示板** | 半径512ブロック以内（同じ次元）の市場の一覧と、方角・距離。市場を選ぶとその市場の全商品の買値・売値が見られる（一覧の上に「商品／買値／売値」の見出し。買値は買う時に払う値段、売値は売る時にもらえる値段）（タブを開いた時点の最新の価格。離れた市場とは取引できない）。**お買い得情報**として、今いる市場より安く買える品（水色「安n」）・高く売れる品（桃色「高n」）の数を出し、市場にマウスを乗せると一番お得な品とその差（例：-25%）が出る |
-| **依頼** | 市場が「この品を何個」と依頼を出す（1市場に最大3件、ゲーム内3日で期限切れ）。納めると基準価格の1.2〜2.0倍の報酬（★1〜3、高額な依頼ほど倍率が高い） |
+| **依頼** | 市場が「この品を何個」と依頼を出す（1市場に最大3件、ゲーム内3日で期限切れ）。納めると基準価格の1.2〜2.0倍の報酬（★1〜3、高額な依頼ほど倍率が高い）。「依頼を受ける」を押すと受付済み（✔）になり、納めた時の評判が増えます（受けたまま期限が切れると評判が下がります）。★★★の依頼は評判「お得意様」以上で納品できます |
 
 - 市場ではゲーム内3日ごとに最大2種類の商品が「品不足」になり、基準価格が1.5〜2.0倍になります（一覧や掲示板でオレンジ色）。
+
+### 評判
+
+村（市場）ごとに、あなたの**評判**があります。交易画面の右上に「評判：常連」のように出て、マウスを乗せると効果と次のレベルまでのポイントが見られます。
+
+| レベル | 名前 | 必要なポイント |
+|---|---|---|
+| 0 | よそ者 | 0 |
+| 1 | 顔見知り | 50 |
+| 2 | 常連 | 150 |
+| 3 | お得意様 | 400 |
+| 4 | 信頼の厚い客 | 1,000 |
+| 5 | 名士 | 2,500 |
+
+- **上がる**：その市場で買う・売る（100c で1ポイント。品不足の商品を売ると2倍）、依頼を納める（★1＝10・★2＝25・★3＝50。受けた依頼なら1.5倍）、市場の近くの村人と取引する（1回1ポイント）
+- **下がる**：時間がたつ（ゲーム内30日で半分）、市場の近くの村人や商人を攻撃する（1回 −20、倒すと −100）、受けた依頼の期限が切れる（★1つあたり −10）
+- **効果**：レベル1つごとに買値が1%安く・売値が1%高くなる（レベル5で5%。売り戻して儲からないよう、商品によっては小さくなります）、依頼の報酬が4%増える、レベル3から★★★の依頼を納品できる、レベル4から「評判の掘り出し物」が1品見える
+- 数値はすべて設定の「評判」タブ（`reputation.*`）で変えられます。
 
 ### 村人との取引
 
@@ -314,6 +333,8 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 |---|---|
 | `/aktradeex balance` | 所持金を表示 |
 | `/aktradeex where` | 今いる場所の情報（村の範囲内か・一番近い市場・ベッドと村人の数・ここに市場を作った場合の規模・交易所を置いた時の結果）。OP 権限不要 |
+| `/aktradeex reputation` | 最寄りの市場での自分の評判（レベル・ポイント）。OP 権限不要 |
+| `/aktradeex reputation set <ポイント>` | 最寄りの市場での自分の評判ポイントを設定する（テスト用） |
 | `/aktradeex where show` / `hide` | 範囲を30秒間パーティクルで表示する／表示を止める。OP 権限不要 |
 | `/aktradeex give <金額>` | 自分にコインを渡す（テスト用） |
 | `/aktradeex pay <金額>` | 自分の所持金から支払う（支払い処理のテスト用） |
@@ -392,6 +413,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `currency.ratioLocked` | `true` | true / false | ON の時、ワールド作成後に比率を変えても、そのワールドが作られた時の比率を使い続ける | `"ratioLocked": false`（比率の変更をワールドに反映する） |
 | `currency.allowMinting` | `true` | true / false | 銅ブロック×9 → 銅貨の鋳造レシピ（鉄ブロックは下の `allowIronMinting` も必要）。反映は再起動か `/reload` の後 | `"allowMinting": false`（鋳造を禁止） |
 | `currency.allowIronMinting` | `false` | true / false | 鉄ブロック×9 → 鉄貨の鋳造レシピ。アイアンゴーレムトラップで鉄がいくらでも手に入り、お金が無限に増えるため既定は OFF。`allowMinting` も ON の時だけ有効。反映は再起動か `/reload` の後 | `"allowIronMinting": true`（鉄の鋳造を許可） |
+| `currency.changeOwnerOnly` | `false` | true / false | インベントリに入りきらずに足元に落ちたお釣りを、取引した本人だけが拾えるようにする。OFF なら誰でも拾える | `"changeOwnerOnly": true` |
 | `currency.exchangeFee` | `0.0` | 0〜0.5 | 両替タブの手数料の割合 | `"exchangeFee": 0.02`（2%） |
 | `currency.startingMoney` | `0` | 0〜1,000,000,000 | 初めてログインした時に渡す金額（c）。**未実装** | `"startingMoney": 500` |
 | `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨） | `"mobDropCoins": false` |
@@ -515,6 +537,22 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `quest.durationDays` | `3.0` | 0.5〜30 | 依頼の期限（ゲーム内日） | `"durationDays": 5.0` |
 | `quest.rewardMultipliers` | `[1.2, 1.5, 2.0]` | 各 0.1〜10（3つ） | ★1〜★3 の報酬倍率（報酬＝基準価格×数量×倍率） | `"rewardMultipliers": [1.1, 1.3, 1.6]` |
 | `quest.difficultyThresholds` | `[200, 1000]` | 昇順の整数2つ | ★2・★3 になる依頼の金額（c） | `"difficultyThresholds": [300, 1500]` |
+| `reputation.enabled` | `true` | true / false | 評判を使う。OFF にすると全員レベル0で、評判は上下しない | `"enabled": false` |
+| `reputation.levelThresholds` | `[50, 150, 400, 1000, 2500]` | 昇順の整数5つ | レベル1〜5に必要なポイント | `"levelThresholds": [30, 100, 300, 800, 2000]` |
+| `reputation.halfLifeDays` | `30.0` | 0〜1000 | ポイントが半分になる日数（ゲーム内）。0 で減らない | `"halfLifeDays": 0` |
+| `reputation.pointsPerCoin` | `0.01` | 0〜10 | 取引1cあたりのポイント（0.01 で 100c＝1ポイント） | `"pointsPerCoin": 0.02` |
+| `reputation.shortageMultiplier` | `2.0` | 1〜10 | 品不足の商品を売った時の倍率 | `"shortageMultiplier": 3.0` |
+| `reputation.questPoints` | `[10, 25, 50]` | 整数3つ | ★1〜3の依頼を納めた時のポイント | `"questPoints": [5, 20, 60]` |
+| `reputation.acceptedQuestMultiplier` | `1.5` | 1〜10 | 自分が受けた依頼を納めた時の倍率 | `"acceptedQuestMultiplier": 2.0` |
+| `reputation.villagerTradePoints` | `1.0` | 0〜1000 | 市場の近くの村人と1回取引するごとのポイント | `"villagerTradePoints": 0.5` |
+| `reputation.attackPenalty` | `20.0` | 0〜100000 | 市場の近くの村人・商人に1回ダメージを与えると減るポイント | `"attackPenalty": 50` |
+| `reputation.killPenalty` | `100.0` | 0〜100000 | 市場の近くの村人・商人を倒すと減るポイント | `"killPenalty": 500` |
+| `reputation.questFailPenalty` | `10.0` | 0〜100000 | 受けた依頼が期限切れになった時、★1つあたりに減るポイント | `"questFailPenalty": 0` |
+| `reputation.priceBonusPerLevel` | `0.01` | 0〜0.05 | レベルごとに買値を安く・売値を高くする割合（商品ごとに上限あり） | `"priceBonusPerLevel": 0.005` |
+| `reputation.rewardBonusPerLevel` | `0.04` | 0〜1 | レベルごとの依頼の報酬アップ | `"rewardBonusPerLevel": 0.1` |
+| `reputation.hardQuestLevel` | `3` | 0〜5 | ★★★の依頼を納めるのに必要なレベル（0 で誰でも） | `"hardQuestLevel": 0` |
+| `reputation.specialBonusLevel` | `4` | 0〜5 | 評判の掘り出し物が見えるレベル | `"specialBonusLevel": 3` |
+| `reputation.specialBonusCount` | `1` | 0〜5 | 評判の高い人だけに見える掘り出し物の数 | `"specialBonusCount": 2` |
 | `demand.maxShortages` | `2` | 0〜10 | 1つの市場で同時に品不足になる商品の最大数。0 で無効 | `"maxShortages": 0`（品不足なし） |
 | `demand.durationDays` | `3.0` | 0.5〜30 | 品不足の商品を選び直す間隔（ゲーム内日） | `"durationDays": 7.0` |
 | `demand.minMultiplier` | `1.5` | 1〜5 | 品不足の商品の基準価格に掛ける倍率の下限 | `"minMultiplier": 1.2` |
@@ -541,7 +579,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
-| `client.showDebugTooltip` | `false` | true / false | 交易画面のツールチップに基準価格などを出す。**未実装** | `"showDebugTooltip": true` |
+| `client.showDebugTooltip` | `false` | true / false | 交易画面で商品の行にマウスを乗せると、基準価格・今の倍率・在庫・値段と在庫が戻るまでの時間を出す（設定画面では「相場の詳しい情報を表示」） | `"showDebugTooltip": true` |
 | `client.balancePosition` | `"INVENTORY_RIGHT"` | "INVENTORY_RIGHT" / "BELOW_SELL_SLOT" / "TOP_RIGHT" | 交易画面の所持金の表示位置（インベントリの右／売却枠の下／右上） | `"balancePosition": "TOP_RIGHT"` |
 
 詳しい計算方法や各項目の背景は、設計書（`docs/trade-mod-design.md`）の G章を参照してください。

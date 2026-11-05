@@ -20,7 +20,9 @@ public enum TradeResult {
 	STOCK_FULL,
 	PRICE_CHANGED,
 	/** Card payment chosen without a valid card (E-8). Appended last: ordinals are sent over the network. */
-	CARD_INVALID;
+	CARD_INVALID,
+	/** M (v0.29): a 3-star request needs a better reputation with the market. */
+	REPUTATION_TOO_LOW;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

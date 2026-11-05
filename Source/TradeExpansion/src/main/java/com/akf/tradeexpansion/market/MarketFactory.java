@@ -59,6 +59,7 @@ public final class MarketFactory {
 		market.goods().clear();
 		market.clearShelved();
 		market.specials().clear();
+		market.bonusSpecials().clear();
 		market.setSpecialDay(Long.MIN_VALUE); // D-5: chosen again by the next upkeep
 		// Shortages and requests depend on the goods, so they are chosen again too (K).
 		market.shortages().clear();
@@ -149,6 +150,7 @@ public final class MarketFactory {
 		for (String goodsId : GoodsSelector.grow(existing, profile.selectorPools(), market.level(), target, random)) {
 			Identifier id = Identifier.parse(goodsId);
 			// A special chosen for good becomes a regular good with its current state (D-5).
+			market.bonusSpecials().remove(id);
 			if (!market.specials().remove(id)) addGood(market, id, random, neighbors, now);
 		}
 	}
@@ -200,7 +202,10 @@ public final class MarketFactory {
 		for (Identifier old : List.copyOf(market.specials())) market.removeGood(old);
 
 		TradeExpansionConfig config = TradeExpansionConfig.get();
-		int count = config.market.specialGoodsAt(market.level());
+		int regular = config.market.specialGoodsAt(market.level());
+		// M: the last specialBonusCount specials are shown only to players with a good reputation.
+		int bonus = config.reputation.enabled ? config.reputation.specialBonusCount : 0;
+		int count = regular + bonus;
 		List<Identifier> candidates = new ArrayList<>();
 		Set<Identifier> shelved = new HashSet<>(market.shelvedGoods());
 		for (Map.Entry<Identifier, GoodsDefinition> e : GoodsCatalog.all().entrySet()) {
@@ -217,6 +222,7 @@ public final class MarketFactory {
 			double priceFactor = 1 + (random.nextDouble() * 2 - 1) * config.price.jitter;
 			market.addGood(pick, new GoodState(priceFactor, 0, 0, now));
 			market.specials().add(pick);
+			if (i >= regular) market.bonusSpecials().add(pick);
 			GoodParams params = market.params(pick);
 			market.good(pick).setStock(Math.max(1, Math.floor(params.targetStock() * config.market.specialStockRatio)));
 		}

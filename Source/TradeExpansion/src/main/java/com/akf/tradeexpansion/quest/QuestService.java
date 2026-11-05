@@ -14,7 +14,9 @@ import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketRegistry;
+import com.akf.tradeexpansion.market.Reputation;
 import com.akf.tradeexpansion.menu.MarketMenu;
+import com.akf.tradeexpansion.network.QuestAcceptC2S;
 import com.akf.tradeexpansion.network.QuestDeliverC2S;
 import com.akf.tradeexpansion.network.QuestResultS2C;
 import com.akf.tradeexpansion.trade.InventoryUtil;
@@ -46,6 +48,8 @@ public final class QuestService {
 	/** Drops expired requests and refills the free slots when the refresh interval has passed. @return changed */
 	public static boolean refresh(ServerLevel level, Market market, long now) {
 		TradeExpansionConfig.Quest config = TradeExpansionConfig.get().quest;
+		// M: players who accepted a request that expires undelivered lose reputation.
+		market.requests().stream().filter(r -> r.deadline() < now).forEach(r -> Reputation.onExpired(market, r, now));
 		boolean changed = market.requests().removeIf(r -> r.deadline() < now);
 		long interval = Math.round(config.refreshDays * PriceModel.TICKS_PER_DAY);
 		if (market.lastRequestRefresh() != Long.MIN_VALUE && now - market.lastRequestRefresh() < interval) return changed;
@@ -95,6 +99,24 @@ public final class QuestService {
 		return new Request(market.takeRequestId(), goodsId, quantity, reward, deadline, difficulty);
 	}
 
+	/** M (v0.29): marks a request as accepted by the player (more reputation when delivered, less if it expires). */
+	public static void accept(ServerPlayer player, QuestAcceptC2S request) {
+		MarketRegistry registry = MarketRegistry.get(player.level().getServer());
+		Market market = registry.get(request.marketId());
+		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id() || !menu.stillValid(player)) return;
+		long now = MarketClock.now(player.level());
+		refresh(player.level(), market, now);
+		List<Request> requests = market.requests();
+		for (int i = 0; i < requests.size(); i++) {
+			Request r = requests.get(i);
+			if (r.id() != request.requestId() || r.accepted().contains(player.getUUID())) continue;
+			requests.set(i, r.accept(player.getUUID()));
+			registry.setDirty();
+			TradeService.broadcast(player.level().getServer(), registry, Set.of(market.id()), now);
+			return;
+		}
+	}
+
 	public static void deliver(ServerPlayer player, QuestDeliverC2S request) {
 		MarketRegistry registry = MarketRegistry.get(player.level().getServer());
 		Market market = registry.get(request.marketId());
@@ -118,18 +140,21 @@ public final class QuestService {
 			InventoryUtil.Match match = def == null ? null : new InventoryUtil.Match(item, GoodsCatalog.patch(target.goods()), false);
 			if (target == null || item == Items.AIR) {
 				result = TradeResult.NOT_AVAILABLE; // expired or delivered by someone else
+			} else if (!Reputation.canDeliver(market, player.getUUID(), target, now)) {
+				result = TradeResult.REPUTATION_TOO_LOW; // M: 3-star requests need reputation.hardQuestLevel
 			} else if (InventoryUtil.count(player, match, menu.sellSlot()) < target.quantity()) {
 				result = TradeResult.INSUFFICIENT_ITEMS;
 			} else {
 				InventoryUtil.remove(player, match, menu.sellSlot(), target.quantity());
+				reward = Reputation.reward(market, player.getUUID(), target, now); // M: reward bonus of the reputation level
 				if (request.useCard()) {
-					BankAccounts.get(player.level().getServer()).add(player.getUUID(), target.reward());
+					BankAccounts.get(player.level().getServer()).add(player.getUUID(), reward);
 				} else {
-					WalletService.give(player, target.reward());
+					WalletService.give(player, reward);
 				}
+				Reputation.onDeliver(market, player.getUUID(), target, now);
 				market.requests().remove(target);
 				registry.setDirty();
-				reward = target.reward();
 				result = TradeResult.SUCCESS;
 				if (TradeExpansionConfig.get().log.trades) {
 					TradeExpansion.LOGGER.info("{} DELIVER {} x{} @market#{} reward={}{}", player.getPlainTextName(), def.item(),

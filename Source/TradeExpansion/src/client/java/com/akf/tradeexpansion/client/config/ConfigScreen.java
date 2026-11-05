@@ -66,6 +66,7 @@ public final class ConfigScreen {
 				.option(bool("currency.sneakUseExchange", d.currency.sneakUseExchange, () -> cur.sneakUseExchange, v -> cur.sneakUseExchange = v))
 				.option(bool("currency.allowMinting", d.currency.allowMinting, () -> cur.allowMinting, v -> cur.allowMinting = v))
 				.option(bool("currency.allowIronMinting", d.currency.allowIronMinting, () -> cur.allowIronMinting, v -> cur.allowIronMinting = v))
+				.option(bool("currency.changeOwnerOnly", d.currency.changeOwnerOnly, () -> cur.changeOwnerOnly, v -> cur.changeOwnerOnly = v))
 				.option(doubleField("currency.exchangeFee", d.currency.exchangeFee, () -> cur.exchangeFee, v -> cur.exchangeFee = v, 0, 0.5))
 				.option(longField("currency.startingMoney", d.currency.startingMoney, () -> cur.startingMoney, v -> cur.startingMoney = v, 0, 1_000_000_000L))
 				.option(bool("currency.mobDropCoins", d.currency.mobDropCoins, () -> cur.mobDropCoins, v -> cur.mobDropCoins = v));
@@ -205,6 +206,34 @@ public final class ConfigScreen {
 				.option(intField("villager.emeraldPrice", d.villager.emeraldPrice, () -> edit.villager.emeraldPrice, v -> edit.villager.emeraldPrice = v, 1, 10000))
 				.option(doubleField("villager.minGoodsPriceMultiplier", d.villager.minGoodsPriceMultiplier, () -> edit.villager.minGoodsPriceMultiplier, v -> edit.villager.minGoodsPriceMultiplier = v, 0, 10));
 
+		// M (v0.29): reputation of each player with each market.
+		TradeExpansionConfig.Reputation rep = edit.reputation;
+		ConfigCategory.Builder reputation = category("reputation")
+				.option(bool("reputation.enabled", d.reputation.enabled, () -> rep.enabled, v -> rep.enabled = v));
+		for (int i = 0; i < 5; i++) {
+			int index = i;
+			reputation.option(intField("reputation.levelThresholds." + i, d.reputation.levelThresholds.get(i),
+					() -> rep.levelThresholds.get(index), v -> rep.levelThresholds.set(index, v), 1, 1_000_000));
+		}
+		reputation.option(doubleField("reputation.halfLifeDays", d.reputation.halfLifeDays, () -> rep.halfLifeDays, v -> rep.halfLifeDays = v, 0, 1000))
+				.option(doubleField("reputation.pointsPerCoin", d.reputation.pointsPerCoin, () -> rep.pointsPerCoin, v -> rep.pointsPerCoin = v, 0, 10))
+				.option(doubleField("reputation.shortageMultiplier", d.reputation.shortageMultiplier, () -> rep.shortageMultiplier, v -> rep.shortageMultiplier = v, 1, 10));
+		for (int i = 0; i < 3; i++) {
+			int index = i;
+			reputation.option(intField("reputation.questPoints." + i, d.reputation.questPoints.get(i),
+					() -> rep.questPoints.get(index), v -> rep.questPoints.set(index, v), 0, 100_000));
+		}
+		reputation.option(doubleField("reputation.acceptedQuestMultiplier", d.reputation.acceptedQuestMultiplier, () -> rep.acceptedQuestMultiplier, v -> rep.acceptedQuestMultiplier = v, 1, 10))
+				.option(doubleField("reputation.villagerTradePoints", d.reputation.villagerTradePoints, () -> rep.villagerTradePoints, v -> rep.villagerTradePoints = v, 0, 1000))
+				.option(doubleField("reputation.attackPenalty", d.reputation.attackPenalty, () -> rep.attackPenalty, v -> rep.attackPenalty = v, 0, 100_000))
+				.option(doubleField("reputation.killPenalty", d.reputation.killPenalty, () -> rep.killPenalty, v -> rep.killPenalty = v, 0, 100_000))
+				.option(doubleField("reputation.questFailPenalty", d.reputation.questFailPenalty, () -> rep.questFailPenalty, v -> rep.questFailPenalty = v, 0, 100_000))
+				.option(doubleField("reputation.priceBonusPerLevel", d.reputation.priceBonusPerLevel, () -> rep.priceBonusPerLevel, v -> rep.priceBonusPerLevel = v, 0, 0.05))
+				.option(doubleField("reputation.rewardBonusPerLevel", d.reputation.rewardBonusPerLevel, () -> rep.rewardBonusPerLevel, v -> rep.rewardBonusPerLevel = v, 0, 1))
+				.option(intField("reputation.hardQuestLevel", d.reputation.hardQuestLevel, () -> rep.hardQuestLevel, v -> rep.hardQuestLevel = v, 0, 5))
+				.option(intField("reputation.specialBonusLevel", d.reputation.specialBonusLevel, () -> rep.specialBonusLevel, v -> rep.specialBonusLevel = v, 0, 5))
+				.option(intField("reputation.specialBonusCount", d.reputation.specialBonusCount, () -> rep.specialBonusCount, v -> rep.specialBonusCount = v, 0, 5));
+
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")
 				.option(Option.<Boolean>createBuilder()
@@ -224,7 +253,7 @@ public final class ConfigScreen {
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.translatable(KEY + "title"))
 				.categories(List.of(currency.build(), priceCat.build(), goods.build(), recovery.build(), distance.build(), marketCat.build(),
-						wallet.build(), bank.build(), tradeCat.build(), village.build(), other.build(), client.build()))
+						wallet.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), other.build(), client.build()))
 				.save(this::save)
 				.build();
 	}

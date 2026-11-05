@@ -20,6 +20,7 @@ import com.akf.tradeexpansion.network.ExchangeResultS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.RequestView;
+import com.akf.tradeexpansion.network.QuestAcceptC2S;
 import com.akf.tradeexpansion.network.QuestDeliverC2S;
 import com.akf.tradeexpansion.network.QuestResultS2C;
 import com.akf.tradeexpansion.network.TradeRequestC2S;
@@ -122,6 +123,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button paymentButton;
 	private Button confirmButton;
 	private Button deliverButton;
+	private Button acceptButton;
 	private Button boardBackButton;
 	private final List<Button> tradeWidgets = new ArrayList<>();
 	private final List<Button> bankWidgets = new ArrayList<>();
@@ -191,6 +193,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// Request tab (J) and board (I)
 		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
 				.bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
+		// M (v0.29): accepting a request gives more reputation when delivered, and costs some if it expires.
+		acceptButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.accept"), b -> accept())
+				.bounds(x + PANEL_X, y + 102, PANEL_W, 14).build());
 		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
 			boardMarket = -1;
 			scroll = 0;
@@ -415,6 +420,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		updateButtons();
 	}
 
+	private void accept() {
+		RequestView r = selectedRequestView();
+		if (r == null || r.accepted()) return;
+		ClientPlayNetworking.send(new QuestAcceptC2S(menu.marketId(), r.request().id()));
+	}
+
 	private void deliver() {
 		RequestView r = selectedRequestView();
 		if (r == null || pending) return;
@@ -441,8 +452,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		RequestView r = selectedRequestView();
 		Player player = player();
 		deliverButton.visible = tab == Tab.QUEST;
-		deliverButton.active = !pending && r != null && player != null
+		deliverButton.active = !pending && r != null && player != null && !r.locked()
 				&& InventoryUtil.count(player, InventoryUtil.Match.plain(BuiltInRegistries.ITEM.getValue(r.item())), menu.sellSlot()) >= r.request().quantity();
+		acceptButton.visible = tab == Tab.QUEST && r != null && !r.locked() && snapshot != null && snapshot.reputation().enabled();
+		acceptButton.active = r != null && !r.accepted();
+		acceptButton.setMessage(Component.translatable(r != null && r.accepted() ? "screen.ak_trade_expansion.quest.accepted" : "screen.ak_trade_expansion.quest.accept"));
 		boardBackButton.visible = tab == Tab.BOARD && boardMarket >= 0;
 	}
 
@@ -638,9 +652,42 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 		if (hovered && mouseX < rx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		else if (hovered && !available) g.setTooltipForNextFrame(font, unavailableReason(view, buy), Optional.empty(), mouseX, mouseY);
-		else if (hovered && view.special()) {
-			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.ak_trade_expansion.special.tooltip")), Optional.empty(), mouseX, mouseY);
+		else if (hovered && (view.special() || TradeExpansionConfig.get().client.showDebugTooltip)) {
+			List<Component> lines = new ArrayList<>();
+			if (view.special()) lines.add(Component.translatable("screen.ak_trade_expansion.special.tooltip"));
+			if (TradeExpansionConfig.get().client.showDebugTooltip) lines.addAll(debugLines(view));
+			g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 		}
+	}
+
+	/**
+	 * A-4 (client.showDebugTooltip): base price B, current multiplier V, stock and the recovery forecast, as the player
+	 * sees them (shortage, special and reputation already in B).
+	 */
+	private List<Component> debugLines(GoodView view) {
+		GoodParams p = view.params();
+		GoodState state = currentState(view);
+		double restock = TradeExpansionConfig.get().recovery.restockMultiplier;
+		double v = PriceModel.multiplier(p, state.pressure());
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable("screen.ak_trade_expansion.debug.base", CoinItem.formatCopper(Math.round(p.basePrice()))).withStyle(net.minecraft.ChatFormatting.GRAY));
+		lines.add(Component.translatable(v > 1.005 ? "screen.ak_trade_expansion.debug.multiplier.high" : v < 0.995 ? "screen.ak_trade_expansion.debug.multiplier.low"
+				: "screen.ak_trade_expansion.debug.multiplier.normal", String.format("%.2f", v)).withStyle(net.minecraft.ChatFormatting.GRAY));
+		lines.add(Component.translatable("screen.ak_trade_expansion.debug.prices", CoinItem.formatCopper(PriceModel.buyPrice(p, state.pressure())),
+				CoinItem.formatCopper(PriceModel.sellPrice(p, state.pressure()))).withStyle(net.minecraft.ChatFormatting.GRAY));
+		lines.add(Component.translatable("screen.ak_trade_expansion.debug.stock", (int) Math.floor(state.stock()), (int) p.targetStock(),
+				(int) p.maxStock()).withStyle(net.minecraft.ChatFormatting.GRAY));
+		// Recovery forecast (B-3): the price gap halves every H days; stock moves to T at r (below) or c (above) per day.
+		if (Math.abs(v - 1) >= 0.005) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.debug.price_recovery", minutes(p.halfLifeDays())).withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		double gap = p.targetStock() - state.stock();
+		double rate = gap > 0 ? p.restockPerDay() * restock : p.consumePerDay() * restock;
+		if (Math.abs(gap) >= 1 && rate > 0) {
+			lines.add(Component.translatable(gap > 0 ? "screen.ak_trade_expansion.debug.restock" : "screen.ak_trade_expansion.debug.consume",
+					minutes(Math.abs(gap) / rate)).withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		return lines;
 	}
 
 	/** A-4: why a good cannot be bought / sold right now, and when that ends. */
@@ -653,6 +700,30 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (Double.isFinite(days)) {
 			lines.add(Component.translatable(buy ? "screen.ak_trade_expansion.restock_in" : "screen.ak_trade_expansion.buying_in", minutes(days)));
 		}
+		return lines;
+	}
+
+	private static Component reputationName(int level) {
+		return Component.translatable("screen.ak_trade_expansion.reputation.level." + Math.clamp(level, 0, 5));
+	}
+
+	/** M: what the reputation level gives and what the next level needs. */
+	private List<Component> reputationTooltip() {
+		MarketSnapshotS2C.ReputationView r = snapshot.reputation();
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable("screen.ak_trade_expansion.reputation.title", reputationName(r.level()), r.level()));
+		lines.add(r.next() < 0
+				? Component.translatable("screen.ak_trade_expansion.reputation.points_max", (long) Math.floor(r.points()))
+				: Component.translatable("screen.ak_trade_expansion.reputation.points", (long) Math.floor(r.points()), r.next()));
+		if (r.priceBonus() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.reputation.price", percent(r.priceBonus())));
+		if (r.rewardBonus() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.reputation.reward", percent(r.rewardBonus())));
+		lines.add(r.level() >= r.hardQuestLevel()
+				? Component.translatable("screen.ak_trade_expansion.reputation.hard_quest.yes")
+				: Component.translatable("screen.ak_trade_expansion.reputation.hard_quest.no", reputationName(r.hardQuestLevel())));
+		lines.add(r.level() >= r.specialBonusLevel()
+				? Component.translatable("screen.ak_trade_expansion.reputation.special.yes")
+				: Component.translatable("screen.ak_trade_expansion.reputation.special.no", reputationName(r.specialBonusLevel())));
+		lines.add(Component.translatable("screen.ak_trade_expansion.reputation.how").withStyle(net.minecraft.ChatFormatting.GRAY));
 		return lines;
 	}
 
@@ -793,7 +864,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(r.item()));
 			g.item(stack, rx + 2, y + 1);
 			fitText(g, stack.getHoverName().getString() + " ×" + r.request().quantity(), rx + 20, y + 5, 110, COLOR_WHITE, true);
-			g.text(font, "★".repeat(r.request().difficulty()), rx + 132, y + 5, COLOR_GOLD);
+			g.text(font, "★".repeat(r.request().difficulty()), rx + 132, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
+			if (r.accepted()) g.text(font, "✔", rx + 124, y + 5, COLOR_GREEN);
 			String reward = CoinItem.formatCopper(r.request().reward());
 			g.text(font, reward, rx + LIST_W - 5 - font.width(reward), y + 5, COLOR_GOLD);
 			if (mouseX >= rx + 2 && mouseX < rx + 18 && mouseY >= y && mouseY < y + ROW_H) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
@@ -819,6 +891,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		Player player = player();
 		int held = player == null ? 0 : InventoryUtil.count(player, InventoryUtil.Match.plain(stack.getItem()), menu.sellSlot());
 		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.held", held), px, y + 84, held >= r.request().quantity() ? 0xFF207020 : 0xFFA02020, false);
+		if (r.locked() && snapshot != null) {
+			// M: 3-star requests need reputation.hardQuestLevel.
+			int needed = snapshot.reputation().hardQuestLevel();
+			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 104, PANEL_W, COLOR_WARNING, false);
+		}
 	}
 
 	private static final int COLOR_DEAL_BUY = 0xFF55FFFF;
@@ -953,7 +1030,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	@Override
 	protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
-		g.text(font, title, 8, 6, COLOR_TEXT, false);
+		int titleWidth = imageWidth - 16;
+		if (snapshot != null && snapshot.reputation().enabled()) {
+			// M (v0.29): the player's reputation with this market, details on hover.
+			String label = Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString();
+			int lx = imageWidth - 8 - font.width(label);
+			g.text(font, label, lx, 6, 0xFF6040A0, false);
+			titleWidth = lx - 12;
+			int mx = mouseX - leftPos;
+			int my = mouseY - topPos;
+			if (mx >= lx && mx < imageWidth - 8 && my >= 4 && my < 16) g.setTooltipForNextFrame(font, reputationTooltip(), Optional.empty(), mouseX, mouseY);
+		}
+		fitText(g, title.getString(), 8, 6, titleWidth, COLOR_TEXT, false);
 		Player player = player();
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
 		g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,
@@ -1047,7 +1135,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int index = scroll + (mouseY - ry) / ROW_H;
 		List<GoodView> goods = visibleGoods();
 		if (index >= goods.size()) return;
-		extractGraph(g, goods.get(index), mouseX + 10, mouseY + 6);
+		boolean tooltipRight = TradeExpansionConfig.get().client.showDebugTooltip || goods.get(index).special();
+		extractGraph(g, goods.get(index), tooltipRight ? mouseX - 10 - 124 : mouseX + 10, mouseY + 6);
 	}
 
 	private void extractGraph(GuiGraphicsExtractor g, GoodView view, int gx, int gy) {
