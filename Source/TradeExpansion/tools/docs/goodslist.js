@@ -41,7 +41,7 @@ for (const f of fs.readdirSync(D + 'ak_trade_expansion/market_profile')) {
   (p.pools || []).forEach(pool => pool.entries.forEach(e => put(e.goods, e.min_level || 1)));
 }
 function markets(id) {
-  if (goods[id].auto_add) return '村の市場すべて（商品数とは別枠）';
+  if (goods[id].auto_add) return goods[id].auto_add.length ? '条件に合う市場（商品数とは別枠）' : 'すべての市場（商品数とは別枠）';
   const w = where[id] || {};
   const keys = Object.keys(w).filter(k => k !== 'default');
   if (!keys.length) return '-';

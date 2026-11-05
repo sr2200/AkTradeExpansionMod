@@ -143,12 +143,17 @@ public final class TradeExpansionConfig {
 		public boolean allowIronMinting = false;
 		/** E-3 / Q16: change dropped at the player's feet can only be picked up by that player. */
 		public boolean changeOwnerOnly = false;
+		/** E-5 (v0.30): the emerald coin sells at a fixed price (selling does not lower it; same in every market). */
+		public boolean emeraldCoinFixedPrice = true;
+		/** E-5 (v0.30): markets take any number of emerald coins (no stock cap, never "not buying"). */
+		public boolean emeraldCoinUnlimited = true;
 
 		public Currency() {
 		}
 
 		Currency(List<Integer> ratios, boolean ratioLocked, boolean allowMinting, double exchangeFee, long startingMoney,
-				boolean mobDropCoins, boolean sneakUseExchange, int emeraldCoinsPerBlock, boolean allowIronMinting, boolean changeOwnerOnly) {
+				boolean mobDropCoins, boolean sneakUseExchange, int emeraldCoinsPerBlock, boolean allowIronMinting, boolean changeOwnerOnly,
+				boolean emeraldCoinFixedPrice, boolean emeraldCoinUnlimited) {
 			this.ratios = new ArrayList<>(ratios);
 			this.ratioLocked = ratioLocked;
 			this.allowMinting = allowMinting;
@@ -159,6 +164,8 @@ public final class TradeExpansionConfig {
 			this.emeraldCoinsPerBlock = emeraldCoinsPerBlock;
 			this.allowIronMinting = allowIronMinting;
 			this.changeOwnerOnly = changeOwnerOnly;
+			this.emeraldCoinFixedPrice = emeraldCoinFixedPrice;
+			this.emeraldCoinUnlimited = emeraldCoinUnlimited;
 		}
 
 		static final Codec<Currency> CODEC = RecordCodecBuilder.create(i -> {
@@ -173,7 +180,9 @@ public final class TradeExpansionConfig {
 					Codec.BOOL.fieldOf("sneakUseExchange").orElse(d.sneakUseExchange).forGetter(c -> c.sneakUseExchange),
 					Codec.INT.fieldOf("emeraldCoinsPerBlock").orElse(d.emeraldCoinsPerBlock).forGetter(c -> c.emeraldCoinsPerBlock),
 					Codec.BOOL.fieldOf("allowIronMinting").orElse(d.allowIronMinting).forGetter(c -> c.allowIronMinting),
-					Codec.BOOL.fieldOf("changeOwnerOnly").orElse(d.changeOwnerOnly).forGetter(c -> c.changeOwnerOnly)
+					Codec.BOOL.fieldOf("changeOwnerOnly").orElse(d.changeOwnerOnly).forGetter(c -> c.changeOwnerOnly),
+					Codec.BOOL.fieldOf("emeraldCoinFixedPrice").orElse(d.emeraldCoinFixedPrice).forGetter(c -> c.emeraldCoinFixedPrice),
+					Codec.BOOL.fieldOf("emeraldCoinUnlimited").orElse(d.emeraldCoinUnlimited).forGetter(c -> c.emeraldCoinUnlimited)
 			).apply(i, Currency::new);
 		});
 

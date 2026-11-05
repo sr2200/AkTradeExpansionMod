@@ -18,6 +18,7 @@ public final class MarketAccess {
 
 	public static void open(ServerPlayer player, ServerLevel level, Market market, ExtendedMenuProvider<MarketMenu.OpenData> provider) {
 		MarketRegistry registry = MarketRegistry.get(level.getServer());
+		MarketFactory.ensureAutoGoods(level, market, registry.inDimension(level.dimension())); // e.g. the emerald coin (v0.30)
 		int resized = MarketFactory.resizeIfDue(level, market, registry.inDimension(level.dimension()));
 		if (resized != 0) {
 			// D-4: tell the player the market has grown / shrunk.

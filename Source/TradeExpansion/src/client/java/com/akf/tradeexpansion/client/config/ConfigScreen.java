@@ -67,6 +67,8 @@ public final class ConfigScreen {
 				.option(bool("currency.allowMinting", d.currency.allowMinting, () -> cur.allowMinting, v -> cur.allowMinting = v))
 				.option(bool("currency.allowIronMinting", d.currency.allowIronMinting, () -> cur.allowIronMinting, v -> cur.allowIronMinting = v))
 				.option(bool("currency.changeOwnerOnly", d.currency.changeOwnerOnly, () -> cur.changeOwnerOnly, v -> cur.changeOwnerOnly = v))
+				.option(bool("currency.emeraldCoinFixedPrice", d.currency.emeraldCoinFixedPrice, () -> cur.emeraldCoinFixedPrice, v -> cur.emeraldCoinFixedPrice = v))
+				.option(bool("currency.emeraldCoinUnlimited", d.currency.emeraldCoinUnlimited, () -> cur.emeraldCoinUnlimited, v -> cur.emeraldCoinUnlimited = v))
 				.option(doubleField("currency.exchangeFee", d.currency.exchangeFee, () -> cur.exchangeFee, v -> cur.exchangeFee = v, 0, 0.5))
 				.option(longField("currency.startingMoney", d.currency.startingMoney, () -> cur.startingMoney, v -> cur.startingMoney = v, 0, 1_000_000_000L))
 				.option(bool("currency.mobDropCoins", d.currency.mobDropCoins, () -> cur.mobDropCoins, v -> cur.mobDropCoins = v));

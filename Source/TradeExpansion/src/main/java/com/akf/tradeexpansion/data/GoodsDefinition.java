@@ -51,6 +51,10 @@ public record GoodsDefinition(
 		Optional<Double> consumePerDay,
 		Optional<Double> halfLifeDays
 ) {
+	private static final Identifier EMERALD_COIN = Identifier.fromNamespaceAndPath("ak_trade_expansion", "emerald_coin");
+	/** Stock cap that is never reached (no "not buying"). */
+	private static final double UNLIMITED_STOCK = 1e15;
+
 	/** Consumables the market uses up (food, torches, fuel, logs and planks): stock and buying capacity recover quickly (B-3). */
 	public static final TagKey<Item> CONSUMABLES = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("ak_trade_expansion", "consumables"));
 
@@ -109,6 +113,11 @@ public record GoodsDefinition(
 	 * B = base_price × profile multiplier × priceFactor × price.globalMultiplier, with B-6 correction of tau.
 	 */
 	public GoodParams params(double priceFactor, double profileMultiplier, TradeExpansionConfig config) {
+		// E-5 (v0.30): the emerald coin can keep one price everywhere and be sold without limit (currency.emeraldCoin*).
+		boolean emeraldCoin = item.equals(EMERALD_COIN);
+		boolean fixed = emeraldCoin && config.currency.emeraldCoinFixedPrice;
+		boolean unlimited = emeraldCoin && config.currency.emeraldCoinUnlimited;
+		if (fixed) priceFactor = 1.0;
 		double t = targetStock;
 		double restock = restockPerDay.orElse(t / 2);
 		boolean consumable = consumable(config);
@@ -117,10 +126,10 @@ public record GoodsDefinition(
 				elasticity.orElse(config.price.defaultElasticity),
 				spread.orElse(config.price.defaultSpread),
 				t,
-				maxStock.orElse(t * config.price.defaultMaxStockMultiplier),
+				unlimited ? UNLIMITED_STOCK : maxStock.orElse(t * config.price.defaultMaxStockMultiplier),
 				restock,
-				config.price.minMultiplier,
-				config.price.maxMultiplier,
+				fixed ? 1.0 : config.price.minMultiplier, // Vmin = Vmax = 1: the price never moves and X stays 0
+				fixed ? 1.0 : config.price.maxMultiplier,
 				consumePerDay.orElse(consumable ? t * config.recovery.consumableMultiplier : restock / 2),
 				halfLifeDays.orElse(consumable ? config.recovery.consumableHalfLifeDays : config.recovery.halfLifeDays));
 		return PriceModel.ensureExploitSafe(params);

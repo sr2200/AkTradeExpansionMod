@@ -15,7 +15,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.20（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.0.21（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -152,7 +152,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 ### エメラルド貨
 
 - 石切台で、エメラルドブロック1個からエメラルド貨1枚を作れます（枚数は設定で変更可、0 でレシピ無効）。
-- 所持金には数えない補助コインで、**村の市場**でだけ10枚単位で売却できます（平常時 10枚で4c、売るほど値下がり）。
+- 所持金には数えない補助コインで、**どの市場でも**10枚単位で売却できます（10枚で4c。値段は変わらず、いくらでも売れます。設定 `currency.emeraldCoinFixedPrice`・`currency.emeraldCoinUnlimited` を OFF にすると、売るほど値下がり・上限640枚になります）。
 - 村人交易で大量に手に入るエメラルドを、少しずつ経済に取り込むための仕組みです。
 
 ---
@@ -321,7 +321,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 | 名前 | ID | 基準 | 買値 / 売値 | 在庫 | 消耗品 | 並ぶ市場 |
 |---|---|---|---|---|---|---|
-| エメラルド貨 | `ak_trade_expansion:emerald_coin` | 5c（10個あたり） | 買えない / 4c | 0 |  | 村の市場すべて（商品数とは別枠） |
+| エメラルド貨 | `ak_trade_expansion:emerald_coin` | 5c（10個あたり） | 買えない / 4c | 0 |  | すべての市場（商品数とは別枠） |
 
 ---
 
@@ -414,6 +414,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `currency.allowMinting` | `true` | true / false | 銅ブロック×9 → 銅貨の鋳造レシピ（鉄ブロックは下の `allowIronMinting` も必要）。反映は再起動か `/reload` の後 | `"allowMinting": false`（鋳造を禁止） |
 | `currency.allowIronMinting` | `false` | true / false | 鉄ブロック×9 → 鉄貨の鋳造レシピ。アイアンゴーレムトラップで鉄がいくらでも手に入り、お金が無限に増えるため既定は OFF。`allowMinting` も ON の時だけ有効。反映は再起動か `/reload` の後 | `"allowIronMinting": true`（鉄の鋳造を許可） |
 | `currency.changeOwnerOnly` | `false` | true / false | インベントリに入りきらずに足元に落ちたお釣りを、取引した本人だけが拾えるようにする。OFF なら誰でも拾える | `"changeOwnerOnly": true` |
+| `currency.emeraldCoinFixedPrice` | `true` | true / false | エメラルド貨の値段を固定する（売っても値下がりせず、どの市場でも10枚で4c）。OFF で相場によって動く | `"emeraldCoinFixedPrice": false` |
+| `currency.emeraldCoinUnlimited` | `true` | true / false | 市場がエメラルド貨をいくらでも買い取る（買取停止にならない）。OFF で在庫上限（640枚）まで | `"emeraldCoinUnlimited": false` |
 | `currency.exchangeFee` | `0.0` | 0〜0.5 | 両替タブの手数料の割合 | `"exchangeFee": 0.02`（2%） |
 | `currency.startingMoney` | `0` | 0〜1,000,000,000 | 初めてログインした時に渡す金額（c）。**未実装** | `"startingMoney": 500` |
 | `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨） | `"mobDropCoins": false` |

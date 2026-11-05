@@ -8,10 +8,5 @@
   "restock_per_day": 64,
   "buy": false,
   "sell": true,
-  "auto_add": [
-    {
-      "type": "ak_trade_expansion:structure",
-      "structure": "#minecraft:village"
-    }
-  ]
+  "auto_add": []
 }

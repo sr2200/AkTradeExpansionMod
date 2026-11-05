@@ -95,13 +95,33 @@ public final class MarketFactory {
 		}
 		for (String goodsId : selected) addGood(market, Identifier.parse(goodsId), random, neighbors, now);
 
-		// D-1 step 0: goods with auto_add conditions (e.g. emerald coin in village markets), outside N.
+		addAutoGoods(market, context, random, neighbors, now);
+	}
+
+	/** D-1 step 0: goods with auto_add conditions (e.g. the emerald coin, every market since v0.30), outside N. */
+	private static boolean addAutoGoods(Market market, MarketContext context, Random random, List<Market> neighbors, long now) {
+		boolean added = false;
 		for (Map.Entry<Identifier, GoodsDefinition> e : GoodsCatalog.all().entrySet()) {
 			List<MarketCondition> conditions = e.getValue().autoAdd().orElse(null);
 			if (conditions != null && market.good(e.getKey()) == null && MarketCondition.all(conditions, context)) {
 				addGood(market, e.getKey(), random, neighbors, now);
+				added = true;
 			}
 		}
+		return added;
+	}
+
+	/**
+	 * Adds auto_add goods the market lacks (markets created before a data pack change, e.g. the emerald coin of v0.30).
+	 *
+	 * @return {@code true} if a good was added
+	 */
+	public static boolean ensureAutoGoods(ServerLevel level, Market market, List<Market> neighbors) {
+		boolean missing = GoodsCatalog.all().entrySet().stream()
+				.anyMatch(e -> e.getValue().autoAdd().isPresent() && market.good(e.getKey()) == null);
+		if (!missing) return false;
+		Random random = new Random(seed(level, market.center()) ^ 0x5DEECE66DL);
+		return addAutoGoods(market, new MarketContext(level, market.center(), market.origin()), random, neighbors, MarketClock.now(level));
 	}
 
 	/**
