@@ -8,6 +8,17 @@ class MarketLevelTest {
 	private static final int[] BEDS = {5, 10, 20, 40};
 	private static final int[] VILLAGERS = {3, 6, 12, 24};
 
+	/** v0.27.5: beds 8 (level 2) and villagers 13 (level 4) → level 2; both must reach a level. */
+	@Test
+	void bothBedsAndVillagersCount() {
+		int[] beds = {5, 10, 20, 40};
+		int[] villagers = {3, 6, 12, 24};
+		assertEquals(2, MarketLevel.levelOfBoth(8, beds, 13, villagers));
+		assertEquals(2, MarketLevel.levelOfBoth(40, beds, 5, villagers));
+		assertEquals(5, MarketLevel.levelOfBoth(40, beds, 24, villagers));
+		assertEquals(1, MarketLevel.levelOfBoth(0, beds, 30, villagers));
+	}
+
 	@Test
 	void bedThresholds() {
 		assertEquals(1, MarketLevel.level(0, BEDS));

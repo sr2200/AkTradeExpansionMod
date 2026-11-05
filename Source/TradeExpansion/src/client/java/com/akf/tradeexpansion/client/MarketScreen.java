@@ -81,6 +81,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final int COLOR_WARNING = 0xFFA02020;
 	private static final int COLOR_UNAVAILABLE_ROW = 0xFF7E6A6A;
 	private static final int COLOR_SPECIAL = 0xFF8FE3FF;
+	/** Height of the header line above a market's goods on the board tab. */
+	private static final int BOARD_HEADER_H = 10;
 
 	private static final long[] BANK_AMOUNTS = {100, 1_000, 10_000, -1}; // -1 = everything
 
@@ -339,7 +341,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		return switch (tab) {
 			case BUY, SELL -> visibleGoods().size();
 			case QUEST -> snapshot == null ? 0 : snapshot.requests().size();
-			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() : board.markets().size();
+			// A market's goods list has a header line, so one row fewer fits: count it as one more row.
+			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() + 1 : board.markets().size();
 			default -> 0;
 		};
 	}
@@ -870,10 +873,23 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		g.textWithWordWrap(font, entry.title(), leftPos + PANEL_X, topPos + 38, PANEL_W, COLOR_TEXT, false);
 		g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 62, PANEL_W, COLOR_DARK, false);
+		// Header line: goods / buy price (the player pays) / sell price (the player gets).
+		g.fill(bx, by, bx + LIST_W, by + BOARD_HEADER_H, COLOR_DARK);
+		int headerY = by + 1;
+		String buyHeader = Component.translatable("screen.trade_expansion.board.header.buy").getString();
+		String sellHeader = Component.translatable("screen.trade_expansion.board.header.sell").getString();
+		g.text(font, Component.translatable("screen.trade_expansion.board.header.goods"), bx + 20, headerY, COLOR_WHITE);
+		g.text(font, buyHeader, bx + 130 - font.width(buyHeader), headerY, COLOR_GOLD);
+		g.text(font, sellHeader, bx + LIST_W - 5 - font.width(sellHeader), headerY, COLOR_GREEN);
+		if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= by && mouseY < by + BOARD_HEADER_H) {
+			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.trade_expansion.board.header.buy.tooltip"),
+					Component.translatable("screen.trade_expansion.board.header.sell.tooltip")), Optional.empty(), mouseX, mouseY);
+		}
 		List<BoardS2C.Good> goods = entry.goods();
-		for (int row = 0; row < ROWS && scroll + row < goods.size(); row++) {
+		int goodsRows = (ROWS * ROW_H - BOARD_HEADER_H) / ROW_H;
+		for (int row = 0; row < goodsRows && scroll + row < goods.size(); row++) {
 			BoardS2C.Good good = goods.get(scroll + row);
-			int y = by + row * ROW_H;
+			int y = by + BOARD_HEADER_H + row * ROW_H;
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(good.item()));
 			g.item(stack, bx + 2, y + 1);
 			fitText(g, stack.getHoverName().getString(), bx + 20, y + 5, 64, good.shortage() ? COLOR_ORANGE : COLOR_WHITE, true);

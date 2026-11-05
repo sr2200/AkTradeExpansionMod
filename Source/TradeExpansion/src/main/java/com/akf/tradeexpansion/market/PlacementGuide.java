@@ -116,6 +116,9 @@ public final class PlacementGuide {
 		lines.add(MarketFactory.usesVillagers(level)
 				? Component.translatable("message.trade_expansion.where.count_villagers", config.market.levelRadius, villagers)
 				: Component.translatable("message.trade_expansion.where.count", config.market.levelRadius, MarketFactory.countBeds(level, pos), villagers));
+		// D-4: the size a market here would have now (beds and villagers, the lower level wins).
+		lines.add(Component.translatable("message.trade_expansion.where.level",
+				com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(MarketFactory.measureLevel(level, pos))));
 		lines.add(Component.translatable("message.trade_expansion.where.result", result(level, pos)));
 		lines.add(Component.translatable("message.trade_expansion.where.show_hint").withStyle(ChatFormatting.DARK_GRAY));
 		return lines;

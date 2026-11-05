@@ -305,6 +305,8 @@ public final class TradeExpansionConfig {
 		public int newMarketMinVillagers = 3;
 		/** C-1 (v0.27.1): with BEDS_AND_VILLAGERS, this many beds allow more villagers than beds (0 = beds must always be at least the villagers). */
 		public int newMarketEnoughBeds = 5;
+		/** D-4 (v0.27.5): in the Overworld the level also needs villagers (villagerThresholds); the lower of the two levels wins. */
+		public boolean levelUsesVillagers = true;
 		/** D-4 (v0.27, Q21): the market loses goods when its level goes down. */
 		public boolean shrinkOnLevelDown = true;
 		/** D-5: number of today's specials for levels 1..5 (0 = none). */
@@ -318,7 +320,7 @@ public final class TradeExpansionConfig {
 
 		Market(int minGoods, int maxGoods, List<Integer> levelThresholds, List<Integer> villagerThresholds, int levelRadius,
 				double levelCheckIntervalDays, RenamePermission renamePermission, NewMarketRequires newMarketRequires,
-				int newMarketMinBeds, int newMarketMinVillagers, int newMarketEnoughBeds, boolean shrinkOnLevelDown, List<Integer> specialGoods,
+				int newMarketMinBeds, int newMarketMinVillagers, int newMarketEnoughBeds, boolean levelUsesVillagers, boolean shrinkOnLevelDown, List<Integer> specialGoods,
 				double specialPriceMultiplier, double specialStockRatio) {
 			this.minGoods = minGoods;
 			this.maxGoods = maxGoods;
@@ -331,6 +333,7 @@ public final class TradeExpansionConfig {
 			this.newMarketMinBeds = newMarketMinBeds;
 			this.newMarketMinVillagers = newMarketMinVillagers;
 			this.newMarketEnoughBeds = newMarketEnoughBeds;
+			this.levelUsesVillagers = levelUsesVillagers;
 			this.shrinkOnLevelDown = shrinkOnLevelDown;
 			this.specialGoods = new ArrayList<>(specialGoods);
 			this.specialPriceMultiplier = specialPriceMultiplier;
@@ -351,6 +354,7 @@ public final class TradeExpansionConfig {
 					Codec.INT.fieldOf("newMarketMinBeds").orElse(d.newMarketMinBeds).forGetter(c -> c.newMarketMinBeds),
 					Codec.INT.fieldOf("newMarketMinVillagers").orElse(d.newMarketMinVillagers).forGetter(c -> c.newMarketMinVillagers),
 					Codec.INT.fieldOf("newMarketEnoughBeds").orElse(d.newMarketEnoughBeds).forGetter(c -> c.newMarketEnoughBeds),
+					Codec.BOOL.fieldOf("levelUsesVillagers").orElse(d.levelUsesVillagers).forGetter(c -> c.levelUsesVillagers),
 					Codec.BOOL.fieldOf("shrinkOnLevelDown").orElse(d.shrinkOnLevelDown).forGetter(c -> c.shrinkOnLevelDown),
 					Codec.INT.listOf().fieldOf("specialGoods").orElse(d.specialGoods).forGetter(c -> c.specialGoods),
 					Codec.DOUBLE.fieldOf("specialPriceMultiplier").orElse(d.specialPriceMultiplier).forGetter(c -> c.specialPriceMultiplier),

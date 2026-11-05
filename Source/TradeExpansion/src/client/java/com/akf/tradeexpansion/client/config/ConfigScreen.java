@@ -113,6 +113,7 @@ public final class ConfigScreen {
 				.option(intField("market.maxGoods", d.market.maxGoods, () -> market.maxGoods, v -> market.maxGoods = v, 1, 100));
 		thresholds(marketCat, "market.levelThresholds.", d.market.levelThresholds, market.levelThresholds);
 		thresholds(marketCat, "market.villagerThresholds.", d.market.villagerThresholds, market.villagerThresholds);
+		marketCat.option(bool("market.levelUsesVillagers", d.market.levelUsesVillagers, () -> market.levelUsesVillagers, v -> market.levelUsesVillagers = v));
 		marketCat.option(server(Option.<TradeExpansionConfig.RenamePermission>createBuilder()
 				.name(Component.translatable(KEY + "market.renamePermission"))
 				.description(description("market.renamePermission"))

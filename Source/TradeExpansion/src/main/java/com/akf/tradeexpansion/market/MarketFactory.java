@@ -153,13 +153,19 @@ public final class MarketFactory {
 		}
 	}
 
-	/** D-4: beds around the center, or villagers in the Nether / End where beds explode. */
+	/**
+	 * D-4: beds around the center (and, with {@code market.levelUsesVillagers}, villagers too: the lower level wins), or
+	 * villagers alone in the Nether / End where beds explode.
+	 */
 	public static int measureLevel(ServerLevel level, BlockPos center) {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		if (usesVillagers(level)) {
 			return MarketLevel.level(countVillagers(level, center), config.market.villagerThresholdArray());
 		}
-		return MarketLevel.level(countBeds(level, center), config.market.levelThresholdArray());
+		if (!config.market.levelUsesVillagers) return MarketLevel.level(countBeds(level, center), config.market.levelThresholdArray());
+		// v0.27.5: beds and villagers both count; the lower level wins.
+		return MarketLevel.levelOfBoth(countBeds(level, center), config.market.levelThresholdArray(),
+				countVillagers(level, center), config.market.villagerThresholdArray());
 	}
 
 	public static boolean usesVillagers(ServerLevel level) {

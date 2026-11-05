@@ -23,6 +23,11 @@ public final class MarketLevel {
 		return Math.min(level, MAX_LEVEL);
 	}
 
+	/** D-4 (v0.27.5): the level needs both the beds and the villagers; the lower of the two levels wins. */
+	public static int levelOfBoth(long beds, int[] bedThresholds, long villagers, int[] villagerThresholds) {
+		return Math.min(level(beds, bedThresholds), level(villagers, villagerThresholds));
+	}
+
 	/** N = round(minGoods + (maxGoods - minGoods) * (level - 1) / 4) */
 	public static int goodsCount(int level, int minGoods, int maxGoods) {
 		int clamped = Math.clamp(level, MIN_LEVEL, MAX_LEVEL);

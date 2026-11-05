@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.27.3（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定（Q38・Q39・Q51 は保留）、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-04（改版履歴は付録B）
+- 版：v0.27.5（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定（Q38・Q39・Q51 は保留）、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -158,7 +158,7 @@ v0.27 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時�
 - **両替タブ**：コイン同士の両替（E-3）。
 - **銀行タブ**（v0.9）：市場レベル3以上の市場だけに出る。預け入れ・引き出し・カード発行（E-7・E-8）。
 - **支払い方法の切り替え**（v0.9）：有効なカードを持っている時だけ「カード／現金」を切り替えられる。所持金の表示も「現金 1,234c ／ 銀行 56,789c」のように両方出す（E-8）。
-- **掲示板タブ**（v0.12、I章）：近くの市場の最新の価格。
+- **掲示板タブ**（v0.12、I章）：近くの市場の最新の価格。市場を選んだ時の商品一覧には、いちばん上にヘッダ行「商品／買値／売値」を出す（v0.27.4。ヘッダにマウスを乗せると「買値：その市場で買う時に払う値段」「売値：その市場に売る時にもらえる値段」。ヘッダの分、一度に見える商品は5行）。
 - **依頼タブ**（v0.12、J章）：この市場の依頼の一覧と納品。
 - **共通**：取引確定時、サーバーで再計算した価格がプレビューから `trade.priceTolerance`（既定 0％＝1銅でも違えば）ずれていたら中止し、最新価格を再表示（他プレイヤーが同時に取引した場合の保護）。
   - プレビューはクライアントがサーバーと同じ `PriceModel` で計算する（F-2）。時間による回復もクライアントのゲーム時刻で計算するため、価格の境目をまたぐ瞬間に確定するとまれに `PRICE_CHANGED` になる。これは仕様どおりの挙動で、再度押せば成立する（プレイヤーに有利な方向のずれも当面は許可しない。Q18、今後変更予定）。
@@ -380,7 +380,7 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
 - 【v0.19】**置き場所の案内**：どこに置けば市場に加わる／新しい市場ができる／置けないかを、プレイヤーが確かめられるようにする。
   | 方法 | 内容 |
   |---|---|
-  | `/tradeex where`（誰でも使える） | 今いる場所について、村の範囲内か（範囲内なら村の範囲の座標）、一番近い市場とその距離、規模を測る半径の中のベッド・村人の数、ここに交易所を置いた時の結果を表示する |
+  | `/tradeex where`（誰でも使える） | 今いる場所について、村の範囲内か（範囲内なら村の範囲の座標）、一番近い市場とその距離、規模を測る半径の中のベッド・村人の数、【v0.27.5】ここに市場を作った場合の規模（レベル名）、ここに交易所を置いた時の結果を表示する |
   | `/tradeex where show` / `hide` | 範囲を30秒間パーティクルで地面に描く（緑：村の範囲、黄：近くの市場の「同じ市場になる範囲」`mergeRadius`、赤：「新しい市場を作れない範囲」`minNewMarketDistance`、青：今いる場所からベッド・村人を数える範囲 `levelRadius`）。描くのはプレイヤーから64ブロック以内の部分だけ、市場は近い順に5つまで。`hide` で止める |
   | 交易所を持った時の案内 | 交易所を手に持っている間、1秒ごとにアクションバーへ、見ているブロックの隣（何も見ていなければ立っている場所）に置いた時の結果を出す（`trade.showPlacementHint`、既定 ON） |
   - 結果の判定は実際の設置と同じ処理（`MarketRegistry.preview`）を使うので、案内と実際の結果は一致する。
@@ -594,7 +594,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 **規模の測り方**：次元によって測るものが違う。
 
-- **オーバーワールド・他Modの次元**：市場の中心から水平半径 `market.levelRadius`（既定 64）以内にある**ベッドの数**（村人やプレイヤーの家を表す `minecraft:home` POI。`PoiManager` で水平距離を見て数える。高さは問わない）。村は家が多いほどベッドが多く、プレイヤーが作った町も家を建てるほど育つ。
+- **オーバーワールド・他Modの次元**：市場の中心から水平半径 `market.levelRadius`（既定 64）以内にある**ベッドの数**（村人やプレイヤーの家を表す `minecraft:home` POI。`PoiManager` で水平距離を見て数える。高さは問わない）。村は家が多いほどベッドが多く、プレイヤーが作った町も家を建てるほど育つ。【v0.27.5】設定 `market.levelUsesVillagers`（既定 ON）の時は、同じ範囲の**村人の人数**でも測り（数え方は下のネザー・エンドと同じ）、ベッドで測ったレベルと村人で測ったレベルの**低い方**を市場のレベルにする（両方そろって初めてレベルが上がる。例：ベッド8個＝レベル2、村人13人＝レベル4 → レベル2）。OFF の時はベッドの数だけで測る。
 - **ネザー・エンド**（v0.7、Q27）：ベッドが使えない（爆発する）ため、同じ水平半径・上下 ±32 ブロック以内にいる**村人（`minecraft:villager`）の人数**。行商人・ゾンビ村人は数えない。村人はネザー・エンドでは増やせないので、プレイヤーがポータルで連れて来た人数が市場の規模になる。村人はエンティティなので、周りのチャンクが読み込まれている必要があるが、測るのは誰かが画面を開いた時なので通常は問題にならない。
 
 | レベル | 名前 | ベッド数（既定） | 村人の人数（ネザー・エンド、既定） | 商品数 N（既定 10〜20 の場合） |
@@ -605,7 +605,8 @@ w(d) = 1                                  (d ≤ Rnear)
 | 4 | 町 | 20〜39 | 12〜23 | 18 |
 | 5 | 都市 | 40〜 | 24〜 | 20 |
 
-- 境目は設定 `market.levelThresholds = [5, 10, 20, 40]`（ベッド数）と `market.villagerThresholds = [3, 6, 12, 24]`（村人の人数。連れて来るのはベッドを置くより大変なので低めにする）。
+- 境目は設定 `market.levelThresholds = [5, 10, 20, 40]`（ベッド数）と `market.villagerThresholds = [3, 6, 12, 24]`（村人の人数。連れて来るのはベッドを置くより大変なので低めにする）。村人の境目は、ネザー・エンドと、`market.levelUsesVillagers` が ON の時のオーバーワールドで使う。
+- 【v0.27.5】村人はエンティティなので、家の中で寝ている・畑に出ているなどで範囲の外にいると数えられない。そのためレベルが日によって上下することがある（`market.shrinkOnLevelDown` が ON なら、そのたびに商品が休止・再開する。D-4 の「レベルが下がった時」）。
 - 商品数 `N = round(minGoods + (maxGoods − minGoods) × (レベル − 1) / 4)`。
 - **測るタイミング**：市場を作った時と、誰かが画面を開いた時（ただし前回からゲーム内 `market.levelCheckIntervalDays`＝既定1日以上たっている場合だけ。POI の検索は重いため）。
 - **レベルが上がった時**：新しい `N` になるまで、D-1 手順3と同じ方法（新しいレベルで候補になった `min_level` の商品を含む）で商品を追加する。追加した商品の `X` は C-1 の新規市場の初期相場と同じ計算、在庫 `S` は `T` から始める。画面を開いたプレイヤーに「市場が『町』に成長しました」のように知らせる。
@@ -949,7 +950,8 @@ MarketRegistry
 | 市場 | `market.minGoods` | 10 | 1〜100 | 1市場の商品数の下限（レベル1、D-4） |
 | 市場 | `market.maxGoods` | 20 | minGoods〜100 | 1市場の商品数の上限（最大レベル、D-4） |
 | 市場 | `market.levelThresholds` | `[5,10,20,40]` | 昇順の整数4つ | レベル2〜5になるベッド数（オーバーワールド・他Modの次元、D-4） |
-| 市場 | `market.villagerThresholds` | `[3,6,12,24]` | 昇順の整数4つ | レベル2〜5になる村人の人数（ネザー・エンド、D-4） |
+| 市場 | `market.villagerThresholds` | `[3,6,12,24]` | 昇順の整数4つ | レベル2〜5になる村人の人数（ネザー・エンド。【v0.27.5】`levelUsesVillagers` が ON ならオーバーワールドでも、D-4） |
+| 市場 | `market.levelUsesVillagers` | true | bool | 【v0.27.5】オーバーワールドのレベルを、ベッドで測ったレベルと村人で測ったレベルの低い方にする。OFF でベッドだけ（D-4） |
 | 市場 | `market.levelRadius` | 64 | 16〜256 | ベッドを数える水平半径（D-4） |
 | 市場 | `market.levelCheckIntervalDays` | 1.0 | 0〜100 | レベルを測り直す最短間隔（ゲーム内日、D-4） |
 | 市場 | `market.shrinkOnLevelDown` | true | bool | 【v0.27】レベルが下がった時に品揃えを減らす（D-4、Q21）。OFF でレベルは最高到達値のまま |
@@ -1253,12 +1255,13 @@ MarketRegistry
 src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クライアント両方で読み込まれる）
 ├─ TradeExpansion.java              ✅ … ModInitializer（登録の呼び出し、イベント登録）
 ├─ core/                          ★Minecraft非依存（純Java）
-│   ├─ PriceModel.java            ✅ … V, Pbuy, Psell, 逐次合計, 最大購入数, 回復計算, B-6 検証・補正
+│   ├─ PriceModel.java            ✅ … V, Pbuy, Psell, 逐次合計（v0.27：まとめ買い割引つき）, 最大購入数, 回復計算, 買取再開までの日数, B-6 検証・補正
+│   ├─ BulkDiscount.java          ✅ … まとめ買い割引の段階と安全上限（B-5、v0.27）
 │   ├─ DistanceModel.java         ✅ … w(d), 新規市場の初期相場（C-1）
 │   ├─ CoinMath.java              ✅ … 比率→価値, 支払い・お釣り・貪欲分解
 │   ├─ GoodParams.java (record)   ✅ … B, τ, s, T, Scap, r, Vmin, Vmax, c, H（X のクランプ範囲も計算）
 │   ├─ GoodState.java             ✅ … priceFactor, X, S, lastTradeGameTime, 相場の記録（history）
-│   ├─ MarketLevel.java           ✅ … ベッド数・村人の人数→レベル、レベル→商品数 N（D-4）
+│   ├─ MarketLevel.java           ✅ … ベッド数・村人の人数→レベル（v0.27.5：両方の低い方 `levelOfBoth`）、レベル→商品数 N（D-4）
 │   ├─ WalletMath.java            ✅ … 財布での支払い・受け取りの計算（E-6）
 │   ├─ QuestMath.java             ✅ … 依頼の難易度・報酬・期間、不足品の倍率（J章・K章）
 │   └─ GoodsSelector.java         ✅ … 商品の抽選（always・プール・追加抽選・レベルアップ時の追加、D-1・D-4）
@@ -1368,7 +1371,8 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ├─ WalletScreen.java              ✅ … 財布の取り出し画面（E-6）
 ├─ config/
 │   ├─ ModMenuIntegration.java    ✅ … Mod Menu のエントリーポイント（`ModMenuApi`）。YACL が無ければ画面を出さない
-│   └─ ConfigScreen.java          ✅ … YACL で作る設定画面（Q35）
+│   ├─ ConfigScreen.java          ✅ … YACL で作る設定画面（Q35）
+│   └─ GoodsManagerScreen.java    ✅ … 設定画面の「追加の商品と消耗品」：アイコンから商品・消耗品を選んで追加・削除（v0.27、Q53）
 ├─ mixin/client/MerchantScreenMixin.java ✅ … 村人の取引画面にコインの代金を表示（14a。`trade_expansion.client.mixins.json`）
 ├─ TraderRenderer.java           ✅ … 商人NPCの描画（村人のモデル＋行商人の服、段階10）
 └─ （widget/ への分離は見送り。v0.22 時点も MarketScreen の中で描画する）
@@ -1425,7 +1429,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 - テンプレートからの変更点：`id`/`name`/`entrypoints`/アイコンのパス、`settings.gradle` の `rootProject.name = 'trade_expansion'`、`build.gradle` の `loom { mods { "trade_expansion" { ... } } }`、`gradle.properties` の `group=com.akf.tradeexpansion`、mixin設定ファイル名（`modid.mixins.json` → `trade_expansion.mixins.json` など、中の `package` も変更）。
 - Mixin：v0.20（段階14）で村人交易のコイン化のために `Merchant*` 系の Mixin とクライアント用の設定 `trade_expansion.client.mixins.json` を追加した。v0.11（段階12）で財布の自動収納のために `trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`、`ItemEntityMixin`）を追加した。v0.14（段階9）で村のテンプレートプールに建物を足すための `StructureTemplatePoolAccessor` を追加した（Fabric API に同等の機能が無いため）。
 - 【v0.11】`fabric.mod.json` に `"suggests": { "modmenu": "*", "yet_another_config_lib_v3": "*" }`、`entrypoints` の `"modmenu": ["com.akf.tradeexpansion.client.config.ModMenuIntegration"]`、`"mixins": ["trade_expansion.mixins.json"]` を追加済み。開発用の依存は `build.gradle` で YACL `3.9.7+26.3-fabric`・Mod Menu `21.0.0` を `compileOnly` ＋ `localRuntime`（配布物には含まれない）。
-- **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat` は `gradle.properties` の `version` の末尾と README のバージョン表記を1つ上げてからビルドする（`release.bat nobump` で上げずにビルド、残りの引数は Gradle に渡す）。【v0.27.2 で変更】バージョンの上げ方：普段のビルド `build.bat` は末尾を上げる（0.0.11 → 0.0.12）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）。上げる処理は両方とも `tools/version/bump.ps1`（`-Part patch` / `-Part minor`）。
+- **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat`・`build.bat` は `gradle.properties` の `version` と README のバージョン表記を上げてからビルドする（`nobump` で上げずにビルド、残りの引数は Gradle に渡す）。【v0.27.2 で変更】バージョンの上げ方：普段のビルド `build.bat` は末尾を上げる（0.0.11 → 0.0.12）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）。上げる処理は両方とも `tools/version/bump.ps1`（`-Part patch` / `-Part minor`）。
 - `authors` は `akf`。ライセンスは **GNU LGPL v2.1 のみ**（v2.1 以降ではない）。`fabric.mod.json` の `license` は `LGPL-2.1-only`。本文はリポジトリ直下の `LICENSE` だけで、v0.23 から `build.gradle` がこれを jar（`LICENSE_trade_expansion`）と配布用 zip に入れる。
 
 リソース（v0.22 時点。✅ は作成済み）：
@@ -1657,3 +1661,5 @@ test {
 | v0.27.1 | 2026-11-04 | 新しい市場を作れる場所（C-1、`BEDS_AND_VILLAGERS`）に例外を追加：ベッドが `market.newMarketEnoughBeds`（既定5）個以上あれば、村人の方が多くても作れる（訪れた村がどれも村人の方が多く、交易所を置けなかったため） |
 | v0.27.2 | 2026-11-04 | バージョンの上げ方を変更：普段のビルド用の `build.bat` を追加して末尾を上げ（0.0.x）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.1.0、0.2.0 …）。共通の処理は `tools/version/bump.ps1`（4-3 配布物） |
 | v0.27.3 | 2026-11-04 | 鉄ブロックの鋳造を既定で無効にした（アイアンゴーレムトラップで鉄が無限に手に入るため）。設定 `currency.allowIronMinting`（既定 false）と読み込み条件 `iron_minting_enabled` を追加（E-2・G章） |
+| v0.27.4 | 2026-11-05 | 掲示板で市場を選んだ時の商品一覧にヘッダ行（商品／買値／売値）を追加（A-4） |
+| v0.27.5 | 2026-11-05 | オーバーワールドの市場のレベルに村人の人数も使う：ベッドで測ったレベルと村人で測ったレベルの低い方（D-4、設定 `market.levelUsesVillagers`）。`/tradeex where` にその場所の規模を、`/tradeex market info` にベッドと村人の数と測り直したレベルを表示。あわせてソースと照合し、4-2 のクラス一覧（`BulkDiscount`・`GoodsManagerScreen`）と配布物の説明（`build.bat`）を更新 |

@@ -232,10 +232,12 @@ public final class TradeExpansionCommand {
 		source.sendSuccess(() -> Component.literal(" name=").append(MarketNames.name(market))
 				.append(market.namer() == null ? "" : " namer=" + market.namer()), false);
 		ServerLevel level = player.level();
-		boolean villagers = MarketFactory.usesVillagers(level);
-		long count = villagers ? MarketFactory.countVillagers(level, market.center()) : MarketFactory.countBeds(level, market.center());
-		source.sendSuccess(() -> Component.literal(String.format(" profile=%s level=%d (%s now: %d) goods=%d",
-				market.profileId(), market.level(), villagers ? "villagers" : "beds", count, market.goods().size())), false);
+		boolean noBeds = MarketFactory.usesVillagers(level);
+		long beds = noBeds ? 0 : MarketFactory.countBeds(level, market.center());
+		long villagerCount = MarketFactory.countVillagers(level, market.center());
+		String counts = noBeds ? "villagers now: " + villagerCount : "beds now: " + beds + ", villagers now: " + villagerCount;
+		source.sendSuccess(() -> Component.literal(String.format(" profile=%s level=%d (%s, measured level %d) goods=%d",
+				market.profileId(), market.level(), counts, MarketFactory.measureLevel(level, market.center()), market.goods().size())), false);
 		if (!market.shortages().isEmpty() || !market.requests().isEmpty()) {
 			source.sendSuccess(() -> Component.literal(String.format(" shortages=%s requests=%s", market.shortages(), market.requests())), false);
 		}
