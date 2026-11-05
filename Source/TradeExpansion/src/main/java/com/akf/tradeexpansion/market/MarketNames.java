@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Market names (design C-4): set with a name tag on a stall, by placing a renamed stall that founds a market, or by
- * {@code /tradeex market name}. Unnamed markets show the profile name ("Plains Village #12").
+ * {@code /aktradeex market name}. Unnamed markets show the profile name ("Plains Village #12").
  */
 public final class MarketNames {
 	public static final int MAX_LENGTH = 32;
@@ -35,14 +35,14 @@ public final class MarketNames {
 		if (market.name() != null) return Component.literal(market.name());
 		MarketProfile profile = market.profileId() == null ? null : MarketProfiles.get(market.profileId());
 		if (profile != null && profile.displayName().isPresent()) {
-			return Component.translatable("market.trade_expansion.auto_name", profile.displayName().get(), market.id());
+			return Component.translatable("market.ak_trade_expansion.auto_name", profile.displayName().get(), market.id());
 		}
-		return Component.translatable("container.trade_expansion.market", market.id());
+		return Component.translatable("container.ak_trade_expansion.market", market.id());
 	}
 
 	/** Screen title / board line: "name (level)". */
 	public static Component title(Market market) {
-		return Component.translatable("container.trade_expansion.market_title", name(market), MarketStallBlockEntity.levelName(market.level()));
+		return Component.translatable("container.ak_trade_expansion.market_title", name(market), MarketStallBlockEntity.levelName(market.level()));
 	}
 
 	/**

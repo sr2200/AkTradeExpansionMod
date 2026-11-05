@@ -21,7 +21,7 @@ public final class MarketAccess {
 		int resized = MarketFactory.resizeIfDue(level, market, registry.inDimension(level.dimension()));
 		if (resized != 0) {
 			// D-4: tell the player the market has grown / shrunk.
-			player.sendSystemMessage(Component.translatable(resized > 0 ? "message.trade_expansion.market_grew" : "message.trade_expansion.market_shrank",
+			player.sendSystemMessage(Component.translatable(resized > 0 ? "message.ak_trade_expansion.market_grew" : "message.ak_trade_expansion.market_shrank",
 					market.id(), MarketStallBlockEntity.levelName(market.level())).withStyle(resized > 0 ? ChatFormatting.GREEN : ChatFormatting.YELLOW));
 		}
 		registry.setDirty();

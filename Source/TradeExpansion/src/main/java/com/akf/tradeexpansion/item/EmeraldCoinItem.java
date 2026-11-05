@@ -18,6 +18,6 @@ public class EmeraldCoinItem extends Item {
 
 	/** Tooltip lines, added on the client through Fabric's ItemTooltipCallback (replaces the deprecated appendHoverText, E-1). */
 	public void addTooltip(ItemStack stack, Consumer<Component> tooltip) {
-		tooltip.accept(Component.translatable("tooltip.trade_expansion.emerald_coin").withStyle(ChatFormatting.GREEN));
+		tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.emerald_coin").withStyle(ChatFormatting.GREEN));
 	}
 }

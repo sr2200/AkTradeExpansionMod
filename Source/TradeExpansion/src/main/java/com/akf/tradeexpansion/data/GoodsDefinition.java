@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * One goods definition: {@code data/<ns>/trade_expansion/goods/<name>.json} (design D-2).
+ * One goods definition: {@code data/<ns>/ak_trade_expansion/goods/<name>.json} (design D-2).
  * Optional values fall back to {@link TradeExpansionConfig}. Prices, stock and pressure count in units of {@code unit} items.
  *
  * @param item          item id; a good matches only plain stacks of this item (no extra components)
@@ -52,7 +52,7 @@ public record GoodsDefinition(
 		Optional<Double> halfLifeDays
 ) {
 	/** Consumables the market uses up (food, torches, fuel, logs and planks): stock and buying capacity recover quickly (B-3). */
-	public static final TagKey<Item> CONSUMABLES = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("trade_expansion", "consumables"));
+	public static final TagKey<Item> CONSUMABLES = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("ak_trade_expansion", "consumables"));
 
 	public static final Codec<GoodsDefinition> CODEC = RecordCodecBuilder.create(i -> i.group(
 			Identifier.CODEC.fieldOf("item").forGetter(GoodsDefinition::item),

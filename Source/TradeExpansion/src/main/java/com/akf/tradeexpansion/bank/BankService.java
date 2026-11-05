@@ -26,7 +26,7 @@ public final class BankService {
 	private BankService() {
 	}
 
-	/** Result codes of the bank tab, shown as {@code bank.trade_expansion.result.<name>}. */
+	/** Result codes of the bank tab, shown as {@code bank.ak_trade_expansion.result.<name>}. */
 	public enum Result {
 		SUCCESS, INVALID_REQUEST, TOO_FAR, CREATIVE_NOT_ALLOWED, NO_BANK, INSUFFICIENT_FUNDS
 	}

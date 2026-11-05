@@ -1,0 +1,11 @@
+{
+  "fabric:load_conditions": [
+    { "condition": "ak_trade_expansion:minting_enabled" }
+  ],
+  "type": "ak_trade_expansion:minting",
+  "category": "misc",
+  "pattern": ["###", "###", "###"],
+  "key": { "#": "minecraft:copper_block" },
+  "result": { "id": "ak_trade_expansion:copper_coin" },
+  "value": 64
+}

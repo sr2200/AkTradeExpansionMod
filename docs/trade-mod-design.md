@@ -1,14 +1,14 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.27.5（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定（Q38・Q39・Q51 は保留）、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
+- 版：v0.28（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定（Q38・Q39 は保留）、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
 - Mod名：**AK Trade Expansion**（v0.25 で「Trade Expansion」から変更。Mod ID・アイテムID・コマンド・設定ファイル名・パッケージ名は変えていない）
 - 配布ファイル：jar は `ak_trade_expansion-<バージョン>.jar`、配布用 zip は `AKTradeExpansion-<バージョン>.zip`（v0.25）
 - ライセンス：GNU LGPL v2.1 のみ（`LGPL-2.1-only`。リポジトリ直下の [LICENSE](../LICENSE)）
-- Mod ID：`trade_expansion`（名前空間。アイテムIDは `trade_expansion:copper_coin` 等）
-- パッケージ：`com.akf.tradeexpansion`　／　コマンド：`/tradeex`（別名 `/trade_expansion`）
+- Mod ID：`ak_trade_expansion`（名前空間。アイテムIDは `ak_trade_expansion:copper_coin` 等）
+- パッケージ：`com.akf.tradeexpansion`　／　コマンド：`/aktradeex`（別名 `/ak_trade_expansion`）
 - ログ接頭辞：`[TradeExpansion]`
 
 > **注意**：26.x 系は難読化が撤廃され、Fabric でも Mojang 公式名（`Item`, `AbstractContainerMenu`, `SavedData` など）で開発する前提で書いています。Fabric API の各モジュール名・クラス名はバージョンごとに改名されることがあるため、実装着手時に [Fabric 公式 Docs](https://docs.fabricmc.net/) と テンプレートジェネレーター（fabricmc.net/develop/template）で最新版を確認してください。本書中「（要確認）」の箇所が該当します。v0.4 時点で実装により確認できたものは **付録A（26.3 API 確認結果）** にまとめ、本文の「（要確認）」を「（確認済：付録A）」に改めています。
@@ -32,11 +32,11 @@ NeoForge を選ぶべきなのは「Create 等の NeoForge 専用大型Modと同
 
 ## 1. 確認事項（質問リスト）
 
-v0.27 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時の決定を後から記録したもの）（Q38・Q39 は保留で、L章に案を記録）。「今後変更予定」は当面の仕様として決定し、将来のバージョンで見直す項目。新たな未決事項が出た場合はこの表に追記し、決まるまでは **【既定案】** で進める。
+v0.28 時点で Q38・Q39 を除き決定済み（Q44〜Q50 は実装時の決定を後から記録したもの）（Q38・Q39 は保留で、L章に案を記録）。「今後変更予定」は当面の仕様として決定し、将来のバージョンで見直す項目。新たな未決事項が出た場合はこの表に追記し、決まるまでは **【既定案】** で進める。
 
 | # | 質問 | 決定／既定案 | 反映先 |
 |---|---|---|---|
-| Q1 | Mod名・Mod ID は？ | **決定**：Trade Expansion／`trade_expansion`。【v0.25】表示名を「AK Trade Expansion」に変更し、jar を `ak_trade_expansion-<バージョン>.jar`、配布用 zip を `AKTradeExpansion-<バージョン>.zip` にした（B案）。Mod ID `trade_expansion`・アイテムID・`/tradeex`・設定ファイル名 `trade_expansion.json`・パッケージ `com.akf.tradeexpansion` は変えない（今のワールドと設定をそのまま使えるようにするため） | — |
+| Q1 | Mod名・Mod ID は？ | **決定**：Trade Expansion／`trade_expansion`。【v0.25】表示名を「AK Trade Expansion」に変更し、jar を `ak_trade_expansion-<バージョン>.jar`、配布用 zip を `AKTradeExpansion-<バージョン>.zip` にした（B案）。【v0.28】Mod ID も `ak_trade_expansion` に変更（C案、Q51）。アイテムID・データパックの名前空間・設定ファイル名 `ak_trade_expansion.json`・管理コマンド `/aktradeex` も新しい名前になる。パッケージ `com.akf.tradeexpansion` は変えない | L-3 |
 | Q2 | 開発経験・想定プレイ・併用Modは？ | **決定**：Java経験あり／Mod開発は初めて。**ソロプレイとマルチプレイの兼用**（シングルの内部サーバーと専用サーバーの両方で同じ処理が動く設計にする、F-2）。併用Modは想定しない | F-2、5-2 |
 | Q3 | 交易窓口は「交易ブロック（屋台）」先行で良いか？ | **決定**：屋台を先行。商人NPCは今後のバージョンアップで追加（フェーズ2） | A-2 |
 | Q4 | NeoForge専用Modと併用する予定はあるか？ | **決定**：当面は Fabric 専用 | 0章 |
@@ -57,7 +57,7 @@ v0.27 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時�
 | Q19 | 差分パケット `MarketDeltaS2C` を作るか？ | **決定**：作らない。市場あたり商品は最大20件程度なので全体スナップショットの再送で十分 | F-2 |
 | Q20 | 【v0.5追加】鋳造1回（ブロック×9）で何枚のコインができるか？ | **決定（今後変更予定）**：枚数ではなく**銅換算の価値で定義**する。鉄ブロック×9 → 640c 分の鉄貨（比率10なら鉄貨64枚＝1スタック）、銅ブロック×9 → 64c 分の銅貨（銅貨64枚）。素材を市場で売るより大幅に安く（鉄インゴット1個あたり約8c、市場の売値は48c）、交易が主な入手手段のまま、大量の素材の受け皿になる | E-2 |
 | Q21 | 【v0.5追加】市場の規模（レベル）が下がった時（ベッドが壊された等）、増えた商品を減らすか？ | **決定（v0.27 で変更）**：減らす。レベルは測った値そのものにし、下がった時は最後に並んだ商品から外す。外した商品の相場と在庫は保存し、レベルが戻ると同じ商品が同じ状態で戻る（同じ乱数を使うので、ベッドの置き直しで品揃えを選び直す抜け道にはならない）。設定 `market.shrinkOnLevelDown` を OFF にすると v0.26 までの「減らさない（最高到達値を保持）」になる | D-4 |
-| Q22 | 【v0.5追加】敵モブのコインドロップの対象・量は？ | **決定**：プレイヤーが倒した敵対モブのみ。銅貨 0〜2枚（ドロップ増加のレベル L ごとに最大 +1、つまり追加 0〜L 枚。v0.14.2 で確定）、まれに鉄貨1枚（2.5%）。対象はエンティティタグ `#trade_expansion:drops_coins` で調整可 | E-2 |
+| Q22 | 【v0.5追加】敵モブのコインドロップの対象・量は？ | **決定**：プレイヤーが倒した敵対モブのみ。銅貨 0〜2枚（ドロップ増加のレベル L ごとに最大 +1、つまり追加 0〜L 枚。v0.14.2 で確定）、まれに鉄貨1枚（2.5%）。対象はエンティティタグ `#ak_trade_expansion:drops_coins` で調整可 | E-2 |
 | Q23 | 【v0.6追加】エメラルド貨を追加する。村人交易でエメラルドが大量に手に入るため、価値は銅貨より低くしたい。どう扱うか？ | **決定**：所持金に数えない**補助コイン**とし、市場が「商品」として買い取る（相場で値が変わる）。10枚を1単位として売買することで、1枚あたりの価値を銅貨（1c）より低くする | E-5、D-2 |
 | Q24 | 【v0.6追加】エメラルド貨の入手方法は？ | **決定**：エメラルドブロック1個 → エメラルド貨1枚（石切台、一方通行。v0.8：不定形クラフトはバニラの「エメラルドブロック→エメラルド9個」と材料が同じで衝突するため石切台に変更）。1個から作れる枚数は設定 `currency.emeraldCoinsPerBlock`（既定1、0 でレシピ無効）で変更できる。エメラルドそのものは市場の商品にしない | E-5、G章 |
 | Q25 | 【v0.6追加】エメラルド貨の使い道は？ | **決定**：案Bのとおり、市場で売って銅貨に換えるだけ（相場で値が変わる）。エメラルド貨で直接ものは買えず、市場からエメラルド貨を買うこともできない | E-5 |
@@ -79,18 +79,18 @@ v0.27 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時�
 | Q41 | 【v0.12追加】村ごとの価格差（平原は小麦が安く砂漠は高い等）はどうするか？ | **決定**：今の仕様（プロファイルの価格倍率、商品設計書）のままとする | D-1、goods-design |
 | Q42 | 【v0.12追加】村ごとの不足品（高く買い取る品）を作るか？ | **決定**：作る。数値は既定案で今後調整。不足品ではクラフトで儲かることがあるが、例外として認める | K章 |
 | Q43 | 【v0.13追加】商人NPC（段階10）を段階9（村への自然生成）より先に作る場合、NPCをどう出すか？ | **決定**：交易所を開いた時に、その交易所に紐付いた商人がいなければ正面に1体出す。スポーンエッグと `/summon` でも出せる。【v0.15.1】段階9は v0.14 で先に実装したため、村の生成時に商人を出す処理（出し方④）は段階10で一緒に作る。残りの実施順は 10 → 14 | A-5、5-1 |
-| Q44 | 【v0.14.1追加】食料・松明・原木など、市場で使われてなくなる品の在庫と買取数を早く戻すか？ | **決定**：「消耗品」とし、在庫過多は1日で目標在庫に戻し、相場の半減期を1日にする。対象はタグ `#trade_expansion:consumables`。後から設定 `consumables.add/remove` と `/tradeex consumable` で追加・削除できる（v0.14.2） | B-3、G章 |
+| Q44 | 【v0.14.1追加】食料・松明・原木など、市場で使われてなくなる品の在庫と買取数を早く戻すか？ | **決定**：「消耗品」とし、在庫過多は1日で目標在庫に戻し、相場の半減期を1日にする。対象はタグ `#ak_trade_expansion:consumables`。後から設定 `consumables.add/remove` と `/aktradeex consumable` で追加・削除できる（v0.14.2） | B-3、G章 |
 | Q45 | 【v0.14.3追加】交易画面の所持金をどこに出すか？（右上は他のModがボタンを足すことがある） | **決定**：既定はプレイヤーインベントリの右。クライアントの設定 `client.balancePosition` で「売却枠の下」「右上」にも変えられる | A-4、G章 |
 | Q46 | 【v0.15追加】市場に名前を付けられるようにするか？ | **決定**：名札・名前付きの交易所・管理コマンドで名付ける。変えられるのは名付け親と OP（名前の無い市場は誰でも、設定 `market.renamePermission`）。名札は1枚使う | C-4 |
 | Q48 | 【v0.18追加】村でない場所に、クラフトした交易所で新しい市場を作れるようにするか？ | **決定**：設定 `market.newMarketRequires` で切り替える。1：村の構造物の中だけ／2：ベッドの数／3：村人の数／4：ベッドと村人の数（ベッド ≧ 村人）。既定は4。Q12 の「無い場所では新しい市場を作る」に条件を付けた | C-1、G章 |
 | Q49 | 【v0.20追加】村人交易のコイン化（段階14）の支払い方法・エメラルドの扱い・抜け道対策・進め方は？ | **決定**：①代金は財布・コインから自動で引き落とす（支払い欄にコインは置かない）②コイン化している間、代金のエメラルド分はエメラルドでは払えない ③抜け道対策（H-2 案A）を最初の段階（14a）から入れる ④14a→14b→14c と段階ごとに作り、ゲーム内で確認しながら進める | H章 |
 | Q50 | 【v0.24.1追加】村人ゾンビを治療した時などの値引きを、コインの代金にどう効かせるか？ | **決定**：今のまま。値引き後のエメラルドの数で代金を計算するので、エメラルドの交易と同じ割合で安くなる。ただし、①もともとエメラルド1個の取引はバニラと同じくそれ以上安くならず、②市場の商品と同じ品は抜け道対策の下限（H-3）が優先される。下限にも値引きを効かせる案・1エメラルド未満まで細かく値引きする案は採らない | H-3 |
-| Q51 | 【v0.25.1追加】Mod ID も「AK Trade Expansion」に合わせて変えるか（C案）？ | **保留（TODO）**：最終的には C案（Mod ID の変更）にする。v0.25 では B案（表示名とファイル名だけ）にした。作業の内容と注意は L-3 | L-3 |
+| Q51 | 【v0.25.1追加】Mod ID も「AK Trade Expansion」に合わせて変えるか（C案）？ | **決定（v0.28 で実施）**：C案。新しい Mod ID は `ak_trade_expansion`、管理コマンドは `/aktradeex`。Java のパッケージ名 `com.akf.tradeexpansion` は変えない。公開前なので、古いバージョンで遊んだワールドの引き継ぎ処理は入れない（テスト用のワールドは作り直す）。詳しくは L-3 | L-3 |
 | Q52 | 【v0.27追加】大量に買うと割引するか？ | **決定**：購入だけ割引する（売却には付けない）。1回の取引の個数で段階を決め、既定は16個以上で5%引き・64個以上で10%引き（設定 `trade.bulkDiscounts`）。「買ってすぐ売り戻す」と儲かる値にならないよう、商品ごとに割引率の上限を自動で付ける（B-5） | B-5、G章 |
 | Q53 | 【v0.27追加】設定画面で、取り扱う商品と消耗品をアイコンで選んで追加・削除できるようにするか？ | **決定**：する。設定画面の「商品」タブから専用の画面を開き、アイテムのアイコン一覧（検索つき）から選んで「追加」、登録済みの一覧から選んで「削除」。追加した商品は基準価格だけを入れ、ほかの値は既定値。追加した商品はどの市場でも「本日の掘り出し物」（D-5）として並ぶことがある | D-2、D-5、G章 |
 | Q54 | 【v0.27追加】市場の規模に応じて、ふだん扱わない品を並べるか？ | **決定**：「本日の掘り出し物」として、その市場の品揃えに無い商品をゲーム内で1日ごとに選び直して並べる。数はレベル1〜2で1品、3以上で2品。価格は1.2倍、在庫は目標在庫の半分から（設定 `market.specialGoods`・`specialPriceMultiplier`・`specialStockRatio`）。商品として定義されていないアイテムは並べない（価格が決まらないため） | D-5 |
 | Q55 | 【v0.27追加】既定の商品に、ダイヤの剣以外の装備・道具と、オーバーワールドのすべての原木を加えるか？ | **決定**：加える。ダイヤの防具4種・道具4種（エンチャント付きは扱わない）と、シラカバ・ダークオーク・サクラ・ペールオーク・ポプラの原木。値段は別紙 goods-design v0.6 | D-3、別紙 2-3・2-7 |
-| Q47 | 【v0.17追加】商品に花を追加するか？ | **決定**：20種を追加し、すべて消耗品にする（価格は別紙 2-12）。花に限らず、商品の値は設定 `goods` と `/tradeex goods` で後から変えられるようにする | D-2、G章、goods-design |
+| Q47 | 【v0.17追加】商品に花を追加するか？ | **決定**：20種を追加し、すべて消耗品にする（価格は別紙 2-12）。花に限らず、商品の値は設定 `goods` と `/aktradeex goods` で後から変えられるようにする | D-2、G章、goods-design |
 
 ---
 
@@ -120,13 +120,13 @@ v0.27 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時�
 
 | 項目 | 内容 |
 |---|---|
-| ID | `trade_expansion:market_stall` |
+| ID | `ak_trade_expansion:market_stall` |
 | 形状 | 屋台風（向きあり、`HORIZONTAL_FACING`） |
 | 入手 | 村に自然生成（屋台入りの建物ピースを村のテンプレートプールに追加、段階9）＋クラフト（仮レシピ：1段目 カーペット×3／2段目 木材・エメラルド・木材／3段目 木材・樽・木材。`#minecraft:wool_carpets`, `#minecraft:planks`） |
 | 採掘 | 斧（`#minecraft:mineable/axe`）。ドロップは自身 |
 | 形状（現状） | 屋台風のモデル（カウンター・柱・縞模様の日よけ・商品。v0.14、段階11）。当たり判定もモデルの形（北向きの形を向きに合わせて回転）。光を通す（`noOcclusion`） |
 | ブロックエンティティ | 持つ（`market_id` を long で保存。未割当は `-1`）。**プレイヤーが設置した時**はその場で市場を割当（生成元 `crafted`）。**プレイヤー以外の方法で置かれたもの**（自然生成・`/setblock` 等）は、最初に右クリックされた時に割当（生成元 `natural`）。ワールド生成は別スレッドで動くため、生成中に SavedData を触らない。【v0.4.1】生成元 `origin`（`natural`/`crafted`）も一緒に保存する（段階8で実装済み） |
-| 割り当て直し（v0.4.1） | 所属市場が `/tradeex market delete`（4-2）で削除されていた場合、次の右クリックで割り当て直す。判定には**保存した生成元**を使う（クラフト品は C-1 の最小距離制限がそのままかかり、自然生成品はかからない）。クラフト品が制限に引っかかった時は、画面を開かずに理由をチャットに表示し、**ブロックは壊さない**（設置時と違い、他人の屋台を右クリックしただけで壊れるのを防ぐ。プレイヤーは壊して置き直す）。`origin` が保存されていない古い屋台は、`market_id = -1` なら `natural`、それ以外なら `crafted` とみなす（制限がかかる安全側） |
+| 割り当て直し（v0.4.1） | 所属市場が `/aktradeex market delete`（4-2）で削除されていた場合、次の右クリックで割り当て直す。判定には**保存した生成元**を使う（クラフト品は C-1 の最小距離制限がそのままかかり、自然生成品はかからない）。クラフト品が制限に引っかかった時は、画面を開かずに理由をチャットに表示し、**ブロックは壊さない**（設置時と違い、他人の屋台を右クリックしただけで壊れるのを防ぐ。プレイヤーは壊して置き直す）。`origin` が保存されていない古い屋台は、`market_id = -1` なら `natural`、それ以外なら `crafted` とみなす（制限がかかる安全側） |
 | 設置の拒否（C-1） | 実装上は「いったん設置 → 割当に失敗したら即座に破壊」。サバイバルではアイテムが戻り、クリエイティブでは戻らない。理由（最寄り市場までの距離、統合半径、最小距離）をチャットに表示 |
 | 破壊 | 自然生成品は破壊不可にする設定 `worldgen.protectNaturalStalls`（既定 false。v0.14 実装：ON の時、`origin` が `natural` の屋台はサバイバルでは壊せず、アクションバーに理由を出す。クリエイティブでは壊せる）。破壊時は市場の `stallPositions` から外す（市場自体は残す）。画面を開いているプレイヤーの画面は、メニューの有効性チェック（`stillValid`：屋台がまだ存在し、`trade.maxDistance` 以内にいるか）で自動的に閉じる。【v0.13】紐付いた商人NPC（A-5）も一緒に消える |
 
@@ -188,10 +188,10 @@ v0.27 時点で Q38・Q39・Q51 を除き決定済み（Q44〜Q50 は実装時�
 
 | 項目 | 内容（既定案） |
 |---|---|
-| ID | エンティティ `trade_expansion:trader`。見た目は村人のモデルを流用する |
+| ID | エンティティ `ak_trade_expansion:trader`。見た目は村人のモデルを流用する |
 | 出し方①（基本） | **交易所を開いた時**に、その交易所に紐付いた商人がいなければ（死んだ・消えた・まだ出していない）、交易所の正面（`FACING` の向き）に1体出す（`trader.spawnOnOpen`、既定 ON）。正面がふさがっていて出せない時は出さない（取引はそのまま交易所でできる）。紐付けは交易所のブロックエンティティに商人の UUID を保存して管理する |
-| 出し方② | スポーンエッグ `trade_expansion:trader_spawn_egg`（クリエイティブタブに追加） |
-| 出し方③ | コマンド `/summon trade_expansion:trader`（バニラのコマンドがそのまま使える） |
+| 出し方② | スポーンエッグ `ak_trade_expansion:trader_spawn_egg`（クリエイティブタブに追加） |
+| 出し方③ | コマンド `/summon ak_trade_expansion:trader`（バニラのコマンドがそのまま使える） |
 | 出し方④ | 村の生成時に交易所の前に1体出す（`worldgen.spawnTraderNpc`）。村の屋台の建物のNBTに商人を入れる形で、段階10（v0.16）で実装した |
 | 所属する市場 | ①④は紐付いた交易所の市場（交易所が割り当て直されたら、それに従う）。②③は出た場所から C-1 と同じ規則で、`mergeRadius` 以内の**既存の市場**に所属する。所属する市場が削除されていた時は、次に右クリックされた時に同じ規則で探し直す。近くに市場が無ければ、右クリックしても「近くに市場がありません」と表示するだけ（**NPC から新しい市場は作らない**。交易所を置き直さずに市場を増やす抜け道を防ぐ） |
 | 動き | その場からほとんど動かない（向きだけ変える）。消えない（デスポーンしない） |
@@ -259,8 +259,8 @@ lastUpdateGameTime ← 現在
 - サーバー停止中は時間が進まないので回復もしない（自然）。
 - r と c には全体倍率 `recovery.restockMultiplier` を掛ける。
 - 【v0.14.1】**消耗品**：食料・松明・燃料・原木・木材など、市場で使われてなくなる品は、在庫も買取数も早く回復させる。
-  - 対象はアイテムタグ `#trade_expansion:consumables`（同梱：作物・野菜・果物・生肉・魚・料理・卵・牛乳・砂糖・コーラスフルーツ・松明・魂の松明・石炭・木炭・`#minecraft:logs`・`#minecraft:planks`・棒・丸石・砂・ガラス・花20種（v0.17）。腐った肉・金のリンゴ・金のニンジンは入れない（消費される品ではない、または高級品のため）。
-  - 【v0.14.2】**後から追加・削除できる**：①データパックでタグを上書き、②設定 `consumables.add`（タグに無くても消耗品にするアイテムID）・`consumables.remove`（タグにあっても消耗品にしないアイテムID）、③管理コマンド `/tradeex consumable add|remove|reset <アイテム>`（②の一覧を書き換えて設定ファイルを読み直す。`reset` は②から消してタグの指定に戻す）、`/tradeex consumable list`（今の消耗品の商品と②の内容）。判定は「`remove` にある → 消耗品でない、`add` にあるかタグにある → 消耗品」。設定画面では「商品」タブの「追加の商品と消耗品」画面で、アイテムのアイコンから選んで追加・除外できる（v0.27。v0.26 までは「回復」タブの文字の一覧）。
+  - 対象はアイテムタグ `#ak_trade_expansion:consumables`（同梱：作物・野菜・果物・生肉・魚・料理・卵・牛乳・砂糖・コーラスフルーツ・松明・魂の松明・石炭・木炭・`#minecraft:logs`・`#minecraft:planks`・棒・丸石・砂・ガラス・花20種（v0.17）。腐った肉・金のリンゴ・金のニンジンは入れない（消費される品ではない、または高級品のため）。
+  - 【v0.14.2】**後から追加・削除できる**：①データパックでタグを上書き、②設定 `consumables.add`（タグに無くても消耗品にするアイテムID）・`consumables.remove`（タグにあっても消耗品にしないアイテムID）、③管理コマンド `/aktradeex consumable add|remove|reset <アイテム>`（②の一覧を書き換えて設定ファイルを読み直す。`reset` は②から消してタグの指定に戻す）、`/aktradeex consumable list`（今の消耗品の商品と②の内容）。判定は「`remove` にある → 消耗品でない、`add` にあるかタグにある → 消耗品」。設定画面では「商品」タブの「追加の商品と消耗品」画面で、アイテムのアイコンから選んで追加・除外できる（v0.27。v0.26 までは「回復」タブの文字の一覧）。
   - 消耗品かどうかは価格の計算のたびに判定するので、変更はすぐに全市場へ反映する（過去の在庫・相場はそのまま、以降の回復の速さが変わる）。開いている交易画面は次のスナップショットから新しい値で計算する。
   - 消費量 c：商品定義の `consume_per_day` → 無ければ、消耗品は `T × recovery.consumableMultiplier`（既定 1.0。上限まで売られても1日で T に戻る）、それ以外は `r / 2`（v0.14 までと同じ）。
   - 半減期 H：商品定義の `half_life_days` → 無ければ、消耗品は `recovery.consumableHalfLifeDays`（既定 1.0）、それ以外は `recovery.halfLifeDays`。
@@ -334,7 +334,7 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
 
 同一市場で「売る→すぐ買い戻す」で利益が出ない条件：
 `(1 + s/2)/(1 − s/2) > exp(1/τ)`。既定 `s = 0.4` なら左辺 1.5 → **τ > 2.47** なら安全。スプレッドを小さくすると必要な τ は大きくなる（例：`s=0.05` なら τ > 20）ため、設定範囲だけでは保証できない。ロード時に商品ごとに検証し、違反する定義は警告＋`τ` をこの条件を満たす値に補正する（補正後の値 = `1 / ln((1+s/2)/(1−s/2)) × 1.01`、つまり安全な最小値に1%の余裕を足す。実装：`PriceModel.ensureExploitSafe`。警告ログは段階7のデータパック読込で出す）。
-（クラフト経由の裏技：安い素材を買って高い完成品を売る、は管理コマンド `/tradeex audit`（4-2、段階11）で検出する）
+（クラフト経由の裏技：安い素材を買って高い完成品を売る、は管理コマンド `/aktradeex audit`（4-2、段階11）で検出する）
 
 #### B-7. 既定値
 
@@ -380,8 +380,8 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
 - 【v0.19】**置き場所の案内**：どこに置けば市場に加わる／新しい市場ができる／置けないかを、プレイヤーが確かめられるようにする。
   | 方法 | 内容 |
   |---|---|
-  | `/tradeex where`（誰でも使える） | 今いる場所について、村の範囲内か（範囲内なら村の範囲の座標）、一番近い市場とその距離、規模を測る半径の中のベッド・村人の数、【v0.27.5】ここに市場を作った場合の規模（レベル名）、ここに交易所を置いた時の結果を表示する |
-  | `/tradeex where show` / `hide` | 範囲を30秒間パーティクルで地面に描く（緑：村の範囲、黄：近くの市場の「同じ市場になる範囲」`mergeRadius`、赤：「新しい市場を作れない範囲」`minNewMarketDistance`、青：今いる場所からベッド・村人を数える範囲 `levelRadius`）。描くのはプレイヤーから64ブロック以内の部分だけ、市場は近い順に5つまで。`hide` で止める |
+  | `/aktradeex where`（誰でも使える） | 今いる場所について、村の範囲内か（範囲内なら村の範囲の座標）、一番近い市場とその距離、規模を測る半径の中のベッド・村人の数、【v0.27.5】ここに市場を作った場合の規模（レベル名）、ここに交易所を置いた時の結果を表示する |
+  | `/aktradeex where show` / `hide` | 範囲を30秒間パーティクルで地面に描く（緑：村の範囲、黄：近くの市場の「同じ市場になる範囲」`mergeRadius`、赤：「新しい市場を作れない範囲」`minNewMarketDistance`、青：今いる場所からベッド・村人を数える範囲 `levelRadius`）。描くのはプレイヤーから64ブロック以内の部分だけ、市場は近い順に5つまで。`hide` で止める |
   | 交易所を持った時の案内 | 交易所を手に持っている間、1秒ごとにアクションバーへ、見ているブロックの隣（何も見ていなければ立っている場所）に置いた時の結果を出す（`trade.showPlacementHint`、既定 ON） |
   - 結果の判定は実際の設置と同じ処理（`MarketRegistry.preview`）を使うので、案内と実際の結果は一致する。
   - 村の範囲は Minecraft 内部の「村の構造物」の範囲（家や道を全部囲む四角）。`newMarketRequires = VILLAGE` の判定もこの範囲を使う。
@@ -396,7 +396,7 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
   ```
   在庫 `S` は `T` から始める。これにより「近場（Rnear以内）は同じ相場」が後から作った市場でも保たれる。
 - 市場が保持する交易所が0になっても市場データは残す（再設置で復活）。
-- 【v0.4.1】管理者が市場の相場を戻したい時は、市場を削除せず `/tradeex market reset` で状態だけ初期化する（市場IDが残るので屋台の割り当て直しは起きない）。市場そのものを消す `/tradeex market delete` を使った場合、所属していた屋台は次の右クリックで割り当て直され、クラフト屋台には上の新規市場の制限がかかる（A-3）。
+- 【v0.4.1】管理者が市場の相場を戻したい時は、市場を削除せず `/aktradeex market reset` で状態だけ初期化する（市場IDが残るので屋台の割り当て直しは起きない）。市場そのものを消す `/aktradeex market delete` を使った場合、所属していた屋台は次の右クリックで割り当て直され、クラフト屋台には上の新規市場の制限がかかる（A-3）。
 
 #### C-2. 距離減衰（相場の波及）
 
@@ -428,7 +428,7 @@ w(d) = 1                                  (d ≤ Rnear)
 | オーバーワールド | 通常 |
 | ネザー | 扱う商品はネザー用のプロファイルで決まる（D-2、Q10）。独立した市場群（オーバーワールドへ波及しない）。設定 `distance.linkNetherToOverworld=true` で、ネザー座標×8 をオーバーワールド座標とみなして相互波及 |
 | エンド | 扱う商品はエンド用のプロファイルで決まる。独立。距離計算は通常通り（外縁の島同士でも波及） |
-| 他Modの次元 | 独立（`trade_expansion:default` プロファイル） |
+| 他Modの次元 | 独立（`ak_trade_expansion:default` プロファイル） |
 
 - 次元ごとに扱う商品が異なる（Q10）ため、`distance.linkNetherToOverworld=true` でも波及するのは**両方の次元の市場が扱っている商品だけ**（C-2 の「波及先が扱っていない商品は無視」による）。
 - `distance.linkNetherToOverworld` は v0.22 時点で未実装（設定値だけある）。
@@ -441,9 +441,9 @@ w(d) = 1                                  (d ≤ Rnear)
 |---|---|
 | 名札で名付け | 金床で名前を付けた名札を持って交易所を右クリックすると、その交易所の市場の名前になる。サバイバルでは名札を1枚使う（クリエイティブでは減らない）。名前の無い名札で右クリックした時は普通に交易画面を開く |
 | 名前付きの交易所 | 金床で名前を付けた交易所を置いて**新しい市場を作った時**だけ、その名前を市場名にする。既存の市場に加わる時は名前を使わない |
-| 管理コマンド | `/tradeex market name <ID> <名前>`（名前は空白を含んでもよい）、`/tradeex market name <ID> reset`（名前を消して自動の名前に戻す）。権限は他の管理コマンドと同じ（`command.permissionLevel`） |
+| 管理コマンド | `/aktradeex market name <ID> <名前>`（名前は空白を含んでもよい）、`/aktradeex market name <ID> reset`（名前を消して自動の名前に戻す）。権限は他の管理コマンドと同じ（`command.permissionLevel`） |
 | 自動の名前 | 名前が無い時は「プロファイルの表示名 #ID」（例：平原の村 #12）。プロファイルに表示名が無ければ「市場 #12」 |
-| 表示 | 交易画面のタイトル・掲示板の市場一覧（I章）は「名前（レベル名）」。交易所を置いた時のメッセージ、`/tradeex market info` にも出す |
+| 表示 | 交易画面のタイトル・掲示板の市場一覧（I章）は「名前（レベル名）」。交易所を置いた時のメッセージ、`/aktradeex market info` にも出す |
 | 名前の扱い | 書式コード（色など）を外し、前後の空白を除き、最大32文字に切る。空になる名前は使わない |
 | 変えられる人 | 設定 `market.renamePermission`：`NAMER_OR_OP`（既定）＝ OP と「名付け親」、名付け親がまだいない市場は誰でも／`ANYONE`＝誰でも／`OP_ONLY`＝OP だけ。名付け親は、プレイヤーが作った市場では最初の交易所を置いた人、それ以外では最初に名前を付けた人。シングルプレイの持ち主はいつでも変えられる。管理コマンドはこの制限を受けない |
 | 保存 | 市場の保存データに名前と名付け親の UUID を持つ（F-1）。市場を削除すれば消える |
@@ -457,7 +457,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 #### D-1. 決定ロジック
 
-市場が**作られた時に**決定し、保存する。その後は**市場のレベルが上がった時だけ商品を追加**する（D-4）。後でデータパックを変えたら `/tradeex market reroll` で再抽選。
+市場が**作られた時に**決定し、保存する。その後は**市場のレベルが上がった時だけ商品を追加**する（D-4）。後でデータパックを変えたら `/aktradeex market reroll` で再抽選。
 
 1. 市場位置の情報を集める：次元、バイオーム（タグ）、含まれる構造物（村・前哨基地など）、村タイプ（バイオームから `VillagerType` 相当を導出：plains/desert/savanna/snow/taiga/jungle/swamp）、生成元（自然生成 or クラフト設置）、**市場レベル**（D-4）。
 2. 全 `market_profile` の `conditions` を評価し、合致したものから `priority` が最も高いものを採用（同点は `weight` で抽選）。プロファイルは一度決めたら保存し、レベルが上がっても変えない。
@@ -477,12 +477,12 @@ w(d) = 1                                  (d ≤ Rnear)
 
 #### D-2. データパック形式
 
-配置：`data/<namespace>/trade_expansion/market_profile/<name>.json` と `data/<namespace>/trade_expansion/goods/<name>.json`
+配置：`data/<namespace>/ak_trade_expansion/market_profile/<name>.json` と `data/<namespace>/ak_trade_expansion/goods/<name>.json`
 
 **商品定義（goods）**：商品のデフォルト値
 
 ```json
-// data/trade_expansion/trade_expansion/goods/diamond_sword.json
+// data/ak_trade_expansion/ak_trade_expansion/goods/diamond_sword.json
 {
   "item": "minecraft:diamond_sword",
   "base_price": 900,
@@ -500,14 +500,14 @@ w(d) = 1                                  (d ≤ Rnear)
 - `buy` / `sell` は**プレイヤー視点**（`buy`=プレイヤーが買える、`sell`=プレイヤーが売れる）。
 - 【v0.6】任意項目 `unit`（取引単位、既定1）：この数をまとめて1単位として売買する（B-5）。1個あたりの価値を 1c 未満にしたい商品に使う。
 - 【v0.14.1】任意項目 `consume_per_day`（在庫が目標より多い時に1日に減る数）と `half_life_days`（相場のずれの半減期）：省略時は B-3 の消耗品の扱いに従う。
-- 【v0.17】**設定ファイルで上書きできる**：設定の `goods`（商品ID → 値）に書いた値が、商品定義の同じ項目より優先される。書ける項目は `base_price`・`elasticity`・`target_stock`・`max_stock`・`restock_per_day`・`consume_per_day`・`half_life_days`・`spread`・`buy`・`sell`（範囲は商品定義と同じ。`buy` と `sell` を両方 false にすると、その商品を扱わなくなる）。商品ID の名前空間を省くと `trade_expansion:` とみなす。管理コマンド `/tradeex goods set <商品> <項目> <値>`・`/tradeex goods reset <商品> [項目]`・`/tradeex goods info <商品>`（データパックの値と設定の値を並べて表示）でも変えられ、変更は設定ファイルに保存してすぐ全市場に反映する。どの市場に並ぶか（プロファイル）はデータパックで変える。
-- 【v0.27】**設定ファイルで商品を追加できる**（Q53）：設定の `goods` に、データパックに無い商品IDで `item`（アイテムID）と `base_price` を書くと、新しい商品になる。ほかの項目は省略時の既定値（`target_stock` 16 など）。例：`{"trade_expansion:melon": {"item": "minecraft:melon", "base_price": 12}}`。存在しないアイテムは警告して無視する。追加した商品はどのプロファイルにも入らないが、どの市場でも「本日の掘り出し物」（D-5）として並ぶことがある。設定画面の「追加の商品と消耗品」画面でアイコンから選んで追加できる（商品IDは `trade_expansion:<アイテムのパス>`、他Modのアイテムは `trade_expansion:<名前空間>_<パス>`）。
+- 【v0.17】**設定ファイルで上書きできる**：設定の `goods`（商品ID → 値）に書いた値が、商品定義の同じ項目より優先される。書ける項目は `base_price`・`elasticity`・`target_stock`・`max_stock`・`restock_per_day`・`consume_per_day`・`half_life_days`・`spread`・`buy`・`sell`（範囲は商品定義と同じ。`buy` と `sell` を両方 false にすると、その商品を扱わなくなる）。商品ID の名前空間を省くと `ak_trade_expansion:` とみなす。管理コマンド `/aktradeex goods set <商品> <項目> <値>`・`/aktradeex goods reset <商品> [項目]`・`/aktradeex goods info <商品>`（データパックの値と設定の値を並べて表示）でも変えられ、変更は設定ファイルに保存してすぐ全市場に反映する。どの市場に並ぶか（プロファイル）はデータパックで変える。
+- 【v0.27】**設定ファイルで商品を追加できる**（Q53）：設定の `goods` に、データパックに無い商品IDで `item`（アイテムID）と `base_price` を書くと、新しい商品になる。ほかの項目は省略時の既定値（`target_stock` 16 など）。例：`{"ak_trade_expansion:melon": {"item": "minecraft:melon", "base_price": 12}}`。存在しないアイテムは警告して無視する。追加した商品はどのプロファイルにも入らないが、どの市場でも「本日の掘り出し物」（D-5）として並ぶことがある。設定画面の「追加の商品と消耗品」画面でアイコンから選んで追加できる（商品IDは `ak_trade_expansion:<アイテムのパス>`、他Modのアイテムは `ak_trade_expansion:<名前空間>_<パス>`）。
 - 【v0.6】任意項目 `auto_add`（条件のリスト。書式は market_profile の `conditions` と同じ）：書いてあれば、プロファイルに関係なく条件に合う市場がこの商品を扱う（D-1 手順0。商品数 `N` とは別枠）。空のリスト `[]` なら全市場。省略時は自動追加しない。条件は市場を作った時と `market reroll` の時に評価する。
 - 省略可能な項目（`elasticity`, `max_stock`, `spread`, `accept_damaged` など）は省略すると全体設定（G章）の既定値を使う。**商品定義に書いてあればそちらが優先**。
 - 付加情報（データコンポーネント）で区別が必要な商品は、任意項目 `components` で絞り込む。指定した付加情報が一致するアイテムだけを同じ商品として扱い、購入時はその付加情報を付けたアイテムを渡す。
 
 ```json
-// data/trade_expansion/trade_expansion/goods/potion_healing.json
+// data/ak_trade_expansion/ak_trade_expansion/goods/potion_healing.json
 {
   "item": "minecraft:potion",
   "components": { "minecraft:potion_contents": { "potion": "minecraft:healing" } },
@@ -521,33 +521,33 @@ w(d) = 1                                  (d ≤ Rnear)
 **市場プロファイル（market_profile）**
 
 ```json
-// data/trade_expansion/trade_expansion/market_profile/desert_village.json
+// data/ak_trade_expansion/ak_trade_expansion/market_profile/desert_village.json
 {
-  "display_name": { "translate": "trade_expansion.profile.desert_village" },
+  "display_name": { "translate": "ak_trade_expansion.profile.desert_village" },
   "priority": 10,
   "weight": 1,
   "conditions": [
-    { "type": "trade_expansion:structure", "structure": "#minecraft:village" },
-    { "type": "trade_expansion:biome", "biome": "#minecraft:is_badlands_or_desert" }   
+    { "type": "ak_trade_expansion:structure", "structure": "#minecraft:village" },
+    { "type": "ak_trade_expansion:biome", "biome": "#minecraft:is_badlands_or_desert" }   
   ],
   "pools": [
     {
       "rolls": { "min": 4, "max": 6 },
       "entries": [
-        { "goods": "trade_expansion:bread",  "weight": 10 },
-        { "goods": "trade_expansion:cactus", "weight": 8, "base_price_multiplier": 0.5 },
-        { "goods": "trade_expansion:water_bucket", "weight": 5, "base_price_multiplier": 2.0 }
+        { "goods": "ak_trade_expansion:bread",  "weight": 10 },
+        { "goods": "ak_trade_expansion:cactus", "weight": 8, "base_price_multiplier": 0.5 },
+        { "goods": "ak_trade_expansion:water_bucket", "weight": 5, "base_price_multiplier": 2.0 }
       ]
     },
     {
       "rolls": 1,
       "entries": [
-        { "goods": "trade_expansion:diamond_sword", "weight": 1, "min_level": 4 },
-        { "goods": "trade_expansion:golden_apple",  "weight": 2, "min_level": 3 }
+        { "goods": "ak_trade_expansion:diamond_sword", "weight": 1, "min_level": 4 },
+        { "goods": "ak_trade_expansion:golden_apple",  "weight": 2, "min_level": 3 }
       ]
     }
   ],
-  "always": ["trade_expansion:wheat"],
+  "always": ["ak_trade_expansion:wheat"],
   "price_modifiers": [
     { "item_tag": "#minecraft:sand", "multiplier": 0.5 },
     { "item": "minecraft:cactus", "multiplier": 0.7 }
@@ -563,15 +563,15 @@ w(d) = 1                                  (d ≤ Rnear)
 
 | type | 引数 | 意味 |
 |---|---|---|
-| `trade_expansion:dimension` | `dimension` | 次元一致 |
-| `trade_expansion:biome` | `biome`（ID or `#タグ`） | 中心座標のバイオーム |
-| `trade_expansion:structure` | `structure`（ID or `#タグ`） | 中心がその構造物内 |
-| `trade_expansion:villager_type` | `villager_type`（例：`minecraft:plains`） | 村タイプ（v0.7：引数名を `type` から変更。条件の種類を表す `type` と重なるため） |
-| `trade_expansion:origin` | `natural` / `crafted` | 生成元 |
-| `trade_expansion:distance_from_spawn` | `min`/`max` | スポーンからの距離（遠いほど高級品、等） |
-| `trade_expansion:all_of` / `any_of` / `not` | 子条件 | 論理演算 |
+| `ak_trade_expansion:dimension` | `dimension` | 次元一致 |
+| `ak_trade_expansion:biome` | `biome`（ID or `#タグ`） | 中心座標のバイオーム |
+| `ak_trade_expansion:structure` | `structure`（ID or `#タグ`） | 中心がその構造物内 |
+| `ak_trade_expansion:villager_type` | `villager_type`（例：`minecraft:plains`） | 村タイプ（v0.7：引数名を `type` から変更。条件の種類を表す `type` と重なるため） |
+| `ak_trade_expansion:origin` | `natural` / `crafted` | 生成元 |
+| `ak_trade_expansion:distance_from_spawn` | `min`/`max` | スポーンからの距離（遠いほど高級品、等） |
+| `ak_trade_expansion:all_of` / `any_of` / `not` | 子条件 | 論理演算 |
 
-- **ディメンションごとに扱う商品を変える**（Q10）：プロファイルは原則 `trade_expansion:dimension` 条件で対象の次元を指定する。何も合致しない場合は、次元ごとの既定プロファイル `trade_expansion:default_overworld` / `default_the_nether` / `default_the_end` を使う（他Modの次元は `trade_expansion:default`）。いずれも `priority: 0`、条件なし。
+- **ディメンションごとに扱う商品を変える**（Q10）：プロファイルは原則 `ak_trade_expansion:dimension` 条件で対象の次元を指定する。何も合致しない場合は、次元ごとの既定プロファイル `ak_trade_expansion:default_overworld` / `default_the_nether` / `default_the_end` を使う（他Modの次元は `ak_trade_expansion:default`）。いずれも `priority: 0`、条件なし。
 - データパックは `/reload` で再読込。既存市場の**商品構成は変えない**が、`base_price`・`τ` 等の定義値は再読込値を使う（保存している状態 `X`, `S`, `priceFactor` は保持。`B` は D-1 の式で再計算）。
 
 #### D-3. 同梱する初期データ（目安）
@@ -612,8 +612,8 @@ w(d) = 1                                  (d ≤ Rnear)
 - **レベルが上がった時**：新しい `N` になるまで、D-1 手順3と同じ方法（新しいレベルで候補になった `min_level` の商品を含む）で商品を追加する。追加した商品の `X` は C-1 の新規市場の初期相場と同じ計算、在庫 `S` は `T` から始める。画面を開いたプレイヤーに「市場が『町』に成長しました」のように知らせる。
 - **レベルが下がった時**（ベッドが壊された、村人が死んだ等）【v0.27 で変更、Q21】：レベルを測った値まで下げ、新しい `N` になるまで、最後に並んだ商品から順に外す（`always` の商品・`auto_add` の商品・本日の掘り出し物は数えない・外さない）。外した商品は相場 `X`・在庫 `S`・相場の記録を保存しておき（休止中）、画面には出さない。外した商品の不足品（K章）も解除する。画面を開いたプレイヤーに「市場が『村』に縮小し、品揃えが減りました」のように知らせる。設定 `market.shrinkOnLevelDown` が OFF の時は v0.26 までどおり、レベルは最高到達値を保持し商品は減らさない。
 - **レベルが戻った時**（v0.27）：まず休止中の商品を、最後に外したものから順に戻す。戻した商品は、休止していた間の回復（B-3）を済ませた状態から再開する。それでも `N` に足りない時だけ、上の「レベルが上がった時」の方法で新しい商品を選ぶ。
-- 画面のタイトルにレベル名を出す（例：「平原の村 #12（町）」。市場名は C-4）。`/tradeex market info` でもレベルとベッド数（ネザー・エンドは村人の人数）を表示する。
-- `/tradeex market reset` はレベルと商品構成を保持し、`market reroll` は現在のレベルで商品を選び直す（v0.27：休止中の商品と本日の掘り出し物も捨てる）。
+- 画面のタイトルにレベル名を出す（例：「平原の村 #12（町）」。市場名は C-4）。`/aktradeex market info` でもレベルとベッド数（ネザー・エンドは村人の人数）を表示する。
+- `/aktradeex market reset` はレベルと商品構成を保持し、`market reroll` は現在のレベルで商品を選び直す（v0.27：休止中の商品と本日の掘り出し物も捨てる）。
 - 割り切り：ベッドを大量に置けばレベルを上げられる。どちらも手間に見合う程度の効果なので許容する。v0.27 からは、村人を一時的に連れて来て上げたレベルも、いなくなれば下がる（`market.shrinkOnLevelDown` が ON の時）。
 - 保存（F-1）：休止中の商品は市場の `shelved`（商品ID・状態・外した時刻）に入れる。
 
@@ -643,11 +643,11 @@ w(d) = 1                                  (d ≤ Rnear)
 
 | コイン | ID | 価値（c）既定比率の場合 | 一般式（全段が同じ比率 R の場合） | スタック |
 |---|---|---|---|---|
-| 銅貨 | `trade_expansion:copper_coin` | 1 | 1 | 64 |
-| 鉄貨 | `trade_expansion:iron_coin` | 10 | R | 64 |
-| 金貨 | `trade_expansion:gold_coin` | 100 | R² | 64 |
-| ダイヤ貨 | `trade_expansion:diamond_coin` | 1,000 | R³ | 64 |
-| ネザライト貨 | `trade_expansion:netherite_coin` | 10,000 | R⁴ | 64 |
+| 銅貨 | `ak_trade_expansion:copper_coin` | 1 | 1 | 64 |
+| 鉄貨 | `ak_trade_expansion:iron_coin` | 10 | R | 64 |
+| 金貨 | `ak_trade_expansion:gold_coin` | 100 | R² | 64 |
+| ダイヤ貨 | `ak_trade_expansion:diamond_coin` | 1,000 | R³ | 64 |
+| ネザライト貨 | `ak_trade_expansion:netherite_coin` | 10,000 | R⁴ | 64 |
 
 - 比率は設定 `currency.ratios = [10,10,10,10]`（銅→鉄、鉄→金、金→ダイヤ、ダイヤ→ネザライト）で**段ごとに**指定する。各コインの価値は「その段までの比率の積」（例：金貨 = ratios[0] × ratios[1]）。全段を同じ値にすれば上表の一般式になる。
 - ネザライト貨は溶岩で燃えない（ネザライトと同様の `fireResistant`）。
@@ -668,7 +668,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 **敵モブのドロップ**（Q22）：
 
-- 対象はエンティティタグ `#trade_expansion:drops_coins`（既定：ゾンビ・スケルトン・クリーパー・クモ等の敵対モブ）。
+- 対象はエンティティタグ `#ak_trade_expansion:drops_coins`（既定：ゾンビ・スケルトン・クリーパー・クモ等の敵対モブ）。
 - **プレイヤーが倒した時だけ**落とす（ルートの条件 `LAST_DAMAGE_PLAYER` があること）。モブトラップでの無限稼ぎを抑えるため。
 - 量：銅貨 0〜2枚（ドロップ増加エンチャントのレベル L で、さらに 0〜L 枚。バニラの「レベルごとに最大+1」と同じ考え方、Q22・v0.14.2 で確定）、2.5% で鉄貨1枚。
 - 実装（v0.14）：Fabric API の `LootTableEvents.MODIFY_DROPS` で、`entities/` のルートテーブルの結果にコインを足す（ルートテーブル自体は変えない）。`currency.mobDropCoins` が OFF なら足さない。
@@ -676,12 +676,12 @@ w(d) = 1                                  (d ≤ Rnear)
 **鋳造**（3×3 クラフト）：
 
 - 銅ブロック×9 → 銅貨、鉄ブロック×9 → 鉄貨。金貨以上は鋳造できない（交易でのみ手に入る）。
-- 【v0.27.3】**鉄ブロックの鋳造は既定で無効**：アイアンゴーレムトラップで鉄インゴットが無限に手に入り、鋳造でお金がいくらでも増えて経済が壊れるため。設定 `currency.allowIronMinting`（既定 false）を ON にし、かつ `currency.allowMinting` も ON の時だけレシピを読み込む（読み込み条件 `trade_expansion:iron_minting_enabled`）。銅ブロックの鋳造は今までどおり `allowMinting` だけで決まる。鉄インゴットは商品として市場に売ることはできるが、市場の在庫上限（買取停止、B-4）と値下がりで1日に換金できる量が限られる。
-- 出力は**銅換算の価値**で定義する（Q20。今後変更の可能性あり）。独自のレシピ形式 `trade_expansion:minting`（`"value": 640` のように銅換算額を書く）を作り、完成数はその時のコイン比率から `value ÷ コインの価値`（切り捨て、1〜64枚）で計算する。完成数はレシピを読み込んだ時（サーバー起動・`/reload`）のコイン比率で決まるので、比率を変えた後は `/reload` が必要（v0.14）。
+- 【v0.27.3】**鉄ブロックの鋳造は既定で無効**：アイアンゴーレムトラップで鉄インゴットが無限に手に入り、鋳造でお金がいくらでも増えて経済が壊れるため。設定 `currency.allowIronMinting`（既定 false）を ON にし、かつ `currency.allowMinting` も ON の時だけレシピを読み込む（読み込み条件 `ak_trade_expansion:iron_minting_enabled`）。銅ブロックの鋳造は今までどおり `allowMinting` だけで決まる。鉄インゴットは商品として市場に売ることはできるが、市場の在庫上限（買取停止、B-4）と値下がりで1日に換金できる量が限られる。
+- 出力は**銅換算の価値**で定義する（Q20。今後変更の可能性あり）。独自のレシピ形式 `ak_trade_expansion:minting`（`"value": 640` のように銅換算額を書く）を作り、完成数はその時のコイン比率から `value ÷ コインの価値`（切り捨て、1〜64枚）で計算する。完成数はレシピを読み込んだ時（サーバー起動・`/reload`）のコイン比率で決まるので、比率を変えた後は `/reload` が必要（v0.14）。
   - 既定：鉄ブロック×9 → 640c 分の鉄貨、銅ブロック×9 → 64c 分の銅貨（比率10ならどちらも64枚）。
   - 上限64枚（スタック上限）に当たる場合は価値が減る（例：銅→鉄の比率が5なら 640c ÷ 5 = 128枚 → 64枚＝320c）。
   - 枚数をレシピに固定すると、比率を変えた時に鋳造の価値まで変わってしまう（例：比率100だと鉄貨64枚＝6,400c、鉄インゴット1個あたり約79c となり、市場で 72c で買って鋳造すると儲かる）。銅換算で定義すれば Q8（銅換算固定）と一貫する。
-  - 市場で買った素材を鋳造しても損になる条件（鋳造価値 ÷ 81 ＜ そのインゴットの買値）は、`/tradeex audit` で検査している（v0.14。素材のブロックが商品でなくても、インゴット×9 のレシピ経由の買値で計算する）。
+  - 市場で買った素材を鋳造しても損になる条件（鋳造価値 ÷ 81 ＜ そのインゴットの買値）は、`/aktradeex audit` で検査している（v0.14。素材のブロックが商品でなくても、インゴット×9 のレシピ経由の買値で計算する）。
 - `currency.allowMinting=false` の時はレシピを無効にする（Fabric の Resource Conditions API で設定値を見る独自条件を作る。同じ仕組みをエメラルド貨で実装済み、E-5）。
 - コイン比率（E-1）を変えると出力枚数が変わり、銅換算の価値は変わらない（例：比率20なら鉄貨は1枚20cなので、鉄ブロック×9 → 鉄貨32枚）。
 
@@ -728,8 +728,8 @@ w(d) = 1                                  (d ≤ Rnear)
 
 | 項目 | 内容 |
 |---|---|
-| ID | `trade_expansion:emerald_coin`（スタック 64） |
-| 入手 | エメラルドブロック1個 → エメラルド貨1枚（**石切台**、一方通行。Q24）。不定形クラフトだとバニラの「エメラルドブロック→エメラルド9個」と材料が同じで衝突するため、石切台のレシピにする（v0.8）。枚数は `currency.emeraldCoinsPerBlock`（既定1、範囲 0〜64）。レシピ形式 `trade_expansion:emerald_coin`（石切台レシピの派生）が、レシピを読み込む時（サーバー起動・`/reload`）に設定値を完成数にする。0 の時は Fabric の読み込み条件 `trade_expansion:emerald_coin_enabled` でレシピ自体を読み込まない（v0.11、段階8） |
+| ID | `ak_trade_expansion:emerald_coin`（スタック 64） |
+| 入手 | エメラルドブロック1個 → エメラルド貨1枚（**石切台**、一方通行。Q24）。不定形クラフトだとバニラの「エメラルドブロック→エメラルド9個」と材料が同じで衝突するため、石切台のレシピにする（v0.8）。枚数は `currency.emeraldCoinsPerBlock`（既定1、範囲 0〜64）。レシピ形式 `ak_trade_expansion:emerald_coin`（石切台レシピの派生）が、レシピを読み込む時（サーバー起動・`/reload`）に設定値を完成数にする。0 の時は Fabric の読み込み条件 `ak_trade_expansion:emerald_coin_enabled` でレシピ自体を読み込まない（v0.11、段階8） |
 | 所持金 | **数えない**。支払い・お釣り・両替タブ・スニーク崩しの対象外（`WalletService` が数えるのは E-1 の5種のみ） |
 | 使い道 | 市場で売却して銅貨に換えるだけ（案B、Q25）。購入は不可（`buy: false`） |
 | 扱う市場 | **村の市場だけ**（Q26）。市場を作った時に、中心が村の構造物（`#minecraft:village`）の中にあれば扱う（`auto_add` 条件、商品数 `N` とは別枠）。ネザー・エンドやプレイヤーが村の外に作った町の市場では扱わない |
@@ -738,9 +738,9 @@ w(d) = 1                                  (d ≤ Rnear)
 **商品定義（既定）**：
 
 ```json
-// data/trade_expansion/trade_expansion/goods/emerald_coin.json
+// data/ak_trade_expansion/ak_trade_expansion/goods/emerald_coin.json
 {
-  "item": "trade_expansion:emerald_coin",
+  "item": "ak_trade_expansion:emerald_coin",
   "unit": 10,
   "base_price": 5,
   "elasticity": 128,
@@ -750,7 +750,7 @@ w(d) = 1                                  (d ≤ Rnear)
   "buy": false,
   "sell": true,
   "auto_add": [
-    { "type": "trade_expansion:structure", "structure": "#minecraft:village" }
+    { "type": "ak_trade_expansion:structure", "structure": "#minecraft:village" }
   ]
 }
 ```
@@ -769,9 +769,9 @@ w(d) = 1                                  (d ≤ Rnear)
 
 | 項目 | 内容 |
 |---|---|
-| ID | `trade_expansion:wallet`（スタック 1） |
+| ID | `ak_trade_expansion:wallet`（スタック 1） |
 | 入手 | クラフト（革×5＋糸×2。Q32） |
-| 中身 | **金額（c）だけを記録**する（データコンポーネント `trade_expansion:wallet_balance`、long）。コインの枚数ではなく銅換算の金額なので、コイン比率を変えても中身の価値は変わらない（Q8） |
+| 中身 | **金額（c）だけを記録**する（データコンポーネント `ak_trade_expansion:wallet_balance`、long）。コインの枚数ではなく銅換算の金額なので、コイン比率を変えても中身の価値は変わらない（Q8） |
 | 容量 | `wallet.capacity`（既定 20,000c ＝ネザライト貨2枚分。v0.18.1 で 100,000c から変更）。超える分はコインのまま残る |
 | 入れ方 | ①コインを財布の上に重ねる（カーソルで持ったコインを財布の上で右クリック、またはその逆。バンドルと同じ操作）②**自動収納**：財布をメインインベントリに持っている間、**拾ったコイン**を自動で財布に入れる（`wallet.autoCollect`、既定 ON）。拾う処理に Mixin（`ItemEntity.playerTouch`）で割り込む。財布から取り出したコインがすぐ財布に戻らないよう、すでにインベントリにあるコインは自動では入れない ③取引のお釣り・売却代金は財布に入る |
 | 出し方 | 財布を手に持って右クリック → 財布の画面で、コインの種類ごとに 1枚／10枚／1スタック取り出す |
@@ -792,7 +792,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 | 項目 | 内容 |
 |---|---|
-| 口座 | プレイヤーごとに1つ（UUID で管理）。サーバー全体の保存データ `trade_expansion:bank` に記録し、次元に関係なく共通（F-1） |
+| 口座 | プレイヤーごとに1つ（UUID で管理）。サーバー全体の保存データ `ak_trade_expansion:bank` に記録し、次元に関係なく共通（F-1） |
 | 窓口 | **市場レベル 3（大きな村）以上の交易画面に「銀行」タブ**が出る（`bank.minMarketLevel`、既定3）。村が育つと銀行が使えるようになる |
 | 預け入れ | 財布・手持ちのコインから。金額を指定（全額／1,000c／100c など）。支払いと同じ順で財布 → コインから取る |
 | 引き出し | 財布があれば財布へ、無ければコインで受け取る |
@@ -800,7 +800,7 @@ w(d) = 1                                  (d ≤ Rnear)
 | 死亡時 | 失わない |
 | クリエイティブ | `trade.allowCreative=false` の時は預け入れ・引き出しもできない（無限のコインで残高を作れないように） |
 | ログ | `log.trades` が ON なら `[TradeExpansion] Steve DEPOSIT 1,000c @market#12` のように出力 |
-| 管理コマンド | `/tradeex bank balance`（自分の残高）、`/tradeex bank set\|add <プレイヤー> <金額>`（管理者用、`command.permissionLevel`） |
+| 管理コマンド | `/aktradeex bank balance`（自分の残高）、`/aktradeex bank set\|add <プレイヤー> <金額>`（管理者用、`command.permissionLevel`） |
 
 #### E-8. クレジットカード（銀行残高で払うカード）【v0.9 追加】
 
@@ -808,9 +808,9 @@ w(d) = 1                                  (d ≤ Rnear)
 
 | 項目 | 内容 |
 |---|---|
-| ID | `trade_expansion:bank_card`（スタック 1） |
+| ID | `ak_trade_expansion:bank_card`（スタック 1） |
 | 発行 | 銀行タブの「カード発行」。手数料 `bank.cardFee`（既定 100c）を**銀行口座から**払う（v0.11。銀行の窓口での手続きなので口座から引く。残高が足りなければ発行できない） |
-| 持ち主 | 発行したプレイヤー専用（データコンポーネント `trade_expansion:card_owner` に UUID・名前・カード番号）。他人が拾っても使えない |
+| 持ち主 | 発行したプレイヤー専用（データコンポーネント `ak_trade_expansion:card_owner` に UUID・名前・カード番号）。他人が拾っても使えない |
 | 再発行 | 再発行すると口座のカード番号が進み、**古いカードは使えなくなる**（落とした時の保護） |
 | 使える場所 | どの市場でも（市場レベルの制限なし）。銀行タブが無い市場でもカード払いはできる |
 | 支払い | 交易画面に「支払い：カード／現金」の切り替えを出す（有効なカードをメインインベントリに持っている時だけ。既定はカード）。カードを選ぶと銀行残高から払う |
@@ -827,9 +827,9 @@ w(d) = 1                                  (d ≤ Rnear)
 
 #### F-1. 永続化
 
-- `SavedData` を **サーバー全体の SavedDataStorage**（`MinecraftServer.getDataStorage()`）に1つ。ID は `trade_expansion:markets`。全次元の市場を保持（各市場が次元IDを持つ）。（確認済：付録A）
+- `SavedData` を **サーバー全体の SavedDataStorage**（`MinecraftServer.getDataStorage()`）に1つ。ID は `ak_trade_expansion:markets`。全次元の市場を保持（各市場が次元IDを持つ）。（確認済：付録A）
   - 定義：`new SavedDataType<>(Identifier, MarketRegistry::new, CODEC, null)`。第4引数（データ変換の種類 `DataFixTypes`）は null。バニラの読み込み処理は null だと例外になるが、Fabric API（`fabric-object-builder-api-v1` の `SavedDataStorageMixin`）が null の時は変換を飛ばすため問題ない。将来データ形式を変える時は `schemaVersion` を見て自前で移行する。
-  - 保存形式は Codec（NBT）。フィールド名は snake_case（`schema_version`, `currency_ratios`, `next_id`, `markets`、市場は `id`, `dimension`, `center`, `origin`, `profile`, `level`, `last_level_check`, `stalls`, `last_update`, `goods`、v0.15 で `naming{name, namer}`（C-4）、v0.14 で `requests`, `last_request_refresh`, `next_request_id`, `shortages`（`goods`・`multiplier` のリスト）, `shortage_period`、商品は `item` と `state{price_factor, pressure, stock, last_trade, history, last_sample_day}`）。v0.14・v0.15 で増えた項目はどれも省略可（無ければ既定値）なので、`schema_version` は 2 のまま。`schema_version` 2（段階7）から商品は**商品ID**（`trade_expansion:bread`）で記録する。フィールド名は互換のため `item` のまま。版1のデータ（アイテムIDで記録）は読み込み時に `minecraft:bread` → `trade_expansion:bread` のように自動で移行する。商品は表示順を保つため Map ではなくリストで保存する。
+  - 保存形式は Codec（NBT）。フィールド名は snake_case（`schema_version`, `currency_ratios`, `next_id`, `markets`、市場は `id`, `dimension`, `center`, `origin`, `profile`, `level`, `last_level_check`, `stalls`, `last_update`, `goods`、v0.15 で `naming{name, namer}`（C-4）、v0.14 で `requests`, `last_request_refresh`, `next_request_id`, `shortages`（`goods`・`multiplier` のリスト）, `shortage_period`、商品は `item` と `state{price_factor, pressure, stock, last_trade, history, last_sample_day}`）。v0.14・v0.15 で増えた項目はどれも省略可（無ければ既定値）なので、`schema_version` は 2 のまま。`schema_version` 2（段階7）から商品は**商品ID**（`ak_trade_expansion:bread`）で記録する。フィールド名は互換のため `item` のまま。版1のデータ（アイテムIDで記録）は読み込み時に `minecraft:bread` → `ak_trade_expansion:bread` のように自動で移行する。商品は表示順を保つため Map ではなくリストで保存する。
 - 構造：
 
 ```
@@ -850,7 +850,7 @@ MarketRegistry
            GoodState { priceFactor(double), X(double), S(double), lastTradeGameTime, history: List<X>（最大14日）, lastSampleDay }   … 基準価格 B は保存せず D-1 の式で計算。history は相場グラフ用（A-4。1日1回、市場の更新時に X を記録）
 ```
 - 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
-- 【v0.9】銀行口座は別の SavedData `trade_expansion:bank`（サーバー全体に1つ）：`accounts: Map<UUID, Account>`、`Account { balance: long, cardNumber: int }`。財布の残高はアイテム側（データコンポーネント）に持つので、保存データには入らない。
+- 【v0.9】銀行口座は別の SavedData `ak_trade_expansion:bank`（サーバー全体に1つ）：`accounts: Map<UUID, Account>`、`Account { balance: long, cardNumber: int }`。財布の残高はアイテム側（データコンポーネント）に持つので、保存データには入らない。
 - 交易所ブロックエンティティは `market_id`（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）と `origin`（`natural`/`crafted`。v0.4.1 で追加、段階8で実装済み。割り当て直しの判定に使う。保存されていない古い屋台は A-3 のとおり補う）を保存。【v0.16、段階10】紐付いた商人NPCの UUID（`trader`）も保存する。商人NPC 側は `market_id`・紐付いた交易所の座標 `stall`（①④のみ）・`link_nearby_stall`（村の建物で置かれ、まだ紐付けていない印）を自分のエンティティデータに持つ（保存データには入らない）。
 - データパックで定義が消えた商品は状態を残したまま「非表示」にする（再追加で復活）。
 
@@ -868,7 +868,7 @@ MarketRegistry
 | `BankRequestC2S` | C→S | 市場ID, 操作（預け入れ／引き出し／カード発行）, 金額 | 銀行タブのボタン | 実装済 |
 | `AccountS2C` | S→C | 銀行残高, 有効なカードを持っているか, 直前の銀行操作の結果 | 画面を開いた時／取引・銀行操作の後に本人へ | 実装済 |
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
-| `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も） | ログイン時／`/tradeex reload` 時 | 実装済 |
+| `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も） | ログイン時／`/aktradeex reload` 時 | 実装済 |
 | `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 報酬額 | 依頼タブの「納品する」 | 実装済（段階13） |
 
@@ -884,20 +884,20 @@ MarketRegistry
 
 ### G. 設定項目一覧
 
-ファイル：`config/trade_expansion.json`（サーバー側。クライアントには表示用に必要な値のみ同期）。`/tradeex reload` で再読込。
+ファイル：`config/ak_trade_expansion.json`（サーバー側。クライアントには表示用に必要な値のみ同期）。`/aktradeex reload` で再読込。
 
 **設定画面（v0.10、Q35）**：Mod Menu の Mod 一覧で AK Trade Expansion の「設定」ボタンを押すと、YetAnotherConfigLib（YACL）で作った設定画面が開く。
 
 - 画面はカテゴリごとのタブに分ける：「通貨」「価格」「回復」「距離」「市場」「財布」「銀行」「取引」「掲示板・依頼・需要」（v0.14。商人・村人の項目もここに置く）「その他」（生成・ログ・管理・バニラをまとめる）「表示」。消耗品の一覧（`consumables.*`）は「回復」タブ（v0.14.2）。各項目に説明文と範囲を出す。範囲外の値は入力できないようにする（YACL の入力欄の範囲指定）。
-- 保存すると `config/trade_expansion.json` に書き込む。**シングルプレイ**では内部サーバーが同じファイルを使うので、保存した時点で反映する（`/tradeex reload` と同じ処理を呼ぶ）。
-- **マルチプレイに接続中**は、サーバー側の項目を「サーバーの値（変更不可）」として灰色で表示し、クライアント側の項目（`client.*`）だけ変更できる。サーバーの設定を変えるには、サーバーの `config/trade_expansion.json` を編集して `/tradeex reload` を実行する。
+- 保存すると `config/ak_trade_expansion.json` に書き込む。**シングルプレイ**では内部サーバーが同じファイルを使うので、保存した時点で反映する（`/aktradeex reload` と同じ処理を呼ぶ）。
+- **マルチプレイに接続中**は、サーバー側の項目を「サーバーの値（変更不可）」として灰色で表示し、クライアント側の項目（`client.*`）だけ変更できる。サーバーの設定を変えるには、サーバーの `config/ak_trade_expansion.json` を編集して `/aktradeex reload` を実行する。
 - **依存関係**：Mod Menu と YACL は任意の依存（`fabric.mod.json` の `suggests`）。入っていない環境でも Mod は動き、設定画面の代わりに設定ファイルを直接編集する。コードは Mod Menu の `modmenu` エントリーポイント（`ModMenuApi`）から YACL を呼ぶ形にし、YACL が無い時はクラスを読み込まないようにする（読み込むとクラッシュするため）。
 - **対応版**：YACL `3.9.7+26.3-fabric`（maven.isxander.dev）、Mod Menu `21.0.0`（maven.terraformersmc.com）。どちらも公式の Maven で 26.3 向けを確認済み（段階8）。`build.gradle` では `compileOnly` ＋ `localRuntime`（開発時だけ読み込み、配布物には含めない）。
 - 価格・相場など一部の項目は、変えると既存の市場の価格がすぐ変わる。設定画面の説明文でその旨を示す。
 
-> **実装状況（v0.22）**：設定ファイルは段階8で実装済み。JSON はカテゴリごとのオブジェクトで、キーは下表のとおり（例：`{"recovery": {"halfLifeDays": 2.0}, "trade": {"allowCreative": false}}`）。初回起動時に全項目を既定値で書き出す。書かれていない項目は既定値、範囲外の値は範囲内に直して警告ログを出す（ファイル全体を捨てない）。`/tradeex reload` か設定画面の保存で読み直す。表の中で機能自体がまだ無いもの（v0.20 時点：初回支給・ネザー連動・デバッグ表示・利息）は、値を保存するだけで効果はない（設定画面の説明に「未実装」と表示）。掲示板・依頼・需要・商人・村人（`board.*`・`quest.*`・`demand.*`・`trader.*`・`villager.*`）の項目は v0.14 で設定ファイルと設定画面（「掲示板・依頼・需要」タブ）に追加した。v0.27 で「商品」タブを追加し、「追加の商品と消耗品」画面（Q53）を開けるようにした。この画面はアイテムのアイコン一覧（名前・IDで検索）・選んだアイテム・基準価格の入力欄・登録済みの一覧からなり、「追加の商品」「消耗品に追加」「消耗品から除外」の3つを切り替える。「完了」で `goods`・`consumables` だけを設定ファイルに書いてすぐ読み直す（ほかのタブの未保存の変更は書かない）。リモートのサーバーにつないでいる間は開けない。`trade.bulkDiscounts` は設定ファイルにある段階の数だけ「取引」タブに出る（段階の追加・削除は設定ファイルで行う）。
+> **実装状況（v0.22）**：設定ファイルは段階8で実装済み。JSON はカテゴリごとのオブジェクトで、キーは下表のとおり（例：`{"recovery": {"halfLifeDays": 2.0}, "trade": {"allowCreative": false}}`）。初回起動時に全項目を既定値で書き出す。書かれていない項目は既定値、範囲外の値は範囲内に直して警告ログを出す（ファイル全体を捨てない）。`/aktradeex reload` か設定画面の保存で読み直す。表の中で機能自体がまだ無いもの（v0.20 時点：初回支給・ネザー連動・デバッグ表示・利息）は、値を保存するだけで効果はない（設定画面の説明に「未実装」と表示）。掲示板・依頼・需要・商人・村人（`board.*`・`quest.*`・`demand.*`・`trader.*`・`villager.*`）の項目は v0.14 で設定ファイルと設定画面（「掲示板・依頼・需要」タブ）に追加した。v0.27 で「商品」タブを追加し、「追加の商品と消耗品」画面（Q53）を開けるようにした。この画面はアイテムのアイコン一覧（名前・IDで検索）・選んだアイテム・基準価格の入力欄・登録済みの一覧からなり、「追加の商品」「消耗品に追加」「消耗品から除外」の3つを切り替える。「完了」で `goods`・`consumables` だけを設定ファイルに書いてすぐ読み直す（ほかのタブの未保存の変更は書かない）。リモートのサーバーにつないでいる間は開けない。`trade.bulkDiscounts` は設定ファイルにある段階の数だけ「取引」タブに出る（段階の追加・削除は設定ファイルで行う）。
 
-**クライアントに同期する値（段階8で実装）**：クライアントはプレビューを自分で計算する（F-2）ため、次の値がサーバーと違うとプレビュー額がずれて取引が `PRICE_CHANGED` で中止され続ける。ログイン時と `/tradeex reload` 時に同期する。
+**クライアントに同期する値（段階8で実装）**：クライアントはプレビューを自分で計算する（F-2）ため、次の値がサーバーと違うとプレビュー額がずれて取引が `PRICE_CHANGED` で中止され続ける。ログイン時と `/aktradeex reload` 時に同期する。
 
 | キー | クライアントでの用途 |
 |---|---|
@@ -938,9 +938,9 @@ MarketRegistry
 | 回復 | `recovery.consumableMultiplier` | 1.0 | 0〜10 | 【v0.14.1】消耗品の消費量 c ＝ T × この値（B-3） |
 | 回復 | `recovery.consumableHalfLifeDays` | 1.0 | 0.05〜100 | 【v0.14.1】消耗品の半減期（B-3） |
 | 回復 | `recovery.clock` | `GAME_TIME` | `GAME_TIME`/`DAY_TIME` | 回復の時計 |
-| 消耗品 | `consumables.add` | `[]` | アイテムIDの一覧 | 【v0.14.2】タグ `#trade_expansion:consumables` に無くても消耗品にするアイテム（B-3）。書式の誤った ID は警告して捨て、`carrot` は `minecraft:carrot` に直す |
+| 消耗品 | `consumables.add` | `[]` | アイテムIDの一覧 | 【v0.14.2】タグ `#ak_trade_expansion:consumables` に無くても消耗品にするアイテム（B-3）。書式の誤った ID は警告して捨て、`carrot` は `minecraft:carrot` に直す |
 | 消耗品 | `consumables.remove` | `[]` | アイテムIDの一覧 | 【v0.14.2】タグや `add` にあっても消耗品にしないアイテム（B-3） |
-| 商品 | `goods` | `{}` | 商品ID → 値 | 【v0.17】商品ごとの値で商品定義を上書きする（D-2）。例：`{"trade_expansion:dandelion": {"base_price": 5, "sell": false}}`。【v0.27】データパックに無い商品IDに `item` と `base_price` を書くと商品を追加する（D-2、Q53） |
+| 商品 | `goods` | `{}` | 商品ID → 値 | 【v0.17】商品ごとの値で商品定義を上書きする（D-2）。例：`{"ak_trade_expansion:dandelion": {"base_price": 5, "sell": false}}`。【v0.27】データパックに無い商品IDに `item` と `base_price` を書くと商品を追加する（D-2、Q53） |
 | 距離 | `distance.mergeRadius` | 64 | 8〜512 | 同一市場の半径 |
 | 距離 | `distance.nearRadius` | 128 | mergeRadius〜 | 相場100%共通 |
 | 距離 | `distance.farRadius` | 1536 | nearRadius+1〜100000 | 影響0 |
@@ -982,7 +982,7 @@ MarketRegistry
 | 銀行 | `bank.cardFee` | 100 | 0〜1e6 | カード発行手数料（c、E-8） |
 | 銀行 | `bank.cardTransactionFee` | 0.0 | 0〜0.1 | カード払い1回の手数料（割合） |
 | ログ | `log.trades` | true | bool | 取引ログ（v0.9：銀行の預け入れ・引き出しも出す） |
-| 管理 | `command.permissionLevel` | 2 | 0〜4 | `/tradeex` 管理系サブコマンドに必要な権限レベル（2＝OP）。26.3 の権限判定は数値ではなく定数なので、0→`Commands.LEVEL_ALL`、1→`LEVEL_MODERATORS`、2→`LEVEL_GAMEMASTERS`、3→`LEVEL_ADMINS`、4→`LEVEL_OWNERS` に変換して `Commands.hasPermission(...)` に渡す（判定のたびに設定を読むので `/tradeex reload` で反映） |
+| 管理 | `command.permissionLevel` | 2 | 0〜4 | `/aktradeex` 管理系サブコマンドに必要な権限レベル（2＝OP）。26.3 の権限判定は数値ではなく定数なので、0→`Commands.LEVEL_ALL`、1→`LEVEL_MODERATORS`、2→`LEVEL_GAMEMASTERS`、3→`LEVEL_ADMINS`、4→`LEVEL_OWNERS` に変換して `Commands.hasPermission(...)` に渡す（判定のたびに設定を読むので `/aktradeex reload` で反映） |
 | バニラ | `vanilla.disableVillagerTrades` | false | bool | バニラ村人の交易を無効化（フェーズ3） |
 | 掲示板 | `board.radius` | 512 | 64〜4096 | 掲示板に出す市場の水平距離（I章） |
 | 掲示板 | `board.maxMarkets` | 20 | 1〜100 | 掲示板に出す市場の最大数 |
@@ -1050,7 +1050,7 @@ MarketRegistry
 
 - 【v0.21、14b】**特殊な取引**：26.3 の取引定義（`data/minecraft/villager_trade`、391件）の代金の形は「エメラルドだけ」「エメラルド＋他の品（例：エメラルドとコンパスで探検家の地図、エメラルドと本でエンチャントの本）」「他の品＋エメラルド（例：生鱈とエメラルドで焼き鱈）」「品物→エメラルド（村人に売る）」の4つだけで、どれも上の仕組みでそのまま扱える。地図やエンチャント付きの品のように付加情報のある品物は商品にならないので、市場の買値の下限はかからない。
 - 【v0.22、14c】**抜け道対策の仕上げ**：取引定義を全件調べると、商品と同じ品を売る村人・行商人の取引は37件あり、1エメラルド＝30c のままでは11件が「村人から買って市場で売ると儲かる」状態だった（例：農民のパン6個＝30c → 市場の売値 96c、肉屋の焼き鳥8個＝30c → 136c、行商人の原木8個＝30c → 48c。焼き鳥は v0.26 で商品から外れた）。①の下限は近くに市場が無い所では効かないため、②の下限を足した。1.4 は、市場の売値の最大（基準価格 × 地域の倍率 1.5 × ばらつき 1.15 × 0.8 ≒ 1.38）より少し上で、不足品（K章、認めている例外）を除けば儲からない。
-- 【v0.22、14c】**調整用のコマンド** `/tradeex audit villagers`：周り32ブロックの村人・行商人のコインで買える取引のうち、同じ次元の市場（`farRadius` 以内）で売ると代金より高く売れるものを、利益の大きい順に最大15件表示する。`villager.emeraldPrice` と `villager.minGoodsPriceMultiplier` の調整に使う。
+- 【v0.22、14c】**調整用のコマンド** `/aktradeex audit villagers`：周り32ブロックの村人・行商人のコインで買える取引のうち、同じ次元の市場（`farRadius` 以内）で売ると代金より高く売れるものを、利益の大きい順に最大15件表示する。`villager.emeraldPrice` と `villager.minGoodsPriceMultiplier` の調整に使う。
 - 【v0.24.1、Q50】**値引き**：村人ゾンビの治療・村の英雄・評判による値引きと需要による値上げは、バニラが計算したエメラルドの数（`getCostA`・`getCostB`）に入っているので、コインの代金にも同じ割合で効く（例：エメラルド10個 → 治療で4個の取引は 300c → 120c）。ただし、①もともとエメラルド1個の取引はバニラと同じく1個より安くならないので、コインの代金も変わらない。②市場の商品と同じ品（パン・焼き鳥・原木など）は、抜け道対策の下限（基準価格 × `villager.minGoodsPriceMultiplier`、近くの市場の買値）の方が高ければ下限が優先され、値引きが見た目に表れない（治療した村人から安く買って市場で売る抜け道を防ぐため）。
 - 代金は画面を開いた時点の値で、開いている間は変わらない（値引き・需要は村人側でも開いた時に決まるため）。
 - 他の村人系 Mod（取引内容や取引画面を変えるもの）とは、同じ処理に手を入れるため相性が悪いことがある。
@@ -1061,7 +1061,7 @@ MarketRegistry
 |---|---|
 | 14a | 代金のコイン換算と表示、財布・コインからの自動支払い（職業・評判の値引きはバニラの値をそのまま換算） |
 | 14b | 行商人・特殊な取引（宝の地図など）の扱い、`villager.coinTrades` の ON/OFF（v0.21 で実装。行商人だけの切り替え `villager.wanderingTraderCoins` を追加） |
-| 14c | 抜け道対策（H-2 案A）と換算のバランス調整（v0.22 で実装：商品の基準価格による下限 `villager.minGoodsPriceMultiplier`、調整用の `/tradeex audit villagers`） |
+| 14c | 抜け道対策（H-2 案A）と換算のバランス調整（v0.22 で実装：商品の基準価格による下限 `villager.minGoodsPriceMultiplier`、調整用の `/aktradeex audit villagers`） |
 
 - 設定 `villager.coinTrades`（既定 true）でコイン化を切り替える。`vanilla.disableVillagerTrades`（村人交易そのものを無効化）は残す。
 
@@ -1152,33 +1152,27 @@ MarketRegistry
 - 価格以外の効果（依頼の解放、銀行・カードの手数料など）なら、今の仕組みとぶつからない。
 - バニラの村人の評判（ゴシップ）とは別のものとする。
 
-#### L-3. Mod ID の変更（Q51、TODO：C案）
+#### L-3. Mod ID の変更（Q51、v0.28 で実施：C案）
 
-最終的には、表示名「AK Trade Expansion」に合わせて Mod ID も変える（C案）。v0.25 では表示名と配布ファイル名だけを変えた（B案、Q1）。
+表示名「AK Trade Expansion」に合わせて Mod ID を変えた（C案）。v0.25 では表示名と配布ファイル名だけを変えていた（B案、Q1）。
 
-**決めること**
-- 新しい Mod ID（案：`ak_trade_expansion`）。Mod ID はアイテムID・データパックの名前空間にもなる
-- コマンド `/tradeex` と設定ファイル名 `trade_expansion.json` も変えるか
-- Java のパッケージ名 `com.akf.tradeexpansion` も変えるか（遊ぶ人には見えないので、変えなくてもよい）
-- 既存のワールドを引き継ぐか（下の「既存のワールド」）
+**決めたこと**
+- 新しい Mod ID：`ak_trade_expansion`（アイテムID・ブロックID・データパックの名前空間も同じ。例：`ak_trade_expansion:copper_coin`）
+- 管理コマンド：`/tradeex` → `/aktradeex`
+- 設定ファイル：`config/ak_trade_expansion.json`（Mod ID から決まる）
+- Java のパッケージ名 `com.akf.tradeexpansion` とクラス名は変えない（遊ぶ人には見えないため）。ログの接頭辞 `[TradeExpansion]` もそのまま
+- 既存のワールド：**引き継がない**。公開前なので、古い ID のアイテム・ブロック・商人と、市場・銀行の保存データ（`trade_expansion:markets`・`trade_expansion:bank`）・古い設定ファイル `trade_expansion.json` を読み替える処理は入れない。テスト用のワールドは作り直す
 
-**変える所**（Mod ID を含む名前はすべて書き換える）
+**変えた所**
 
 | 区分 | 内容 |
 |---|---|
-| 設定 | `fabric.mod.json` の `id`、`TradeExpansion.MOD_ID`、`build.gradle` の `loom { mods { … } }`、`settings.gradle` の `rootProject.name`、Mixin 設定ファイル名（`trade_expansion.mixins.json`・`trade_expansion.client.mixins.json`） |
-| 登録するもの | アイテム（コイン・エメラルド貨・財布・カード・スポーンエッグ）、ブロック（交易所）、ブロックエンティティ、エンティティ（商人）、メニュー、データコンポーネント（`wallet_balance`・`card_owner`）、レシピの種類（`minting`・`emerald_coin`）、読み込み条件（`minting_enabled`・`emerald_coin_enabled`）、パケット、クリエイティブタブ |
-| 保存データ | `trade_expansion:markets`、`trade_expansion:bank` |
-| リソース | `assets/trade_expansion/`（翻訳・モデル・テクスチャ・アイコン）、`data/trade_expansion/`（商品・プロファイル・レシピ・タグ・構造物・ルートテーブル） |
-| 中身に Mod ID を含むファイル | 翻訳のキー（`item.trade_expansion.*` など）、商品定義・プロファイルの ID（`trade_expansion:bread` など）、タグ（`#trade_expansion:consumables`・`drops_coins`）、レシピ、構造物NBT の中の交易所と商人の ID（`tools/structures/genstall.js` で作り直す） |
-| 文書 | 設計書・商品設計書・README・投稿ページの下書き・チェックリスト・`src/dist/README.txt`・`tools/docs/goodslist.js` |
-
-**既存のワールド**
-- そのまま変えると、古い ID のアイテム・ブロック・商人・市場と銀行の保存データが読み込まれず消える。
-- 引き継ぐ場合は、①登録の別名（古い ID を新しい ID に読み替える仕組み。26.3 の登録の別名機能があるか要確認）、②保存データの古い名前のファイルを読んで新しい名前で保存し直す処理、③設定ファイルの古い名前を読む処理 が要る。
-- 公開前に変えれば、引き継ぎの処理は不要（開発用のワールドは作り直す）。**公開（配布）前に済ませるのが望ましい**。公開後に変える場合は、①〜③を入れて、配布ページで「古いワールドの引き継ぎ方」を案内する。
-
-**進め方の目安**：新しい ID と上の「決めること」を決める → ソース・リソースを一括で書き換える → ビルドとテスト → 新しいワールドで公開前チェックリスト（`docs/release/ingame-checklist.md`）を一通り → 文書を更新。
+| 設定 | `fabric.mod.json` の `id`・アイコンのパス・Mixin 設定、`TradeExpansion.MOD_ID`、`build.gradle` の `loom { mods { … } }`、`settings.gradle` の `rootProject.name`、Mixin 設定ファイル名（`ak_trade_expansion.mixins.json`・`ak_trade_expansion.client.mixins.json`） |
+| 登録するもの | アイテム・ブロック・ブロックエンティティ・エンティティ・メニュー・データコンポーネント・レシピの種類・読み込み条件・パケット・クリエイティブタブ（すべて `MOD_ID` から作るので自動で新しい名前になる） |
+| 保存データ | `ak_trade_expansion:markets`、`ak_trade_expansion:bank` |
+| リソース | `assets/ak_trade_expansion/`、`data/ak_trade_expansion/`（商品・プロファイルのフォルダも `data/<名前空間>/ak_trade_expansion/goods`・`market_profile` に変更） |
+| 中身 | 翻訳のキー（`item.ak_trade_expansion.*` など）、商品定義・プロファイルの ID、タグ（`#ak_trade_expansion:consumables`・`drops_coins`）、レシピと読み込み条件、構造物NBT の中の交易所と商人の ID（`tools/structures/genstall.js` で作り直した） |
+| 文書 | 設計書・商品設計書・README・投稿ページの下書き・チェックリスト・`src/dist/README.txt`・`tools/docs/goodslist.js`（改版履歴は当時の記録なので古い名前のまま） |
 
 ---
 
@@ -1274,10 +1268,10 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ModCreativeTab.java        ✅
 │   └─ ModDataComponents.java     ✅ … `wallet_balance`・`card_owner`
 ├─ crafting/
-│   ├─ MintingRecipe.java         ✅ … 鋳造レシピ `trade_expansion:minting`（銅換算額→枚数、読み込み条件 `minting_enabled`、E-2）
+│   ├─ MintingRecipe.java         ✅ … 鋳造レシピ `ak_trade_expansion:minting`（銅換算額→枚数、読み込み条件 `minting_enabled`、E-2）
 │   └─ EmeraldCoinRecipe.java     ✅ … 石切台でエメラルド貨の枚数を設定値にする派生レシピと読み込み条件（E-5）
 ├─ loot/
-│   └─ CoinDrops.java             ✅ … 敵モブのコインドロップ（LootTableEvents.MODIFY_DROPS、タグ `#trade_expansion:drops_coins`、E-2）
+│   └─ CoinDrops.java             ✅ … 敵モブのコインドロップ（LootTableEvents.MODIFY_DROPS、タグ `#ak_trade_expansion:drops_coins`、E-2）
 ├─ item/
 │   ├─ CoinItem.java              ✅ … 価値ツールチップ、スニーク＋右クリックで崩す（v0.4 追加）
 │   ├─ EmeraldCoinItem.java       ✅ … 補助コイン（CoinItem とは別クラスにして所持金の計算から外す、E-5）
@@ -1295,7 +1289,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ MarketFactory.java         ✅ … 新規市場の中身（プロファイル選択・レベル測定・商品の抽選・auto_add）、レベルアップ
 │   ├─ Propagation.java           ✅ … 波及処理
 │   ├─ MarketClock.java           ✅ … 回復の時計（`recovery.clock`、B-3）
-│   ├─ PlacementGuide.java        ✅ … 置き場所の案内（`/tradeex where`・範囲のパーティクル・交易所を持った時の案内、C-1）
+│   ├─ PlacementGuide.java        ✅ … 置き場所の案内（`/aktradeex where`・範囲のパーティクル・交易所を持った時の案内、C-1）
 │   ├─ SettlementRule.java        ✅ … 新しい市場を作れる場所の判定（C-1、`market.newMarketRequires`）
 │   ├─ MarketNames.java           ✅ … 市場名の整形・自動の名前・変えられる人の判定（C-4）
 │   ├─ MarketAccess.java          ✅ … 交易画面を開く共通処理（レベルアップの確認・スナップショット・口座、交易所と商人で共用）
@@ -1320,7 +1314,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ villager/                       … 段階14：村人交易のコイン化（H章）
 │   └─ VillagerCoins.java         ✅ … 取引ごとの代金（エメラルド換算・市場の買値の下限）、代金の保管と送信、支払い（14a）
 ├─ bank/                           … 段階12
-│   ├─ BankAccounts.java          ✅ … SavedData `trade_expansion:bank`（口座・カード番号）
+│   ├─ BankAccounts.java          ✅ … SavedData `ak_trade_expansion:bank`（口座・カード番号）
 │   └─ BankService.java           ✅ … 預け入れ・引き出し・カード発行・カードの有効性・手数料
 ├─ trade/
 │   ├─ TradeService.java          ✅ … 購入/売却の一連処理（検証→回復→計算→照合→移動→波及→保存/ログ→同期）。Shift で全数
@@ -1346,7 +1340,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ConfigManager.java         ✅ … 設定ファイルの読み書き・反映・コピー（設定画面用）
 │   ├─ ConfigValidator.java       ✅ … 範囲外の値を直す
 │   ├─ GoodsOverride.java         ✅ … 設定ファイルの商品ごとの値（D-2）
-│   └─ ServerConfig.java          ✅ … コイン比率のロック（E-4）・クライアントへの同期・`/tradeex reload`
+│   └─ ServerConfig.java          ✅ … コイン比率のロック（E-4）・クライアントへの同期・`/aktradeex reload`
 ├─ mixin/
 │   ├─ ItemEntityMixin.java       ✅ … 拾ったコインを財布へ（E-6）
 │   ├─ StructureTemplatePoolAccessor.java ✅ … 村のプールに屋台の建物を追加（段階9）
@@ -1373,7 +1367,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 │   ├─ ModMenuIntegration.java    ✅ … Mod Menu のエントリーポイント（`ModMenuApi`）。YACL が無ければ画面を出さない
 │   ├─ ConfigScreen.java          ✅ … YACL で作る設定画面（Q35）
 │   └─ GoodsManagerScreen.java    ✅ … 設定画面の「追加の商品と消耗品」：アイコンから商品・消耗品を選んで追加・削除（v0.27、Q53）
-├─ mixin/client/MerchantScreenMixin.java ✅ … 村人の取引画面にコインの代金を表示（14a。`trade_expansion.client.mixins.json`）
+├─ mixin/client/MerchantScreenMixin.java ✅ … 村人の取引画面にコインの代金を表示（14a。`ak_trade_expansion.client.mixins.json`）
 ├─ TraderRenderer.java           ✅ … 商人NPCの描画（村人のモデル＋行商人の服、段階10）
 └─ （widget/ への分離は見送り。v0.22 時点も MarketScreen の中で描画する）
 ```
@@ -1386,7 +1380,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ```json
 {
   "schemaVersion": 1,
-  "id": "trade_expansion",
+  "id": "ak_trade_expansion",
   "version": "${version}",
   "name": "AK Trade Expansion",
   "description": "Dynamic market trading with coins, regional goods and distance-based price propagation.",
@@ -1394,7 +1388,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
     "akf"
   ],
   "license": "LGPL-2.1-only",
-  "icon": "assets/trade_expansion/icon.png",
+  "icon": "assets/ak_trade_expansion/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -1418,17 +1412,17 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
     "yet_another_config_lib_v3": "*"
   },
   "mixins": [
-    "trade_expansion.mixins.json",
+    "ak_trade_expansion.mixins.json",
     {
-      "config": "trade_expansion.client.mixins.json",
+      "config": "ak_trade_expansion.client.mixins.json",
       "environment": "client"
     }
   ]
 }
 ```
-- テンプレートからの変更点：`id`/`name`/`entrypoints`/アイコンのパス、`settings.gradle` の `rootProject.name = 'trade_expansion'`、`build.gradle` の `loom { mods { "trade_expansion" { ... } } }`、`gradle.properties` の `group=com.akf.tradeexpansion`、mixin設定ファイル名（`modid.mixins.json` → `trade_expansion.mixins.json` など、中の `package` も変更）。
-- Mixin：v0.20（段階14）で村人交易のコイン化のために `Merchant*` 系の Mixin とクライアント用の設定 `trade_expansion.client.mixins.json` を追加した。v0.11（段階12）で財布の自動収納のために `trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`、`ItemEntityMixin`）を追加した。v0.14（段階9）で村のテンプレートプールに建物を足すための `StructureTemplatePoolAccessor` を追加した（Fabric API に同等の機能が無いため）。
-- 【v0.11】`fabric.mod.json` に `"suggests": { "modmenu": "*", "yet_another_config_lib_v3": "*" }`、`entrypoints` の `"modmenu": ["com.akf.tradeexpansion.client.config.ModMenuIntegration"]`、`"mixins": ["trade_expansion.mixins.json"]` を追加済み。開発用の依存は `build.gradle` で YACL `3.9.7+26.3-fabric`・Mod Menu `21.0.0` を `compileOnly` ＋ `localRuntime`（配布物には含まれない）。
+- テンプレートからの変更点：`id`/`name`/`entrypoints`/アイコンのパス、`settings.gradle` の `rootProject.name = 'ak_trade_expansion'`、`build.gradle` の `loom { mods { "ak_trade_expansion" { ... } } }`、`gradle.properties` の `group=com.akf.tradeexpansion`、mixin設定ファイル名（`modid.mixins.json` → `ak_trade_expansion.mixins.json` など、中の `package` も変更）。
+- Mixin：v0.20（段階14）で村人交易のコイン化のために `Merchant*` 系の Mixin とクライアント用の設定 `ak_trade_expansion.client.mixins.json` を追加した。v0.11（段階12）で財布の自動収納のために `ak_trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`、`ItemEntityMixin`）を追加した。v0.14（段階9）で村のテンプレートプールに建物を足すための `StructureTemplatePoolAccessor` を追加した（Fabric API に同等の機能が無いため）。
+- 【v0.11】`fabric.mod.json` に `"suggests": { "modmenu": "*", "yet_another_config_lib_v3": "*" }`、`entrypoints` の `"modmenu": ["com.akf.tradeexpansion.client.config.ModMenuIntegration"]`、`"mixins": ["ak_trade_expansion.mixins.json"]` を追加済み。開発用の依存は `build.gradle` で YACL `3.9.7+26.3-fabric`・Mod Menu `21.0.0` を `compileOnly` ＋ `localRuntime`（配布物には含まれない）。
 - **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat`・`build.bat` は `gradle.properties` の `version` と README のバージョン表記を上げてからビルドする（`nobump` で上げずにビルド、残りの引数は Gradle に渡す）。【v0.27.2 で変更】バージョンの上げ方：普段のビルド `build.bat` は末尾を上げる（0.0.11 → 0.0.12）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）。上げる処理は両方とも `tools/version/bump.ps1`（`-Part patch` / `-Part minor`）。
 - `authors` は `akf`。ライセンスは **GNU LGPL v2.1 のみ**（v2.1 以降ではない）。`fabric.mod.json` の `license` は `LGPL-2.1-only`。本文はリポジトリ直下の `LICENSE` だけで、v0.23 から `build.gradle` がこれを jar（`LICENSE_trade_expansion`）と配布用 zip に入れる。
 
@@ -1436,28 +1430,28 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ```
 src/main/resources/
 ├─ fabric.mod.json                                         ✅
-├─ trade_expansion.mixins.json                             ✅（ItemEntityMixin、StructureTemplatePoolAccessor、村人交易の Merchant*Mixin・MerchantMenuAccessor・ServerPlayerMixin）
-├─ （src/client/resources/）trade_expansion.client.mixins.json ✅（MerchantScreenMixin、v0.20）
-├─ assets/trade_expansion/
+├─ ak_trade_expansion.mixins.json                             ✅（ItemEntityMixin、StructureTemplatePoolAccessor、村人交易の Merchant*Mixin・MerchantMenuAccessor・ServerPlayerMixin）
+├─ （src/client/resources/）ak_trade_expansion.client.mixins.json ✅（MerchantScreenMixin、v0.20）
+├─ assets/ak_trade_expansion/
 │   ├─ icon.png                                            ✅（v0.23：屋台と金貨のドット絵 128×128。`tools/icon/genicon.js` で生成）
 │   ├─ lang/ja_jp.json, en_us.json                         ✅（設定画面の項目名・説明を含む）
 │   ├─ items/*.json, models/item/*.json                    ✅（コイン5種・エメラルド貨・財布・カード・交易所・商人のスポーンエッグ（行商人のモデルを流用））
 │   ├─ models/block/market_stall.json, blockstates/market_stall.json ✅（屋台風のモデル、facing 4方向）
 │   └─ textures/item/*.png, textures/block/market_stall_{front,side,top}.png ✅（仮テクスチャ）
 └─ data/
-    ├─ trade_expansion/recipe/market_stall.json, wallet.json, emerald_coin.json, copper_coin_minting.json, iron_coin_minting.json ✅（エメラルド貨は石切台、鋳造は独自形式。どちらも読み込み条件つき）
-    ├─ trade_expansion/structure/village/<5種類>/market_stall.nbt ✅（村の屋台の建物、段階9。`tools/structures/genstall.js` で生成）
-    ├─ trade_expansion/tags/item/consumables.json, tags/entity_type/drops_coins.json ✅（消耗品 B-3、コインを落とすモブ E-2）
-    ├─ trade_expansion/loot_table/blocks/market_stall.json ✅
+    ├─ ak_trade_expansion/recipe/market_stall.json, wallet.json, emerald_coin.json, copper_coin_minting.json, iron_coin_minting.json ✅（エメラルド貨は石切台、鋳造は独自形式。どちらも読み込み条件つき）
+    ├─ ak_trade_expansion/structure/village/<5種類>/market_stall.nbt ✅（村の屋台の建物、段階9。`tools/structures/genstall.js` で生成）
+    ├─ ak_trade_expansion/tags/item/consumables.json, tags/entity_type/drops_coins.json ✅（消耗品 B-3、コインを落とすモブ E-2）
+    ├─ ak_trade_expansion/loot_table/blocks/market_stall.json ✅
     ├─ minecraft/tags/block/mineable/axe.json              ✅
-    └─ trade_expansion/trade_expansion/goods/*.json（96件。花20種・生の肉と魚・原木10種・ダイヤの装備と道具を含む）, market_profile/*.json（12件） ✅
+    └─ ak_trade_expansion/ak_trade_expansion/goods/*.json（96件。花20種・生の肉と魚・原木10種・ダイヤの装備と道具を含む）, market_profile/*.json（12件） ✅
 ```
 
 ### 4-3. データフロー（売却の例）
 
 ```
 [Client] MarketScreen：数量10選択 → ClientMarketCacheの値でプレビュー表示（5,517c）
-   │ [売却する] TradeRequestC2S(market=12, goods=trade_expansion:diamond_sword, SELL, qty=10, expected=5517, card=false)
+   │ [売却する] TradeRequestC2S(market=12, goods=ak_trade_expansion:diamond_sword, SELL, qty=10, expected=5517, card=false)
    ▼
 [Server] ModPayloads の受信処理（サーバースレッド）→ TradeService.handle()
     1. 検証：メニュー一致・数量≤上限 → 距離（stillValid）→ クリエイティブ可否 → カードの有効性 → 取扱可（B-5 の順序）
@@ -1485,16 +1479,16 @@ src/main/resources/
 |---|---|---|---|
 | **0. 環境** | JDK 25、IntelliJ IDEA、Fabric テンプレート生成（26.3, Fabric API）、`runClient` 起動確認、Git管理 | 空Modが起動する | ✅（JDK 26 で release 25 指定でもビルド可。Git 管理済み） |
 | **1. コイン** | 5種コイン登録、テクスチャ、翻訳、クリエイティブタブ、ツールチップに価値表示 | クリエイティブで取り出せる | ✅（テクスチャは仮） |
-| **2. 通貨ロジック** | `build.gradle` にJUnit追加（5-2）、`CoinMath`（純Java）＋JUnit、`WalletService`、スニーク右クリック崩し、`/tradeex pay` テストコマンド | 支払い・お釣りがテスト通過 | ✅（`/tradeex balance`・`give` も追加） |
+| **2. 通貨ロジック** | `build.gradle` にJUnit追加（5-2）、`CoinMath`（純Java）＋JUnit、`WalletService`、スニーク右クリック崩し、`/aktradeex pay` テストコマンド | 支払い・お釣りがテスト通過 | ✅（`/aktradeex balance`・`give` も追加） |
 | **3. MVP：固定市場** | 交易所ブロック、`Market` 1種固定（JSONで5商品）、価格は固定、交易画面（購入/売却）、C2S/S2Cパケット | マルチで買って売れる | ✅（商品は JSON ではなく組み込み10商品。段階4と同時に実装したため価格は最初から変動） |
 | **4. 価格モデル** | `PriceModel`＋JUnit、在庫・売り切れ・X、遅延回復、`SavedData` 永続化 | 再起動しても相場が残る、3章の数値が再現 | ✅（3章の数値はテストで再現。再起動での残存はゲーム内未確認） |
 | **5. 市場の分割・統合** | 設置位置で市場を作成/統合、`MarketIndex` | 64ブロック内の屋台が同一市場 | △（統合・設置拒否は実装。`MarketIndex` は全件走査で代用） |
 | **6. 距離波及** | `DistanceModel`＋JUnit、`Propagation`、全体スナップショットの再送で同期（Q19） | 500ブロック先で約54%の影響 | △（波及は実装。同期は全体再送、Q19。商品ごとの `link` 係数は段階11で実装。ネザー連動は未） |
 | **7. 地域品揃え** | goods / market_profile のデータパック、条件評価、シード抽選、`/reload`、ディメンション別の既定プロファイル、市場レベル（ベッド数、ネザー・エンドは村人の人数）と商品数 10〜20・`min_level`（D-4）、取引単位 `unit`・`auto_add`、エメラルド貨とそのレシピ（E-5） | 砂漠村と雪原村、オーバーワールドとネザーで品揃えが違う。村が大きいほど商品が多い。村の市場でだけエメラルド貨を10枚単位で売れる | ✅（ゲーム内は未確認。goods の `components`・減額買取の取引処理は段階11へ移した。エメラルド貨の枚数設定と `market reroll` は段階8で実装済み） |
-| **8. 設定・管理コマンド** | `trade_expansion.json`（G章の「クライアントに同期する値」も含む）、Mod Menu＋YACL の設定画面（Q35）、`/tradeex market info/reset/delete/reroll`、`/tradeex simulate`、ログ、屋台の生成元 `origin` の保存と割り当て直し時の判定（A-3） | 設定変更が反映 | ✅（ゲーム内の確認は進行中。`market setx` は段階11で実装） |
-| **9. 村への自然生成** | 屋台入りの建物ピース（構造物NBT、7×5×7：床・柵の柱・縞模様の羊毛の屋根・樽・干し草・ランタン、入口のジグソーは村の小さい家と同じ形式）を plains/desert/savanna/snowy/taiga ごとに作り（`data/trade_expansion/structure/village/<種類>/market_stall.nbt`、生成スクリプトは `tools/structures/genstall.js`）、サーバー起動時に各村の `houses` プールへ重み2で追加する（`worldgen.spawnStallsInVillages`。Fabric API に追加機能が無いため `StructureTemplatePoolAccessor` Mixin で追加）。置かれた屋台は `origin` が `natural`、市場の割当は最初の右クリック時（A-3）。`worldgen.protectNaturalStalls` が ON なら、自然生成の屋台はサバイバルでは壊せない（`PlayerBlockBreakEvents.BEFORE`）。村の生成時に商人NPCを出す処理（`worldgen.spawnTraderNpc`）は段階10で作った（建物のNBTに商人を入れる、A-5） | 新規チャンクの村に屋台 | ✅（テンプレートの読み込み・設置とプールへの追加はサーバーで確認済み。実際の村での出現と見た目はゲーム内で確認が必要。商人NPCは段階10で追加） |
+| **8. 設定・管理コマンド** | `ak_trade_expansion.json`（G章の「クライアントに同期する値」も含む）、Mod Menu＋YACL の設定画面（Q35）、`/aktradeex market info/reset/delete/reroll`、`/aktradeex simulate`、ログ、屋台の生成元 `origin` の保存と割り当て直し時の判定（A-3） | 設定変更が反映 | ✅（ゲーム内の確認は進行中。`market setx` は段階11で実装） |
+| **9. 村への自然生成** | 屋台入りの建物ピース（構造物NBT、7×5×7：床・柵の柱・縞模様の羊毛の屋根・樽・干し草・ランタン、入口のジグソーは村の小さい家と同じ形式）を plains/desert/savanna/snowy/taiga ごとに作り（`data/ak_trade_expansion/structure/village/<種類>/market_stall.nbt`、生成スクリプトは `tools/structures/genstall.js`）、サーバー起動時に各村の `houses` プールへ重み2で追加する（`worldgen.spawnStallsInVillages`。Fabric API に追加機能が無いため `StructureTemplatePoolAccessor` Mixin で追加）。置かれた屋台は `origin` が `natural`、市場の割当は最初の右クリック時（A-3）。`worldgen.protectNaturalStalls` が ON なら、自然生成の屋台はサバイバルでは壊せない（`PlayerBlockBreakEvents.BEFORE`）。村の生成時に商人NPCを出す処理（`worldgen.spawnTraderNpc`）は段階10で作った（建物のNBTに商人を入れる、A-5） | 新規チャンクの村に屋台 | ✅（テンプレートの読み込み・設置とプールへの追加はサーバーで確認済み。実際の村での出現と見た目はゲーム内で確認が必要。商人NPCは段階10で追加） |
 | **10. 商人NPC** | `TraderEntity`（村人モデル流用）、右クリックで同じ画面、交易所を開いた時に出す・スポーンエッグ・`/summon`・村の建物の生成時に出す（出し方④、v0.15.1 で段階9から移動）、無敵・紐付いた交易所と一緒に消える、商人から開いた画面の有効性（A-5） | 交易所を開くと商人が出て、商人からも取引できる。スポーンエッグで出した商人も近くの市場で取引できる | ✅（v0.16。村の建物の商人・`/summon`・`/kill`・交易所が消えた時に消えることはサーバーで確認済み。右クリックでの取引・スポーンエッグ・見た目はゲーム内で確認が必要） |
-| **11. 仕上げ** | goods の `components`・減額買取の取引処理・連動係数 `link`（D-2）、`market setx`、敵モブのコインドロップ（`LootTableEvents.MODIFY_DROPS`）、銅貨・鉄貨の鋳造レシピ（E-2）、バニラ村人の交易を無効化する設定（Q5）、両替タブ、UI改善（相場グラフ・前回比・相場メーター・所持金の内訳、Q17）、屋台風の形状（カウンター・柱・縞の日よけのモデルと当たり判定）、売却スロット、Shift で全数、`appendHoverText` の置き換え（Fabric の `ItemTooltipCallback`）、バランス確認、`/tradeex audit`（クラフト裏技検出：素材の買値合計 < 完成品の売値、および鋳造で素材の買値合計 < コインの価値 を列挙） | | ✅（ゲーム内の確認は進行中） |
+| **11. 仕上げ** | goods の `components`・減額買取の取引処理・連動係数 `link`（D-2）、`market setx`、敵モブのコインドロップ（`LootTableEvents.MODIFY_DROPS`）、銅貨・鉄貨の鋳造レシピ（E-2）、バニラ村人の交易を無効化する設定（Q5）、両替タブ、UI改善（相場グラフ・前回比・相場メーター・所持金の内訳、Q17）、屋台風の形状（カウンター・柱・縞の日よけのモデルと当たり判定）、売却スロット、Shift で全数、`appendHoverText` の置き換え（Fabric の `ItemTooltipCallback`）、バランス確認、`/aktradeex audit`（クラフト裏技検出：素材の買値合計 < 完成品の売値、および鋳造で素材の買値合計 < コインの価値 を列挙） | | ✅（ゲーム内の確認は進行中） |
 | **12. 財布・銀行・カード** | 財布（E-6）、銀行タブと口座（E-7）、カード払い（E-8）、支払い・受け取りの財布対応、関連パケット・設定・コマンド | 財布を持っていればコインがインベントリに出てこない。大きな市場で預け入れ・引き出しができ、カードでどの市場でも払える | ✅（ゲーム内の確認は進行中） |
 | **13. 掲示板・依頼・需要** | 掲示板タブ（I章）、依頼と依頼タブ（J章）、不足品（K章）、関連パケット・設定 | 掲示板で近くの市場の価格が見られる。依頼を納めると報酬がもらえる。不足品が高く売れる | ✅（ゲーム内の確認は進行中） |
 | **14. 村人交易のコイン化** | 14a 代金のコイン換算と自動支払い、14b 行商人・特殊な取引と ON/OFF、14c 抜け道対策とバランス調整（H章） | 村人からコインで買える。村人に売るとエメラルドがもらえる | ✅（v0.22：14a〜14c を実装。Mixin の適用はサーバーで確認済み、取引画面での動作と換算額の妥当性はゲーム内で確認が必要） |
@@ -1512,7 +1506,7 @@ src/main/resources/
 | 単体テスト（JUnit 5） | `PriceModel` | 3章の表の値を期待値に（例：10本売却で合計5517）、Vのクランプ、回復の半減期、Δt<0 の扱い、B-6の往復で損すること・常に買値≥売値の性質テスト |
 | 〃 | `DistanceModel` | d=128→1.0、500→0.541、1536→0、境界値、新規市場の初期相場（C-1） |
 | 〃 | `MarketLevel` | ベッド数とレベルの境目（4/5、39/40 等）、村人の人数とレベルの境目（2/3、23/24 等）、商品数 N（10・13・15・18・20）、設定を変えた時の N |
-| 〃 | 鋳造の枚数 | 比率10で64枚、比率20で32枚、上限64枚で頭打ち（E-2。予定：v0.22 時点では未作成。鋳造の損得は `/tradeex audit` で確認できる） |
+| 〃 | 鋳造の枚数 | 比率10で64枚、比率20で32枚、上限64枚で頭打ち（E-2。予定：v0.22 時点では未作成。鋳造の損得は `/aktradeex audit` で確認できる） |
 | 〃 | 財布での支払い | 財布だけ・コインだけ・両方で払う場合、財布の容量を超えるお釣り、支払い前後の総価値の差 = 価格（E-6。計算部分は純Javaにしてテストする） |
 | 〃 | 取引単位 | `unit=10` で、単位の数による合計額・最大数量、端数（所持19枚なら1単位）の扱い（B-5。予定：v0.22 時点では未作成） |
 | 〃 | 依頼・不足品 | `QuestMathTest`：難易度の判定（200c・1,000c の境目）、報酬の切り上げ、期間の番号、不足品の倍率の範囲（J・K章）。扱っていない品の B と期間ごとの選び直しはゲーム内で確認する |
@@ -1523,12 +1517,12 @@ src/main/resources/
 | 〃 | `CoinMath` | 支払い/お釣りの全ケース（ダイヤ貨2枚で1,080c等）、所持不足、比率 2/10/100・段ごとに異なる比率、ランダム1万回で「支払い前後の総価値の差 = 価格」 |
 | 〃 | 条件評価・JSON | Codecで正しいJSON/不正JSON（エラーメッセージ） |
 | ゲームテスト | 取引の一連処理 | Fabric Game Test API（`fabric-gametest-api-v1` は Fabric API に同梱されていることを確認済み。Loom 1.19 での有効化方法は要確認。テスト用サーバーの起動には EULA への同意設定が必要になる点に注意）で、テスト用構造物に屋台を置き、偽プレイヤーで購入→所持金と在庫を検証 |
-| 手動テスト（シングル） | UI | チェックリスト：売り切れ表示、買取停止、在庫・所持金不足時の中止と最大数量表示、インベントリ満杯時のお釣りドロップ、画面を開いたまま時間経過、売却スロットに置いたまま閉じる、画面を開いたまま屋台を壊す、Shift で全数、両替、掲示板・依頼の納品、所持金の表示位置の切り替え、名札での名付けと権限、村の屋台の建物の生成、`/tradeex goods set` の値が画面の価格に反映される、花の並び方 |
+| 手動テスト（シングル） | UI | チェックリスト：売り切れ表示、買取停止、在庫・所持金不足時の中止と最大数量表示、インベントリ満杯時のお釣りドロップ、画面を開いたまま時間経過、売却スロットに置いたまま閉じる、画面を開いたまま屋台を壊す、Shift で全数、両替、掲示板・依頼の納品、所持金の表示位置の切り替え、名札での名付けと権限、村の屋台の建物の生成、`/aktradeex goods set` の値が画面の価格に反映される、花の並び方 |
 | 手動テスト（商人NPC） | 段階10 | 交易所を開くと正面に1体出る・2回目は出ない・殺せない・交易所を壊すと消える・スポーンエッグと `/summon` で出した商人が近くの市場で取引できる・市場が無い所では「近くに市場がありません」・離れると画面が閉じる |
 | 手動テスト（マルチ） | 同期 | `runServer` ＋ `runClient` を2つ（ユーザー名を変えて起動）。同じ屋台を2人で開き、片方の取引がもう片方に即反映、同時押しで二重購入しない、価格変動時の拒否 |
-| 永続化 | SavedData | 取引→サーバー停止→起動で状態一致。ゲーム内時間を `/time add` ではなく実時間待ち or テストコマンド `/tradeex market advance <日数>`（最寄り市場に指定日数分の回復を適用、v0.4 実装済み）で回復確認。`/tradeex market info` で X・S・価格を確認できる |
-| 手動テスト（共通の注意） | — | `trade.allowCreative` の既定が false なので、**取引の確認はサバイバルモードで行う**（お金は `/tradeex give <額>` で用意） |
-| バランス | 経済 | `/tradeex simulate <商品ID> <buy\|sell> <数>`（実際には取引せず価格推移を表示）、`/tradeex audit`、`/tradeex consumable list`、`/tradeex where`（置き場所の確認）、`/tradeex audit villagers`（村人の取引の抜け道） |
+| 永続化 | SavedData | 取引→サーバー停止→起動で状態一致。ゲーム内時間を `/time add` ではなく実時間待ち or テストコマンド `/aktradeex market advance <日数>`（最寄り市場に指定日数分の回復を適用、v0.4 実装済み）で回復確認。`/aktradeex market info` で X・S・価格を確認できる |
+| 手動テスト（共通の注意） | — | `trade.allowCreative` の既定が false なので、**取引の確認はサバイバルモードで行う**（お金は `/aktradeex give <額>` で用意） |
+| バランス | 経済 | `/aktradeex simulate <商品ID> <buy\|sell> <数>`（実際には取引せず価格推移を表示）、`/aktradeex audit`、`/aktradeex consumable list`、`/aktradeex where`（置き場所の確認）、`/aktradeex audit villagers`（村人の取引の抜け道） |
 | 専用サーバー | クライアントコード分離 | `runServer` が起動し、屋台を右クリックしてもサーバー側で例外が出ないこと |
 
 **JUnit の追加**（テンプレートには含まれていない）：`build.gradle` に以下を追記し、テストは `src/test/java` に置く。`core/` パッケージは Minecraft に依存しないので、ゲームを起動せずに `gradlew test` で実行できる。
@@ -1663,3 +1657,4 @@ test {
 | v0.27.3 | 2026-11-04 | 鉄ブロックの鋳造を既定で無効にした（アイアンゴーレムトラップで鉄が無限に手に入るため）。設定 `currency.allowIronMinting`（既定 false）と読み込み条件 `iron_minting_enabled` を追加（E-2・G章） |
 | v0.27.4 | 2026-11-05 | 掲示板で市場を選んだ時の商品一覧にヘッダ行（商品／買値／売値）を追加（A-4） |
 | v0.27.5 | 2026-11-05 | オーバーワールドの市場のレベルに村人の人数も使う：ベッドで測ったレベルと村人で測ったレベルの低い方（D-4、設定 `market.levelUsesVillagers`）。`/tradeex where` にその場所の規模を、`/tradeex market info` にベッドと村人の数と測り直したレベルを表示。あわせてソースと照合し、4-2 のクラス一覧（`BulkDiscount`・`GoodsManagerScreen`）と配布物の説明（`build.bat`）を更新 |
+| v0.28 | 2026-11-05 | Q51 を決定・実施（C案）：Mod ID を `trade_expansion` から `ak_trade_expansion` に、管理コマンドを `/tradeex` から `/aktradeex` に変更。設定ファイルは `ak_trade_expansion.json`。パッケージ名は変えない。古いワールドの引き継ぎ処理は入れない（L-3、Q1） |

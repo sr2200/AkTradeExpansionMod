@@ -27,11 +27,11 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * YACL settings screen opened from Mod Menu (design G, Q35). Edits a copy of {@code config/trade_expansion.json};
+ * YACL settings screen opened from Mod Menu (design G, Q35). Edits a copy of {@code config/ak_trade_expansion.json};
  * while connected to a remote server only the client settings can be changed.
  */
 public final class ConfigScreen {
-	private static final String KEY = "config.trade_expansion.";
+	private static final String KEY = "config.ak_trade_expansion.";
 
 	private final TradeExpansionConfig edit;
 	/** Connected to a server we do not host: server-side options are read-only. */
@@ -229,7 +229,7 @@ public final class ConfigScreen {
 				.build();
 	}
 
-	/** Singleplayer: the integrated server reloads the file (same as {@code /tradeex reload}). Remote: only client settings. */
+	/** Singleplayer: the integrated server reloads the file (same as {@code /aktradeex reload}). Remote: only client settings. */
 	private void save() {
 		if (serverLocked) {
 			TradeExpansionConfig file = ConfigManager.read(ConfigManager.path());

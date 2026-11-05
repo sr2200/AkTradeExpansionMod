@@ -3,7 +3,7 @@ package com.akf.tradeexpansion.market;
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
 
-/** How a market was created (D-1 condition {@code trade_expansion:origin}). */
+/** How a market was created (D-1 condition {@code ak_trade_expansion:origin}). */
 public enum MarketOrigin implements StringRepresentable {
 	NATURAL("natural"),
 	CRAFTED("crafted");

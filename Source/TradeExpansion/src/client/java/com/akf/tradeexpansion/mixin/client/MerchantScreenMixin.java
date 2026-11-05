@@ -53,7 +53,7 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
 			long price = VillagerCoins.price(player, shopItem);
 			if (price >= 0) {
 				long cash = WalletService.balance(player);
-				Component line = Component.translatable("screen.trade_expansion.villager_price", CoinItem.formatCopper(price), CoinItem.formatCopper(cash));
+				Component line = Component.translatable("screen.ak_trade_expansion.villager_price", CoinItem.formatCopper(price), CoinItem.formatCopper(cash));
 				g.text(font, line, leftPos + 136, topPos + 58, cash >= price ? 0xFF404040 : 0xFFA02020, false);
 			}
 		}

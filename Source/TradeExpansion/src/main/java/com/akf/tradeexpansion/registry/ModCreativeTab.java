@@ -19,7 +19,7 @@ public final class ModCreativeTab {
 
 	public static void init() {
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, KEY, FabricCreativeModeTab.builder()
-				.title(Component.translatable("itemGroup.trade_expansion"))
+				.title(Component.translatable("itemGroup.ak_trade_expansion"))
 				.icon(() -> new ItemStack(ModItems.GOLD_COIN))
 				.displayItems((parameters, output) -> {
 					output.accept(ModBlocks.MARKET_STALL);

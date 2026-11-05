@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * {@code data/<ns>/trade_expansion/market_profile/<name>.json} (design D-2): which goods a kind of market deals in.
+ * {@code data/<ns>/ak_trade_expansion/market_profile/<name>.json} (design D-2): which goods a kind of market deals in.
  */
 public record MarketProfile(
 		Optional<Component> displayName,

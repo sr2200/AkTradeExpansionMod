@@ -23,7 +23,7 @@ import java.util.Optional;
 
 /**
  * Conditions of {@code market_profile} and goods {@code auto_add} (design D-2).
- * JSON: {@code {"type": "trade_expansion:biome", "biome": "#minecraft:is_jungle"}}.
+ * JSON: {@code {"type": "ak_trade_expansion:biome", "biome": "#minecraft:is_jungle"}}.
  */
 public interface MarketCondition {
 	boolean test(MarketContext context);

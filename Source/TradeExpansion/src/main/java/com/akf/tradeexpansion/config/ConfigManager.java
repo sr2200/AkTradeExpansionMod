@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Reads and writes {@code config/trade_expansion.json} (design chapter G) and applies it.
+ * Reads and writes {@code config/ak_trade_expansion.json} (design chapter G) and applies it.
  */
 public final class ConfigManager {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();

@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Decodes every bundled goods / market_profile JSON with the real codecs (design D-2, goods-design.md). */
 class BundledDataTest {
-	private static final Path DATA = Path.of("src/main/resources/data/trade_expansion/trade_expansion");
+	private static final Path DATA = Path.of("src/main/resources/data/ak_trade_expansion/ak_trade_expansion");
 
 	@BeforeAll
 	static void bootstrap() {

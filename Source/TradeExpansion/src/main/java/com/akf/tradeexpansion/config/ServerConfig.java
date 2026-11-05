@@ -14,7 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Arrays;
 
 /**
- * Server-side handling of the settings: coin ratio lock (E-4), client sync (G), {@code /tradeex reload}.
+ * Server-side handling of the settings: coin ratio lock (E-4), client sync (G), {@code /aktradeex reload}.
  */
 public final class ServerConfig {
 	private ServerConfig() {

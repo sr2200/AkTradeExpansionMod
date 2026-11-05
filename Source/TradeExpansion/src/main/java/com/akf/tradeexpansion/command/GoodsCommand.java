@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 
 /**
- * {@code /tradeex goods info|set|reset <goods> ...} (design D-2 / G): per-goods values in the config file
+ * {@code /aktradeex goods info|set|reset <goods> ...} (design D-2 / G): per-goods values in the config file
  * ({@code goods}), so prices and stock can be changed without a data pack. Changes are saved to the file and applied
  * to every market at once.
  */
@@ -56,11 +56,11 @@ final class GoodsCommand {
 				.suggests((c, b) -> SharedSuggestionProvider.suggestResource(GoodsCatalog.all().keySet(), b));
 	}
 
-	/** "dandelion" means trade_expansion:dandelion (the command parser would make it minecraft:dandelion), like the config file. */
+	/** "dandelion" means ak_trade_expansion:dandelion (the command parser would make it minecraft:dandelion), like the config file. */
 	private static Identifier goodsId(CommandContext<CommandSourceStack> context) {
 		Identifier raw = IdentifierArgument.getId(context, "goods");
 		if (GoodsCatalog.loaded(raw) == null && raw.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)) {
-			return Identifier.fromNamespaceAndPath("trade_expansion", raw.getPath());
+			return Identifier.fromNamespaceAndPath("ak_trade_expansion", raw.getPath());
 		}
 		return raw;
 	}
@@ -68,17 +68,17 @@ final class GoodsCommand {
 	private static int change(CommandContext<CommandSourceStack> context, UnaryOperator<GoodsOverride> edit, boolean set) {
 		Identifier id = goodsId(context);
 		if (GoodsCatalog.loaded(id) == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.not_goods", id.toString()));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.not_goods", id.toString()));
 			return 0;
 		}
-		// Edit the file (not the live copy) so hand edits are kept, then reload like /tradeex reload.
+		// Edit the file (not the live copy) so hand edits are kept, then reload like /aktradeex reload.
 		TradeExpansionConfig file = ConfigManager.read(ConfigManager.path());
 		GoodsOverride updated = edit.apply(file.goods.getOrDefault(id.toString(), GoodsOverride.EMPTY));
 		if (updated.isEmpty()) file.goods.remove(id.toString());
 		else file.goods.put(id.toString(), updated);
 		ConfigManager.write(ConfigManager.path(), file);
 		ServerConfig.reload(context.getSource().getServer());
-		context.getSource().sendSuccess(() -> Component.translatable(set ? "command.trade_expansion.goods_set" : "command.trade_expansion.goods_reset",
+		context.getSource().sendSuccess(() -> Component.translatable(set ? "command.ak_trade_expansion.goods_set" : "command.ak_trade_expansion.goods_reset",
 				id.toString()), true);
 		return info(context);
 	}
@@ -89,14 +89,14 @@ final class GoodsCommand {
 		GoodsDefinition loaded = GoodsCatalog.loaded(id);
 		GoodsDefinition effective = GoodsCatalog.get(id);
 		if (loaded == null || effective == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.not_goods", id.toString()));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.not_goods", id.toString()));
 			return 0;
 		}
 		GoodsOverride o = TradeExpansionConfig.get().goods.getOrDefault(id.toString(), GoodsOverride.EMPTY);
 		CommandSourceStack source = context.getSource();
-		source.sendSuccess(() -> Component.translatable("command.trade_expansion.goods_info", id.toString(),
+		source.sendSuccess(() -> Component.translatable("command.ak_trade_expansion.goods_info", id.toString(),
 				GoodsDefinition.isConsumable(effective.item(), TradeExpansionConfig.get())
-						? Component.translatable("command.trade_expansion.consumable.yes") : Component.translatable("command.trade_expansion.consumable.no")), false);
+						? Component.translatable("command.ak_trade_expansion.consumable.yes") : Component.translatable("command.ak_trade_expansion.consumable.no")), false);
 		for (GoodsOverride.NumberKey key : GoodsOverride.NumberKey.values()) {
 			String pack = value(loaded, key).map(GoodsCommand::number).orElse("-");
 			String config = o.get(key).map(GoodsCommand::number).orElse("-");

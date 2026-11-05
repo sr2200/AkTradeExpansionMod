@@ -10,14 +10,14 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** config/trade_expansion.json (design G): defaults, partial files, range correction, round trip. */
+/** config/ak_trade_expansion.json (design G): defaults, partial files, range correction, round trip. */
 class ConfigTest {
 	@TempDir
 	Path dir;
 
 	@Test
 	void missingFileWritesDefaults() {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		TradeExpansionConfig config = ConfigManager.read(file);
 		assertTrue(Files.exists(file));
 		assertDoesNotThrow(() -> assertTrue(Files.readString(file).contains("\"halfLifeDays\": 2.0"), "every value is written"));
@@ -28,7 +28,7 @@ class ConfigTest {
 
 	@Test
 	void partialFileKeepsOtherDefaults() throws IOException {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, "{\"recovery\": {\"halfLifeDays\": 3.5}, \"trade\": {\"allowCreative\": true}}");
 		TradeExpansionConfig config = ConfigManager.read(file);
 		assertEquals(3.5, config.recovery.halfLifeDays);
@@ -40,7 +40,7 @@ class ConfigTest {
 	/** B-3: consumable overrides are normalized item ids; malformed and duplicate entries are dropped, lists stay editable. */
 	@Test
 	void consumableListsAreNormalized() throws IOException {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, "{\"consumables\": {\"add\": [\"cobblestone\", \"minecraft:cobblestone\", \"Bad Id\"], \"remove\": [\"minecraft:coal\"]}}");
 		TradeExpansionConfig config = ConfigManager.read(file);
 		assertEquals(List.of("minecraft:cobblestone"), config.consumables.add);
@@ -52,24 +52,24 @@ class ConfigTest {
 	/** D-2 / G: per-goods values; ids get the mod namespace, values are clamped, empty entries dropped. */
 	@Test
 	void goodsOverridesAreNormalized() throws IOException {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, """
 				{"goods": {"dandelion": {"base_price": 5, "sell": false},
-				           "trade_expansion:poppy": {"spread": 5.0},
-				           "trade_expansion:empty": {}}}
+				           "ak_trade_expansion:poppy": {"spread": 5.0},
+				           "ak_trade_expansion:empty": {}}}
 				""");
 		TradeExpansionConfig config = ConfigManager.read(file);
-		assertEquals(5.0, config.goods.get("trade_expansion:dandelion").basePrice().orElseThrow());
-		assertFalse(config.goods.get("trade_expansion:dandelion").sell().orElseThrow());
-		assertEquals(1.9, config.goods.get("trade_expansion:poppy").spread().orElseThrow());
-		assertFalse(config.goods.containsKey("trade_expansion:empty"));
+		assertEquals(5.0, config.goods.get("ak_trade_expansion:dandelion").basePrice().orElseThrow());
+		assertFalse(config.goods.get("ak_trade_expansion:dandelion").sell().orElseThrow());
+		assertEquals(1.9, config.goods.get("ak_trade_expansion:poppy").spread().orElseThrow());
+		assertFalse(config.goods.containsKey("ak_trade_expansion:empty"));
 	}
 
 	/** C-1: where new markets may be founded; default 4 (beds and villagers). */
 	@Test
 	void newMarketRequirement() throws IOException {
 		assertEquals(TradeExpansionConfig.NewMarketRequires.BEDS_AND_VILLAGERS, TradeExpansionConfig.defaults().market.newMarketRequires);
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, "{\"market\": {\"newMarketRequires\": \"VILLAGE\", \"newMarketMinBeds\": -5}}");
 		TradeExpansionConfig config = ConfigManager.read(file);
 		assertEquals(TradeExpansionConfig.NewMarketRequires.VILLAGE, config.market.newMarketRequires);
@@ -79,7 +79,7 @@ class ConfigTest {
 
 	@Test
 	void outOfRangeValuesAreCorrected() throws IOException {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, """
 				{"currency": {"ratios": [1, 10, 500, 10], "emeraldCoinsPerBlock": 99},
 				 "distance": {"mergeRadius": 64, "nearRadius": 10, "farRadius": 5},
@@ -98,14 +98,14 @@ class ConfigTest {
 
 	@Test
 	void brokenFileFallsBackToDefaults() throws IOException {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, "{ this is not json");
 		assertEquals(2.0, ConfigManager.read(file).recovery.halfLifeDays);
 	}
 
 	@Test
 	void writeThenReadRoundTrips() {
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		TradeExpansionConfig config = TradeExpansionConfig.defaults();
 		config.recovery.clock = TradeExpansionConfig.RecoveryClock.DAY_TIME;
 		config.bank.cardFee = 250;
@@ -134,7 +134,7 @@ class ConfigTest {
 		assertEquals(1, market.specialGoodsAt(1));
 		assertEquals(2, market.specialGoodsAt(3));
 		assertEquals(2, market.specialGoodsAt(9));
-		Path file = dir.resolve("trade_expansion.json");
+		Path file = dir.resolve("ak_trade_expansion.json");
 		Files.writeString(file, "{\"market\": {\"specialGoods\": [3, 3]}}");
 		assertEquals(java.util.List.of(1, 1, 2, 2, 2), ConfigManager.read(file).market.specialGoods);
 	}

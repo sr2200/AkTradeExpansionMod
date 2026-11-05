@@ -45,7 +45,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * {@code /tradeex} (alias {@code /trade_expansion}), design 4-2 / 5-1 stage 8.
+ * {@code /aktradeex} (alias {@code /ak_trade_expansion}), design 4-2 / 5-1 stage 8.
  * Everything except {@code balance} needs {@code command.permissionLevel}.
  */
 public final class TradeExpansionCommand {
@@ -53,7 +53,7 @@ public final class TradeExpansionCommand {
 	}
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-		LiteralCommandNode<CommandSourceStack> root = dispatcher.register(Commands.literal("tradeex")
+		LiteralCommandNode<CommandSourceStack> root = dispatcher.register(Commands.literal("aktradeex")
 				.then(Commands.literal("balance")
 						.executes(TradeExpansionCommand::balance))
 				.then(admin(Commands.literal("pay"))
@@ -114,7 +114,7 @@ public final class TradeExpansionCommand {
 										.then(Commands.literal("reset").executes(c -> marketName(c, null)))
 										.then(Commands.argument("name", StringArgumentType.greedyString())
 												.executes(c -> marketName(c, StringArgumentType.getString(c, "name"))))))));
-		dispatcher.register(Commands.literal("trade_expansion").redirect(root));
+		dispatcher.register(Commands.literal("ak_trade_expansion").redirect(root));
 	}
 
 	/** {@code command.permissionLevel} 0..4 → the 26.3 permission constants (design G). Read on every check, so reload applies. */
@@ -144,7 +144,7 @@ public final class TradeExpansionCommand {
 	private static int run(CommandContext<CommandSourceStack> context, Market market,
 			Function<Market, Function<CommandContext<CommandSourceStack>, Integer>> action) {
 		if (market == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
 		return action.apply(market).apply(context);
@@ -153,7 +153,7 @@ public final class TradeExpansionCommand {
 	private static int balance(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		long balance = WalletService.balance(player);
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.balance", CoinItem.formatCopper(balance)), false);
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.balance", CoinItem.formatCopper(balance)), false);
 		return (int) Math.min(Integer.MAX_VALUE, balance);
 	}
 
@@ -161,13 +161,13 @@ public final class TradeExpansionCommand {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		long amount = LongArgumentType.getLong(context, "amount");
 		if (!WalletService.pay(player, amount)) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.insufficient_funds",
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.insufficient_funds",
 					CoinItem.formatCopper(WalletService.balance(player)), CoinItem.formatCopper(amount)));
 			return 0;
 		}
 		long balance = WalletService.balance(player);
 		TradeExpansion.LOGGER.info("{} PAY {} (test command)", player.getPlainTextName(), CoinItem.formatCopper(amount));
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.paid",
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.paid",
 				CoinItem.formatCopper(amount), CoinItem.formatCopper(balance)), false);
 		return 1;
 	}
@@ -177,7 +177,7 @@ public final class TradeExpansionCommand {
 		long amount = LongArgumentType.getLong(context, "amount");
 		WalletService.give(player, amount);
 		long balance = WalletService.balance(player);
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.given",
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.given",
 				CoinItem.formatCopper(amount), CoinItem.formatCopper(balance)), false);
 		return 1;
 	}
@@ -186,7 +186,7 @@ public final class TradeExpansionCommand {
 	private static int bankBalance(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		long balance = BankAccounts.get(context.getSource().getServer()).balance(player.getUUID());
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.bank_balance", CoinItem.formatCopper(balance)), false);
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.bank_balance", CoinItem.formatCopper(balance)), false);
 		return (int) Math.min(Integer.MAX_VALUE, balance);
 	}
 
@@ -199,14 +199,14 @@ public final class TradeExpansionCommand {
 		else bank.add(target.getUUID(), amount);
 		long balance = bank.balance(target.getUUID());
 		BankService.sendAccount(target);
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.bank_changed",
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.bank_changed",
 				target.getPlainTextName(), CoinItem.formatCopper(balance)), true);
 		return 1;
 	}
 
 	private static int reload(CommandContext<CommandSourceStack> context) {
 		ServerConfig.reload(context.getSource().getServer());
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.reloaded"), true);
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.reloaded"), true);
 		return 1;
 	}
 
@@ -221,7 +221,7 @@ public final class TradeExpansionCommand {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		Market market = nearestMarket(player);
 		if (market == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
 		MarketUpkeep.touch(player.level(), market);
@@ -256,7 +256,7 @@ public final class TradeExpansionCommand {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		Market market = nearestMarket(player);
 		if (market == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
 		double days = DoubleArgumentType.getDouble(context, "days");
@@ -266,7 +266,7 @@ public final class TradeExpansionCommand {
 		market.elapse(days);
 		registry.setDirty();
 		TradeService.broadcast(player.level().getServer(), registry, Set.of(market.id()), now);
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.advanced", market.id(), days), true);
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.advanced", market.id(), days), true);
 		return 1;
 	}
 
@@ -284,7 +284,7 @@ public final class TradeExpansionCommand {
 			MarketRegistry registry = MarketRegistry.get(context.getSource().getServer());
 			registry.setDirty();
 			TradeService.broadcast(context.getSource().getServer(), registry, Set.of(market.id()), now);
-			context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_reset", market.id()), true);
+			context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.market_reset", market.id()), true);
 			return 1;
 		};
 	}
@@ -299,7 +299,7 @@ public final class TradeExpansionCommand {
 			MarketUpkeep.touch(level, market);
 			registry.setDirty();
 			TradeService.broadcast(context.getSource().getServer(), registry, Set.of(market.id()), MarketClock.now(level));
-			context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_rerolled",
+			context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.market_rerolled",
 					market.id(), String.valueOf(market.profileId()), market.goods().size()), true);
 			return 1;
 		};
@@ -309,10 +309,10 @@ public final class TradeExpansionCommand {
 	private static int marketDelete(CommandContext<CommandSourceStack> context) {
 		long id = LongArgumentType.getLong(context, "id");
 		if (!MarketRegistry.get(context.getSource().getServer()).remove(id)) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
-		context.getSource().sendSuccess(() -> Component.translatable("command.trade_expansion.market_deleted", id), true);
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.market_deleted", id), true);
 		return 1;
 	}
 
@@ -322,7 +322,7 @@ public final class TradeExpansionCommand {
 		switch (action) {
 			case 1 -> {
 				com.akf.tradeexpansion.market.PlacementGuide.show(player);
-				context.getSource().sendSuccess(() -> Component.translatable("message.trade_expansion.where.shown"), false);
+				context.getSource().sendSuccess(() -> Component.translatable("message.ak_trade_expansion.where.shown"), false);
 			}
 			case 2 -> com.akf.tradeexpansion.market.PlacementGuide.hide(player);
 			default -> com.akf.tradeexpansion.market.PlacementGuide.describe(player).forEach(line -> context.getSource().sendSuccess(() -> line, false));
@@ -336,19 +336,19 @@ public final class TradeExpansionCommand {
 		MarketRegistry registry = MarketRegistry.get(context.getSource().getServer());
 		Market market = registry.get(id);
 		if (market == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
 		String name = MarketNames.sanitize(raw);
 		if (raw != null && name == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.name_empty"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.name_empty"));
 			return 0;
 		}
 		MarketNames.rename(market, name, null);
 		registry.setDirty();
 		context.getSource().sendSuccess(() -> name == null
-				? Component.translatable("command.trade_expansion.name_reset", id, MarketNames.name(market))
-				: Component.translatable("message.trade_expansion.renamed", id, name), true);
+				? Component.translatable("command.ak_trade_expansion.name_reset", id, MarketNames.name(market))
+				: Component.translatable("message.ak_trade_expansion.renamed", id, name), true);
 		return 1;
 	}
 
@@ -360,7 +360,7 @@ public final class TradeExpansionCommand {
 		GoodState state = market == null ? null : market.good(goodsId);
 		GoodParams p = market == null ? null : market.params(goodsId);
 		if (state == null || p == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.not_traded", goodsId));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.not_traded", goodsId));
 			return 0;
 		}
 		long now = MarketUpkeep.touch(player.level(), market);
@@ -377,13 +377,13 @@ public final class TradeExpansionCommand {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		Market market = nearestMarket(player);
 		if (market == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.no_market"));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
 		MarketUpkeep.touch(player.level(), market);
 		List<AuditCommand.Finding> findings = AuditCommand.audit(player.level(), market);
 		CommandSourceStack source = context.getSource();
-		source.sendSuccess(() -> Component.translatable("command.trade_expansion.audit", market.id(), findings.size()), false);
+		source.sendSuccess(() -> Component.translatable("command.ak_trade_expansion.audit", market.id(), findings.size()), false);
 		findings.stream().limit(15).forEach(f -> source.sendSuccess(() -> Component.literal(String.format(" %s: %s buy %s -> sell %s (+%s)%s",
 				f.recipe(), f.result(), CoinItem.formatCopper(f.cost()), CoinItem.formatCopper(f.sell()), CoinItem.formatCopper(f.profit()),
 				market.shortages().keySet().stream().anyMatch(id -> f.result().endsWith(" " + id)) ? " [shortage]" : "")), false));
@@ -399,7 +399,7 @@ public final class TradeExpansionCommand {
 		GoodState state = market == null ? null : market.good(goodsId);
 		GoodParams p = market == null ? null : market.params(goodsId);
 		if (state == null || p == null) {
-			context.getSource().sendFailure(Component.translatable("command.trade_expansion.not_traded", goodsId));
+			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.not_traded", goodsId));
 			return 0;
 		}
 		market.refresh(MarketClock.now(player.level()));

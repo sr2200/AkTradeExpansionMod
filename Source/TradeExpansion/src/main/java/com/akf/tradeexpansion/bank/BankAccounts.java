@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Bank accounts of every player, one per server (design E-7 / F-1: {@code trade_expansion:bank}).
+ * Bank accounts of every player, one per server (design E-7 / F-1: {@code ak_trade_expansion:bank}).
  */
 public final class BankAccounts extends SavedData {
 	/** Mutable account: balance in copper and the number of the only card that works (E-8). */

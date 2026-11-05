@@ -1,0 +1,11 @@
+{
+  "fabric:load_conditions": [
+    { "condition": "ak_trade_expansion:iron_minting_enabled" }
+  ],
+  "type": "ak_trade_expansion:minting",
+  "category": "misc",
+  "pattern": ["###", "###", "###"],
+  "key": { "#": "minecraft:iron_block" },
+  "result": { "id": "ak_trade_expansion:iron_coin" },
+  "value": 640
+}

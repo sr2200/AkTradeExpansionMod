@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 /**
  * Server settings the client needs for its previews (design G "クライアントに同期する値").
- * Sent on join and after {@code /tradeex reload}; without it previews would disagree with the server.
+ * Sent on join and after {@code /aktradeex reload}; without it previews would disagree with the server.
  *
  * @param ratios effective coin ratios (the world's locked ratios when {@code currency.ratioLocked}, E-4)
  */

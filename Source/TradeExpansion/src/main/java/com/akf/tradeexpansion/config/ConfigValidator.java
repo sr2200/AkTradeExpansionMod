@@ -127,12 +127,12 @@ public final class ConfigValidator {
 	}
 
 	/** Fixed-size double list, each element clamped; wrong size → defaults. */
-	/** D-2: goods ids normalized ("dandelion" → "trade_expansion:dandelion"), values clamped to the goods JSON ranges, empty entries dropped. */
+	/** D-2: goods ids normalized ("dandelion" → "ak_trade_expansion:dandelion"), values clamped to the goods JSON ranges, empty entries dropped. */
 	private static java.util.Map<String, GoodsOverride> goodsOverrides(java.util.Map<String, GoodsOverride> values) {
 		java.util.TreeMap<String, GoodsOverride> result = new java.util.TreeMap<>();
 		values.forEach((key, value) -> {
 			String raw = key == null ? "" : key.trim();
-			net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(raw.contains(":") ? raw : "trade_expansion:" + raw);
+			net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(raw.contains(":") ? raw : "ak_trade_expansion:" + raw);
 			if (id == null) {
 				TradeExpansionConfig.warn("goods: '{}' is not a goods id, ignored", key);
 				return;

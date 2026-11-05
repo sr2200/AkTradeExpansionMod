@@ -42,7 +42,7 @@ public final class SettlementRule {
 		TradeExpansionConfig.Market config = TradeExpansionConfig.get().market;
 		TradeExpansionConfig.NewMarketRequires mode = config.newMarketRequires;
 		if (mode == TradeExpansionConfig.NewMarketRequires.VILLAGE) {
-			return villageAt(level, pos) != null ? null : Component.translatable("message.trade_expansion.new_market.village");
+			return villageAt(level, pos) != null ? null : Component.translatable("message.ak_trade_expansion.new_market.village");
 		}
 		boolean noBeds = MarketFactory.usesVillagers(level);
 		long beds = noBeds ? 0 : MarketFactory.countBeds(level, pos);
@@ -58,15 +58,15 @@ public final class SettlementRule {
 		int radius = config.levelRadius;
 		return switch (mode) {
 			case BEDS -> noBeds
-					? Component.translatable("message.trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, MarketFactory.countVillagers(level, pos))
-					: Component.translatable("message.trade_expansion.new_market.beds", radius, config.newMarketMinBeds, beds);
-			case VILLAGERS -> Component.translatable("message.trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers);
+					? Component.translatable("message.ak_trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, MarketFactory.countVillagers(level, pos))
+					: Component.translatable("message.ak_trade_expansion.new_market.beds", radius, config.newMarketMinBeds, beds);
+			case VILLAGERS -> Component.translatable("message.ak_trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers);
 			default -> noBeds
-					? Component.translatable("message.trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers)
+					? Component.translatable("message.ak_trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers)
 					: config.newMarketEnoughBeds > 0
-					? Component.translatable("message.trade_expansion.new_market.beds_and_villagers.enough", radius, config.newMarketMinBeds,
+					? Component.translatable("message.ak_trade_expansion.new_market.beds_and_villagers.enough", radius, config.newMarketMinBeds,
 					config.newMarketMinVillagers, Math.max(config.newMarketMinBeds, config.newMarketEnoughBeds), beds, villagers)
-					: Component.translatable("message.trade_expansion.new_market.beds_and_villagers", radius, config.newMarketMinBeds,
+					: Component.translatable("message.ak_trade_expansion.new_market.beds_and_villagers", radius, config.newMarketMinBeds,
 					config.newMarketMinVillagers, beds, villagers);
 		};
 	}

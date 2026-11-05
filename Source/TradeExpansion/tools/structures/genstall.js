@@ -1,4 +1,4 @@
-// Generates the village stall buildings (design stage 9): data/trade_expansion/structure/village/<type>/market_stall.nbt
+// Generates the village stall buildings (design stage 9): data/ak_trade_expansion/structure/village/<type>/market_stall.nbt
 // Layout (7 x 5 x 7): floor at y=0, entrance jigsaw on the west edge (x=0, y=1, z=3) like vanilla desert houses,
 // stall in the middle facing the entrance, four fence posts, a striped wool awning, a barrel, a hay bale and a lantern.
 // A trader NPC (design A-5 ④) stands in front of the stall and links itself to it on its first tick; the vanilla
@@ -6,7 +6,7 @@
 const n = require('./nbt.js');
 const fs = require('fs');
 const path = require('path');
-// Usage: node tools/structures/genstall.js src/main/resources/data/trade_expansion/structure/village
+// Usage: node tools/structures/genstall.js src/main/resources/data/ak_trade_expansion/structure/village
 const out = process.argv[2];
 const DATA_VERSION = 5023;
 
@@ -47,8 +47,8 @@ for (const [type, m] of Object.entries(types)) {
   for (const [x, z] of [[1, 1], [1, 5], [5, 1], [5, 5]]) for (let y = 1; y <= 3; y++) set(x, y, z, fence({}));
   for (let x = 1; x <= 5; x++) for (let z = 1; z <= 5; z++) set(x, 4, z, state(m.awning[z % 2]));
 
-  set(3, 1, 3, state('trade_expansion:market_stall', { facing: 'west' }),
-      C({ id: S('trade_expansion:market_stall'), origin: S('natural') }));
+  set(3, 1, 3, state('ak_trade_expansion:market_stall', { facing: 'west' }),
+      C({ id: S('ak_trade_expansion:market_stall'), origin: S('natural') }));
   set(4, 1, 2, state('minecraft:barrel', { facing: 'up', open: 'false' }));
   set(4, 1, 4, state('minecraft:hay_block', { axis: 'y' }));
   set(3, 3, 3, state('minecraft:lantern', { hanging: 'true', waterlogged: 'false' }));
@@ -75,7 +75,7 @@ for (const [type, m] of Object.entries(types)) {
     entities: L([C({
       pos: L([2.5, 1.0, 3.5].map(v => ({ t: 6, v })), 6),
       blockPos: L([2, 1, 3].map(I), 3),
-      nbt: C({ id: S('trade_expansion:trader'), link_nearby_stall: { t: 1, v: 1 }, Rotation: L([90, 0].map(v => ({ t: 5, v })), 5) }),
+      nbt: C({ id: S('ak_trade_expansion:trader'), link_nearby_stall: { t: 1, v: 1 }, Rotation: L([90, 0].map(v => ({ t: 5, v })), 5) }),
     })], 10),
     blocks: L(blocks, 10),
     palette: L(palette, 10),

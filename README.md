@@ -11,11 +11,11 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 | 項目 | 内容 |
 |---|---|
-| Mod ID | `trade_expansion`（表示名は「AK Trade Expansion」。0.0.10 までは「Trade Expansion」） |
+| Mod ID | `ak_trade_expansion`（表示名は「AK Trade Expansion」。0.0.10 までは「Trade Expansion」） |
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.16（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.0.17（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -38,7 +38,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 - 価格はすべて銅貨単位（c）。支払いは財布とインベントリのコインから自動で行い、お釣りは財布に（財布が無ければ最小の枚数のコインで）返します。入りきらない分は足元に落ちます。
 - コインを持ってスニーク＋右クリックすると、1枚を1段下のコインに崩せます。
-- 入手方法：市場に商品を売る、依頼を納める、プレイヤーが倒した敵対モブのドロップ（銅貨0〜2枚、まれに鉄貨）、鋳造（作業台で銅ブロック×9 → 銅貨64枚、鉄ブロック×9 → 鉄貨64枚。素材を売るよりずっと安いので、余った素材の受け皿です）。テスト用に管理コマンド `/tradeex give` もあります。
+- 入手方法：市場に商品を売る、依頼を納める、プレイヤーが倒した敵対モブのドロップ（銅貨0〜2枚、まれに鉄貨）、鋳造（作業台で銅ブロック×9 → 銅貨64枚、鉄ブロック×9 → 鉄貨64枚。素材を売るよりずっと安いので、余った素材の受け皿です）。テスト用に管理コマンド `/aktradeex give` もあります。
 - 交易画面の「両替」タブで、コインを1段下に崩したり、1段下のコインからまとめたりできます（手数料は既定で無し。設定 `currency.exchangeFee` で変更可）。
 
 ### 財布・銀行・クレジットカード
@@ -58,9 +58,9 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 既存の市場から 64〜256ブロックの場所には新しい交易所を置けません（相場をリセットする抜け道を防ぐため）。
 - 256ブロック以上離れた場所に新しい市場を作るには、周り（半径64ブロック）に**村人が3人以上いて、ベッドが3個以上かつ村人の数以上**あることが必要です（既定）。ただし**ベッドが5個以上あれば、村人の方が多くても作れます**（設定 `market.newMarketEnoughBeds`）。条件は設定 `market.newMarketRequires` で「村の中だけ」「ベッドの数」「村人の数」に変えられます。ネザー・エンドでは村人の数だけで判定します。
 - クリエイティブモードでは取引できません（無限のアイテムで経済が壊れるのを防ぐため）。試すときはサバイバルモードで行ってください（設定 `trade.allowCreative` で許可もできます）。
-- **置き場所の確認**：交易所を手に持つと、画面下に「置くと◯◯に加わる／新しい市場ができる／置けない理由」が出ます。`/tradeex where` で今いる場所の情報（村の範囲内か・近くの市場・ベッドと村人の数・置いた時の結果）、`/tradeex where show` で範囲を30秒間パーティクルで表示できます（緑：村、黄：同じ市場になる範囲、赤：新しい市場を作れない範囲、青：ベッド・村人を数える範囲）。
+- **置き場所の確認**：交易所を手に持つと、画面下に「置くと◯◯に加わる／新しい市場ができる／置けない理由」が出ます。`/aktradeex where` で今いる場所の情報（村の範囲内か・近くの市場・ベッドと村人の数・置いた時の結果）、`/aktradeex where show` で範囲を30秒間パーティクルで表示できます（緑：村、黄：同じ市場になる範囲、赤：新しい市場を作れない範囲、青：ベッド・村人を数える範囲）。
 - **村の屋台**：新しく生成される村（平原・砂漠・サバンナ・雪原・タイガ）には、交易所の入った屋台の建物が建つことがあります。設定 `worldgen.protectNaturalStalls` を ON にすると、村の交易所をサバイバルで壊せなくなります（既定 OFF）。
-- **商人NPC**：交易所を開くと、交易所の前に商人が現れます（いなくなっていれば次に開いた時にまた現れます）。商人を右クリックしても同じ交易画面を開けます。商人は倒せず、その場から動きません。交易所を壊すと一緒に消えます。村の屋台の建物には最初から商人がいます。クリエイティブタブの「商人のスポーンエッグ」や `/summon trade_expansion:trader` で出した商人は、近く（64ブロック以内）の市場で取引できます（商人だけでは新しい市場は作れません）。消す時は `/kill`。
+- **商人NPC**：交易所を開くと、交易所の前に商人が現れます（いなくなっていれば次に開いた時にまた現れます）。商人を右クリックしても同じ交易画面を開けます。商人は倒せず、その場から動きません。交易所を壊すと一緒に消えます。村の屋台の建物には最初から商人がいます。クリエイティブタブの「商人のスポーンエッグ」や `/summon ak_trade_expansion:trader` で出した商人は、近く（64ブロック以内）の市場で取引できます（商人だけでは新しい市場は作れません）。消す時は `/kill`。
 - **市場名**：金床で名前を付けた名札を持って交易所を右クリックすると、その市場に名前を付けられます（名札は1枚使います）。名前を付けた交易所を置いて新しい市場を作った時も、その名前になります。名前を変えられるのは、名付けた人（自分で作った市場なら作った人）と管理者だけです（名前の無い市場は誰でも。設定 `market.renamePermission` で変更可）。名前が無い市場は「平原の村 #12」のように表示されます。
 
 ### 交易画面
@@ -86,7 +86,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 同じ市場で売ってすぐ買い戻しても儲からないように、買値と売値には差があります。
 - ずれた相場はゲーム内2日で半分元に戻ります。在庫も時間で補充されます。
 - 売りすぎて在庫が上限に達すると「買取停止」になりますが、市場が在庫を少しずつ使うので、時間がたつとまた買い取ってもらえます。
-- 食料・松明・燃料・原木・木材・丸石・砂・ガラス・花などの**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります。消耗品は後から追加・削除できます（設定画面の「商品」タブ →「追加の商品と消耗品」でアイコンから選ぶ、管理コマンド `/tradeex consumable add|remove <アイテム>`、設定の `consumables.add`・`consumables.remove`、データパックのアイテムタグ `#trade_expansion:consumables`）。
+- 食料・松明・燃料・原木・木材・丸石・砂・ガラス・花などの**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります。消耗品は後から追加・削除できます（設定画面の「商品」タブ →「追加の商品と消耗品」でアイコンから選ぶ、管理コマンド `/aktradeex consumable add|remove <アイテム>`、設定の `consumables.add`・`consumables.remove`、データパックのアイテムタグ `#ak_trade_expansion:consumables`）。
 - 取引の影響は近くの市場にも伝わります（128ブロック以内は100%、1,536ブロックで0%）。在庫は伝わりません。
 
 ### 品揃えと市場の規模
@@ -146,7 +146,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - **在庫** は平常時の在庫（目標在庫）です。上限はその2倍（ダイヤの剣・エメラルド貨は個別に設定）。
 - **消耗品** は在庫と相場が早く戻る商品です（「相場の動き方」を参照）。
 - **並ぶ市場** の「オーバーワールドの全市場」は、どの地域の市場でも抽選の候補になる日用品・高級品です。「（レベルN〜）」はその規模以上の市場だけで並ぶことを表します。地元の特産として、ほかより低いレベルから並ぶ地域は個別に書いています。
-- 値は設定の `goods` や `/tradeex goods set` で変えられます。ここに載っているのは既定値です。
+- 値は設定の `goods` や `/aktradeex goods set` で変えられます。ここに載っているのは既定値です。
 
 ### 食料（12種）
 
@@ -302,40 +302,40 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 | 名前 | ID | 基準 | 買値 / 売値 | 在庫 | 消耗品 | 並ぶ市場 |
 |---|---|---|---|---|---|---|
-| エメラルド貨 | `trade_expansion:emerald_coin` | 5c（10個あたり） | 買えない / 4c | 0 |  | 村の市場すべて（商品数とは別枠） |
+| エメラルド貨 | `ak_trade_expansion:emerald_coin` | 5c（10個あたり） | 買えない / 4c | 0 |  | 村の市場すべて（商品数とは別枠） |
 
 ---
 
 ## コマンド
 
-`/tradeex`（別名 `/trade_expansion`）。`balance`・`bank balance`・`where` 以外は OP 権限（既定はレベル2。設定 `command.permissionLevel` で変更可）が必要です。
+`/aktradeex`（別名 `/ak_trade_expansion`）。`balance`・`bank balance`・`where` 以外は OP 権限（既定はレベル2。設定 `command.permissionLevel` で変更可）が必要です。
 
 | コマンド | 内容 |
 |---|---|
-| `/tradeex balance` | 所持金を表示 |
-| `/tradeex where` | 今いる場所の情報（村の範囲内か・一番近い市場・ベッドと村人の数・ここに市場を作った場合の規模・交易所を置いた時の結果）。OP 権限不要 |
-| `/tradeex where show` / `hide` | 範囲を30秒間パーティクルで表示する／表示を止める。OP 権限不要 |
-| `/tradeex give <金額>` | 自分にコインを渡す（テスト用） |
-| `/tradeex pay <金額>` | 自分の所持金から支払う（支払い処理のテスト用） |
-| `/tradeex market info` | 最寄りの市場の情報（プロファイル・レベル・ベッドと村人の数・今測った場合のレベル・全商品の価格と在庫） |
-| `/tradeex market advance <日数>` | 最寄りの市場の相場を、指定した日数分だけ回復させる（テスト用） |
-| `/tradeex market reset [ID]` | 市場の相場と在庫を初期値に戻す（商品構成・レベルはそのまま。ID 省略で最寄り） |
-| `/tradeex market reroll [ID]` | 今のデータパックとレベルで品揃えを選び直す |
-| `/tradeex market name <ID> <名前>` | 市場名を付ける・変える（`reset` で名前を消す） |
-| `/tradeex market delete <ID>` | 市場を削除（交易所は次に使われた時に割り当て直し） |
-| `/tradeex market setx <商品> <X>` | 最寄りの市場の相場のずれ X を直接設定する（テスト用） |
-| `/tradeex simulate <商品> <buy\|sell> <数>` | 取引せずに、最寄りの市場での価格の推移を表示 |
-| `/tradeex consumable list` | 消耗品として扱っている商品と、設定で追加・除外したアイテムを表示 |
-| `/tradeex consumable add\|remove <アイテム>` | アイテムを消耗品に追加する／消耗品から外す（設定ファイルに保存され、すぐに反映） |
-| `/tradeex consumable reset <アイテム>` | 追加・除外の設定を消して、データパックのタグの指定に戻す |
-| `/tradeex goods info <商品>` | 商品の値（データパックの値と設定ファイルの値）を表示 |
-| `/tradeex goods set <商品> <項目> <値>` | 商品の値を設定ファイルで上書きする（例：`/tradeex goods set dandelion base_price 5`。すぐ反映） |
-| `/tradeex goods reset <商品> [項目]` | 上書きを消してデータパックの値に戻す |
-| `/tradeex audit villagers` | 周りの村人・行商人の取引のうち、買って市場で売ると儲かるものを一覧にする（換算額の調整用） |
-| `/tradeex audit` | 最寄りの市場で、素材を買ってクラフト（または鋳造）して売ると儲かるレシピを一覧にする（バランス確認用） |
-| `/tradeex reload` | 設定ファイルを読み直す |
-| `/tradeex bank balance` | 自分の銀行残高（OP 権限不要） |
-| `/tradeex bank set\|add <プレイヤー> <金額>` | 銀行残高を設定・増減 |
+| `/aktradeex balance` | 所持金を表示 |
+| `/aktradeex where` | 今いる場所の情報（村の範囲内か・一番近い市場・ベッドと村人の数・ここに市場を作った場合の規模・交易所を置いた時の結果）。OP 権限不要 |
+| `/aktradeex where show` / `hide` | 範囲を30秒間パーティクルで表示する／表示を止める。OP 権限不要 |
+| `/aktradeex give <金額>` | 自分にコインを渡す（テスト用） |
+| `/aktradeex pay <金額>` | 自分の所持金から支払う（支払い処理のテスト用） |
+| `/aktradeex market info` | 最寄りの市場の情報（プロファイル・レベル・ベッドと村人の数・今測った場合のレベル・全商品の価格と在庫） |
+| `/aktradeex market advance <日数>` | 最寄りの市場の相場を、指定した日数分だけ回復させる（テスト用） |
+| `/aktradeex market reset [ID]` | 市場の相場と在庫を初期値に戻す（商品構成・レベルはそのまま。ID 省略で最寄り） |
+| `/aktradeex market reroll [ID]` | 今のデータパックとレベルで品揃えを選び直す |
+| `/aktradeex market name <ID> <名前>` | 市場名を付ける・変える（`reset` で名前を消す） |
+| `/aktradeex market delete <ID>` | 市場を削除（交易所は次に使われた時に割り当て直し） |
+| `/aktradeex market setx <商品> <X>` | 最寄りの市場の相場のずれ X を直接設定する（テスト用） |
+| `/aktradeex simulate <商品> <buy\|sell> <数>` | 取引せずに、最寄りの市場での価格の推移を表示 |
+| `/aktradeex consumable list` | 消耗品として扱っている商品と、設定で追加・除外したアイテムを表示 |
+| `/aktradeex consumable add\|remove <アイテム>` | アイテムを消耗品に追加する／消耗品から外す（設定ファイルに保存され、すぐに反映） |
+| `/aktradeex consumable reset <アイテム>` | 追加・除外の設定を消して、データパックのタグの指定に戻す |
+| `/aktradeex goods info <商品>` | 商品の値（データパックの値と設定ファイルの値）を表示 |
+| `/aktradeex goods set <商品> <項目> <値>` | 商品の値を設定ファイルで上書きする（例：`/aktradeex goods set dandelion base_price 5`。すぐ反映） |
+| `/aktradeex goods reset <商品> [項目]` | 上書きを消してデータパックの値に戻す |
+| `/aktradeex audit villagers` | 周りの村人・行商人の取引のうち、買って市場で売ると儲かるものを一覧にする（換算額の調整用） |
+| `/aktradeex audit` | 最寄りの市場で、素材を買ってクラフト（または鋳造）して売ると儲かるレシピを一覧にする（バランス確認用） |
+| `/aktradeex reload` | 設定ファイルを読み直す |
+| `/aktradeex bank balance` | 自分の銀行残高（OP 権限不要） |
+| `/aktradeex bank set\|add <プレイヤー> <金額>` | 銀行残高を設定・増減 |
 
 ### 既存のワールドの品揃えを更新する
 
@@ -343,11 +343,11 @@ MOD を新しいバージョンに入れ替えた時や、データパックで�
 
 1. OP 権限を用意する（シングルプレイなら、ワールドの「チートの許可」を ON にするか、LAN に公開してチートを ON にする）
 2. 選び直したい市場の交易所の近くで、次を実行する
-   - `/tradeex market reroll` … 一番近い市場を選び直す
-   - `/tradeex market reroll <ID>` … ID を指定して選び直す（離れた市場や、まとめて直したい時）
+   - `/aktradeex market reroll` … 一番近い市場を選び直す
+   - `/aktradeex market reroll <ID>` … ID を指定して選び直す（離れた市場や、まとめて直したい時）
 3. 「市場 #12 の品揃えを選び直しました（…、15 商品）」と出れば完了。交易画面を開き直すと新しい品揃えになっている
 
-- **市場の ID の調べ方**：交易画面のタイトルや `/tradeex where` に出る「平原の村 #12」の **#の後ろの数字**が ID です。`/tradeex market info` でも表示されます。市場の ID は 1 から順に付いているので、全部の市場を直す時は `/tradeex market reroll 1`、`/tradeex market reroll 2`… と順に実行します。
+- **市場の ID の調べ方**：交易画面のタイトルや `/aktradeex where` に出る「平原の村 #12」の **#の後ろの数字**が ID です。`/aktradeex market info` でも表示されます。市場の ID は 1 から順に付いているので、全部の市場を直す時は `/aktradeex market reroll 1`、`/aktradeex market reroll 2`… と順に実行します。
 - **選び直すと変わるもの**：扱う商品の組み合わせ（その時の MOD とデータパックの内容で選び直す）、各商品の相場と在庫（初期値に戻る）、品不足と依頼（選び直す）
 - **そのまま残るもの**：市場の名前、市場のレベル（下がらない）、交易所と商人、銀行の残高、プレイヤーの持ち物
 - 品揃えは場所ごとに決まった乱数で選ぶので、MOD やデータパックの内容が変わっていなければ、選び直しても同じ品揃えになります。
@@ -357,10 +357,10 @@ MOD を新しいバージョンに入れ替えた時や、データパックで�
 
 ## 設定
 
-設定は `config/trade_expansion.json` に保存されます（初回起動時に全項目が既定値で書き出されます）。
+設定は `config/ak_trade_expansion.json` に保存されます（初回起動時に全項目が既定値で書き出されます）。
 
 - **Mod Menu ＋ YetAnotherConfigLib（YACL）** を入れていれば、Mod 一覧の AK Trade Expansion の「設定」ボタンから画面で変更できます。どちらも任意で、入っていなくても Mod は動きます。
-- シングルプレイでは保存した時点で反映されます。マルチプレイではサーバーの設定ファイルを編集して `/tradeex reload` を実行します（`client.*` は各プレイヤーが自分で変更できます）。
+- シングルプレイでは保存した時点で反映されます。マルチプレイではサーバーの設定ファイルを編集して `/aktradeex reload` を実行します（`client.*` は各プレイヤーが自分で変更できます）。
 - 範囲外の値は自動で範囲内に直されます（サーバーログに警告）。書かれていない項目は既定値になります。
 - 「**未実装**」の項目は、値を保存できるだけで今はまだ効果がありません。
 
@@ -424,14 +424,14 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
-| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/tradeex consumable add` や設定画面の「追加の商品と消耗品」でも追加できる | `"add": ["minecraft:sandstone", "minecraft:white_wool"]` |
-| `consumables.remove` | `[]` | アイテムIDの一覧 | タグや `add` にあっても消耗品として扱わないアイテム。`/tradeex consumable remove` でも指定できる | `"remove": ["minecraft:cobblestone"]` |
+| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#ak_trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/aktradeex consumable add` や設定画面の「追加の商品と消耗品」でも追加できる | `"add": ["minecraft:sandstone", "minecraft:white_wool"]` |
+| `consumables.remove` | `[]` | アイテムIDの一覧 | タグや `add` にあっても消耗品として扱わないアイテム。`/aktradeex consumable remove` でも指定できる | `"remove": ["minecraft:cobblestone"]` |
 
 #### 商品ごとの値（goods）
 
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
-| `goods` | `{}` | 商品ID → 値 | 商品定義（データパック）の値を商品ごとに上書きする。書ける項目は `base_price`（基準価格）・`elasticity`（弾力性）・`target_stock`（目標在庫）・`max_stock`（在庫上限）・`restock_per_day`（補充速度）・`consume_per_day`（消費量）・`half_life_days`（相場の半減期）・`spread`（スプレッド）・`buy`・`sell`。`buy` と `sell` を両方 `false` にするとその商品を扱わなくなる。名前空間を省くと `trade_expansion:`。`/tradeex goods set` でも変更できる。データパックに無い商品IDに `item`（アイテムID）と `base_price` を書くと**商品を追加**する（設定画面の「追加の商品と消耗品」でアイコンから追加できる） | `"goods": { "dandelion": { "base_price": 5 }, "melon": { "item": "minecraft:melon", "base_price": 12 } }` |
+| `goods` | `{}` | 商品ID → 値 | 商品定義（データパック）の値を商品ごとに上書きする。書ける項目は `base_price`（基準価格）・`elasticity`（弾力性）・`target_stock`（目標在庫）・`max_stock`（在庫上限）・`restock_per_day`（補充速度）・`consume_per_day`（消費量）・`half_life_days`（相場の半減期）・`spread`（スプレッド）・`buy`・`sell`。`buy` と `sell` を両方 `false` にするとその商品を扱わなくなる。名前空間を省くと `ak_trade_expansion:`。`/aktradeex goods set` でも変更できる。データパックに無い商品IDに `item`（アイテムID）と `base_price` を書くと**商品を追加**する（設定画面の「追加の商品と消耗品」でアイコンから追加できる） | `"goods": { "dandelion": { "base_price": 5 }, "melon": { "item": "minecraft:melon", "base_price": 12 } }` |
 
 #### 距離（distance）
 
@@ -534,7 +534,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
 | `log.trades` | `true` | true / false | 誰が何をいくらで売買したか（銀行の出し入れも）をサーバーログに出す | `"trades": false` |
-| `command.permissionLevel` | `2` | 0〜4 | `/tradeex` の管理用コマンドに必要な権限レベル（2＝OP） | `"permissionLevel": 3` |
+| `command.permissionLevel` | `2` | 0〜4 | `/aktradeex` の管理用コマンドに必要な権限レベル（2＝OP） | `"permissionLevel": 3` |
 | `vanilla.disableVillagerTrades` | `false` | true / false | バニラの村人との交易をできなくする | `"disableVillagerTrades": true` |
 
 #### 表示（client）※各プレイヤーのクライアント側の設定
@@ -552,12 +552,12 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 商品と品揃えはデータパックで変更・追加できます。`/reload` で再読み込みされ、既存の市場にも価格の変更が反映されます（商品の構成は変わりません）。
 
-値段や在庫だけを変えたい時は、データパックを作らなくても、設定ファイルの `goods` か `/tradeex goods set` で商品ごとに上書きできます（上の「設定」を参照）。
+値段や在庫だけを変えたい時は、データパックを作らなくても、設定ファイルの `goods` か `/aktradeex goods set` で商品ごとに上書きできます（上の「設定」を参照）。
 
 | 種類 | 置き場所 |
 |---|---|
-| 商品定義 | `data/<namespace>/trade_expansion/goods/<名前>.json` |
-| 市場プロファイル | `data/<namespace>/trade_expansion/market_profile/<名前>.json` |
+| 商品定義 | `data/<namespace>/ak_trade_expansion/goods/<名前>.json` |
+| 市場プロファイル | `data/<namespace>/ak_trade_expansion/market_profile/<名前>.json` |
 
 商品定義の例：
 
@@ -576,7 +576,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 主な項目：`base_price`（基準価格）、`elasticity`（大きいほど値崩れしにくい）、`target_stock`（目標在庫）、`max_stock`（在庫上限。これ以上は買い取らない）、`unit`（取引単位）、`auto_add`（条件に合う市場に自動で追加）、`link`（近くの市場への相場の伝わりやすさ、既定 1.0）、`consume_per_day`（在庫が目標より多い時に1日に減る数）、`half_life_days`（相場の半減期）、`components`（エンチャントなど付加情報付きの品。例：`{"minecraft:enchantments": {"minecraft:sharpness": 1}}`）。
 
-市場プロファイルでは、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。同梱データ（商品95種（花20種を含む）＋エメラルド貨、プロファイル12種）は `Source/TradeExpansion/src/main/resources/data/trade_expansion/trade_expansion/` にあります。
+市場プロファイルでは、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。同梱データ（商品95種（花20種を含む）＋エメラルド貨、プロファイル12種）は `Source/TradeExpansion/src/main/resources/data/ak_trade_expansion/ak_trade_expansion/` にあります。
 
 ---
 
@@ -620,8 +620,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `src/main/java/.../quest/`・`board/` | 依頼・品不足・掲示板 |
 | `src/main/java/.../worldgen/`・`mixin/` | 村への屋台の建物の追加・財布の自動収納 |
 | `src/main/java/.../entity/` | 商人NPC |
-| `src/main/java/.../command/` | 管理コマンド（`/tradeex`） |
-| `src/main/resources/data/trade_expansion/structure/` | 村の屋台の建物（構造物NBT。`tools/structures/genstall.js` で生成） |
+| `src/main/java/.../command/` | 管理コマンド（`/aktradeex`） |
+| `src/main/resources/data/ak_trade_expansion/structure/` | 村の屋台の建物（構造物NBT。`tools/structures/genstall.js` で生成） |
 | `src/client/java/...` | 交易画面などクライアント専用のコード |
 | `tools/structures/genstall.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js` | 村の屋台の建物の生成、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
 | `build.bat`・`release.bat`・`tools/version/bump.ps1` | 普段のビルド（末尾を上げる）・配布用のビルド（真ん中を上げる）と、バージョンを上げる処理（下の「よく使うコマンド」） |
@@ -645,10 +645,6 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | 12 | 財布・銀行・クレジットカード | ✅（ゲーム内の確認は進行中） |
 | 13 | 掲示板・依頼・品不足 | ✅（ゲーム内の確認は進行中） |
 | 14 | 村人交易のコイン化（14a 村人・14b 行商人と特殊な取引・14c 抜け道対策） | ✅（ゲーム内の確認は進行中） |
-
-**今後の予定（TODO）**
-
-- Mod ID を表示名に合わせて変更する（`trade_expansion` → 例：`ak_trade_expansion`）。変更すると、それより前のバージョンで遊んだワールドのコイン・交易所・市場データは引き継げない場合があります。詳しくは設計書 L-3。
 
 ---
 

@@ -29,7 +29,7 @@ import java.util.Optional;
  * through {@code onSave} when closed with "Done".
  */
 public final class GoodsManagerScreen extends Screen {
-	private static final String KEY = "config.trade_expansion.goods_manager.";
+	private static final String KEY = "config.ak_trade_expansion.goods_manager.";
 	private static final int PANEL_W = 340;
 	private static final int PANEL_H = 222;
 	private static final int CELL = 18;
@@ -175,11 +175,11 @@ public final class GoodsManagerScreen extends Screen {
 		return BuiltInRegistries.ITEM.getKey(item).toString();
 	}
 
-	/** Goods id for a config-added good: {@code trade_expansion:<path>}, with the namespace for other mods' items. */
+	/** Goods id for a config-added good: {@code ak_trade_expansion:<path>}, with the namespace for other mods' items. */
 	private static String goodsIdFor(Item item) {
 		Identifier id = BuiltInRegistries.ITEM.getKey(item);
 		String path = id.getNamespace().equals("minecraft") ? id.getPath() : id.getNamespace() + "_" + id.getPath();
-		return "trade_expansion:" + path;
+		return "ak_trade_expansion:" + path;
 	}
 
 	private void add() {

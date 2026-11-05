@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Settings of design chapter G, stored in {@code config/trade_expansion.json} as one JSON object per category
+ * Settings of design chapter G, stored in {@code config/ak_trade_expansion.json} as one JSON object per category
  * ({@code {"currency": {"ratios": [10, 10, 10, 10], ...}, ...}}). Missing keys take the defaults below.
  * <p>
  * Instances are mutable so that the config screen can edit a copy; the live instance is replaced as a whole
@@ -228,7 +228,7 @@ public final class TradeExpansionConfig {
 		public double halfLifeDays = 2.0;
 		public double restockMultiplier = 1.0;
 		public RecoveryClock clock = RecoveryClock.GAME_TIME;
-		/** B-3: consumables (#trade_expansion:consumables) consume T × this per day above the target stock. */
+		/** B-3: consumables (#ak_trade_expansion:consumables) consume T × this per day above the target stock. */
 		public double consumableMultiplier = 1.0;
 		/** B-3: half-life of X for consumables. */
 		public double consumableHalfLifeDays = 1.0;
@@ -735,8 +735,8 @@ public final class TradeExpansionConfig {
 	}
 
 	/**
-	 * B-3: changes to the consumables tag ({@code #trade_expansion:consumables}) without a datapack, as item ids.
-	 * {@code remove} wins over {@code add} and the tag. Edited by {@code /tradeex consumable} and the config screen.
+	 * B-3: changes to the consumables tag ({@code #ak_trade_expansion:consumables}) without a datapack, as item ids.
+	 * {@code remove} wins over {@code add} and the tag. Edited by {@code /aktradeex consumable} and the config screen.
 	 */
 	public static final class Consumables {
 		public List<String> add = new ArrayList<>();

@@ -20,7 +20,7 @@ import java.util.TreeSet;
 import java.util.function.BiConsumer;
 
 /**
- * {@code /tradeex consumable list|add|remove|reset <item>} (design B-3): changes which goods count as consumables
+ * {@code /aktradeex consumable list|add|remove|reset <item>} (design B-3): changes which goods count as consumables
  * without a datapack. Writes {@code consumables.add / remove} to the config file and reloads it; markets use the new
  * recovery speed at once.
  */
@@ -34,15 +34,15 @@ final class ConsumableCommand {
 				.then(Commands.literal("add").then(item((c, id) -> {
 					c.remove.remove(id);
 					if (!c.add.contains(id)) c.add.add(id);
-				}, "command.trade_expansion.consumable.added")))
+				}, "command.ak_trade_expansion.consumable.added")))
 				.then(Commands.literal("remove").then(item((c, id) -> {
 					c.add.remove(id);
 					if (!c.remove.contains(id)) c.remove.add(id);
-				}, "command.trade_expansion.consumable.removed")))
+				}, "command.ak_trade_expansion.consumable.removed")))
 				.then(Commands.literal("reset").then(item((c, id) -> {
 					c.add.remove(id);
 					c.remove.remove(id);
-				}, "command.trade_expansion.consumable.reset")));
+				}, "command.ak_trade_expansion.consumable.reset")));
 	}
 
 	private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, Identifier> item(
@@ -52,17 +52,17 @@ final class ConsumableCommand {
 				.executes(context -> {
 					Identifier id = IdentifierArgument.getId(context, "item");
 					if (!BuiltInRegistries.ITEM.containsKey(id)) {
-						context.getSource().sendFailure(Component.translatable("command.trade_expansion.consumable.unknown_item", id.toString()));
+						context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.consumable.unknown_item", id.toString()));
 						return 0;
 					}
-					// Edit the file (not the live copy) so hand edits are kept, then reload like /tradeex reload.
+					// Edit the file (not the live copy) so hand edits are kept, then reload like /aktradeex reload.
 					TradeExpansionConfig file = ConfigManager.read(ConfigManager.path());
 					change.accept(file.consumables, id.toString());
 					ConfigManager.write(ConfigManager.path(), file);
 					ServerConfig.reload(context.getSource().getServer());
 					boolean now = GoodsDefinition.isConsumable(id, TradeExpansionConfig.get());
 					context.getSource().sendSuccess(() -> Component.translatable(message, id.toString(),
-							Component.translatable(now ? "command.trade_expansion.consumable.yes" : "command.trade_expansion.consumable.no")), true);
+							Component.translatable(now ? "command.ak_trade_expansion.consumable.yes" : "command.ak_trade_expansion.consumable.no")), true);
 					return 1;
 				});
 	}
@@ -74,8 +74,8 @@ final class ConsumableCommand {
 			if (def.consumable(config)) goods.add(def.item().getPath());
 		});
 		CommandSourceStack source = context.getSource();
-		source.sendSuccess(() -> Component.translatable("command.trade_expansion.consumable.list", goods.size(), String.join(", ", goods)), false);
-		source.sendSuccess(() -> Component.translatable("command.trade_expansion.consumable.overrides",
+		source.sendSuccess(() -> Component.translatable("command.ak_trade_expansion.consumable.list", goods.size(), String.join(", ", goods)), false);
+		source.sendSuccess(() -> Component.translatable("command.ak_trade_expansion.consumable.overrides",
 				text(config.consumables.add), text(config.consumables.remove)), false);
 		return goods.size();
 	}

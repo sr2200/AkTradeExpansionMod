@@ -27,7 +27,7 @@ public class EmeraldCoinRecipe extends StonecutterRecipe {
 			SingleItemRecipe.<StonecutterRecipe>simpleMapCodec(EmeraldCoinRecipe::create),
 			SingleItemRecipe.<StonecutterRecipe>simpleStreamCodec(EmeraldCoinRecipe::new));
 
-	/** {@code "fabric:load_conditions": [{"condition": "trade_expansion:emerald_coin_enabled"}]} */
+	/** {@code "fabric:load_conditions": [{"condition": "ak_trade_expansion:emerald_coin_enabled"}]} */
 	public static final ResourceConditionType<Enabled> ENABLED = ResourceConditionType.create(
 			TradeExpansion.id("emerald_coin_enabled"), MapCodec.unit(new Enabled()));
 

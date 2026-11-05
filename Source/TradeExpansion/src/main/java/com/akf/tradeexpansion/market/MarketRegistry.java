@@ -68,7 +68,7 @@ public final class MarketRegistry extends SavedData {
 		this.nextId = nextId;
 		markets.forEach(m -> this.markets.put(m.id(), m));
 		if (schemaVersion < 2) {
-			// Built-in goods of schema 1 were keyed by item id (minecraft:bread → trade_expansion:bread).
+			// Built-in goods of schema 1 were keyed by item id (minecraft:bread → ak_trade_expansion:bread).
 			this.markets.values().forEach(m -> m.remapGoods(id -> TradeExpansion.id(id.getPath())));
 			setDirty();
 		}
@@ -143,7 +143,7 @@ public final class MarketRegistry extends SavedData {
 		double nearestDistance = nearest == null ? Double.POSITIVE_INFINITY : nearest.horizontalDistanceTo(pos);
 		if (nearest != null && nearestDistance <= config.distance.mergeRadius) return new Preview(Preview.Kind.JOIN, nearest, nearestDistance, null, null);
 		if (origin == MarketOrigin.CRAFTED && nearestDistance < config.distance.minNewMarketDistance) {
-			Component reason = Component.translatable("message.trade_expansion.stall_too_close",
+			Component reason = Component.translatable("message.ak_trade_expansion.stall_too_close",
 					(int) nearestDistance, (int) config.distance.mergeRadius, (int) config.distance.minNewMarketDistance);
 			return new Preview(Preview.Kind.REFUSED, null, nearestDistance, Rejection.TOO_CLOSE_TO_MARKET, reason);
 		}

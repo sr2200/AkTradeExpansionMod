@@ -16,7 +16,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 /**
- * Coins from hostile mobs (design E-2, Q22): only mobs in {@code #trade_expansion:drops_coins} killed by a player;
+ * Coins from hostile mobs (design E-2, Q22): only mobs in {@code #ak_trade_expansion:drops_coins} killed by a player;
  * 0..2 copper coins (+ up to the Looting level more), and a 2.5% chance of one iron coin.
  */
 public final class CoinDrops {

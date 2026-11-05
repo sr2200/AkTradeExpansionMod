@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Market profiles loaded from {@code data/<ns>/trade_expansion/market_profile/*.json} (design D-2).
+ * Market profiles loaded from {@code data/<ns>/ak_trade_expansion/market_profile/*.json} (design D-2).
  * Profiles whose path starts with {@code default} are only used as the per-dimension fallback.
  */
 public final class MarketProfiles {

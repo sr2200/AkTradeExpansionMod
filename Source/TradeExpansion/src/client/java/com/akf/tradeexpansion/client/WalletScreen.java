@@ -24,7 +24,7 @@ public class WalletScreen extends Screen {
 	private final InteractionHand hand;
 
 	public WalletScreen(InteractionHand hand) {
-		super(Component.translatable("item.trade_expansion.wallet"));
+		super(Component.translatable("item.ak_trade_expansion.wallet"));
 		this.hand = hand;
 	}
 
@@ -65,7 +65,7 @@ public class WalletScreen extends Screen {
 		int left = width / 2 - 100;
 		int top = height / 2 - 60;
 		long balance = WalletItem.balance(wallet());
-		g.centeredText(font, Component.translatable("screen.trade_expansion.wallet.balance",
+		g.centeredText(font, Component.translatable("screen.ak_trade_expansion.wallet.balance",
 				CoinItem.formatCopper(balance), CoinItem.formatCopper(WalletItem.capacity())), width / 2, top + 6, 0xFFFFD700);
 		CoinType[] types = CoinType.values();
 		for (int t = 0; t < types.length; t++) {

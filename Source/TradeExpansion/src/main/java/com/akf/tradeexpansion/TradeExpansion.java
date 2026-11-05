@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TradeExpansion implements ModInitializer {
-	public static final String MOD_ID = "trade_expansion";
+	public static final String MOD_ID = "ak_trade_expansion";
 
 	/** Log lines are prefixed with [TradeExpansion]. */
 	public static final Logger LOGGER = LoggerFactory.getLogger("TradeExpansion");

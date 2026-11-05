@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"id": "trade_expansion",
+	"id": "ak_trade_expansion",
 	"version": "${version}",
 	"name": "AK Trade Expansion",
 	"description": "Dynamic market trading with coins, regional goods and distance-based price propagation.",
@@ -8,7 +8,7 @@
 		"akf"
 	],
 	"license": "LGPL-2.1-only",
-	"icon": "assets/trade_expansion/icon.png",
+	"icon": "assets/ak_trade_expansion/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
@@ -32,9 +32,9 @@
 		"yet_another_config_lib_v3": "*"
 	},
 	"mixins": [
-		"trade_expansion.mixins.json",
+		"ak_trade_expansion.mixins.json",
 		{
-			"config": "trade_expansion.client.mixins.json",
+			"config": "ak_trade_expansion.client.mixins.json",
 			"environment": "client"
 		}
 	]

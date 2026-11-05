@@ -18,7 +18,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * {@code /tradeex audit villagers} (design H-4, 14c): for the villagers and wandering traders around the player, the
+ * {@code /aktradeex audit villagers} (design H-4, 14c): for the villagers and wandering traders around the player, the
  * coin trades whose goods a market of the dimension buys for more than the villager asks (buy from the villager, sell
  * at the market). Uses the prices the player would pay here; helps tuning {@code villager.emeraldPrice} and
  * {@code villager.minGoodsPriceMultiplier}.
@@ -60,7 +60,7 @@ final class VillagerAudit {
 		findings.sort(Comparator.comparingLong(Finding::profit).reversed());
 		int merchantCount = merchants.size();
 		int offerCount = checked;
-		source.sendSuccess(() -> Component.translatable("command.trade_expansion.audit_villagers", merchantCount, offerCount, findings.size()), false);
+		source.sendSuccess(() -> Component.translatable("command.ak_trade_expansion.audit_villagers", merchantCount, offerCount, findings.size()), false);
 		findings.stream().limit(MAX_LINES).forEach(f -> source.sendSuccess(() -> Component.literal(String.format(" %s: %s x%d  %s -> %s (+%s)",
 				f.merchant(), f.goods(), f.count(), CoinItem.formatCopper(f.price()), CoinItem.formatCopper(f.sell()), CoinItem.formatCopper(f.profit()))), false));
 		return findings.size();

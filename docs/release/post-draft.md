@@ -99,16 +99,16 @@
 
 | コマンド | 内容 |
 |---|---|
-| `/tradeex balance` | 所持金を表示 |
-| `/tradeex bank balance` | 銀行残高を表示 |
-| `/tradeex where` | 今いる場所に交易所を置くとどうなるかを表示 |
-| `/tradeex where show` | 村の範囲や市場の範囲を30秒間パーティクルで表示 |
+| `/aktradeex balance` | 所持金を表示 |
+| `/aktradeex bank balance` | 銀行残高を表示 |
+| `/aktradeex where` | 今いる場所に交易所を置くとどうなるかを表示 |
+| `/aktradeex where show` | 村の範囲や市場の範囲を30秒間パーティクルで表示 |
 
 サーバー管理者向けのコマンド（相場の初期化、商品の値段の変更、市場名の変更など）もあります。一覧は【ソースコードのURL】の README を参照してください。
 
 ## 設定
 
-- 設定ファイル：`.minecraft\config\trade_expansion.json`（サーバーではサーバーの `config` フォルダ）
+- 設定ファイル：`.minecraft\config\ak_trade_expansion.json`（サーバーではサーバーの `config` フォルダ）
 - Mod Menu と YACL を入れていれば、MOD 一覧の「設定」ボタンから変更できます
 - 変えられる主な項目：コインの比率、価格の動き方、相場の戻る速さ、市場の距離、村人の代金の換算、商品ごとの値段、など
 

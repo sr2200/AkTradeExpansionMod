@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "W": "#minecraft:wool_carpets",
+    "P": "#minecraft:planks",
+    "E": "minecraft:emerald",
+    "B": "minecraft:barrel"
+  },
+  "pattern": [
+    "WWW",
+    "PEP",
+    "PBP"
+  ],
+  "result": {
+    "id": "ak_trade_expansion:market_stall"
+  }
+}

@@ -138,13 +138,13 @@ public class MarketStallBlockEntity extends BlockEntity implements ExtendedMenuP
 	public Component getDisplayName() {
 		Market market = level instanceof ServerLevel serverLevel && marketId != UNASSIGNED
 				? MarketRegistry.get(serverLevel.getServer()).get(marketId) : null;
-		if (market == null) return Component.translatable("container.trade_expansion.market", marketId);
+		if (market == null) return Component.translatable("container.ak_trade_expansion.market", marketId);
 		return com.akf.tradeexpansion.market.MarketNames.title(market);
 	}
 
 	/** "Hamlet" .. "City" (D-4). */
 	public static Component levelName(int level) {
-		return Component.translatable("market_level.trade_expansion." + level);
+		return Component.translatable("market_level.ak_trade_expansion." + level);
 	}
 
 	@Override

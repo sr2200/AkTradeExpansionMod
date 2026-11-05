@@ -1,0 +1,123 @@
+{
+  "display_name": {
+    "translate": "ak_trade_expansion.profile.default_the_end"
+  },
+  "priority": 0,
+  "weight": 1,
+  "conditions": [],
+  "always": [
+    "ak_trade_expansion:ender_pearl"
+  ],
+  "pools": [
+    {
+      "rolls": {
+        "min": 6,
+        "max": 8
+      },
+      "entries": [
+        {
+          "goods": "ak_trade_expansion:chorus_fruit",
+          "weight": 10
+        },
+        {
+          "goods": "ak_trade_expansion:obsidian",
+          "weight": 6
+        },
+        {
+          "goods": "ak_trade_expansion:bread",
+          "weight": 6
+        },
+        {
+          "goods": "ak_trade_expansion:torch",
+          "weight": 6
+        },
+        {
+          "goods": "ak_trade_expansion:beef",
+          "weight": 5
+        },
+        {
+          "goods": "ak_trade_expansion:iron_ingot",
+          "weight": 5
+        },
+        {
+          "goods": "ak_trade_expansion:coal",
+          "weight": 4
+        },
+        {
+          "goods": "ak_trade_expansion:gold_ingot",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:string",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:bone",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:rotten_flesh",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:blaze_rod",
+          "weight": 3,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:ender_eye",
+          "weight": 5,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:redstone",
+          "weight": 3,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:shulker_shell",
+          "weight": 4,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:experience_bottle",
+          "weight": 3,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:lapis_lazuli",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:diamond",
+          "weight": 2,
+          "min_level": 4
+        },
+        {
+          "goods": "ak_trade_expansion:golden_apple",
+          "weight": 1,
+          "min_level": 4
+        }
+      ]
+    }
+  ],
+  "price_modifiers": [
+    {
+      "item": "minecraft:ender_pearl",
+      "multiplier": 0.7
+    },
+    {
+      "item": "minecraft:bread",
+      "multiplier": 1.3
+    },
+    {
+      "item": "minecraft:beef",
+      "multiplier": 1.3
+    },
+    {
+      "item": "minecraft:ender_eye",
+      "multiplier": 0.9
+    }
+  ]
+}

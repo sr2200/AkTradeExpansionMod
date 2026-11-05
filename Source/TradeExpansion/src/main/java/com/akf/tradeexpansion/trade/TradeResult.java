@@ -26,6 +26,6 @@ public enum TradeResult {
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);
 
 	public String translationKey() {
-		return "trade.trade_expansion.result." + name().toLowerCase(Locale.ROOT);
+		return "trade.ak_trade_expansion.result." + name().toLowerCase(Locale.ROOT);
 	}
 }

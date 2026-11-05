@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@code /tradeex audit} (design B-6, 5-2): recipes that turn goods bought in a market into goods that sell there for
+ * {@code /aktradeex audit} (design B-6, 5-2): recipes that turn goods bought in a market into goods that sell there for
  * more (buy every ingredient at the current price, craft, sell the result), and minting recipes whose coins are worth
  * more than the bought materials (E-2). Shortages (K) are reported too, since they are an accepted exception.
  */

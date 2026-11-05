@@ -47,14 +47,14 @@ public class CoinItem extends Item {
 
 	/** Tooltip lines, added on the client through Fabric's ItemTooltipCallback (replaces the deprecated appendHoverText, E-1). */
 	public void addTooltip(ItemStack stack, Consumer<Component> tooltip) {
-		tooltip.accept(Component.translatable("tooltip.trade_expansion.coin_value", formatCopper(type.value()))
+		tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.coin_value", formatCopper(type.value()))
 				.withStyle(ChatFormatting.GOLD));
 		if (stack.getCount() > 1) {
-			tooltip.accept(Component.translatable("tooltip.trade_expansion.coin_stack_value", formatCopper(type.value() * stack.getCount()))
+			tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.coin_stack_value", formatCopper(type.value() * stack.getCount()))
 					.withStyle(ChatFormatting.GRAY));
 		}
 		if (sneakUseExchange() && type.lower() != null) {
-			tooltip.accept(Component.translatable("tooltip.trade_expansion.coin_break_hint").withStyle(ChatFormatting.DARK_GRAY));
+			tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.coin_break_hint").withStyle(ChatFormatting.DARK_GRAY));
 		}
 	}
 

@@ -146,7 +146,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		Tab[] tabs = Tab.values();
 		for (int i = 0; i < tabs.length; i++) {
 			Tab t = tabs[i];
-			tabButtons.put(t, addRenderableWidget(Button.builder(Component.translatable("screen.trade_expansion.tab." + t.key), b -> setTab(t))
+			tabButtons.put(t, addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.tab." + t.key), b -> setTab(t))
 					.bounds(x + LIST_X + i * (TAB_W + 1), y + 18, TAB_W, 14).build()));
 		}
 		paymentButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
@@ -160,7 +160,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("1"), b -> setQuantity(1)).bounds(x + PANEL_X, y + 78, 16, 14).build()));
 		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("8"), b -> setQuantity(8)).bounds(x + PANEL_X + 18, y + 78, 16, 14).build()));
 		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("64"), b -> setQuantity(64)).bounds(x + PANEL_X + 36, y + 78, 20, 14).build()));
-		tradeWidgets.add(addRenderableWidget(Button.builder(Component.translatable("screen.trade_expansion.max"), b -> setQuantity(maxQuantity(false)))
+		tradeWidgets.add(addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.max"), b -> setQuantity(maxQuantity(false)))
 				.bounds(x + PANEL_X + 58, y + 78, 20, 14).build()));
 		confirmButton = addRenderableWidget(Button.builder(Component.empty(), b -> confirm()).bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
 		tradeWidgets.add(confirmButton);
@@ -168,7 +168,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// Bank tab (E-7)
 		for (int i = 0; i < BANK_AMOUNTS.length; i++) {
 			long amount = BANK_AMOUNTS[i];
-			Component label = amount < 0 ? Component.translatable("screen.trade_expansion.bank.all") : Component.literal(CoinItem.formatCopper(amount));
+			Component label = amount < 0 ? Component.translatable("screen.ak_trade_expansion.bank.all") : Component.literal(CoinItem.formatCopper(amount));
 			bankWidgets.add(addRenderableWidget(Button.builder(label, b -> bank(BankRequestC2S.Action.DEPOSIT, amount))
 					.bounds(x + LIST_X + 4 + i * 49, y + LIST_Y + 44, 47, 14).build()));
 			bankWidgets.add(addRenderableWidget(Button.builder(label, b -> bank(BankRequestC2S.Action.WITHDRAW, amount))
@@ -189,9 +189,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 
 		// Request tab (J) and board (I)
-		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.trade_expansion.quest.deliver"), b -> deliver())
+		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
 				.bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
-		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.trade_expansion.board.back"), b -> {
+		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
 			boardMarket = -1;
 			scroll = 0;
 			updateButtons();
@@ -221,7 +221,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			GoodView view = selectedView();
 			Component name = view == null ? Component.empty() : view.displayStack().getHoverName();
 			int items = result.quantity() * (view == null ? 1 : view.unit());
-			setStatus(Component.translatable(result.buy() ? "screen.trade_expansion.bought" : "screen.trade_expansion.sold",
+			setStatus(Component.translatable(result.buy() ? "screen.ak_trade_expansion.bought" : "screen.ak_trade_expansion.sold",
 					name, items, CoinItem.formatCopper(result.total())), true);
 		} else {
 			setStatus(Component.translatable(result.result().translationKey()), false);
@@ -233,7 +233,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		account = newAccount;
 		if (newAccount.result() >= 0) {
 			BankService.Result result = BankService.Result.values()[newAccount.result()];
-			setStatus(Component.translatable("bank.trade_expansion.result." + result.name().toLowerCase(Locale.ROOT)), result == BankService.Result.SUCCESS);
+			setStatus(Component.translatable("bank.ak_trade_expansion.result." + result.name().toLowerCase(Locale.ROOT)), result == BankService.Result.SUCCESS);
 		}
 		updateButtons();
 	}
@@ -247,7 +247,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	public void onQuestResult(QuestResultS2C result) {
 		pending = false;
 		if (result.result() == TradeResult.SUCCESS) {
-			setStatus(Component.translatable("screen.trade_expansion.quest.delivered", CoinItem.formatCopper(result.reward())), true);
+			setStatus(Component.translatable("screen.ak_trade_expansion.quest.delivered", CoinItem.formatCopper(result.reward())), true);
 			selectedRequest = -1;
 		} else {
 			setStatus(Component.translatable(result.result().translationKey()), false);
@@ -257,7 +257,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	public void onExchangeResult(ExchangeResultS2C result) {
 		boolean ok = result.result() == TradeResult.SUCCESS;
-		setStatus(ok ? Component.translatable("screen.trade_expansion.exchange.done") : Component.translatable(result.result().translationKey()), ok);
+		setStatus(ok ? Component.translatable("screen.ak_trade_expansion.exchange.done") : Component.translatable(result.result().translationKey()), ok);
 	}
 
 	private void setStatus(Component text, boolean success) {
@@ -429,13 +429,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		tabButtons.forEach((t, b) -> b.active = t != tab);
 		tabButtons.get(Tab.BANK).visible = bankAvailable();
 		paymentButton.visible = (tradeTab() || tab == Tab.QUEST) && account != null && account.validCard();
-		paymentButton.setMessage(Component.translatable(payByCard ? "screen.trade_expansion.pay.card" : "screen.trade_expansion.pay.cash"));
+		paymentButton.setMessage(Component.translatable(payByCard ? "screen.ak_trade_expansion.pay.card" : "screen.ak_trade_expansion.pay.cash"));
 		for (Button b : tradeWidgets) b.visible = tradeTab();
 		for (Button b : bankWidgets) b.visible = tab == Tab.BANK;
 		for (Button b : exchangeWidgets) b.visible = tab == Tab.EXCHANGE;
-		bankWidgets.getLast().setMessage(Component.translatable("screen.trade_expansion.bank.issue_card",
+		bankWidgets.getLast().setMessage(Component.translatable("screen.ak_trade_expansion.bank.issue_card",
 				CoinItem.formatCopper(TradeExpansionConfig.get().bank.cardFee)));
-		confirmButton.setMessage(Component.translatable(tab == Tab.BUY ? "screen.trade_expansion.confirm.buy" : "screen.trade_expansion.confirm.sell"));
+		confirmButton.setMessage(Component.translatable(tab == Tab.BUY ? "screen.ak_trade_expansion.confirm.buy" : "screen.ak_trade_expansion.confirm.sell"));
 		confirmButton.active = !pending && selectedView() != null && (shiftAll() ? maxQuantity(true) > 0 : quantity <= maxQuantity(false));
 
 		RequestView r = selectedRequestView();
@@ -554,11 +554,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			case BOARD -> extractBoard(g, lx, ly, mouseX, mouseY);
 			default -> {
 				if (snapshot == null) {
-					g.text(font, Component.translatable("screen.trade_expansion.loading"), lx + 4, ly + 4, COLOR_WHITE);
+					g.text(font, Component.translatable("screen.ak_trade_expansion.loading"), lx + 4, ly + 4, COLOR_WHITE);
 					return;
 				}
 				List<GoodView> goods = visibleGoods();
-				if (goods.isEmpty()) g.text(font, Component.translatable("screen.trade_expansion.empty"), lx + 4, ly + 4, COLOR_WHITE);
+				if (goods.isEmpty()) g.text(font, Component.translatable("screen.ak_trade_expansion.empty"), lx + 4, ly + 4, COLOR_WHITE);
 				for (int row = 0; row < ROWS && scroll + row < goods.size(); row++) {
 					extractRow(g, goods.get(scroll + row), lx, ly + row * ROW_H, mouseX, mouseY);
 				}
@@ -610,7 +610,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 		long unitPrice = buy ? PriceModel.buyPrice(params, state.pressure()) : PriceModel.sellPrice(params, state.pressure());
 		String price = !available
-				? Component.translatable(buy ? "screen.trade_expansion.sold_out" : "screen.trade_expansion.not_buying").getString()
+				? Component.translatable(buy ? "screen.ak_trade_expansion.sold_out" : "screen.ak_trade_expansion.not_buying").getString()
 				: CoinItem.formatCopper(unitPrice) + (view.unit() > 1 ? "/" + view.unit() : "");
 		g.text(font, price, rx + 136 - font.width(price), textY, available ? COLOR_GOLD : COLOR_RED);
 		// The name uses the space up to the price and shrinks when it does not fit.
@@ -639,7 +639,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (hovered && mouseX < rx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		else if (hovered && !available) g.setTooltipForNextFrame(font, unavailableReason(view, buy), Optional.empty(), mouseX, mouseY);
 		else if (hovered && view.special()) {
-			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.trade_expansion.special.tooltip")), Optional.empty(), mouseX, mouseY);
+			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.ak_trade_expansion.special.tooltip")), Optional.empty(), mouseX, mouseY);
 		}
 	}
 
@@ -649,9 +649,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		double restock = TradeExpansionConfig.get().recovery.restockMultiplier;
 		double days = buy ? PriceModel.daysUntilRestock(view.params(), state, restock) : PriceModel.daysUntilBuying(view.params(), state, restock);
 		List<Component> lines = new ArrayList<>();
-		lines.add(Component.translatable(buy ? "screen.trade_expansion.sold_out.reason" : "screen.trade_expansion.not_buying.reason"));
+		lines.add(Component.translatable(buy ? "screen.ak_trade_expansion.sold_out.reason" : "screen.ak_trade_expansion.not_buying.reason"));
 		if (Double.isFinite(days)) {
-			lines.add(Component.translatable(buy ? "screen.trade_expansion.restock_in" : "screen.trade_expansion.buying_in", minutes(days)));
+			lines.add(Component.translatable(buy ? "screen.ak_trade_expansion.restock_in" : "screen.ak_trade_expansion.buying_in", minutes(days)));
 		}
 		return lines;
 	}
@@ -696,7 +696,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private void extractPanel(GuiGraphicsExtractor g, int px, int y) {
 		GoodView view = selectedView();
 		if (view == null) {
-			g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.select"), px, y + 38, PANEL_W, COLOR_TEXT, false);
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.select"), px, y + 38, PANEL_W, COLOR_TEXT, false);
 			return;
 		}
 		GoodParams params = view.params();
@@ -723,31 +723,31 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int line1 = y + 95;
 		int line2 = y + 104;
 		int line3 = y + 113;
-		fitText(g, Component.translatable("screen.trade_expansion.total", CoinItem.formatCopper(previewTotal(view, Math.max(1, qty)))).getString(),
+		fitText(g, Component.translatable("screen.ak_trade_expansion.total", CoinItem.formatCopper(previewTotal(view, Math.max(1, qty)))).getString(),
 				px, line1, PANEL_W, COLOR_TEXT, false);
 		if (tab == Tab.BUY) {
 			// B-5: bulk discount reached by this quantity
 			double rate = snapshot.bulkDiscount().rate(params, Math.max(1, qty), view.unit());
 			if (rate > 0) {
-				fitText(g, Component.translatable("screen.trade_expansion.bulk_discount", percent(rate)).getString(), px, line3, PANEL_W, 0xFF207020, false);
+				fitText(g, Component.translatable("screen.ak_trade_expansion.bulk_discount", percent(rate)).getString(), px, line3, PANEL_W, 0xFF207020, false);
 			}
 		}
 		double restock = TradeExpansionConfig.get().recovery.restockMultiplier;
 		if (tab == Tab.BUY && !PriceModel.canBuy(state)) {
-			fitText(g, Component.translatable("screen.trade_expansion.restock_in", minutes(PriceModel.daysUntilRestock(params, state, restock))).getString(),
+			fitText(g, Component.translatable("screen.ak_trade_expansion.restock_in", minutes(PriceModel.daysUntilRestock(params, state, restock))).getString(),
 					px, line2, PANEL_W, COLOR_WARNING, false);
 		} else if (tab == Tab.SELL && PriceModel.sellCapacity(params, state) < 1) {
 			// A-4: the market is full; say so instead of "max: 0".
 			double days = PriceModel.daysUntilBuying(params, state, restock);
-			fitText(g, Component.translatable("screen.trade_expansion.not_buying").getString(), px, line2, PANEL_W, COLOR_WARNING, false);
+			fitText(g, Component.translatable("screen.ak_trade_expansion.not_buying").getString(), px, line2, PANEL_W, COLOR_WARNING, false);
 			if (Double.isFinite(days)) {
-				fitText(g, Component.translatable("screen.trade_expansion.buying_in", minutes(days)).getString(), px, line3, PANEL_W, COLOR_WARNING, false);
+				fitText(g, Component.translatable("screen.ak_trade_expansion.buying_in", minutes(days)).getString(), px, line3, PANEL_W, COLOR_WARNING, false);
 			}
 		} else {
-			fitText(g, Component.translatable("screen.trade_expansion.max_quantity", maxQuantity(false)).getString(), px, line2, PANEL_W, COLOR_DARK, false);
+			fitText(g, Component.translatable("screen.ak_trade_expansion.max_quantity", maxQuantity(false)).getString(), px, line2, PANEL_W, COLOR_DARK, false);
 		}
 		if (TradeExpansionConfig.get().trade.allowShiftAll) {
-			g.text(font, Component.translatable("screen.trade_expansion.shift_all"), px, y + 141, COLOR_DARK, false);
+			g.text(font, Component.translatable("screen.ak_trade_expansion.shift_all"), px, y + 141, COLOR_DARK, false);
 		}
 	}
 
@@ -755,12 +755,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private void extractBank(GuiGraphicsExtractor g, int bx, int by) {
 		Player player = player();
 		long bank = account == null ? 0 : account.bankBalance();
-		g.text(font, Component.translatable("screen.trade_expansion.bank.balance", CoinItem.formatCopper(bank)), bx + 4, by + 4, COLOR_GOLD);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.balance", CoinItem.formatCopper(bank)), bx + 4, by + 4, COLOR_GOLD);
 		if (player != null) {
-			g.text(font, Component.translatable("screen.trade_expansion.bank.cash", CoinItem.formatCopper(WalletService.balance(player))), bx + 4, by + 16, COLOR_WHITE);
+			g.text(font, Component.translatable("screen.ak_trade_expansion.bank.cash", CoinItem.formatCopper(WalletService.balance(player))), bx + 4, by + 16, COLOR_WHITE);
 		}
-		g.text(font, Component.translatable("screen.trade_expansion.bank.deposit"), bx + 4, by + 34, COLOR_WHITE);
-		g.text(font, Component.translatable("screen.trade_expansion.bank.withdraw"), bx + 4, by + 64, COLOR_WHITE);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.deposit"), bx + 4, by + 34, COLOR_WHITE);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.withdraw"), bx + 4, by + 64, COLOR_WHITE);
 	}
 
 	/** E-3: loose coins per tier and the exchange buttons. */
@@ -776,13 +776,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			g.text(font, "×" + counts[t - 1], ex + 74, ry + 3, COLOR_WHITE);
 		}
 		double fee = TradeExpansionConfig.get().currency.exchangeFee;
-		g.text(font, Component.translatable("screen.trade_expansion.exchange.help", Math.round(fee * 100)), ex + 4, ey + ROWS * ROW_H - 10, COLOR_GRAY);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.exchange.help", Math.round(fee * 100)), ex + 4, ey + ROWS * ROW_H - 10, COLOR_GRAY);
 	}
 
 	/** J: request list. */
 	private void extractRequests(GuiGraphicsExtractor g, int rx, int ry, int mouseX, int mouseY) {
 		if (snapshot == null || snapshot.requests().isEmpty()) {
-			g.text(font, Component.translatable("screen.trade_expansion.quest.none"), rx + 4, ry + 4, COLOR_WHITE);
+			g.text(font, Component.translatable("screen.ak_trade_expansion.quest.none"), rx + 4, ry + 4, COLOR_WHITE);
 			return;
 		}
 		List<RequestView> requests = snapshot.requests();
@@ -803,22 +803,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private void extractRequestPanel(GuiGraphicsExtractor g, int px, int y) {
 		RequestView r = selectedRequestView();
 		if (r == null) {
-			g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.quest.select"), px, y + 38, PANEL_W, COLOR_TEXT, false);
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.quest.select"), px, y + 38, PANEL_W, COLOR_TEXT, false);
 			return;
 		}
 		ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(r.item()));
 		g.item(stack, px, y + 36);
 		g.text(font, "×" + r.request().quantity(), px + 18, y + 40, COLOR_TEXT, false);
-		g.text(font, Component.translatable("screen.trade_expansion.quest.reward", CoinItem.formatCopper(r.request().reward())), px, y + 60, COLOR_TEXT, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.reward", CoinItem.formatCopper(r.request().reward())), px, y + 60, COLOR_TEXT, false);
 		long minutes = 0;
 		if (minecraft != null && minecraft.level != null) {
 			long left = r.request().deadline() - MarketClock.now(minecraft.level);
 			minutes = Math.max(0, (long) Math.ceil(left / (double) PriceModel.TICKS_PER_DAY * 20));
 		}
-		g.text(font, Component.translatable("screen.trade_expansion.quest.time_left", minutes), px, y + 72, COLOR_TEXT, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.time_left", minutes), px, y + 72, COLOR_TEXT, false);
 		Player player = player();
 		int held = player == null ? 0 : InventoryUtil.count(player, InventoryUtil.Match.plain(stack.getItem()), menu.sellSlot());
-		g.text(font, Component.translatable("screen.trade_expansion.quest.held", held), px, y + 84, held >= r.request().quantity() ? 0xFF207020 : 0xFFA02020, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.held", held), px, y + 84, held >= r.request().quantity() ? 0xFF207020 : 0xFFA02020, false);
 	}
 
 	private static final int COLOR_DEAL_BUY = 0xFF55FFFF;
@@ -827,13 +827,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	/** I: nearby markets (with their deals, v0.24), or the goods of the chosen one. */
 	private void extractBoard(GuiGraphicsExtractor g, int bx, int by, int mouseX, int mouseY) {
 		if (board == null) {
-			g.text(font, Component.translatable("screen.trade_expansion.loading"), bx + 4, by + 4, COLOR_WHITE);
+			g.text(font, Component.translatable("screen.ak_trade_expansion.loading"), bx + 4, by + 4, COLOR_WHITE);
 			return;
 		}
 		BoardS2C.Entry entry = boardEntry();
 		if (entry == null) {
 			if (board.markets().isEmpty()) {
-				g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.none", TradeExpansionConfig.get().board.radius),
+				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.none", TradeExpansionConfig.get().board.radius),
 						bx + 4, by + 4, LIST_W - 8, COLOR_WHITE, false);
 				return;
 			}
@@ -846,7 +846,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 					g.fill(bx, rowY, bx + LIST_W, rowY + ROW_H, 0xFF9B9B9B);
 				}
 				int y = rowY + 5;
-				String where = Component.translatable("screen.trade_expansion.board.where", direction(e.dx(), e.dz()),
+				String where = Component.translatable("screen.ak_trade_expansion.board.where", direction(e.dx(), e.dz()),
 						(int) Math.round(Math.sqrt((double) e.dx() * e.dx() + (double) e.dz() * e.dz()))).getString();
 				int right = bx + LIST_W - 5 - font.width(where);
 				g.text(font, where, right, y, COLOR_GOLD);
@@ -855,13 +855,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				long sellDeals = e.goods().stream().filter(gd -> gd.sellDeal() > 0).count();
 				int x = right - 4;
 				if (sellDeals > 0) {
-					String text = Component.translatable("screen.trade_expansion.board.deal_sell_count", sellDeals).getString();
+					String text = Component.translatable("screen.ak_trade_expansion.board.deal_sell_count", sellDeals).getString();
 					x -= font.width(text);
 					g.text(font, text, x, y, COLOR_DEAL_SELL);
 					x -= 3;
 				}
 				if (buyDeals > 0) {
-					String text = Component.translatable("screen.trade_expansion.board.deal_buy_count", buyDeals).getString();
+					String text = Component.translatable("screen.ak_trade_expansion.board.deal_buy_count", buyDeals).getString();
 					x -= font.width(text);
 					g.text(font, text, x, y, COLOR_DEAL_BUY);
 					x -= 3;
@@ -872,18 +872,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			return;
 		}
 		g.textWithWordWrap(font, entry.title(), leftPos + PANEL_X, topPos + 38, PANEL_W, COLOR_TEXT, false);
-		g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 62, PANEL_W, COLOR_DARK, false);
+		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 62, PANEL_W, COLOR_DARK, false);
 		// Header line: goods / buy price (the player pays) / sell price (the player gets).
 		g.fill(bx, by, bx + LIST_W, by + BOARD_HEADER_H, COLOR_DARK);
 		int headerY = by + 1;
-		String buyHeader = Component.translatable("screen.trade_expansion.board.header.buy").getString();
-		String sellHeader = Component.translatable("screen.trade_expansion.board.header.sell").getString();
-		g.text(font, Component.translatable("screen.trade_expansion.board.header.goods"), bx + 20, headerY, COLOR_WHITE);
+		String buyHeader = Component.translatable("screen.ak_trade_expansion.board.header.buy").getString();
+		String sellHeader = Component.translatable("screen.ak_trade_expansion.board.header.sell").getString();
+		g.text(font, Component.translatable("screen.ak_trade_expansion.board.header.goods"), bx + 20, headerY, COLOR_WHITE);
 		g.text(font, buyHeader, bx + 130 - font.width(buyHeader), headerY, COLOR_GOLD);
 		g.text(font, sellHeader, bx + LIST_W - 5 - font.width(sellHeader), headerY, COLOR_GREEN);
 		if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= by && mouseY < by + BOARD_HEADER_H) {
-			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.trade_expansion.board.header.buy.tooltip"),
-					Component.translatable("screen.trade_expansion.board.header.sell.tooltip")), Optional.empty(), mouseX, mouseY);
+			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.ak_trade_expansion.board.header.buy.tooltip"),
+					Component.translatable("screen.ak_trade_expansion.board.header.sell.tooltip")), Optional.empty(), mouseX, mouseY);
 		}
 		List<BoardS2C.Good> goods = entry.goods();
 		int goodsRows = (ROWS * ROW_H - BOARD_HEADER_H) / ROW_H;
@@ -900,8 +900,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= y && mouseY < y + ROW_H && (good.buyDeal() > 0 || good.sellDeal() > 0)) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(stack.getHoverName());
-				if (good.buyDeal() > 0) lines.add(Component.translatable("screen.trade_expansion.board.deal_buy", good.buyDeal()));
-				if (good.sellDeal() > 0) lines.add(Component.translatable("screen.trade_expansion.board.deal_sell", good.sellDeal()));
+				if (good.buyDeal() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.board.deal_buy", good.buyDeal()));
+				if (good.sellDeal() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.board.deal_sell", good.sellDeal()));
 				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
 		}
@@ -912,7 +912,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int px = leftPos + PANEL_X;
 		int y = topPos + 38;
 		if (entry == null) {
-			g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.deal_hint"), px, y, PANEL_W, COLOR_DARK, false);
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.deal_hint"), px, y, PANEL_W, COLOR_DARK, false);
 			return;
 		}
 		List<BoardS2C.Good> cheap = entry.goods().stream().filter(gd -> gd.buyDeal() > 0)
@@ -920,12 +920,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		List<BoardS2C.Good> dear = entry.goods().stream().filter(gd -> gd.sellDeal() > 0)
 				.sorted(java.util.Comparator.comparingInt(BoardS2C.Good::sellDeal).reversed()).limit(2).toList();
 		if (cheap.isEmpty() && dear.isEmpty()) {
-			g.textWithWordWrap(font, Component.translatable("screen.trade_expansion.board.deal_none"), px, y, PANEL_W, COLOR_DARK, false);
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.deal_none"), px, y, PANEL_W, COLOR_DARK, false);
 			return;
 		}
-		g.text(font, Component.translatable("screen.trade_expansion.board.deal_buy_title"), px, y, 0xFF1F6F7F, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.board.deal_buy_title"), px, y, 0xFF1F6F7F, false);
 		y = extractDealLines(g, cheap, true, px, y + 10);
-		g.text(font, Component.translatable("screen.trade_expansion.board.deal_sell_title"), px, y + 2, 0xFF8F2F7F, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.board.deal_sell_title"), px, y + 2, 0xFF8F2F7F, false);
 		extractDealLines(g, dear, false, px, y + 12);
 	}
 
@@ -944,11 +944,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	}
 
 	private static String direction(int dx, int dz) {
-		if (dx == 0 && dz == 0) return Component.translatable("direction.trade_expansion.here").getString();
+		if (dx == 0 && dz == 0) return Component.translatable("direction.ak_trade_expansion.here").getString();
 		double angle = Math.toDegrees(Math.atan2(dx, -dz)); // 0 = north, clockwise
 		String[] keys = {"n", "ne", "e", "se", "s", "sw", "w", "nw"};
 		int index = (int) Math.round(((angle % 360) + 360) % 360 / 45.0) % 8;
-		return Component.translatable("direction.trade_expansion." + keys[index]).getString();
+		return Component.translatable("direction.ak_trade_expansion." + keys[index]).getString();
 	}
 
 	@Override
@@ -958,7 +958,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
 		g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,
 				statusColor == COLOR_GREEN ? 0xFF207020 : statusColor == COLOR_RED ? 0xFFA02020 : COLOR_TEXT, false);
-		g.text(font, Component.translatable("screen.trade_expansion.sell_slot"), MarketMenu.SELL_SLOT_X - 6, MarketMenu.SELL_SLOT_Y - 11, COLOR_TEXT, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_slot"), MarketMenu.SELL_SLOT_X - 6, MarketMenu.SELL_SLOT_Y - 11, COLOR_TEXT, false);
 	}
 
 	/**
@@ -974,8 +974,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		TradeExpansionConfig.BalancePosition position = TradeExpansionConfig.get().client.balancePosition;
 		if (position == TradeExpansionConfig.BalancePosition.TOP_RIGHT) {
 			Component balance = account == null
-					? Component.translatable("screen.trade_expansion.balance", CoinItem.formatCopper(cash))
-					: Component.translatable("screen.trade_expansion.balance_bank", CoinItem.formatCopper(cash), CoinItem.formatCopper(account.bankBalance()));
+					? Component.translatable("screen.ak_trade_expansion.balance", CoinItem.formatCopper(cash))
+					: Component.translatable("screen.ak_trade_expansion.balance_bank", CoinItem.formatCopper(cash), CoinItem.formatCopper(account.bankBalance()));
 			x0 = imageWidth - 8 - font.width(balance);
 			x1 = imageWidth - 8;
 			y0 = 5;
@@ -989,11 +989,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			y0 = right ? MarketMenu.INVENTORY_Y + 4 : MarketMenu.SELL_SLOT_Y + 22;
 			int width = x1 - x0;
 			int y = y0;
-			g.text(font, Component.translatable("screen.trade_expansion.cash_label"), x0, y, COLOR_DARK, false);
+			g.text(font, Component.translatable("screen.ak_trade_expansion.cash_label"), x0, y, COLOR_DARK, false);
 			g.text(font, fit(cash, width), x0, y + 10, COLOR_TEXT, false);
 			y += 20;
 			if (account != null) {
-				g.text(font, Component.translatable("screen.trade_expansion.bank_label"), x0, y, COLOR_DARK, false);
+				g.text(font, Component.translatable("screen.ak_trade_expansion.bank_label"), x0, y, COLOR_DARK, false);
 				g.text(font, fit(account.bankBalance(), width), x0, y + 10, COLOR_TEXT, false);
 				y += 20;
 			}
@@ -1024,15 +1024,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		long[] counts = WalletService.coinCounts(player);
 		CoinType[] types = CoinType.values();
 		for (int t = types.length - 1; t >= 0; t--) {
-			if (counts[t] > 0) lines.add(Component.translatable("item.trade_expansion." + types[t].path()).append(" ×" + counts[t]));
+			if (counts[t] > 0) lines.add(Component.translatable("item.ak_trade_expansion." + types[t].path()).append(" ×" + counts[t]));
 		}
 		List<ItemStack> wallets = WalletService.wallets(player);
 		if (!wallets.isEmpty()) {
 			long total = wallets.stream().mapToLong(WalletItem::balance).sum();
-			lines.add(Component.translatable("screen.trade_expansion.balance.wallet", CoinItem.formatCopper(total)));
+			lines.add(Component.translatable("screen.ak_trade_expansion.balance.wallet", CoinItem.formatCopper(total)));
 		}
-		if (account != null) lines.add(Component.translatable("screen.trade_expansion.balance.bank", CoinItem.formatCopper(account.bankBalance())));
-		if (lines.isEmpty()) lines.add(Component.translatable("screen.trade_expansion.balance.none"));
+		if (account != null) lines.add(Component.translatable("screen.ak_trade_expansion.balance.bank", CoinItem.formatCopper(account.bankBalance())));
+		if (lines.isEmpty()) lines.add(Component.translatable("screen.ak_trade_expansion.balance.none"));
 		return lines;
 	}
 
@@ -1068,7 +1068,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		gy = Math.min(gy, height - h - 4);
 		g.fill(gx, gy, gx + w, gy + h, 0xF0100010);
 		g.outline(gx, gy, w, h, 0xFF5000FF);
-		g.text(font, Component.translatable(buy ? "screen.trade_expansion.graph.buy" : "screen.trade_expansion.graph.sell"), gx + 4, gy + 3, COLOR_WHITE);
+		g.text(font, Component.translatable(buy ? "screen.ak_trade_expansion.graph.buy" : "screen.ak_trade_expansion.graph.sell"), gx + 4, gy + 3, COLOR_WHITE);
 		double v = PriceModel.multiplier(view.params(), currentState(view).pressure());
 		String pct = Math.round(v * 100) + "%";
 		g.text(font, pct, gx + w - 4 - font.width(pct), gy + 3, v > 1.005 ? COLOR_RED : v < 0.995 ? COLOR_GREEN : COLOR_WHITE);
@@ -1090,7 +1090,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			prevY = py;
 		}
 		g.text(font, CoinItem.formatCopper(min) + " - " + CoinItem.formatCopper(max), gx + 4, gy + h - 11, COLOR_GRAY);
-		String days = Component.translatable("screen.trade_expansion.graph.days", Math.max(0, prices.length - 1)).getString();
+		String days = Component.translatable("screen.ak_trade_expansion.graph.days", Math.max(0, prices.length - 1)).getString();
 		g.text(font, days, gx + w - 4 - font.width(days), gy + h - 11, COLOR_GRAY);
 	}
 

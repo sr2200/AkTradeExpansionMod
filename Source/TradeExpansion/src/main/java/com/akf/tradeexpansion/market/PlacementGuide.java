@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Helps players see where a stall can go (design C-1, v0.19): {@code /tradeex where} (village range, nearest market,
- * beds / villagers, placement result), {@code /tradeex where show} (ranges drawn with particles for a while), and an
+ * Helps players see where a stall can go (design C-1, v0.19): {@code /aktradeex where} (village range, nearest market,
+ * beds / villagers, placement result), {@code /aktradeex where show} (ranges drawn with particles for a while), and an
  * action bar hint while holding a stall ({@code trade.showPlacementHint}).
  */
 public final class PlacementGuide {
@@ -43,7 +43,7 @@ public final class PlacementGuide {
 	private static final DustParticleOptions TOO_CLOSE = new DustParticleOptions(0xFF5555, 1.5f);
 	private static final DustParticleOptions COUNT = new DustParticleOptions(0x55AAFF, 1.0f);
 
-	/** A range display started by {@code /tradeex where show}. */
+	/** A range display started by {@code /aktradeex where show}. */
 	private record Display(ResourceKey<Level> dimension, long until, @Nullable BoundingBox village, List<BlockPos> markets, BlockPos origin) {
 	}
 
@@ -90,41 +90,41 @@ public final class PlacementGuide {
 	public static Component result(ServerLevel level, BlockPos pos) {
 		MarketRegistry.Preview preview = MarketRegistry.get(level.getServer()).preview(level, pos, MarketOrigin.CRAFTED);
 		return switch (preview.kind()) {
-			case JOIN -> Component.translatable("message.trade_expansion.where.join", MarketNames.name(preview.market())).withStyle(ChatFormatting.GREEN);
-			case NEW -> Component.translatable("message.trade_expansion.where.new").withStyle(ChatFormatting.GREEN);
+			case JOIN -> Component.translatable("message.ak_trade_expansion.where.join", MarketNames.name(preview.market())).withStyle(ChatFormatting.GREEN);
+			case NEW -> Component.translatable("message.ak_trade_expansion.where.new").withStyle(ChatFormatting.GREEN);
 			case REFUSED -> preview.reason().copy().withStyle(ChatFormatting.RED);
 		};
 	}
 
-	/** {@code /tradeex where}: what is around the player's position. */
+	/** {@code /aktradeex where}: what is around the player's position. */
 	public static List<Component> describe(ServerPlayer player) {
 		ServerLevel level = player.level();
 		BlockPos pos = player.blockPosition();
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		List<Component> lines = new ArrayList<>();
-		lines.add(Component.translatable("message.trade_expansion.where.header", pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.GOLD));
+		lines.add(Component.translatable("message.ak_trade_expansion.where.header", pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.GOLD));
 		BoundingBox village = SettlementRule.villageAt(level, pos);
 		lines.add(village == null
-				? Component.translatable("message.trade_expansion.where.no_village")
-				: Component.translatable("message.trade_expansion.where.village", village.minX(), village.maxX(), village.minZ(), village.maxZ()));
+				? Component.translatable("message.ak_trade_expansion.where.no_village")
+				: Component.translatable("message.ak_trade_expansion.where.village", village.minX(), village.maxX(), village.minZ(), village.maxZ()));
 		Market nearest = MarketRegistry.get(level.getServer()).nearestWithin(level.dimension(), pos, Double.MAX_VALUE);
 		lines.add(nearest == null
-				? Component.translatable("message.trade_expansion.where.no_market")
-				: Component.translatable("message.trade_expansion.where.market", MarketNames.title(nearest), (int) nearest.horizontalDistanceTo(pos),
+				? Component.translatable("message.ak_trade_expansion.where.no_market")
+				: Component.translatable("message.ak_trade_expansion.where.market", MarketNames.title(nearest), (int) nearest.horizontalDistanceTo(pos),
 				(int) config.distance.mergeRadius, (int) config.distance.minNewMarketDistance));
 		long villagers = MarketFactory.countVillagers(level, pos);
 		lines.add(MarketFactory.usesVillagers(level)
-				? Component.translatable("message.trade_expansion.where.count_villagers", config.market.levelRadius, villagers)
-				: Component.translatable("message.trade_expansion.where.count", config.market.levelRadius, MarketFactory.countBeds(level, pos), villagers));
+				? Component.translatable("message.ak_trade_expansion.where.count_villagers", config.market.levelRadius, villagers)
+				: Component.translatable("message.ak_trade_expansion.where.count", config.market.levelRadius, MarketFactory.countBeds(level, pos), villagers));
 		// D-4: the size a market here would have now (beds and villagers, the lower level wins).
-		lines.add(Component.translatable("message.trade_expansion.where.level",
+		lines.add(Component.translatable("message.ak_trade_expansion.where.level",
 				com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(MarketFactory.measureLevel(level, pos))));
-		lines.add(Component.translatable("message.trade_expansion.where.result", result(level, pos)));
-		lines.add(Component.translatable("message.trade_expansion.where.show_hint").withStyle(ChatFormatting.DARK_GRAY));
+		lines.add(Component.translatable("message.ak_trade_expansion.where.result", result(level, pos)));
+		lines.add(Component.translatable("message.ak_trade_expansion.where.show_hint").withStyle(ChatFormatting.DARK_GRAY));
 		return lines;
 	}
 
-	/** {@code /tradeex where show}: draws the ranges for 30 seconds. */
+	/** {@code /aktradeex where show}: draws the ranges for 30 seconds. */
 	public static void show(ServerPlayer player) {
 		ServerLevel level = player.level();
 		BlockPos pos = player.blockPosition();

@@ -17,7 +17,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"trade_expansion" {
+		"ak_trade_expansion" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
@@ -78,7 +78,7 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
-// File names (B案, v0.25): the jar is ak_trade_expansion-<version>.jar; the mod ID stays trade_expansion.
+// File names: the jar is ak_trade_expansion-<version>.jar, the same as the mod ID (C案, v0.28).
 base {
 	archivesName = "ak_trade_expansion"
 }

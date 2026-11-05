@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Goods definitions loaded from {@code data/<ns>/trade_expansion/goods/*.json} (design D-2), keyed by goods id
- * (the file id, e.g. {@code trade_expansion:bread}). Replaced on every data pack (re)load.
+ * Goods definitions loaded from {@code data/<ns>/ak_trade_expansion/goods/*.json} (design D-2), keyed by goods id
+ * (the file id, e.g. {@code ak_trade_expansion:bread}). Replaced on every data pack (re)load.
  */
 public final class GoodsCatalog {
 	/** As loaded from the data packs. */

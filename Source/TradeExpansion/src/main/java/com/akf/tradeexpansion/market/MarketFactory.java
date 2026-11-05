@@ -51,7 +51,7 @@ public final class MarketFactory {
 	}
 
 	/**
-	 * {@code /tradeex market reroll}: profile and goods again with the current data packs, at the measured level (kept at
+	 * {@code /aktradeex market reroll}: profile and goods again with the current data packs, at the measured level (kept at
 	 * least at its previous value when {@code market.shrinkOnLevelDown} is off, Q21); price factors and pressure start over.
 	 */
 	public static void reroll(ServerLevel level, Market market, List<Market> neighbors) {

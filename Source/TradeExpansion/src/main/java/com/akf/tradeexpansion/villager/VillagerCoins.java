@@ -159,7 +159,7 @@ public final class VillagerCoins {
 		return params == null ? 0 : PriceModel.buyPrice(params, state.pressure()) * count;
 	}
 
-	/** 14c ({@code /tradeex audit villagers}): the best price a market of the dimension pays for {@code count} of the good, or 0. */
+	/** 14c ({@code /aktradeex audit villagers}): the best price a market of the dimension pays for {@code count} of the good, or 0. */
 	public static long bestMarketSell(ServerLevel level, BlockPos pos, Identifier id, int count) {
 		if (!GoodsCatalog.get(id).sell()) return 0;
 		double far = TradeExpansionConfig.get().distance.farRadius;

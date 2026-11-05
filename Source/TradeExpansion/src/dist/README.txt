@@ -25,7 +25,7 @@
  1. Fabric Loader をインストールし、Minecraft 26.3 の Fabric の起動構成を作る
  2. Fabric API を mods フォルダに入れる
  3. この zip の中の ak_trade_expansion-@VERSION@.jar を mods フォルダに入れる
-    （古いバージョンの jar（trade_expansion-*.jar や ak_trade_expansion-*.jar）が mods フォルダにあれば、先に消してください）
+    （古いバージョンの jar（ak_trade_expansion-*.jar や ak_trade_expansion-*.jar）が mods フォルダにあれば、先に消してください）
  4. （任意）Mod Menu と YACL を mods フォルダに入れる
  5. Fabric の起動構成で Minecraft を起動する
 
@@ -42,17 +42,17 @@
 
 
 ■ 設定
- - 設定ファイル：.minecraft\config\trade_expansion.json
+ - 設定ファイル：.minecraft\config\ak_trade_expansion.json
    （初回起動時に全項目が書き出されます。サーバーではサーバーの config フォルダ）
  - Mod Menu と YACL を入れていれば、Mod 一覧の「設定」ボタンから変更できます
- - マルチプレイでは、サーバーの設定ファイルを編集して /tradeex reload を実行します
+ - マルチプレイでは、サーバーの設定ファイルを編集して /aktradeex reload を実行します
 
 
 ■ 主なコマンド
- /tradeex balance          所持金を表示
- /tradeex bank balance     銀行残高を表示
- /tradeex where            今いる場所に交易所を置くとどうなるかを表示
- /tradeex where show       村の範囲や市場の範囲を30秒間表示
+ /aktradeex balance          所持金を表示
+ /aktradeex bank balance     銀行残高を表示
+ /aktradeex where            今いる場所に交易所を置くとどうなるかを表示
+ /aktradeex where show       村の範囲や市場の範囲を30秒間表示
  そのほかの管理用コマンド（OP 権限が必要）は、配布ページを参照してください。
 
 

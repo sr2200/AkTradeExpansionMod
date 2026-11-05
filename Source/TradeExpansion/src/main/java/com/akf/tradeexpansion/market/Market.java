@@ -33,7 +33,7 @@ import java.util.function.UnaryOperator;
 
 /**
  * One market: a group of stalls sharing stock and prices (design C-1 / D-4 / F-1).
- * Goods are keyed by goods id ({@code trade_expansion:bread}), not by item id.
+ * Goods are keyed by goods id ({@code ak_trade_expansion:bread}), not by item id.
  */
 public final class Market {
 	private static final Codec<GoodState> GOOD_STATE_CODEC = RecordCodecBuilder.create(i -> i.group(

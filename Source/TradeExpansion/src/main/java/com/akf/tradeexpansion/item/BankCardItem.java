@@ -21,9 +21,9 @@ public class BankCardItem extends Item {
 	public void addTooltip(ItemStack stack, Consumer<Component> tooltip) {
 		ModDataComponents.CardOwner owner = stack.get(ModDataComponents.CARD_OWNER);
 		if (owner == null) {
-			tooltip.accept(Component.translatable("tooltip.trade_expansion.card_blank").withStyle(ChatFormatting.RED));
+			tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.card_blank").withStyle(ChatFormatting.RED));
 			return;
 		}
-		tooltip.accept(Component.translatable("tooltip.trade_expansion.card_owner", owner.name(), owner.number()).withStyle(ChatFormatting.AQUA));
+		tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.card_owner", owner.name(), owner.number()).withStyle(ChatFormatting.AQUA));
 	}
 }

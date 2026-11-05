@@ -28,7 +28,7 @@ import java.util.List;
  * Stalls in generated villages (design stage 9, C-1 "自然生成"): adds a small stall building to the house pool of every
  * vanilla village type, and protects the stalls it places ({@code worldgen.protectNaturalStalls}).
  * <p>
- * The building ({@code data/trade_expansion/structure/village/<type>/market_stall.nbt}) connects to a street like a
+ * The building ({@code data/ak_trade_expansion/structure/village/<type>/market_stall.nbt}) connects to a street like a
  * vanilla house; its stall has origin {@code natural} and gets its market on first use.
  */
 public final class VillageStalls {
@@ -45,7 +45,7 @@ public final class VillageStalls {
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
 			if (!TradeExpansionConfig.get().worldgen.protectNaturalStalls || player.isCreative()) return true;
 			if (blockEntity instanceof MarketStallBlockEntity stall && stall.origin() == MarketOrigin.NATURAL) {
-				player.sendOverlayMessage(Component.translatable("message.trade_expansion.stall_protected").withStyle(ChatFormatting.RED));
+				player.sendOverlayMessage(Component.translatable("message.ak_trade_expansion.stall_protected").withStyle(ChatFormatting.RED));
 				return false;
 			}
 			return true;

@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "trade_expansion:block/market_stall" },
-    "facing=east": { "model": "trade_expansion:block/market_stall", "y": 90 },
-    "facing=south": { "model": "trade_expansion:block/market_stall", "y": 180 },
-    "facing=west": { "model": "trade_expansion:block/market_stall", "y": 270 }
-  }
-}

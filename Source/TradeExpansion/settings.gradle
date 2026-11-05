@@ -10,4 +10,4 @@ pluginManagement {
 }
 
 // Should match your modid
-rootProject.name = 'trade_expansion'
+rootProject.name = 'ak_trade_expansion'

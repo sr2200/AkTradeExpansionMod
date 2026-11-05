@@ -32,7 +32,7 @@ public final class DataReloadListener {
 
 	private static final class Goods extends SimpleJsonResourceReloadListener<GoodsDefinition> {
 		Goods() {
-			super(GoodsDefinition.CODEC, FileToIdConverter.json("trade_expansion/goods"));
+			super(GoodsDefinition.CODEC, FileToIdConverter.json("ak_trade_expansion/goods"));
 		}
 
 		@Override
@@ -60,7 +60,7 @@ public final class DataReloadListener {
 
 	private static final class Profiles extends SimpleJsonResourceReloadListener<MarketProfile> {
 		Profiles() {
-			super(MarketProfile.CODEC, FileToIdConverter.json("trade_expansion/market_profile"));
+			super(MarketProfile.CODEC, FileToIdConverter.json("ak_trade_expansion/market_profile"));
 		}
 
 		@Override

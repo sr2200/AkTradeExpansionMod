@@ -3,7 +3,7 @@
 - 版：v0.6（採用）　作成日：2026-11-02　更新：オーバーワールドの原木をすべて商品にし（2-3）、ダイヤの防具・道具を追加（2-7）
 - 本体の設計書：[trade-mod-design.md](trade-mod-design.md)（以下「本体」）。用語・式・設定は本体に従う
 - ライセンス：GNU LGPL v2.1 のみ（リポジトリ直下の [LICENSE](../LICENSE)）
-- 対象：段階7で作るデータパック `data/trade_expansion/trade_expansion/goods/*.json` と `market_profile/*.json` の中身
+- 対象：段階7で作るデータパック `data/ak_trade_expansion/ak_trade_expansion/goods/*.json` と `market_profile/*.json` の中身
 
 ---
 
@@ -184,7 +184,7 @@
 
 ### 2-11. 補助コイン（参考）
 
-エメラルド貨（`trade_expansion:emerald_coin`）は本体 E-5 のとおり。10枚1単位・基準 5c・売のみ・村の市場だけが自動で扱う（商品数とは別枠）。95種には数えない。
+エメラルド貨（`ak_trade_expansion:emerald_coin`）は本体 E-5 のとおり。10枚1単位・基準 5c・売のみ・村の市場だけが自動で扱う（商品数とは別枠）。95種には数えない。
 
 ### 2-12. 花（20種）【v0.4 追加】
 
@@ -207,7 +207,7 @@
 | `pitcher_plant` | ウツボカズラ | 40 | 48 / 32 | 32 | 8 | ○ | 3 | 高級品（スニッファー） |
 | `wither_rose` | ウィザーローズ | 60 | 72 / 48 | 16 | 4 | ○ | 4 | 高級品・ネザー（`min_level` 2） |
 
-- 値はすべて、設定ファイルの `goods`（本体 D-2・G章）や `/tradeex goods set` で後から変えられる。消耗品かどうかも `consumables.remove` で外せる。
+- 値はすべて、設定ファイルの `goods`（本体 D-2・G章）や `/aktradeex goods set` で後から変えられる。消耗品かどうかも `consumables.remove` で外せる。
 
 ---
 
@@ -257,7 +257,7 @@
 
 ### 3-3. オーバーワールドのプロファイル（9種）
 
-条件の `village` は `{ "type": "trade_expansion:structure", "structure": "#minecraft:village" }`、`type=X` は `trade_expansion:villager_type` 条件を表す。
+条件の `village` は `{ "type": "ak_trade_expansion:structure", "structure": "#minecraft:village" }`、`type=X` は `ak_trade_expansion:villager_type` 条件を表す。
 
 | ID | 優先度 | 条件 | always | 地元の特産（重み） | 価格倍率 |
 |---|---|---|---|---|---|
@@ -318,43 +318,43 @@
 ### 3-5. JSON の例（平原の村）
 
 ```json
-// data/trade_expansion/trade_expansion/market_profile/plains_village.json
+// data/ak_trade_expansion/ak_trade_expansion/market_profile/plains_village.json
 {
-  "display_name": { "translate": "trade_expansion.profile.plains_village" },
+  "display_name": { "translate": "ak_trade_expansion.profile.plains_village" },
   "priority": 10,
   "weight": 1,
   "conditions": [
-    { "type": "trade_expansion:structure", "structure": "#minecraft:village" },
-    { "type": "trade_expansion:villager_type", "villager_type": "minecraft:plains" }
+    { "type": "ak_trade_expansion:structure", "structure": "#minecraft:village" },
+    { "type": "ak_trade_expansion:villager_type", "villager_type": "minecraft:plains" }
   ],
-  "always": ["trade_expansion:wheat"],
+  "always": ["ak_trade_expansion:wheat"],
   "pools": [
     {
       "rolls": { "min": 2, "max": 3 },
       "entries": [
-        { "goods": "trade_expansion:bread", "weight": 10 },
-        { "goods": "trade_expansion:oak_log", "weight": 10 },
-        { "goods": "trade_expansion:apple", "weight": 8 },
-        { "goods": "trade_expansion:white_wool", "weight": 8 },
-        { "goods": "trade_expansion:white_bed", "weight": 6 },
-        { "goods": "trade_expansion:beef", "weight": 6 }
+        { "goods": "ak_trade_expansion:bread", "weight": 10 },
+        { "goods": "ak_trade_expansion:oak_log", "weight": 10 },
+        { "goods": "ak_trade_expansion:apple", "weight": 8 },
+        { "goods": "ak_trade_expansion:white_wool", "weight": 8 },
+        { "goods": "ak_trade_expansion:white_bed", "weight": 6 },
+        { "goods": "ak_trade_expansion:beef", "weight": 6 }
       ]
     },
     {
       "rolls": { "min": 3, "max": 4 },
       "entries": [
-        { "goods": "trade_expansion:bread", "weight": 10 },
-        { "goods": "trade_expansion:torch", "weight": 8 },
+        { "goods": "ak_trade_expansion:bread", "weight": 10 },
+        { "goods": "ak_trade_expansion:torch", "weight": 8 },
         "… 3-2 の日用品プール …",
-        { "goods": "trade_expansion:book", "weight": 3, "min_level": 2 }
+        { "goods": "ak_trade_expansion:book", "weight": 3, "min_level": 2 }
       ]
     },
     {
       "rolls": { "min": 1, "max": 2 },
       "entries": [
-        { "goods": "trade_expansion:iron_ingot", "weight": 5, "min_level": 2 },
+        { "goods": "ak_trade_expansion:iron_ingot", "weight": 5, "min_level": 2 },
         "… 3-2 の高級品プール …",
-        { "goods": "trade_expansion:diamond_sword", "weight": 1, "min_level": 5 }
+        { "goods": "ak_trade_expansion:diamond_sword", "weight": 1, "min_level": 5 }
       ]
     }
   ],
@@ -365,7 +365,7 @@
 }
 ```
 
-- 商品の ID（`trade_expansion:bread` 等）は goods 定義ファイルの名前。goods ファイル名はアイテム ID のパス部分に合わせる（`goods/bread.json` → `"item": "minecraft:bread"`）。
+- 商品の ID（`ak_trade_expansion:bread` 等）は goods 定義ファイルの名前。goods ファイル名はアイテム ID のパス部分に合わせる（`goods/bread.json` → `"item": "minecraft:bread"`）。
 - `price_modifiers` の `item`（1品だけ指定）と、`villager_type` 条件の引数名 `villager_type` は本体 D-2（v0.7）のとおり。
 
 ### 3-6. 品揃えの例
@@ -390,7 +390,7 @@
 | G1 | ネザー・エンドの市場はベッドが使えず、レベル1（商品数10）から上がらない | **決定**：ネザー・エンドは市場の中心から一定距離内の**村人の人数**でレベルを測る（3-4）。村人はネザー・エンドで増やせないため、人数だけで判定する。本体 Q27・D-4・G章（`market.villagerThresholds`）に反映済み |
 | G2 | 鞍は 26.3 でクラフトできるか | **決定**：クラフトできる（革3＋鉄インゴット）。基準価格 130c のまま |
 | G3 | 本体 D-2 の修正：`price_modifiers` に `item` 指定を追加、`villager_type` 条件の引数名を変更、D-3 のジャングル/沼地を「村なし」に修正 | **決定・反映済み**：本体 v0.7 で D-2・D-3 に反映 |
-| G4 | 価格・τ・在庫の数値はすべて仮。段階7の実装後、`/tradeex simulate` と実際のプレイで調整する | — |
+| G4 | 価格・τ・在庫の数値はすべて仮。段階7の実装後、`/aktradeex simulate` と実際のプレイで調整する | — |
 
 ---
 

@@ -1,6 +1,6 @@
-// Draws the mod icon (assets/trade_expansion/icon.png): a market stall with a striped awning and a gold coin,
+// Draws the mod icon (assets/ak_trade_expansion/icon.png): a market stall with a striped awning and a gold coin,
 // as 32x32 pixel art scaled up to 128x128 without smoothing. No libraries needed (writes the PNG itself).
-// Usage (in Source/TradeExpansion): node tools/icon/genicon.js src/main/resources/assets/trade_expansion/icon.png
+// Usage (in Source/TradeExpansion): node tools/icon/genicon.js src/main/resources/assets/ak_trade_expansion/icon.png
 const fs = require('fs');
 const zlib = require('zlib');
 

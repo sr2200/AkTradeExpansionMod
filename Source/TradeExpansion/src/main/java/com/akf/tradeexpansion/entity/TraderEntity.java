@@ -124,7 +124,7 @@ public class TraderEntity extends PathfinderMob {
 		if (level() instanceof ServerLevel level && player instanceof ServerPlayer serverPlayer) {
 			Market market = resolveMarket(level);
 			if (market == null) {
-				player.sendOverlayMessage(Component.translatable("message.trade_expansion.trader_no_market").withStyle(ChatFormatting.RED));
+				player.sendOverlayMessage(Component.translatable("message.ak_trade_expansion.trader_no_market").withStyle(ChatFormatting.RED));
 				return InteractionResult.FAIL;
 			}
 			lookAt(player, 30.0f, 30.0f);

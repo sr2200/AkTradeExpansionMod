@@ -1,0 +1,10 @@
+{
+  "fabric:load_conditions": [
+    { "condition": "ak_trade_expansion:emerald_coin_enabled" }
+  ],
+  "type": "ak_trade_expansion:emerald_coin",
+  "ingredient": "minecraft:emerald_block",
+  "result": {
+    "id": "ak_trade_expansion:emerald_coin"
+  }
+}

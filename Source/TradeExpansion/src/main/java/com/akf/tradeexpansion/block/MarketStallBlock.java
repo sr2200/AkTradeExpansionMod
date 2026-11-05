@@ -94,7 +94,7 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 				if (name != null) MarketNames.rename(market, name, player);
 				MarketRegistry.get(serverLevel.getServer()).setDirty();
 			}
-			player.sendSystemMessage(Component.translatable("message.trade_expansion.stall_joined", MarketNames.name(market))
+			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.stall_joined", MarketNames.name(market))
 					.withStyle(ChatFormatting.GRAY));
 		}
 	}
@@ -114,13 +114,13 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 			}
 			if (name == null) return InteractionResult.TRY_WITH_EMPTY_HAND;
 			if (!MarketNames.canRename(serverPlayer, market)) {
-				player.sendOverlayMessage(Component.translatable("message.trade_expansion.rename_denied").withStyle(ChatFormatting.RED));
+				player.sendOverlayMessage(Component.translatable("message.ak_trade_expansion.rename_denied").withStyle(ChatFormatting.RED));
 				return InteractionResult.FAIL;
 			}
 			MarketNames.rename(market, name, serverPlayer);
 			MarketRegistry.get(serverLevel.getServer()).setDirty();
 			if (!player.hasInfiniteMaterials()) stack.shrink(1);
-			player.sendSystemMessage(Component.translatable("message.trade_expansion.renamed", market.id(), name).withStyle(ChatFormatting.GREEN));
+			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.renamed", market.id(), name).withStyle(ChatFormatting.GREEN));
 		}
 		return InteractionResult.SUCCESS;
 	}
@@ -128,7 +128,7 @@ public class MarketStallBlock extends HorizontalDirectionalBlock implements Enti
 	private static Component tooCloseMessage(MarketRegistry.Assignment assignment) {
 		if (assignment.reason() != null) return assignment.reason().copy().withStyle(ChatFormatting.RED); // C-1: distance or newMarketRequires
 		TradeExpansionConfig config = TradeExpansionConfig.get();
-		return Component.translatable("message.trade_expansion.stall_too_close",
+		return Component.translatable("message.ak_trade_expansion.stall_too_close",
 				(int) assignment.nearestDistance(), (int) config.distance.mergeRadius, (int) config.distance.minNewMarketDistance)
 				.withStyle(ChatFormatting.RED);
 	}

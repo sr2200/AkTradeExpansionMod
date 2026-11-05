@@ -86,8 +86,8 @@ public class WalletItem extends Item {
 
 	/** Tooltip lines, added on the client through Fabric's ItemTooltipCallback (replaces the deprecated appendHoverText, E-1). */
 	public void addTooltip(ItemStack stack, Consumer<Component> tooltip) {
-		tooltip.accept(Component.translatable("tooltip.trade_expansion.wallet_balance",
+		tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.wallet_balance",
 				CoinItem.formatCopper(balance(stack)), CoinItem.formatCopper(capacity())).withStyle(ChatFormatting.GOLD));
-		tooltip.accept(Component.translatable("tooltip.trade_expansion.wallet_hint").withStyle(ChatFormatting.DARK_GRAY));
+		tooltip.accept(Component.translatable("tooltip.ak_trade_expansion.wallet_hint").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }
