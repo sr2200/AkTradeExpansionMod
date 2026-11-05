@@ -148,7 +148,7 @@ public final class QuestService {
 				InventoryUtil.remove(player, match, menu.sellSlot(), target.quantity());
 				reward = Reputation.reward(market, player.getUUID(), target, now); // M: reward bonus of the reputation level
 				if (request.useCard()) {
-					BankAccounts.get(player.level().getServer()).add(player.getUUID(), reward);
+					BankService.accounts(player).add(player.getUUID(), reward);
 				} else {
 					WalletService.give(player, reward);
 				}

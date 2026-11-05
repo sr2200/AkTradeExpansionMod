@@ -6,6 +6,7 @@ import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.item.BankCardItem;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
+import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.AccountS2C;
@@ -46,6 +47,14 @@ public final class BankService {
 		return false;
 	}
 
+	/** The bank with {@code player}'s interest paid up to now (E-7): use this before reading or changing the balance. */
+	public static BankAccounts accounts(ServerPlayer player) {
+		BankAccounts bank = BankAccounts.get(player.level().getServer());
+		TradeExpansionConfig.Bank config = TradeExpansionConfig.get().bank;
+		bank.accrue(player.getUUID(), MarketClock.now(player.level()), config.interestRatePerDay, config.interestMaxBalance);
+		return bank;
+	}
+
 	/** Card payment: price plus {@code bank.cardTransactionFee}. */
 	public static long cardCharge(long price) {
 		return price + (long) Math.ceil(price * TradeExpansionConfig.get().bank.cardTransactionFee);
@@ -57,7 +66,7 @@ public final class BankService {
 
 	/** @param result shown on the bank tab, or {@code null} */
 	public static void sendAccount(ServerPlayer player, Result result) {
-		long balance = BankAccounts.get(player.level().getServer()).balance(player.getUUID());
+		long balance = accounts(player).balance(player.getUUID());
 		ServerPlayNetworking.send(player, new AccountS2C(balance, hasValidCard(player), result == null ? -1 : result.ordinal()));
 	}
 
@@ -76,7 +85,7 @@ public final class BankService {
 		if (player.isCreative() && !config.trade.allowCreative) return Result.CREATIVE_NOT_ALLOWED;
 		if (market.level() < config.bank.minMarketLevel) return Result.NO_BANK;
 
-		BankAccounts bank = BankAccounts.get(player.level().getServer());
+		BankAccounts bank = accounts(player);
 		long amount = request.amount();
 		switch (request.action()) {
 			case DEPOSIT -> {

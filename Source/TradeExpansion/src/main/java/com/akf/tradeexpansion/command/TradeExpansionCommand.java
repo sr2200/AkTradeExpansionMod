@@ -191,7 +191,7 @@ public final class TradeExpansionCommand {
 	/** E-7: own bank balance. */
 	private static int bankBalance(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		ServerPlayer player = context.getSource().getPlayerOrException();
-		long balance = BankAccounts.get(context.getSource().getServer()).balance(player.getUUID());
+		long balance = BankService.accounts(player).balance(player.getUUID()); // E-7: interest paid up to now
 		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.bank_balance", CoinItem.formatCopper(balance)), false);
 		return (int) Math.min(Integer.MAX_VALUE, balance);
 	}
@@ -200,7 +200,7 @@ public final class TradeExpansionCommand {
 	private static int bankChange(CommandContext<CommandSourceStack> context, boolean set) throws CommandSyntaxException {
 		ServerPlayer target = EntityArgument.getPlayer(context, "player");
 		long amount = LongArgumentType.getLong(context, "amount");
-		BankAccounts bank = BankAccounts.get(context.getSource().getServer());
+		BankAccounts bank = BankService.accounts(target); // E-7: interest up to now before the change
 		if (set) bank.set(target.getUUID(), amount);
 		else bank.add(target.getUUID(), amount);
 		long balance = bank.balance(target.getUUID());

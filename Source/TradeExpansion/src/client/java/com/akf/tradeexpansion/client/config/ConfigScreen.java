@@ -149,7 +149,8 @@ public final class ConfigScreen {
 				.option(intField("bank.minMarketLevel", d.bank.minMarketLevel, () -> edit.bank.minMarketLevel, v -> edit.bank.minMarketLevel = v, 1, 5))
 				.option(longField("bank.cardFee", d.bank.cardFee, () -> edit.bank.cardFee, v -> edit.bank.cardFee = v, 0, 1_000_000L))
 				.option(doubleField("bank.cardTransactionFee", d.bank.cardTransactionFee, () -> edit.bank.cardTransactionFee, v -> edit.bank.cardTransactionFee = v, 0, 0.1))
-				.option(doubleField("bank.interestRatePerDay", d.bank.interestRatePerDay, () -> edit.bank.interestRatePerDay, v -> edit.bank.interestRatePerDay = v, 0, 0.01));
+				.option(doubleField("bank.interestRatePerDay", d.bank.interestRatePerDay, () -> edit.bank.interestRatePerDay, v -> edit.bank.interestRatePerDay = v, 0, 0.01))
+				.option(longField("bank.interestMaxBalance", d.bank.interestMaxBalance, () -> edit.bank.interestMaxBalance, v -> edit.bank.interestMaxBalance = v, 0, 1_000_000_000_000L));
 
 		ConfigCategory.Builder tradeCat = category("trade")
 				.option(doubleField("trade.maxDistance", d.trade.maxDistance, () -> trade.maxDistance, v -> trade.maxDistance = v, 2, 32))

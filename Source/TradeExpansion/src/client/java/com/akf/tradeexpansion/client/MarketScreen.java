@@ -830,6 +830,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (player != null) {
 			g.text(font, Component.translatable("screen.ak_trade_expansion.bank.cash", CoinItem.formatCopper(WalletService.balance(player))), bx + 4, by + 16, COLOR_WHITE);
 		}
+		TradeExpansionConfig.Bank bankConfig = TradeExpansionConfig.get().bank;
+		if (bankConfig.interestRatePerDay > 0) {
+			// E-7: interest rate (and the balance it is paid on)
+			String rate = String.valueOf(Math.round(bankConfig.interestRatePerDay * 100_000) / 1000.0).replaceAll("\\.?0+$", "");
+			Component text = bankConfig.interestMaxBalance > 0
+					? Component.translatable("screen.ak_trade_expansion.bank.interest", rate, CoinItem.formatCopper(bankConfig.interestMaxBalance))
+					: Component.translatable("screen.ak_trade_expansion.bank.interest.no_cap", rate);
+			fitText(g, text.getString(), bx + 4, by + 25, LIST_W - 8, COLOR_GRAY, true);
+		}
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.deposit"), bx + 4, by + 34, COLOR_WHITE);
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.withdraw"), bx + 4, by + 64, COLOR_WHITE);
 	}

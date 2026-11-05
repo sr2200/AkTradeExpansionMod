@@ -110,7 +110,7 @@ public final class TradeService {
 		}
 
 		// 5. Move items and money: card = bank account (E-8, no splitting with cash, Q34); cash = wallets then coins (E-6)
-		BankAccounts bank = BankAccounts.get(player.level().getServer());
+		BankAccounts bank = BankService.accounts(player); // E-7: interest paid up to now
 		if (buy) {
 			long charge = card ? BankService.cardCharge(total) : total;
 			boolean affordable = card ? bank.balance(player.getUUID()) >= charge : WalletService.canPay(player, total);

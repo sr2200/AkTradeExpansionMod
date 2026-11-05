@@ -60,6 +60,7 @@ public final class ConfigValidator {
 		b.interestRatePerDay = clamp("bank.interestRatePerDay", b.interestRatePerDay, 0, 0.01);
 		b.cardFee = clamp("bank.cardFee", b.cardFee, 0, 1_000_000L);
 		b.cardTransactionFee = clamp("bank.cardTransactionFee", b.cardTransactionFee, 0, 0.1);
+		b.interestMaxBalance = clamp("bank.interestMaxBalance", b.interestMaxBalance, 0, 1_000_000_000_000L);
 
 		TradeExpansionConfig.Trade t = c.trade;
 		t.maxDistance = clamp("trade.maxDistance", t.maxDistance, 2, 32);

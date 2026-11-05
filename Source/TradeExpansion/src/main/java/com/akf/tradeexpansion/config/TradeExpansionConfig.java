@@ -409,18 +409,22 @@ public final class TradeExpansionConfig {
 	/** E-7 / E-8 (stage 12). */
 	public static final class Bank {
 		public int minMarketLevel = 3;
-		public double interestRatePerDay = 0.0;
+		/** E-7 (v0.29.1, C案): interest per in-game day, compounded (0.0003 = 0.03 %, about 0.3 % in 10 days). */
+		public double interestRatePerDay = 0.0003;
 		public long cardFee = 100;
 		public double cardTransactionFee = 0.0;
+		/** E-7 (v0.29.1): interest is paid on the balance up to this (0 = no cap). */
+		public long interestMaxBalance = 100_000;
 
 		public Bank() {
 		}
 
-		Bank(int minMarketLevel, double interestRatePerDay, long cardFee, double cardTransactionFee) {
+		Bank(int minMarketLevel, double interestRatePerDay, long cardFee, double cardTransactionFee, long interestMaxBalance) {
 			this.minMarketLevel = minMarketLevel;
 			this.interestRatePerDay = interestRatePerDay;
 			this.cardFee = cardFee;
 			this.cardTransactionFee = cardTransactionFee;
+			this.interestMaxBalance = interestMaxBalance;
 		}
 
 		static final Codec<Bank> CODEC = RecordCodecBuilder.create(i -> {
@@ -429,7 +433,8 @@ public final class TradeExpansionConfig {
 					Codec.INT.fieldOf("minMarketLevel").orElse(d.minMarketLevel).forGetter(c -> c.minMarketLevel),
 					Codec.DOUBLE.fieldOf("interestRatePerDay").orElse(d.interestRatePerDay).forGetter(c -> c.interestRatePerDay),
 					Codec.LONG.fieldOf("cardFee").orElse(d.cardFee).forGetter(c -> c.cardFee),
-					Codec.DOUBLE.fieldOf("cardTransactionFee").orElse(d.cardTransactionFee).forGetter(c -> c.cardTransactionFee)
+					Codec.DOUBLE.fieldOf("cardTransactionFee").orElse(d.cardTransactionFee).forGetter(c -> c.cardTransactionFee),
+					Codec.LONG.fieldOf("interestMaxBalance").orElse(d.interestMaxBalance).forGetter(c -> c.interestMaxBalance)
 			).apply(i, Bank::new);
 		});
 	}
