@@ -331,7 +331,7 @@ public final class TradeExpansionCommand {
 			ServerLevel level = context.getSource().getServer().getLevel(market.dimension());
 			if (level == null) return 0;
 			MarketRegistry registry = MarketRegistry.get(context.getSource().getServer());
-			MarketFactory.reroll(level, market, registry.inDimension(market.dimension()));
+			MarketFactory.reroll(level, market, registry.linkedTo(market.dimension()));
 			MarketUpkeep.touch(level, market);
 			registry.setDirty();
 			TradeService.broadcast(context.getSource().getServer(), registry, Set.of(market.id()), MarketClock.now(level));

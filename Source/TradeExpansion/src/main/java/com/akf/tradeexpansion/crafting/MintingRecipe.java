@@ -44,7 +44,7 @@ public class MintingRecipe extends ShapedRecipe {
 
 	private static int count(ItemStackTemplate coin, long value) {
 		long coinValue = coin.item().value() instanceof CoinItem c ? c.type().value() : 1;
-		return (int) Math.clamp(value / coinValue, 1, 64);
+		return com.akf.tradeexpansion.core.CoinMath.mintCount(value, coinValue);
 	}
 
 	private static final MapCodec<ShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

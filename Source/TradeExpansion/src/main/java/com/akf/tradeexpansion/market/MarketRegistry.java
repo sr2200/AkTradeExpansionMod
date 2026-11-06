@@ -2,6 +2,7 @@ package com.akf.tradeexpansion.market;
 
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.core.DistanceModel;
 import com.akf.tradeexpansion.currency.CoinType;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -108,6 +109,32 @@ public final class MarketRegistry extends SavedData {
 	}
 
 	/**
+	 * Markets whose prices are linked with {@code dimension} (C-2): the same dimension, plus the Overworld for the Nether
+	 * and the other way round when {@code distance.linkNetherToOverworld} is on. Distances between them: {@link #linkedDistance}.
+	 */
+	public List<Market> linkedTo(ResourceKey<Level> dimension) {
+		ResourceKey<Level> other = linkedDimension(dimension);
+		if (other == null) return inDimension(dimension);
+		return markets.values().stream().filter(m -> m.dimension().equals(dimension) || m.dimension().equals(other)).toList();
+	}
+
+	/** The dimension linked with {@code dimension} (Nether ↔ Overworld), or {@code null}. */
+	public static ResourceKey<Level> linkedDimension(ResourceKey<Level> dimension) {
+		if (!TradeExpansionConfig.get().distance.linkNetherToOverworld) return null;
+		if (dimension.equals(Level.OVERWORLD)) return Level.NETHER;
+		if (dimension.equals(Level.NETHER)) return Level.OVERWORLD;
+		return null;
+	}
+
+	/** Horizontal distance in Overworld blocks: Nether coordinates count ×8 (C-2, distance.linkNetherToOverworld). */
+	public static double linkedDistance(Market a, Market b) {
+		double sa = a.dimension().equals(Level.NETHER) ? 8 : 1;
+		double sb = b.dimension().equals(Level.NETHER) ? 8 : 1;
+		if (a.dimension().equals(b.dimension())) sa = sb = 1; // same dimension: plain distance (as before)
+		return DistanceModel.horizontalDistance(a.center().getX() * sa, a.center().getZ() * sa, b.center().getX() * sb, b.center().getZ() * sb);
+	}
+
+	/**
 	 * Finds or creates the market a stall at {@code pos} belongs to (C-1):
 	 * the market with the nearest center within {@code mergeRadius} (ties: smaller id), otherwise a new one.
 	 * Crafted stalls may found a new market only {@code minNewMarketDistance} away from every other market.
@@ -122,7 +149,7 @@ public final class MarketRegistry extends SavedData {
 		if (preview.kind() == Preview.Kind.REFUSED) {
 			return new Assignment(null, preview.rejection(), preview.nearestDistance(), false, preview.reason());
 		}
-		Market market = createMarket(level, pos, origin, inDimension(level.dimension()));
+		Market market = createMarket(level, pos, origin, linkedTo(level.dimension()));
 		double nearestDistance = preview.nearestDistance();
 		market.stalls().add(pos.immutable());
 		setDirty();

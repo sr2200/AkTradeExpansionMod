@@ -28,6 +28,14 @@ public final class CoinMath {
 		return values;
 	}
 
+	/**
+	 * Minting (E-2, Q20): coins made from a recipe worth {@code value} copper = value ÷ coin value, rounded down, at least 1
+	 * and at most one stack (64).
+	 */
+	public static int mintCount(long value, long coinValue) {
+		return (int) Math.clamp(value / Math.max(1, coinValue), 1, 64);
+	}
+
 	/** Total copper value of the given coin counts. */
 	public static long total(long[] counts, long[] values) {
 		long sum = 0;

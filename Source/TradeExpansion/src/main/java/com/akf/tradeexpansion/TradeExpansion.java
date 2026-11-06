@@ -39,6 +39,7 @@ public class TradeExpansion implements ModInitializer {
 		ModMenus.init();
 		ModCreativeTab.init();
 		ModPayloads.init();
+		com.akf.tradeexpansion.currency.StartingMoney.register(); // E-2: currency.startingMoney on the first join
 		com.akf.tradeexpansion.market.Reputation.register(); // M: hurting villagers / traders lowers the reputation
 		EmeraldCoinRecipe.init();
 		MintingRecipe.init();

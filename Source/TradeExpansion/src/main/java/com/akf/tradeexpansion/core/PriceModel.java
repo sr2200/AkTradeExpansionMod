@@ -30,6 +30,11 @@ public final class PriceModel {
 		return Math.max(1L, (long) Math.floor(raw + ROUNDING_EPSILON));
 	}
 
+	/** Trading units in {@code items} items of a good traded {@code unit} at a time (B-5): the remainder is not counted. */
+	public static int units(int items, int unit) {
+		return items / Math.max(1, unit);
+	}
+
 	/** Total for selling n items one by one; X rises by 1 per item (B-5). */
 	public static long sumSell(GoodParams p, double pressure, int n) {
 		long total = 0;

@@ -135,7 +135,8 @@ public final class TradeExpansionConfig {
 		public boolean ratioLocked = true;
 		public boolean allowMinting = true;
 		public double exchangeFee = 0.0;
-		public long startingMoney = 0;
+		/** E-2 (v0.31): given on a player's first join; default = 10 loaves of bread at the normal buy price (24c). */
+		public long startingMoney = 240;
 		public boolean mobDropCoins = true;
 		public boolean sneakUseExchange = true;
 		public int emeraldCoinsPerBlock = 1;
@@ -277,7 +278,8 @@ public final class TradeExpansionConfig {
 		public double nearRadius = 128;
 		public double farRadius = 1536;
 		public double falloffExponent = 2.0;
-		public boolean linkNetherToOverworld = false;
+		/** C-2 (v0.31): Nether markets share prices with Overworld markets at ×8 coordinates. */
+		public boolean linkNetherToOverworld = true;
 		public double minNewMarketDistance = 256;
 
 		public Distance() {

@@ -15,7 +15,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.22（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.0.23（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -39,7 +39,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 - 価格はすべて銅貨単位（c）。支払いは財布とインベントリのコインから自動で行い、お釣りは財布に（財布が無ければ最小の枚数のコインで）返します。入りきらない分は足元に落ちます。
 - コインを持ってスニーク＋右クリックすると、1枚を1段下のコインに崩せます。
-- 入手方法：市場に商品を売る、依頼を納める、プレイヤーが倒した敵対モブのドロップ（銅貨0〜2枚、まれに鉄貨）、鋳造（作業台で銅ブロック×9 → 銅貨64枚、鉄ブロック×9 → 鉄貨64枚。素材を売るよりずっと安いので、余った素材の受け皿です）。テスト用に管理コマンド `/aktradeex give` もあります。
+- 入手方法：初めてワールドに入った時に 240c（パン10個分）、市場に商品を売る、依頼を納める、プレイヤーが倒した敵対モブのドロップ（銅貨0〜2枚、まれに鉄貨）、鋳造（作業台で銅ブロック×9 → 銅貨64枚、鉄ブロック×9 → 鉄貨64枚。素材を売るよりずっと安いので、余った素材の受け皿です）。テスト用に管理コマンド `/aktradeex give` もあります。
 - 交易画面の「両替」タブで、コインを1段下に崩したり、1段下のコインからまとめたりできます（手数料は既定で無し。設定 `currency.exchangeFee` で変更可）。
 
 ### 財布・銀行・クレジットカード
@@ -383,7 +383,6 @@ MOD を新しいバージョンに入れ替えた時や、データパックで�
 - **Mod Menu ＋ YetAnotherConfigLib（YACL）** を入れていれば、Mod 一覧の AK Trade Expansion の「設定」ボタンから画面で変更できます。どちらも任意で、入っていなくても Mod は動きます。
 - シングルプレイでは保存した時点で反映されます。マルチプレイではサーバーの設定ファイルを編集して `/aktradeex reload` を実行します（`client.*` は各プレイヤーが自分で変更できます）。
 - 範囲外の値は自動で範囲内に直されます（サーバーログに警告）。書かれていない項目は既定値になります。
-- 「**未実装**」の項目は、値を保存できるだけで今はまだ効果がありません。
 
 ### 設定ファイルの書き方
 
@@ -417,7 +416,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `currency.emeraldCoinFixedPrice` | `true` | true / false | エメラルド貨の値段を固定する（売っても値下がりせず、どの市場でも10枚で4c）。OFF で相場によって動く | `"emeraldCoinFixedPrice": false` |
 | `currency.emeraldCoinUnlimited` | `true` | true / false | 市場がエメラルド貨をいくらでも買い取る（買取停止にならない）。OFF で在庫上限（640枚）まで | `"emeraldCoinUnlimited": false` |
 | `currency.exchangeFee` | `0.0` | 0〜0.5 | 両替タブの手数料の割合 | `"exchangeFee": 0.02`（2%） |
-| `currency.startingMoney` | `0` | 0〜1,000,000,000 | 初めてログインした時に渡す金額（c）。**未実装** | `"startingMoney": 500` |
+| `currency.startingMoney` | `240` | 0〜1,000,000,000 | ワールドに初めて入った時に一度だけ渡す金額（c）。既定はパン10個分。財布があれば財布に、無ければコインで渡す。0 で渡さない | `"startingMoney": 1000` |
 | `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨） | `"mobDropCoins": false` |
 | `currency.sneakUseExchange` | `true` | true / false | コインを持ってスニーク＋右クリックで、1枚を下位のコインに崩す | `"sneakUseExchange": false` |
 | `currency.emeraldCoinsPerBlock` | `1` | 0〜64 | エメラルドブロック1個から石切台で作れるエメラルド貨の枚数。0 でレシピ無効。反映は再起動か `/reload` の後 | `"emeraldCoinsPerBlock": 2` |
@@ -465,7 +464,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `distance.nearRadius` | `128` | mergeRadius〜100000 | この距離以内の市場は相場が100%連動する | `"nearRadius": 256` |
 | `distance.farRadius` | `1536` | nearRadius+1〜100000 | この距離より遠い市場には相場の変化が伝わらない | `"farRadius": 3000` |
 | `distance.falloffExponent` | `2.0` | 0.5〜5 | 距離による影響の減り方。1＝直線、2＝近場を出た直後に大きく下がる | `"falloffExponent": 1.0` |
-| `distance.linkNetherToOverworld` | `false` | true / false | ネザー座標×8 をオーバーワールド座標とみなして相場を連動させる。**未実装** | `"linkNetherToOverworld": true` |
+| `distance.linkNetherToOverworld` | `true` | true / false | ネザー座標×8 をオーバーワールド座標とみなして、近くの市場どうしの相場を連動させる（両方で扱う商品だけ）。OFF でネザーは独立 | `"linkNetherToOverworld": false` |
 | `distance.minNewMarketDistance` | `256` | 0〜10000 | クラフトした交易所で新しい市場を作れるのは、既存の市場からこの距離以上離れた場所だけ | `"minNewMarketDistance": 128` |
 
 #### 市場（market）
@@ -667,7 +666,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `tools/structures/genstall.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js` | 村の屋台の建物の生成、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
 | `build.bat`・`release.bat`・`tools/version/bump.ps1` | 普段のビルド（末尾を上げる）・配布用のビルド（真ん中を上げる）と、バージョンを上げる処理（下の「よく使うコマンド」） |
 | `src/dist/README.txt` | 配布用 zip に入れる導入方法（`@VERSION@` がバージョンに置き換わる） |
-| `src/test/java/...` | 単体テスト（価格・まとめ買い割引・距離・コイン・財布・市場レベル・商品の抽選・依頼の計算・評判・預金の利息・市場名・設定ファイル・同梱データの読み込み）。74件 |
+| `src/test/java/...` | 単体テスト（価格・まとめ買い割引・取引単位・距離・コイン・鋳造の枚数・財布・市場レベル・商品の抽選・依頼の計算・評判・預金の利息・市場名・設定ファイル・同梱データの読み込み）。83件 |
 
 ---
 

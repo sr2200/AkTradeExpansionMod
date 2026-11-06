@@ -11,7 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Spreads a pressure change of one market to the others in the same dimension (design C-2).
+ * Spreads a pressure change of one market to the others in the same dimension (design C-2), and between the Nether and
+ * the Overworld with {@code distance.linkNetherToOverworld} (Nether coordinates ×8).
  * Only X propagates; stock does not.
  */
 public final class Propagation {
@@ -25,13 +26,13 @@ public final class Propagation {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		List<Market> affected = new ArrayList<>();
 		// Linear scan is fine for a few hundred markets; a spatial index can replace it if needed.
-		for (Market other : registry.inDimension(source.dimension())) {
+		for (Market other : registry.linkedTo(source.dimension())) {
 			if (other == source) continue;
 			GoodState state = other.good(goodsId);
 			GoodParams params = other.params(goodsId);
 			if (state == null || params == null) continue;
 
-			double d = DistanceModel.horizontalDistance(source.center().getX(), source.center().getZ(), other.center().getX(), other.center().getZ());
+			double d = MarketRegistry.linkedDistance(source, other);
 			double w = DistanceModel.weight(d, config.distance.nearRadius, config.distance.farRadius, config.distance.falloffExponent);
 			if (w <= 0) continue;
 

@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.30.1（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
+- 版：v0.31（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -429,12 +429,12 @@ w(d) = 1                                  (d ≤ Rnear)
 | 次元 | 既定の扱い |
 |---|---|
 | オーバーワールド | 通常 |
-| ネザー | 扱う商品はネザー用のプロファイルで決まる（D-2、Q10）。独立した市場群（オーバーワールドへ波及しない）。設定 `distance.linkNetherToOverworld=true` で、ネザー座標×8 をオーバーワールド座標とみなして相互波及 |
+| ネザー | 扱う商品はネザー用のプロファイルで決まる（D-2、Q10）。【v0.31 で変更】既定（`distance.linkNetherToOverworld=true`）では、ネザー座標×8 をオーバーワールド座標とみなして**オーバーワールドの市場と相互に波及**する。OFF にすると独立した市場群（v0.30 までの既定） |
 | エンド | 扱う商品はエンド用のプロファイルで決まる。独立。距離計算は通常通り（外縁の島同士でも波及） |
 | 他Modの次元 | 独立（`ak_trade_expansion:default` プロファイル） |
 
 - 次元ごとに扱う商品が異なる（Q10）ため、`distance.linkNetherToOverworld=true` でも波及するのは**両方の次元の市場が扱っている商品だけ**（C-2 の「波及先が扱っていない商品は無視」による）。
-- `distance.linkNetherToOverworld` は v0.29 時点でも未実装（設定値だけある。docs/TODO）。
+- 【v0.31 で実装】連動は、取引の波及（C-2）と、新しい市場の初期相場（C-1 の「近くの市場の X の加重平均」）の両方に効く。距離は、違う次元の市場どうしの時だけネザー側の座標を8倍して測る（同じ次元どうしは今までどおり）。新しい市場を作れる最小距離（`distance.minNewMarketDistance`）・掲示板（I章）・同じ市場への統合（`distance.mergeRadius`）は次元ごとのまま。実装は `MarketRegistry.linkedTo`（連動する市場の一覧）と `MarketRegistry.linkedDistance`（換算した距離）。
 
 #### C-4. 市場名【v0.15 追加】
 
@@ -668,7 +668,7 @@ w(d) = 1                                  (d ≤ Rnear)
 | 鋳造（ブロック→コイン） | ON（`currency.allowMinting`）。**銅貨と鉄貨のみ**。鉄貨は【v0.27.3】既定 OFF（`currency.allowIronMinting`）。下記 |
 | 宝箱 | なし（Q9） |
 | エメラルド貨を市場で売る | ON（E-5）。村人交易で得たエメラルドを、相場に応じた少額の銅貨に換える |
-| 初回ログイン時の支給 | 0c（`currency.startingMoney`。v0.29 時点でも未実装。docs/TODO） |
+| 初回ログイン時の支給 | 【v0.31 で実装】240c（`currency.startingMoney`。パン10個分＝平常時の買値 24c × 10）。ワールドに初めて入った時に一度だけ、財布があれば財布に、無ければコインで渡し、「初めの所持金として 240c を受け取りました」と知らせる。受け取ったプレイヤーはワールドごとに保存する（`ak_trade_expansion:starting_money`、UUID の一覧）。v0.31 より前から遊んでいるプレイヤーも、次に入った時に一度だけ受け取る |
 
 **敵モブのドロップ**（Q22）：
 
@@ -899,7 +899,7 @@ MarketRegistry
 - **対応版**：YACL `3.9.7+26.3-fabric`（maven.isxander.dev）、Mod Menu `21.0.0`（maven.terraformersmc.com）。どちらも公式の Maven で 26.3 向けを確認済み（段階8）。`build.gradle` では `compileOnly` ＋ `localRuntime`（開発時だけ読み込み、配布物には含めない）。
 - 価格・相場など一部の項目は、変えると既存の市場の価格がすぐ変わる。設定画面の説明文でその旨を示す。
 
-> **実装状況（v0.29）**：設定ファイルは段階8で実装済み。JSON はカテゴリごとのオブジェクトで、キーは下表のとおり（例：`{"recovery": {"halfLifeDays": 2.0}, "trade": {"allowCreative": false}}`）。初回起動時に全項目を既定値で書き出す。書かれていない項目は既定値、範囲外の値は範囲内に直して警告ログを出す（ファイル全体を捨てない）。`/aktradeex reload` か設定画面の保存で読み直す。表の中で機能自体がまだ無いもの（v0.29 時点：初回支給 `currency.startingMoney`・ネザー連動 `distance.linkNetherToOverworld`）は、値を保存するだけで効果はない（設定画面の説明に「未実装」と表示）。掲示板・依頼・需要・商人・村人（`board.*`・`quest.*`・`demand.*`・`trader.*`・`villager.*`）の項目は v0.14 で設定ファイルと設定画面（「掲示板・依頼・需要」タブ）に追加した。v0.27 で「商品」タブを追加し、「追加の商品と消耗品」画面（Q53）を開けるようにした。この画面はアイテムのアイコン一覧（名前・IDで検索）・選んだアイテム・基準価格の入力欄・登録済みの一覧からなり、「追加の商品」「消耗品に追加」「消耗品から除外」の3つを切り替える。「完了」で `goods`・`consumables` だけを設定ファイルに書いてすぐ読み直す（ほかのタブの未保存の変更は書かない）。リモートのサーバーにつないでいる間は開けない。`trade.bulkDiscounts` は設定ファイルにある段階の数だけ「取引」タブに出る（段階の追加・削除は設定ファイルで行う）。
+> **実装状況（v0.29）**：設定ファイルは段階8で実装済み。JSON はカテゴリごとのオブジェクトで、キーは下表のとおり（例：`{"recovery": {"halfLifeDays": 2.0}, "trade": {"allowCreative": false}}`）。初回起動時に全項目を既定値で書き出す。書かれていない項目は既定値、範囲外の値は範囲内に直して警告ログを出す（ファイル全体を捨てない）。`/aktradeex reload` か設定画面の保存で読み直す。表の中の項目はすべて実装済み（v0.31。初回支給とネザー連動を実装して、値だけの項目は無くなった）。掲示板・依頼・需要・商人・村人（`board.*`・`quest.*`・`demand.*`・`trader.*`・`villager.*`）の項目は v0.14 で設定ファイルと設定画面（「掲示板・依頼・需要」タブ）に追加した。v0.27 で「商品」タブを追加し、「追加の商品と消耗品」画面（Q53）を開けるようにした。この画面はアイテムのアイコン一覧（名前・IDで検索）・選んだアイテム・基準価格の入力欄・登録済みの一覧からなり、「追加の商品」「消耗品に追加」「消耗品から除外」の3つを切り替える。「完了」で `goods`・`consumables` だけを設定ファイルに書いてすぐ読み直す（ほかのタブの未保存の変更は書かない）。リモートのサーバーにつないでいる間は開けない。`trade.bulkDiscounts` は設定ファイルにある段階の数だけ「取引」タブに出る（段階の追加・削除は設定ファイルで行う）。
 
 **クライアントに同期する値（段階8で実装）**：クライアントはプレビューを自分で計算する（F-2）ため、次の値がサーバーと違うとプレビュー額がずれて取引が `PRICE_CHANGED` で中止され続ける。ログイン時と `/aktradeex reload` 時に同期する。
 
@@ -929,7 +929,7 @@ MarketRegistry
 | 通貨 | `currency.emeraldCoinFixedPrice` | true | bool | 【v0.30】エメラルド貨の値段を固定（売っても下がらず、どの市場でも 10枚で 4c。E-5） |
 | 通貨 | `currency.emeraldCoinUnlimited` | true | bool | 【v0.30】エメラルド貨をいくらでも売れる（買取停止にならない。E-5） |
 | 通貨 | `currency.exchangeFee` | 0.0 | 0〜0.5 | 両替手数料 |
-| 通貨 | `currency.startingMoney` | 0 | 0〜1e9 | 初回支給（c） |
+| 通貨 | `currency.startingMoney` | 240 | 0〜1e9 | 【v0.31 で実装】初回支給（c）。既定はパン10個分（E-2） |
 | 通貨 | `currency.mobDropCoins` | true | bool | 敵モブがコインを落とす（E-2。v0.5 で宝箱の `currency.lootTableCoins` から置き換え） |
 | 通貨 | `currency.sneakUseExchange` | true | bool | スニーク+右クリックでコインを崩す |
 | 通貨 | `currency.emeraldCoinsPerBlock` | 1 | 0〜64 | エメラルドブロック1個から石切台で作れるエメラルド貨の枚数（0 でレシピ無効、E-5。反映はサーバー再起動か `/reload` の後） |
@@ -952,7 +952,7 @@ MarketRegistry
 | 距離 | `distance.nearRadius` | 128 | mergeRadius〜 | 相場100%共通 |
 | 距離 | `distance.farRadius` | 1536 | nearRadius+1〜100000 | 影響0 |
 | 距離 | `distance.falloffExponent` | 2.0 | 0.5〜5 | p |
-| 距離 | `distance.linkNetherToOverworld` | false | bool | ネザー×8で連動 |
+| 距離 | `distance.linkNetherToOverworld` | true | bool | 【v0.31 で実装、既定を ON に】ネザー×8 でオーバーワールドと相場を連動（C-2・C-3） |
 | 距離 | `distance.minNewMarketDistance` | 256 | 0〜10000 | クラフト屋台で新規市場を作れる最小距離（C-1） |
 | 市場 | `market.minGoods` | 10 | 1〜100 | 1市場の商品数の下限（レベル1、D-4） |
 | 市場 | `market.maxGoods` | 20 | minGoods〜100 | 1市場の商品数の上限（最大レベル、D-4） |
@@ -1358,7 +1358,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ currency/
 │   ├─ CoinType.java (enum)       ✅ … COPPER..NETHERITE、価値（比率から計算）
 │   ├─ ExchangeService.java       ✅ … 両替タブ（手数料の掛け方は A-4、E-3）
-│   └─ WalletService.java         ✅ … 所持金（コイン＋財布）・支払い（財布→コイン）・受け取り（財布→コイン）・取り出し・拾ったコインの収納
+│   ├─ WalletService.java         ✅ … 所持金（コイン＋財布）・支払い（財布→コイン）・受け取り（財布→コイン）・取り出し・拾ったコインの収納
+│   └─ StartingMoney.java         ✅ … 初回支給：ワールドに初めて入った時に一度だけ渡す（E-2、v0.31）
 ├─ market/
 │   ├─ Market.java                ✅ … 市場1つ（goods: 商品IDをキーに表示順を保つ Map、プロファイル・レベル、遅延回復）
 │   ├─ MarketOrigin.java          ✅ … natural / crafted（v0.4 追加。MarketId は long で代用）
@@ -1451,7 +1452,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（4件）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`config/ConfigTest`（10件）、`data/BundledDataTest`（2件。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）。計74件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（4件）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（10件）、`data/BundledDataTest`（3件。エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）。計83件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -1585,9 +1586,9 @@ src/main/resources/
 | 単体テスト（JUnit 5） | `PriceModel` | 3章の表の値を期待値に（例：10本売却で合計5517）、Vのクランプ、回復の半減期、Δt<0 の扱い、B-6の往復で損すること・常に買値≥売値の性質テスト |
 | 〃 | `DistanceModel` | d=128→1.0、500→0.541、1536→0、境界値、新規市場の初期相場（C-1） |
 | 〃 | `MarketLevel` | ベッド数とレベルの境目（4/5、39/40 等）、村人の人数とレベルの境目（2/3、23/24 等）、商品数 N（10・13・15・18・20）、設定を変えた時の N |
-| 〃 | 鋳造の枚数 | 比率10で64枚、比率20で32枚、上限64枚で頭打ち（E-2。予定：v0.29 時点でも未作成、docs/TODO。鋳造の損得は `/aktradeex audit` で確認できる） |
+| 〃 | 鋳造の枚数 | 比率10で64枚、比率20で32枚、上限64枚で頭打ち（E-2。`MintingCountTest`、v0.31。鋳造の損得は `/aktradeex audit` で確認できる） |
 | 〃 | 財布での支払い | 財布だけ・コインだけ・両方で払う場合、財布の容量を超えるお釣り、支払い前後の総価値の差 = 価格（E-6。計算部分は純Javaにしてテストする） |
-| 〃 | 取引単位 | `unit=10` で、単位の数による合計額・最大数量、端数（所持19枚なら1単位）の扱い（B-5。予定：v0.29 時点でも未作成、docs/TODO） |
+| 〃 | 取引単位 | `unit=10` で、単位の数による合計額・最大数量、端数（所持19枚なら1単位）の扱い（B-5。`TradeUnitTest`、v0.31） |
 | 〃 | 依頼・不足品 | `QuestMathTest`：難易度の判定（200c・1,000c の境目）、報酬の切り上げ、期間の番号、不足品の倍率の範囲（J・K章）。扱っていない品の B と期間ごとの選び直しはゲーム内で確認する |
 | 〃 | 消耗品 | `PriceModelTest`：消費量 c と半減期 H が商品ごとに効くこと、既定（消耗品でない）は `r/2`・2日のまま。`ConfigTest`：`consumables.add/remove` の ID の直し方（B-3） |
 | 〃 | 買取停止・まとめ買い（v0.27） | `PriceModelTest`：買取再開までの日数、割引の段階（個数で数える）、売り戻しで儲からないこと、割引つきの最大数量を総当たりと比べる。`ConfigTest`：`market.specialGoods` のレベルごとの数と誤った長さの扱い |
@@ -1742,3 +1743,4 @@ test {
 | v0.29.2 | 2026-11-05 | ソースとの照合：A-4 の実装状況（評判の表示・依頼タブ・掲示板タブ・銀行タブの利率）、古い「v0.22 時点」の注記、未実装の設定の一覧（初回支給・ネザー連動だけ）、4-2 のクラス一覧（`InterestMath`）・Mixin・テスト（計74件）を更新 |
 | v0.30 | 2026-11-05 | Q26 を変更：エメラルド貨をすべての市場で買い取る（`auto_add` を空の条件に、既存の市場にも画面を開いた時に追加）。既定で値段を固定・いくらでも売れるようにした（設定 `currency.emeraldCoinFixedPrice`・`currency.emeraldCoinUnlimited`、E-5・G章）。あわせて改版履歴 v0.14.2 の行の余分な列の区切りを修正 |
 | v0.30.1 | 2026-11-05 | 交易画面の評判の表示を、右上からタイトル（市場名）のすぐ後ろに移動（A-4・M章） |
+| v0.31 | 2026-11-06 | 未実装だった設定を実装：初回支給 `currency.startingMoney`（既定 240c＝パン10個分、E-2）、ネザーとオーバーワールドの相場の連動 `distance.linkNetherToOverworld`（既定を ON に、C-2・C-3）。単体テスト `MintingCountTest`・`TradeUnitTest` を追加（計83件） |

@@ -266,7 +266,7 @@ public final class MarketFactory {
 		List<DistanceModel.Neighbor> neighbors = new ArrayList<>();
 		for (Market other : others) {
 			if (other == market) continue;
-			double d = other.horizontalDistanceTo(market.center());
+			double d = MarketRegistry.linkedDistance(other, market); // C-2: Nether ×8 when linked
 			if (d >= config.distance.farRadius || other.good(goodsId) == null) continue;
 			other.refresh(now);
 			neighbors.add(new DistanceModel.Neighbor(d, other.good(goodsId).pressure()));

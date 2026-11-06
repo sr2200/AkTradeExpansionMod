@@ -388,13 +388,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int limit = all ? TradeService.MAX_ALL : TradeExpansionConfig.get().trade.maxPerTransaction;
 		if (tab == Tab.BUY) {
 			int max = (int) Math.min(limit, Math.max(0, Math.floor(state.stock())));
-			max = Math.min(max, InventoryUtil.freeSpaceFor(player, match, !useCard()) / view.unit());
+			max = Math.min(max, PriceModel.units(InventoryUtil.freeSpaceFor(player, match, !useCard()), view.unit()));
 			long funds = useCard()
 					? (long) Math.floor(account.bankBalance() / (1 + TradeExpansionConfig.get().bank.cardTransactionFee))
 					: WalletService.balance(player);
 			return PriceModel.maxAffordable(params, state.pressure(), funds, max, view.unit(), snapshot.bulkDiscount());
 		}
-		int held = InventoryUtil.count(player, match, menu.sellSlot()) / view.unit();
+		int held = PriceModel.units(InventoryUtil.count(player, match, menu.sellSlot()), view.unit());
 		return Math.min(limit, Math.min(held, PriceModel.sellCapacity(params, state)));
 	}
 
@@ -481,7 +481,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			if (view.sell() && (match.exact(inSlot) || match.damagedRatio(inSlot) >= 0)) {
 				if (tab != Tab.SELL) setTab(Tab.SELL);
 				selected = view.goods();
-				quantity = Math.clamp(inSlot.getCount() / view.unit(), 1, TradeExpansionConfig.get().trade.maxPerTransaction);
+				quantity = Math.clamp(PriceModel.units(inSlot.getCount(), view.unit()), 1, TradeExpansionConfig.get().trade.maxPerTransaction);
 				return;
 			}
 		}
