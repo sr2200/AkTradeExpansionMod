@@ -1448,6 +1448,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ├─ MarketScreen.java              ✅ … 購入・売却・銀行・掲示板・依頼・両替タブ、一覧・数量・プレビュー・相場グラフ、支払い方法の切り替え（一覧は画面クラス内で直接描画）
 ├─ ItemTooltips.java              ✅ … コイン・財布・カード等のツールチップ（Fabric の ItemTooltipCallback）
 ├─ ClientMarketCache.java         ✅ … 受信したスナップショット（最新1件。切断時に破棄）
+│  （共通側の menu/MarketLayout.java ✅ … 交易画面の大きさと枠の位置、v0.33）
 ├─ ClientNetworkHandlers.java     ✅ … S2C受信処理（開いている MarketScreen に通知）
 ├─ WalletScreen.java              ✅ … 財布の取り出し画面（E-6）
 ├─ config/
@@ -1753,3 +1754,4 @@ test {
 | v0.31 | 2026-11-06 | 未実装だった設定を実装：初回支給 `currency.startingMoney`（既定 240c＝パン10個分、E-2）、ネザーとオーバーワールドの相場の連動 `distance.linkNetherToOverworld`（既定を ON に、C-2・C-3）。単体テスト `MintingCountTest`・`TradeUnitTest` を追加（計83件） |
 | v0.31.1 | 2026-11-06 | ドキュメントとソースの再チェック：①開拓地（`crafted_stall`）にオーバーワールドの条件を追加（ネザー・エンドでクラフトした市場がそれぞれの次元の品揃えになる。データの不具合）、②掲示板のお買い得の比較の基準にも評判の効果を入れた、③相場の詳しい情報で上限なしの在庫を「∞」と表示。文書：Q10（ネザー連動の既定）、D-4・E-7（プレイヤーの町も村人が必要）、G章 設定画面のタブ・同期する値、F-2 `ConfigSyncS2C` |
 | v0.32 | 2026-11-07 | 「まとめて売る」を追加（A-4、F-2 `SellAllC2S`、G章 `client.sellAllExclude`・`client.sellAllInclude`）：ホットバー以外の売れる物を確認の枠で一覧にして一度に売る。道具・防具は最初から除外、除外は自分の設定に保存、在庫上限の商品は売れる分だけ、表示と違えば全部中止 |
+| v0.33 | 2026-11-07 | 交易画面をウィンドウの広さに合わせて大きくする（A-4、案A）：開いた時の GUI の大きさで、商品一覧を最大10行・横幅を最大 +120 まで広げ、インベントリの位置も合わせる（`MarketLayout`、`MarketLayoutTest`） |
