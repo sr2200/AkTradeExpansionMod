@@ -84,6 +84,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	/** Width kept free at the right end of the title row (other mods may put buttons there, A-4). */
 	private static final int TITLE_RIGHT_RESERVE = 24;
 	/** "Sell all" confirmation: over the list and the right panel (A-4, v0.32). */
+	private static final int SCROLLBAR_W = 6;
+	private static final int COLOR_SCROLL_TRACK = 0xFF2B2B2B;
+	private static final int COLOR_SCROLL_THUMB = 0xFFC6C6C6;
 	private static final int SELL_ALL_X = 8;
 	private static final int SELL_ALL_Y = 18;
 
@@ -135,6 +138,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private boolean sellAllPending;
 	private final List<SellAllLine> sellAllLines = new ArrayList<>();
 	private int sellAllScroll;
+	/** Which scrollbar thumb is being dragged (A-4, v0.33.1). */
+	private enum Drag { NONE, LIST, SELL_ALL }
+	private Drag dragging = Drag.NONE;
+	private double dragOffset;
 	private Button boardBackButton;
 	private final List<Button> tradeWidgets = new ArrayList<>();
 	private final List<Button> bankWidgets = new ArrayList<>();
@@ -634,17 +641,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			String right = line.excluded() ? Component.translatable("screen.ak_trade_expansion.sell_all.excluded").getString()
 					: line.units() <= 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(line.total());
 			int rightWidth = font.width(right);
-			g.text(font, right, x + sellAllW - 8 - rightWidth, ry + 5, line.excluded() ? COLOR_GRAY : line.units() <= 0 ? COLOR_RED : COLOR_GOLD);
-			int countX = x + sellAllW - 16 - rightWidth - font.width(count);
+			g.text(font, right, x + sellAllW - 11 - rightWidth, ry + 5, line.excluded() ? COLOR_GRAY : line.units() <= 0 ? COLOR_RED : COLOR_GOLD);
+			int countX = x + sellAllW - 19 - rightWidth - font.width(count);
 			g.text(font, count, countX, ry + 5, color);
 			fitText(g, line.stack().getHoverName().getString(), x + 22, ry + 5, countX - x - 26, color, true);
 		}
-		if (sellAllLines.size() > sellAllRows) {
-			int trackH = sellAllRows * ROW_H;
-			int thumbH = Math.max(8, trackH * sellAllRows / sellAllLines.size());
-			int thumbY = (trackH - thumbH) * sellAllScroll / (sellAllLines.size() - sellAllRows);
-			g.fill(x + sellAllW - 3, listY + thumbY, x + sellAllW - 1, listY + thumbY + thumbH, COLOR_LIGHT);
-		}
+		extractScrollbar(g, sellAllScrollbar(), sellAllScroll, dragging == Drag.SELL_ALL);
 		int count = (int) sellAllLines.stream().filter(l -> !l.excluded() && l.units() > 0).count();
 		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.total", CoinItem.formatCopper(sellAllTotal()), count),
 				x + 4, y + sellAllH - 14, COLOR_GOLD);
@@ -681,6 +683,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		int listScroll = clickScrollbar(listScrollbar(), scroll, event.x(), event.y(), false);
+		if (listScroll >= 0) {
+			scroll = listScroll;
+			return true;
+		}
+		int sellScroll = clickScrollbar(sellAllScrollbar(), sellAllScroll, event.x(), event.y(), true);
+		if (sellScroll >= 0) {
+			sellAllScroll = sellScroll;
+			return true;
+		}
 		if (sellAllOpen) {
 			int x = leftPos + SELL_ALL_X;
 			int listY = topPos + SELL_ALL_Y + 16;
@@ -693,7 +705,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		double mx = event.x() - leftPos;
 		double my = event.y() - topPos;
-		if (mx >= LIST_X && mx < LIST_X + listW && my >= LIST_Y && my < LIST_Y + rows * ROW_H
+		if (mx >= LIST_X && mx < LIST_X + listW - SCROLLBAR_W && my >= LIST_Y && my < LIST_Y + rows * ROW_H
 				&& (tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD)) {
 			int index = scroll + (int) ((my - LIST_Y) / ROW_H);
 			switch (tab) {
@@ -786,7 +798,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				extractPanel(g, x + panelX, y);
 			}
 		}
-		extractScrollbar(g, lx, ly);
+		extractScrollbar(g, listScrollbar(), scroll, dragging == Drag.LIST);
 		if (sellAllOpen) extractSellAll(g, mouseX, mouseY);
 	}
 
@@ -803,13 +815,94 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		return false;
 	}
 
-	private void extractScrollbar(GuiGraphicsExtractor g, int lx, int ly) {
-		int rows = rowCount();
-		if (rows <= rows) return;
-		int trackH = rows * ROW_H;
-		int thumbH = Math.max(8, trackH * rows / rows);
-		int thumbY = (trackH - thumbH) * scroll / (rows - rows);
-		g.fill(lx + listW - 3, ly + thumbY, lx + listW, ly + thumbY + thumbH, COLOR_LIGHT);
+	// ---- scrollbars (A-4, v0.33.1) ----
+
+	/** Scrollable area: where its bar is (screen coordinates) and how far it can scroll. */
+	private record Scrollbar(int x, int y, int h, int total, int visible) {
+		int max() {
+			return Math.max(0, total - visible);
+		}
+
+		int thumbH() {
+			return Math.max(10, h * visible / Math.max(1, total));
+		}
+
+		int thumbY(int scroll) {
+			return max() == 0 ? 0 : (h - thumbH()) * scroll / max();
+		}
+
+		boolean contains(double mx, double my) {
+			return mx >= x && mx < x + SCROLLBAR_W && my >= y && my < y + h;
+		}
+
+		/** Scroll position for the thumb's top at {@code thumbTop} (dragging). */
+		int scrollAt(double thumbTop) {
+			int range = h - thumbH();
+			if (range <= 0 || max() == 0) return 0;
+			return (int) Math.clamp(Math.round((thumbTop - y) / range * max()), 0, max());
+		}
+	}
+
+	/** The goods / requests / board list, or {@code null} on tabs without a list. */
+	private Scrollbar listScrollbar() {
+		if (!(tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD) || sellAllOpen) return null;
+		return new Scrollbar(leftPos + LIST_X + listW - SCROLLBAR_W, topPos + LIST_Y, rows * ROW_H, rowCount(), rows);
+	}
+
+	private Scrollbar sellAllScrollbar() {
+		if (!sellAllOpen) return null;
+		return new Scrollbar(leftPos + SELL_ALL_X + sellAllW - SCROLLBAR_W - 1, topPos + SELL_ALL_Y + 16, sellAllRows * ROW_H,
+				sellAllLines.size(), sellAllRows);
+	}
+
+	/** Track always; the thumb only when there is more than fits. */
+	private void extractScrollbar(GuiGraphicsExtractor g, Scrollbar bar, int scrollPos, boolean active) {
+		if (bar == null) return;
+		g.fill(bar.x(), bar.y(), bar.x() + SCROLLBAR_W, bar.y() + bar.h(), COLOR_SCROLL_TRACK);
+		if (bar.max() == 0) return;
+		int top = bar.y() + bar.thumbY(scrollPos);
+		int bottom = top + bar.thumbH();
+		g.fill(bar.x(), top, bar.x() + SCROLLBAR_W, bottom, active ? COLOR_LIGHT : COLOR_SCROLL_THUMB);
+		g.fill(bar.x() + 1, top + 1, bar.x() + SCROLLBAR_W - 1, bottom - 1, active ? 0xFFE0E0E0 : 0xFFA8A8A8);
+	}
+
+	/**
+	 * Clicks on a scrollbar: on the thumb starts dragging, elsewhere on the track scrolls one page towards the click.
+	 *
+	 * @return the new scroll position, or -1 if the click was not on {@code bar}
+	 */
+	private int clickScrollbar(Scrollbar bar, int scrollPos, double mx, double my, boolean sellAll) {
+		if (bar == null || !bar.contains(mx, my)) return -1;
+		if (bar.max() == 0) return scrollPos;
+		int top = bar.y() + bar.thumbY(scrollPos);
+		if (my >= top && my < top + bar.thumbH()) {
+			dragging = sellAll ? Drag.SELL_ALL : Drag.LIST;
+			dragOffset = my - top;
+			return scrollPos;
+		}
+		return Math.clamp(scrollPos + (my < top ? -bar.visible() : bar.visible()), 0, bar.max());
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+		if (dragging == Drag.LIST && listScrollbar() != null) {
+			scroll = listScrollbar().scrollAt(event.y() - dragOffset);
+			return true;
+		}
+		if (dragging == Drag.SELL_ALL && sellAllScrollbar() != null) {
+			sellAllScroll = sellAllScrollbar().scrollAt(event.y() - dragOffset);
+			return true;
+		}
+		return super.mouseDragged(event, dragX, dragY);
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		if (dragging != Drag.NONE) {
+			dragging = Drag.NONE;
+			return true;
+		}
+		return super.mouseReleased(event);
 	}
 
 	private void extractRow(GuiGraphicsExtractor g, GoodView view, int rx, int ry, int mouseX, int mouseY) {
@@ -845,11 +938,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 
 		String stock = (int) Math.floor(state.stock()) + "/" + (int) params.targetStock();
-		g.text(font, stock, rx + 170 + wide - font.width(stock), textY, textColor);
+		g.text(font, stock, rx + 168 + wide - font.width(stock), textY, textColor);
 
 		// Q17: market meter. Center = normal price; right = expensive (red), left = cheap (green); log scale, ends at ×3 / ÷3.
 		double v = PriceModel.multiplier(params, state.pressure());
-		int mx0 = rx + 173 + wide;
+		int mx0 = rx + 170 + wide;
 		int mw = 22;
 		g.fill(mx0, ry + 7, mx0 + mw, ry + 11, COLOR_DARK);
 		double pos = Math.clamp(Math.log(v) / Math.log(3.0), -1, 1);
@@ -1085,7 +1178,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			g.text(font, "★".repeat(r.request().difficulty()), rx + 132 + wide, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
 			if (r.accepted()) g.text(font, "✔", rx + 124 + wide, y + 5, COLOR_GREEN);
 			String reward = CoinItem.formatCopper(r.request().reward());
-			g.text(font, reward, rx + listW - 5 - font.width(reward), y + 5, COLOR_GOLD);
+			g.text(font, reward, rx + listW - 8 - font.width(reward), y + 5, COLOR_GOLD);
 			if (mouseX >= rx + 2 && mouseX < rx + 18 && mouseY >= y && mouseY < y + ROW_H) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		}
 	}
@@ -1143,7 +1236,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				int y = rowY + 5;
 				String where = Component.translatable("screen.ak_trade_expansion.board.where", direction(e.dx(), e.dz()),
 						(int) Math.round(Math.sqrt((double) e.dx() * e.dx() + (double) e.dz() * e.dz()))).getString();
-				int right = bx + listW - 5 - font.width(where);
+				int right = bx + listW - 8 - font.width(where);
 				g.text(font, where, right, y, COLOR_GOLD);
 				// Deal counts: cheaper to buy than here (cyan) / pays more than here (pink).
 				long buyDeals = e.goods().stream().filter(gd -> gd.buyDeal() > 0).count();
@@ -1175,7 +1268,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		String sellHeader = Component.translatable("screen.ak_trade_expansion.board.header.sell").getString();
 		g.text(font, Component.translatable("screen.ak_trade_expansion.board.header.goods"), bx + 20, headerY, COLOR_WHITE);
 		g.text(font, buyHeader, bx + 130 + wide - font.width(buyHeader), headerY, COLOR_GOLD);
-		g.text(font, sellHeader, bx + listW - 5 - font.width(sellHeader), headerY, COLOR_GREEN);
+		g.text(font, sellHeader, bx + listW - 8 - font.width(sellHeader), headerY, COLOR_GREEN);
 		if (mouseX >= bx && mouseX < bx + listW && mouseY >= by && mouseY < by + BOARD_HEADER_H) {
 			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.ak_trade_expansion.board.header.buy.tooltip"),
 					Component.translatable("screen.ak_trade_expansion.board.header.sell.tooltip")), Optional.empty(), mouseX, mouseY);
@@ -1191,7 +1284,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			String buy = good.buy() < 0 ? "-" : (good.buyDeal() > 0 ? "\u2193" : "") + CoinItem.formatCopper(good.buy());
 			String sell = good.sell() < 0 ? "-" : (good.sellDeal() > 0 ? "\u2191" : "") + CoinItem.formatCopper(good.sell());
 			g.text(font, buy, bx + 130 + wide - font.width(buy), y + 5, good.buyDeal() > 0 ? COLOR_DEAL_BUY : COLOR_GOLD);
-			g.text(font, sell, bx + listW - 5 - font.width(sell), y + 5, good.sellDeal() > 0 ? COLOR_DEAL_SELL : COLOR_GREEN);
+			g.text(font, sell, bx + listW - 8 - font.width(sell), y + 5, good.sellDeal() > 0 ? COLOR_DEAL_SELL : COLOR_GREEN);
 			if (mouseX >= bx && mouseX < bx + listW && mouseY >= y && mouseY < y + ROW_H && (good.buyDeal() > 0 || good.sellDeal() > 0)) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(stack.getHoverName());
@@ -1358,7 +1451,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (!tradeTab() || snapshot == null || sellAllOpen) return;
 		int rx = leftPos + LIST_X;
 		int ry = topPos + LIST_Y;
-		if (mouseX < rx + 18 || mouseX >= rx + listW || mouseY < ry || mouseY >= ry + rows * ROW_H) return;
+		if (mouseX < rx + 18 || mouseX >= rx + listW - SCROLLBAR_W || mouseY < ry || mouseY >= ry + rows * ROW_H) return;
 		int index = scroll + (mouseY - ry) / ROW_H;
 		List<GoodView> goods = visibleGoods();
 		if (index >= goods.size()) return;
