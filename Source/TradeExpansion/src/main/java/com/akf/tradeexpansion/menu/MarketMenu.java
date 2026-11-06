@@ -25,12 +25,11 @@ import net.minecraft.world.phys.Vec3;
  * {@code MarketSnapshotS2C} packets.
  */
 public class MarketMenu extends AbstractContainerMenu {
-	/** Top-left of the player inventory inside the screen. */
-	public static final int INVENTORY_X = 70;
-	public static final int INVENTORY_Y = 156;
-	/** The sell slot, left of the inventory. */
-	public static final int SELL_SLOT_X = 26;
-	public static final int SELL_SLOT_Y = 176;
+	/**
+	 * Layout of the screen on the client (A-4, v0.33): set by the client to fit the window when the menu is created. The
+	 * server keeps the default; slot coordinates are only used for drawing and clicks on the client.
+	 */
+	public static volatile java.util.function.Supplier<MarketLayout> clientLayout = () -> MarketLayout.DEFAULT;
 
 	/**
 	 * Sent to the client when the menu opens (Extended Menu Type).
@@ -54,21 +53,28 @@ public class MarketMenu extends AbstractContainerMenu {
 	private final int traderId;
 	private final SimpleContainer sellSlot = new SimpleContainer(1);
 	private final int sellSlotIndex;
+	private final MarketLayout layout;
 
 	public MarketMenu(int containerId, Inventory inventory, OpenData data) {
 		super(ModMenus.MARKET, containerId);
 		this.marketId = data.marketId();
 		this.stallPos = data.stallPos();
 		this.traderId = data.traderId();
+		this.layout = inventory.player.level().isClientSide() ? clientLayout.get() : MarketLayout.DEFAULT;
 		this.sellSlotIndex = slots.size();
-		addSlot(new Slot(sellSlot, 0, SELL_SLOT_X, SELL_SLOT_Y) {
+		addSlot(new Slot(sellSlot, 0, layout.sellSlotX(), layout.sellSlotY()) {
 			@Override
 			public boolean mayPlace(ItemStack stack) {
 				// Coins are money, not goods (E-1). The emerald coin is not a CoinItem, so it can be sold from here (E-5).
 				return !(stack.getItem() instanceof CoinItem);
 			}
 		});
-		addStandardInventorySlots(inventory, INVENTORY_X, INVENTORY_Y);
+		addStandardInventorySlots(inventory, layout.inventoryX(), layout.inventoryY());
+	}
+
+	/** Screen size and slot positions (A-4, v0.33). */
+	public MarketLayout layout() {
+		return layout;
 	}
 
 	public long marketId() {

@@ -12,6 +12,11 @@ public class TradeExpansionClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		MenuScreens.register(ModMenus.MARKET, MarketScreen::new);
+		// A-4 (v0.33): the trade screen grows with the window (decided when it opens).
+		com.akf.tradeexpansion.menu.MarketMenu.clientLayout = () -> {
+			com.mojang.blaze3d.platform.Window window = net.minecraft.client.Minecraft.getInstance().getWindow();
+			return com.akf.tradeexpansion.menu.MarketLayout.fit(window.getGuiScaledWidth(), window.getGuiScaledHeight());
+		};
 		net.minecraft.client.renderer.entity.EntityRenderers.register(com.akf.tradeexpansion.registry.ModEntities.TRADER, TraderRenderer::new);
 		ClientNetworkHandlers.init();
 		ItemTooltips.init();

@@ -10,6 +10,7 @@ import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.item.WalletItem;
 import com.akf.tradeexpansion.market.MarketClock;
+import com.akf.tradeexpansion.menu.MarketLayout;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.AccountS2C;
 import com.akf.tradeexpansion.network.BankRequestC2S;
@@ -58,15 +59,9 @@ import java.util.Optional;
  * All prices are computed with the same {@link PriceModel} the server uses.
  */
 public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
-	private static final int WIDTH = 300;
-	private static final int HEIGHT = 240;
-
 	private static final int LIST_X = 8;
 	private static final int LIST_Y = 36;
-	private static final int LIST_W = 200;
-	private static final int ROW_H = 18;
-	private static final int ROWS = 6;
-	private static final int PANEL_X = 214;
+	private static final int ROW_H = MarketLayout.ROW_H;
 	private static final int PANEL_W = 78;
 	private static final int TAB_W = 32;
 
@@ -91,9 +86,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	/** "Sell all" confirmation: over the list and the right panel (A-4, v0.32). */
 	private static final int SELL_ALL_X = 8;
 	private static final int SELL_ALL_Y = 18;
-	private static final int SELL_ALL_W = 284;
-	private static final int SELL_ALL_H = 134;
-	private static final int SELL_ALL_ROWS = 5;
+
 
 	private static final long[] BANK_AMOUNTS = {100, 1_000, 10_000, -1}; // -1 = everything
 
@@ -147,8 +140,27 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private final List<Button> bankWidgets = new ArrayList<>();
 	private final List<Button> exchangeWidgets = new ArrayList<>();
 
+	/** A-4 (v0.33): sizes from the layout the menu was made with (fits the window when the screen opened). */
+	private final MarketLayout layout;
+	private final int listW;
+	private final int rows;
+	private final int panelX;
+	/** Extra width of the list over the base 200: added to the name columns. */
+	private final int wide;
+	private final int sellAllW;
+	private final int sellAllH;
+	private final int sellAllRows;
+
 	public MarketScreen(MarketMenu menu, Inventory inventory, Component title) {
-		super(menu, inventory, title, WIDTH, HEIGHT);
+		super(menu, inventory, title, menu.layout().width(), menu.layout().height());
+		this.layout = menu.layout();
+		this.wide = layout.extraWidth();
+		this.listW = 200 + wide;
+		this.rows = layout.rows();
+		this.panelX = LIST_X + listW + 6;
+		this.sellAllW = layout.width() - 16;
+		this.sellAllH = 134 + layout.extraRows() * ROW_H;
+		this.sellAllRows = 5 + layout.extraRows();
 		this.snapshot = ClientMarketCache.get(menu.marketId());
 		if (snapshot != null) recordBaseline(snapshot);
 	}
@@ -172,17 +184,17 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		paymentButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
 			payByCard = !payByCard;
 			updateButtons();
-		}).bounds(x + PANEL_X, y + 18, PANEL_W, 14).build());
+		}).bounds(x + panelX, y + 18, PANEL_W, 14).build());
 
 		// Trade (buy / sell) panel
-		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("-"), b -> setQuantity(quantity - 1)).bounds(x + PANEL_X, y + 60, 14, 14).build()));
-		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("+"), b -> setQuantity(quantity + 1)).bounds(x + PANEL_X + 64, y + 60, 14, 14).build()));
-		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("1"), b -> setQuantity(1)).bounds(x + PANEL_X, y + 78, 16, 14).build()));
-		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("8"), b -> setQuantity(8)).bounds(x + PANEL_X + 18, y + 78, 16, 14).build()));
-		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("64"), b -> setQuantity(64)).bounds(x + PANEL_X + 36, y + 78, 20, 14).build()));
+		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("-"), b -> setQuantity(quantity - 1)).bounds(x + panelX, y + 60, 14, 14).build()));
+		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("+"), b -> setQuantity(quantity + 1)).bounds(x + panelX + 64, y + 60, 14, 14).build()));
+		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("1"), b -> setQuantity(1)).bounds(x + panelX, y + 78, 16, 14).build()));
+		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("8"), b -> setQuantity(8)).bounds(x + panelX + 18, y + 78, 16, 14).build()));
+		tradeWidgets.add(addRenderableWidget(Button.builder(Component.literal("64"), b -> setQuantity(64)).bounds(x + panelX + 36, y + 78, 20, 14).build()));
 		tradeWidgets.add(addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.max"), b -> setQuantity(maxQuantity(false)))
-				.bounds(x + PANEL_X + 58, y + 78, 20, 14).build()));
-		confirmButton = addRenderableWidget(Button.builder(Component.empty(), b -> confirm()).bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
+				.bounds(x + panelX + 58, y + 78, 20, 14).build()));
+		confirmButton = addRenderableWidget(Button.builder(Component.empty(), b -> confirm()).bounds(x + panelX, y + 122, PANEL_W, 16).build());
 		tradeWidgets.add(confirmButton);
 
 		// Bank tab (E-7)
@@ -210,22 +222,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 		// Request tab (J) and board (I)
 		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
-				.bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
+				.bounds(x + panelX, y + 122, PANEL_W, 16).build());
 		// A-4 (v0.32): sell everything the market takes from the main inventory (not the hotbar) and the sell slot.
 		sellAllButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.sell_all"), b -> openSellAll())
-				.bounds(x + PANEL_X, y + 139, PANEL_W, 14).build());
+				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		sellAllConfirmButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.sell_all.confirm"), b -> confirmSellAll())
-				.bounds(x + SELL_ALL_X + SELL_ALL_W - 108, y + SELL_ALL_Y + SELL_ALL_H - 18, 52, 14).build());
+				.bounds(x + SELL_ALL_X + sellAllW - 108, y + SELL_ALL_Y + sellAllH - 18, 52, 14).build());
 		sellAllCancelButton = addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> closeSellAll())
-				.bounds(x + SELL_ALL_X + SELL_ALL_W - 54, y + SELL_ALL_Y + SELL_ALL_H - 18, 50, 14).build());
+				.bounds(x + SELL_ALL_X + sellAllW - 54, y + SELL_ALL_Y + sellAllH - 18, 50, 14).build());
 		// M (v0.29): accepting a request gives more reputation when delivered, and costs some if it expires.
 		acceptButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.accept"), b -> accept())
-				.bounds(x + PANEL_X, y + 102, PANEL_W, 14).build());
+				.bounds(x + panelX, y + 102, PANEL_W, 14).build());
 		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
 			boardMarket = -1;
 			scroll = 0;
 			updateButtons();
-		}).bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
+		}).bounds(x + panelX, y + 122, PANEL_W, 16).build());
 		updateButtons();
 	}
 
@@ -597,20 +609,20 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private void extractSellAll(GuiGraphicsExtractor g, int mouseX, int mouseY) {
 		int x = leftPos + SELL_ALL_X;
 		int y = topPos + SELL_ALL_Y;
-		g.fill(x - 1, y - 1, x + SELL_ALL_W + 1, y + SELL_ALL_H + 1, COLOR_DARK);
-		g.fill(x, y, x + SELL_ALL_W, y + SELL_ALL_H, 0xFF3A3A3A);
+		g.fill(x - 1, y - 1, x + sellAllW + 1, y + sellAllH + 1, COLOR_DARK);
+		g.fill(x, y, x + sellAllW, y + sellAllH, 0xFF3A3A3A);
 		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.title"), x + 4, y + 4, COLOR_GOLD);
 		int listY = y + 16;
 		if (sellAllLines.isEmpty()) {
 			g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.none"), x + 4, listY + 4, COLOR_GRAY);
 		}
 		SellAllLine hovered = null;
-		for (int row = 0; row < SELL_ALL_ROWS && sellAllScroll + row < sellAllLines.size(); row++) {
+		for (int row = 0; row < sellAllRows && sellAllScroll + row < sellAllLines.size(); row++) {
 			SellAllLine line = sellAllLines.get(sellAllScroll + row);
 			int ry = listY + row * ROW_H;
-			boolean over = mouseX >= x && mouseX < x + SELL_ALL_W && mouseY >= ry && mouseY < ry + ROW_H;
+			boolean over = mouseX >= x && mouseX < x + sellAllW && mouseY >= ry && mouseY < ry + ROW_H;
 			if (over) {
-				g.fill(x + 1, ry, x + SELL_ALL_W - 1, ry + ROW_H, 0xFF505050);
+				g.fill(x + 1, ry, x + sellAllW - 1, ry + ROW_H, 0xFF505050);
 				hovered = line;
 			}
 			g.item(line.stack(), x + 3, ry + 1);
@@ -622,21 +634,21 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			String right = line.excluded() ? Component.translatable("screen.ak_trade_expansion.sell_all.excluded").getString()
 					: line.units() <= 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(line.total());
 			int rightWidth = font.width(right);
-			g.text(font, right, x + SELL_ALL_W - 8 - rightWidth, ry + 5, line.excluded() ? COLOR_GRAY : line.units() <= 0 ? COLOR_RED : COLOR_GOLD);
-			int countX = x + SELL_ALL_W - 16 - rightWidth - font.width(count);
+			g.text(font, right, x + sellAllW - 8 - rightWidth, ry + 5, line.excluded() ? COLOR_GRAY : line.units() <= 0 ? COLOR_RED : COLOR_GOLD);
+			int countX = x + sellAllW - 16 - rightWidth - font.width(count);
 			g.text(font, count, countX, ry + 5, color);
 			fitText(g, line.stack().getHoverName().getString(), x + 22, ry + 5, countX - x - 26, color, true);
 		}
-		if (sellAllLines.size() > SELL_ALL_ROWS) {
-			int trackH = SELL_ALL_ROWS * ROW_H;
-			int thumbH = Math.max(8, trackH * SELL_ALL_ROWS / sellAllLines.size());
-			int thumbY = (trackH - thumbH) * sellAllScroll / (sellAllLines.size() - SELL_ALL_ROWS);
-			g.fill(x + SELL_ALL_W - 3, listY + thumbY, x + SELL_ALL_W - 1, listY + thumbY + thumbH, COLOR_LIGHT);
+		if (sellAllLines.size() > sellAllRows) {
+			int trackH = sellAllRows * ROW_H;
+			int thumbH = Math.max(8, trackH * sellAllRows / sellAllLines.size());
+			int thumbY = (trackH - thumbH) * sellAllScroll / (sellAllLines.size() - sellAllRows);
+			g.fill(x + sellAllW - 3, listY + thumbY, x + sellAllW - 1, listY + thumbY + thumbH, COLOR_LIGHT);
 		}
 		int count = (int) sellAllLines.stream().filter(l -> !l.excluded() && l.units() > 0).count();
 		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.total", CoinItem.formatCopper(sellAllTotal()), count),
-				x + 4, y + SELL_ALL_H - 14, COLOR_GOLD);
-		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.hint"), x + 4, y + SELL_ALL_H - 25, COLOR_GRAY);
+				x + 4, y + sellAllH - 14, COLOR_GOLD);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.hint"), x + 4, y + sellAllH - 25, COLOR_GRAY);
 		if (hovered != null) g.setTooltipForNextFrame(font, hovered.stack(), mouseX, mouseY);
 	}
 
@@ -672,7 +684,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (sellAllOpen) {
 			int x = leftPos + SELL_ALL_X;
 			int listY = topPos + SELL_ALL_Y + 16;
-			if (event.x() >= x && event.x() < x + SELL_ALL_W && event.y() >= listY && event.y() < listY + SELL_ALL_ROWS * ROW_H) {
+			if (event.x() >= x && event.x() < x + sellAllW && event.y() >= listY && event.y() < listY + sellAllRows * ROW_H) {
 				int index = sellAllScroll + (int) ((event.y() - listY) / ROW_H);
 				if (index < sellAllLines.size() && !sellAllPending) toggleSellAll(sellAllLines.get(index));
 				return true;
@@ -681,7 +693,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		double mx = event.x() - leftPos;
 		double my = event.y() - topPos;
-		if (mx >= LIST_X && mx < LIST_X + LIST_W && my >= LIST_Y && my < LIST_Y + ROWS * ROW_H
+		if (mx >= LIST_X && mx < LIST_X + listW && my >= LIST_Y && my < LIST_Y + rows * ROW_H
 				&& (tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD)) {
 			int index = scroll + (int) ((my - LIST_Y) / ROW_H);
 			switch (tab) {
@@ -713,12 +725,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
 		if (sellAllOpen) {
-			int maxScroll = Math.max(0, sellAllLines.size() - SELL_ALL_ROWS);
+			int maxScroll = Math.max(0, sellAllLines.size() - sellAllRows);
 			sellAllScroll = Math.clamp(sellAllScroll - (int) Math.signum(scrollY), 0, maxScroll);
 			return true;
 		}
-		int maxScroll = Math.max(0, rowCount() - ROWS);
-		if (maxScroll > 0 && mouseX - leftPos < PANEL_X && mouseY - topPos < LIST_Y + ROWS * ROW_H) {
+		int maxScroll = Math.max(0, rowCount() - rows);
+		if (maxScroll > 0 && mouseX - leftPos < panelX && mouseY - topPos < LIST_Y + rows * ROW_H) {
 			scroll = Math.clamp(scroll - (int) Math.signum(scrollY), 0, maxScroll);
 			return true;
 		}
@@ -743,13 +755,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 		if (sellSlotNotBuying()) {
 			// A-4: red frame around the sell slot when the market does not take its item right now.
-			int sx = x + MarketMenu.SELL_SLOT_X;
-			int sy = y + MarketMenu.SELL_SLOT_Y;
+			int sx = x + layout.sellSlotX();
+			int sy = y + layout.sellSlotY();
 			g.outline(sx - 2, sy - 2, 20, 20, COLOR_RED);
 		}
 
-		g.fill(x + LIST_X - 1, y + LIST_Y - 1, x + LIST_X + LIST_W + 1, y + LIST_Y + ROWS * ROW_H + 1, COLOR_DARK);
-		g.fill(x + LIST_X, y + LIST_Y, x + LIST_X + LIST_W, y + LIST_Y + ROWS * ROW_H, COLOR_LIST_BG);
+		g.fill(x + LIST_X - 1, y + LIST_Y - 1, x + LIST_X + listW + 1, y + LIST_Y + rows * ROW_H + 1, COLOR_DARK);
+		g.fill(x + LIST_X, y + LIST_Y, x + LIST_X + listW, y + LIST_Y + rows * ROW_H, COLOR_LIST_BG);
 
 		int lx = x + LIST_X;
 		int ly = y + LIST_Y;
@@ -758,7 +770,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			case EXCHANGE -> extractExchange(g, lx, ly);
 			case QUEST -> {
 				extractRequests(g, lx, ly, mouseX, mouseY);
-				extractRequestPanel(g, x + PANEL_X, y);
+				extractRequestPanel(g, x + panelX, y);
 			}
 			case BOARD -> extractBoard(g, lx, ly, mouseX, mouseY);
 			default -> {
@@ -768,10 +780,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				}
 				List<GoodView> goods = visibleGoods();
 				if (goods.isEmpty()) g.text(font, Component.translatable("screen.ak_trade_expansion.empty"), lx + 4, ly + 4, COLOR_WHITE);
-				for (int row = 0; row < ROWS && scroll + row < goods.size(); row++) {
+				for (int row = 0; row < rows && scroll + row < goods.size(); row++) {
 					extractRow(g, goods.get(scroll + row), lx, ly + row * ROW_H, mouseX, mouseY);
 				}
-				extractPanel(g, x + PANEL_X, y);
+				extractPanel(g, x + panelX, y);
 			}
 		}
 		extractScrollbar(g, lx, ly);
@@ -793,11 +805,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	private void extractScrollbar(GuiGraphicsExtractor g, int lx, int ly) {
 		int rows = rowCount();
-		if (rows <= ROWS) return;
-		int trackH = ROWS * ROW_H;
-		int thumbH = Math.max(8, trackH * ROWS / rows);
-		int thumbY = (trackH - thumbH) * scroll / (rows - ROWS);
-		g.fill(lx + LIST_W - 3, ly + thumbY, lx + LIST_W, ly + thumbY + thumbH, COLOR_LIGHT);
+		if (rows <= rows) return;
+		int trackH = rows * ROW_H;
+		int thumbH = Math.max(8, trackH * rows / rows);
+		int thumbY = (trackH - thumbH) * scroll / (rows - rows);
+		g.fill(lx + listW - 3, ly + thumbY, lx + listW, ly + thumbY + thumbH, COLOR_LIGHT);
 	}
 
 	private void extractRow(GuiGraphicsExtractor g, GoodView view, int rx, int ry, int mouseX, int mouseY) {
@@ -805,11 +817,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		GoodState state = currentState(view);
 		boolean buy = tab == Tab.BUY;
 		boolean available = buy ? PriceModel.canBuy(state) : PriceModel.sellCapacity(params, state) >= 1;
-		boolean hovered = mouseX >= rx && mouseX < rx + LIST_W && mouseY >= ry && mouseY < ry + ROW_H;
+		boolean hovered = mouseX >= rx && mouseX < rx + listW && mouseY >= ry && mouseY < ry + ROW_H;
 
-		if (view.goods().equals(selected)) g.fill(rx, ry, rx + LIST_W, ry + ROW_H, 0xFF6F6F9F);
-		else if (hovered) g.fill(rx, ry, rx + LIST_W, ry + ROW_H, 0xFF9B9B9B);
-		else if (!available) g.fill(rx, ry, rx + LIST_W, ry + ROW_H, COLOR_UNAVAILABLE_ROW); // A-4: sold out / not buying at a glance
+		if (view.goods().equals(selected)) g.fill(rx, ry, rx + listW, ry + ROW_H, 0xFF6F6F9F);
+		else if (hovered) g.fill(rx, ry, rx + listW, ry + ROW_H, 0xFF9B9B9B);
+		else if (!available) g.fill(rx, ry, rx + listW, ry + ROW_H, COLOR_UNAVAILABLE_ROW); // A-4: sold out / not buying at a glance
 
 		ItemStack stack = view.displayStack();
 		g.item(stack, rx + 2, ry + 1);
@@ -822,22 +834,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		String price = !available
 				? Component.translatable(buy ? "screen.ak_trade_expansion.sold_out" : "screen.ak_trade_expansion.not_buying").getString()
 				: CoinItem.formatCopper(unitPrice) + (view.unit() > 1 ? "/" + view.unit() : "");
-		g.text(font, price, rx + 136 - font.width(price), textY, available ? COLOR_GOLD : COLOR_RED);
+		g.text(font, price, rx + 136 + wide - font.width(price), textY, available ? COLOR_GOLD : COLOR_RED);
 		// The name uses the space up to the price and shrinks when it does not fit.
-		fitText(g, name, rx + 20, textY, 136 - 20 - font.width(price) - 4, textColor, true);
+		fitText(g, name, rx + 20, textY, 136 + wide - 20 - font.width(price) - 4, textColor, true);
 
 		// Q17: change since the screen opened.
 		Long base = (buy ? baselineBuy : baselineSell).get(view.goods());
 		if (available && base != null && base != unitPrice) {
-			g.text(font, unitPrice > base ? "▲" : "▼", rx + 137, textY, unitPrice > base ? COLOR_RED : COLOR_GREEN);
+			g.text(font, unitPrice > base ? "▲" : "▼", rx + 137 + wide, textY, unitPrice > base ? COLOR_RED : COLOR_GREEN);
 		}
 
 		String stock = (int) Math.floor(state.stock()) + "/" + (int) params.targetStock();
-		g.text(font, stock, rx + 170 - font.width(stock), textY, textColor);
+		g.text(font, stock, rx + 170 + wide - font.width(stock), textY, textColor);
 
 		// Q17: market meter. Center = normal price; right = expensive (red), left = cheap (green); log scale, ends at ×3 / ÷3.
 		double v = PriceModel.multiplier(params, state.pressure());
-		int mx0 = rx + 173;
+		int mx0 = rx + 173 + wide;
 		int mw = 22;
 		g.fill(mx0, ry + 7, mx0 + mw, ry + 11, COLOR_DARK);
 		double pos = Math.clamp(Math.log(v) / Math.log(3.0), -1, 1);
@@ -1034,7 +1046,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			Component text = bankConfig.interestMaxBalance > 0
 					? Component.translatable("screen.ak_trade_expansion.bank.interest", rate, CoinItem.formatCopper(bankConfig.interestMaxBalance))
 					: Component.translatable("screen.ak_trade_expansion.bank.interest.no_cap", rate);
-			fitText(g, text.getString(), bx + 4, by + 25, LIST_W - 8, COLOR_GRAY, true);
+			fitText(g, text.getString(), bx + 4, by + 25, listW - 8, COLOR_GRAY, true);
 		}
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.deposit"), bx + 4, by + 34, COLOR_WHITE);
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.withdraw"), bx + 4, by + 64, COLOR_WHITE);
@@ -1053,7 +1065,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			g.text(font, "×" + counts[t - 1], ex + 74, ry + 3, COLOR_WHITE);
 		}
 		double fee = TradeExpansionConfig.get().currency.exchangeFee;
-		g.text(font, Component.translatable("screen.ak_trade_expansion.exchange.help", Math.round(fee * 100)), ex + 4, ey + ROWS * ROW_H - 10, COLOR_GRAY);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.exchange.help", Math.round(fee * 100)), ex + 4, ey + rows * ROW_H - 10, COLOR_GRAY);
 	}
 
 	/** J: request list. */
@@ -1063,17 +1075,17 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			return;
 		}
 		List<RequestView> requests = snapshot.requests();
-		for (int row = 0; row < ROWS && scroll + row < requests.size(); row++) {
+		for (int row = 0; row < rows && scroll + row < requests.size(); row++) {
 			RequestView r = requests.get(scroll + row);
 			int y = ry + row * ROW_H;
-			if (r.request().id() == selectedRequest) g.fill(rx, y, rx + LIST_W, y + ROW_H, 0xFF6F6F9F);
+			if (r.request().id() == selectedRequest) g.fill(rx, y, rx + listW, y + ROW_H, 0xFF6F6F9F);
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(r.item()));
 			g.item(stack, rx + 2, y + 1);
-			fitText(g, stack.getHoverName().getString() + " ×" + r.request().quantity(), rx + 20, y + 5, 110, COLOR_WHITE, true);
-			g.text(font, "★".repeat(r.request().difficulty()), rx + 132, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
-			if (r.accepted()) g.text(font, "✔", rx + 124, y + 5, COLOR_GREEN);
+			fitText(g, stack.getHoverName().getString() + " ×" + r.request().quantity(), rx + 20, y + 5, 100 + wide, COLOR_WHITE, true);
+			g.text(font, "★".repeat(r.request().difficulty()), rx + 132 + wide, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
+			if (r.accepted()) g.text(font, "✔", rx + 124 + wide, y + 5, COLOR_GREEN);
 			String reward = CoinItem.formatCopper(r.request().reward());
-			g.text(font, reward, rx + LIST_W - 5 - font.width(reward), y + 5, COLOR_GOLD);
+			g.text(font, reward, rx + listW - 5 - font.width(reward), y + 5, COLOR_GOLD);
 			if (mouseX >= rx + 2 && mouseX < rx + 18 && mouseY >= y && mouseY < y + ROW_H) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		}
 	}
@@ -1117,21 +1129,21 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (entry == null) {
 			if (board.markets().isEmpty()) {
 				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.none", TradeExpansionConfig.get().board.radius),
-						bx + 4, by + 4, LIST_W - 8, COLOR_WHITE, false);
+						bx + 4, by + 4, listW - 8, COLOR_WHITE, false);
 				return;
 			}
 			BoardS2C.Entry hovered = null;
-			for (int row = 0; row < ROWS && scroll + row < board.markets().size(); row++) {
+			for (int row = 0; row < rows && scroll + row < board.markets().size(); row++) {
 				BoardS2C.Entry e = board.markets().get(scroll + row);
 				int rowY = by + row * ROW_H;
-				if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= rowY && mouseY < rowY + ROW_H) {
+				if (mouseX >= bx && mouseX < bx + listW && mouseY >= rowY && mouseY < rowY + ROW_H) {
 					hovered = e;
-					g.fill(bx, rowY, bx + LIST_W, rowY + ROW_H, 0xFF9B9B9B);
+					g.fill(bx, rowY, bx + listW, rowY + ROW_H, 0xFF9B9B9B);
 				}
 				int y = rowY + 5;
 				String where = Component.translatable("screen.ak_trade_expansion.board.where", direction(e.dx(), e.dz()),
 						(int) Math.round(Math.sqrt((double) e.dx() * e.dx() + (double) e.dz() * e.dz()))).getString();
-				int right = bx + LIST_W - 5 - font.width(where);
+				int right = bx + listW - 5 - font.width(where);
 				g.text(font, where, right, y, COLOR_GOLD);
 				// Deal counts: cheaper to buy than here (cyan) / pays more than here (pink).
 				long buyDeals = e.goods().stream().filter(gd -> gd.buyDeal() > 0).count();
@@ -1154,33 +1166,33 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			extractDeals(g, hovered);
 			return;
 		}
-		g.textWithWordWrap(font, entry.title(), leftPos + PANEL_X, topPos + 38, PANEL_W, COLOR_TEXT, false);
-		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.columns"), leftPos + PANEL_X, topPos + 62, PANEL_W, COLOR_DARK, false);
+		g.textWithWordWrap(font, entry.title(), leftPos + panelX, topPos + 38, PANEL_W, COLOR_TEXT, false);
+		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.columns"), leftPos + panelX, topPos + 62, PANEL_W, COLOR_DARK, false);
 		// Header line: goods / buy price (the player pays) / sell price (the player gets).
-		g.fill(bx, by, bx + LIST_W, by + BOARD_HEADER_H, COLOR_DARK);
+		g.fill(bx, by, bx + listW, by + BOARD_HEADER_H, COLOR_DARK);
 		int headerY = by + 1;
 		String buyHeader = Component.translatable("screen.ak_trade_expansion.board.header.buy").getString();
 		String sellHeader = Component.translatable("screen.ak_trade_expansion.board.header.sell").getString();
 		g.text(font, Component.translatable("screen.ak_trade_expansion.board.header.goods"), bx + 20, headerY, COLOR_WHITE);
-		g.text(font, buyHeader, bx + 130 - font.width(buyHeader), headerY, COLOR_GOLD);
-		g.text(font, sellHeader, bx + LIST_W - 5 - font.width(sellHeader), headerY, COLOR_GREEN);
-		if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= by && mouseY < by + BOARD_HEADER_H) {
+		g.text(font, buyHeader, bx + 130 + wide - font.width(buyHeader), headerY, COLOR_GOLD);
+		g.text(font, sellHeader, bx + listW - 5 - font.width(sellHeader), headerY, COLOR_GREEN);
+		if (mouseX >= bx && mouseX < bx + listW && mouseY >= by && mouseY < by + BOARD_HEADER_H) {
 			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.ak_trade_expansion.board.header.buy.tooltip"),
 					Component.translatable("screen.ak_trade_expansion.board.header.sell.tooltip")), Optional.empty(), mouseX, mouseY);
 		}
 		List<BoardS2C.Good> goods = entry.goods();
-		int goodsRows = (ROWS * ROW_H - BOARD_HEADER_H) / ROW_H;
+		int goodsRows = (rows * ROW_H - BOARD_HEADER_H) / ROW_H;
 		for (int row = 0; row < goodsRows && scroll + row < goods.size(); row++) {
 			BoardS2C.Good good = goods.get(scroll + row);
 			int y = by + BOARD_HEADER_H + row * ROW_H;
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(good.item()));
 			g.item(stack, bx + 2, y + 1);
-			fitText(g, stack.getHoverName().getString(), bx + 20, y + 5, 64, good.shortage() ? COLOR_ORANGE : COLOR_WHITE, true);
+			fitText(g, stack.getHoverName().getString(), bx + 20, y + 5, 64 + wide, good.shortage() ? COLOR_ORANGE : COLOR_WHITE, true);
 			String buy = good.buy() < 0 ? "-" : (good.buyDeal() > 0 ? "\u2193" : "") + CoinItem.formatCopper(good.buy());
 			String sell = good.sell() < 0 ? "-" : (good.sellDeal() > 0 ? "\u2191" : "") + CoinItem.formatCopper(good.sell());
-			g.text(font, buy, bx + 130 - font.width(buy), y + 5, good.buyDeal() > 0 ? COLOR_DEAL_BUY : COLOR_GOLD);
-			g.text(font, sell, bx + LIST_W - 5 - font.width(sell), y + 5, good.sellDeal() > 0 ? COLOR_DEAL_SELL : COLOR_GREEN);
-			if (mouseX >= bx && mouseX < bx + LIST_W && mouseY >= y && mouseY < y + ROW_H && (good.buyDeal() > 0 || good.sellDeal() > 0)) {
+			g.text(font, buy, bx + 130 + wide - font.width(buy), y + 5, good.buyDeal() > 0 ? COLOR_DEAL_BUY : COLOR_GOLD);
+			g.text(font, sell, bx + listW - 5 - font.width(sell), y + 5, good.sellDeal() > 0 ? COLOR_DEAL_SELL : COLOR_GREEN);
+			if (mouseX >= bx && mouseX < bx + listW && mouseY >= y && mouseY < y + ROW_H && (good.buyDeal() > 0 || good.sellDeal() > 0)) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(stack.getHoverName());
 				if (good.buyDeal() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.board.deal_buy", good.buyDeal()));
@@ -1192,7 +1204,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	/** I (v0.24): the best deals (2 each) of the market under the mouse, in the right panel. */
 	private void extractDeals(GuiGraphicsExtractor g, BoardS2C.Entry entry) {
-		int px = leftPos + PANEL_X;
+		int px = leftPos + panelX;
 		int y = topPos + 38;
 		if (entry == null) {
 			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.deal_hint"), px, y, PANEL_W, COLOR_DARK, false);
@@ -1259,9 +1271,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		Player player = player();
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
-		if (!sellAllOpen) g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,
+		if (!sellAllOpen) g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + rows * ROW_H + 3,
 				statusColor == COLOR_GREEN ? 0xFF207020 : statusColor == COLOR_RED ? 0xFFA02020 : COLOR_TEXT, false);
-		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_slot"), MarketMenu.SELL_SLOT_X - 6, MarketMenu.SELL_SLOT_Y - 11, COLOR_TEXT, false);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_slot"), layout.sellSlotX() - 6, layout.sellSlotY() - 11, COLOR_TEXT, false);
 	}
 
 	/**
@@ -1287,9 +1299,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		} else {
 			// Two-line column: right of the player inventory (A, default) or below the sell slot (B).
 			boolean right = position == TradeExpansionConfig.BalancePosition.INVENTORY_RIGHT;
-			x0 = right ? MarketMenu.INVENTORY_X + 9 * 18 + 4 : 8;
-			x1 = right ? imageWidth - 6 : MarketMenu.INVENTORY_X - 4;
-			y0 = right ? MarketMenu.INVENTORY_Y + 4 : MarketMenu.SELL_SLOT_Y + 22;
+			x0 = right ? layout.inventoryX() + 9 * 18 + 4 : 8;
+			x1 = right ? imageWidth - 6 : layout.inventoryX() - 4;
+			y0 = right ? layout.inventoryY() + 4 : layout.sellSlotY() + 22;
 			int width = x1 - x0;
 			int y = y0;
 			g.text(font, Component.translatable("screen.ak_trade_expansion.cash_label"), x0, y, COLOR_DARK, false);
@@ -1346,7 +1358,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (!tradeTab() || snapshot == null || sellAllOpen) return;
 		int rx = leftPos + LIST_X;
 		int ry = topPos + LIST_Y;
-		if (mouseX < rx + 18 || mouseX >= rx + LIST_W || mouseY < ry || mouseY >= ry + ROWS * ROW_H) return;
+		if (mouseX < rx + 18 || mouseX >= rx + listW || mouseY < ry || mouseY >= ry + rows * ROW_H) return;
 		int index = scroll + (mouseY - ry) / ROW_H;
 		List<GoodView> goods = visibleGoods();
 		if (index >= goods.size()) return;
