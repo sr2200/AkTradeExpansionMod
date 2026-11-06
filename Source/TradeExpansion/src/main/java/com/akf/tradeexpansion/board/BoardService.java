@@ -68,7 +68,9 @@ public final class BoardService {
 		GoodParams refParams = Reputation.params(here, uuid, goodsId, now);
 		GoodState refState = here.good(goodsId);
 		if (refParams == null || refState == null) {
-			refParams = def.params(1.0, 1.0, TradeExpansionConfig.get());
+			// M: the player's reputation with this market applies to the reference price too
+			refParams = com.akf.tradeexpansion.core.ReputationMath.withBonus(def.params(1.0, 1.0, TradeExpansionConfig.get()),
+					Reputation.priceBonus(Reputation.level(here, uuid, now)));
 			refState = null;
 		}
 		double refX = refState == null ? 0 : refState.pressure();

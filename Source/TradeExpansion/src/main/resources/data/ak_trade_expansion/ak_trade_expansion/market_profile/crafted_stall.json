@@ -6,6 +6,10 @@
   "weight": 1,
   "conditions": [
     {
+      "type": "ak_trade_expansion:dimension",
+      "dimension": "minecraft:overworld"
+    },
+    {
       "type": "ak_trade_expansion:origin",
       "origin": "crafted"
     }

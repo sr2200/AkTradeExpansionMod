@@ -677,8 +677,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				: "screen.ak_trade_expansion.debug.multiplier.normal", String.format("%.2f", v)).withStyle(net.minecraft.ChatFormatting.GRAY));
 		lines.add(Component.translatable("screen.ak_trade_expansion.debug.prices", CoinItem.formatCopper(PriceModel.buyPrice(p, state.pressure())),
 				CoinItem.formatCopper(PriceModel.sellPrice(p, state.pressure()))).withStyle(net.minecraft.ChatFormatting.GRAY));
-		lines.add(Component.translatable("screen.ak_trade_expansion.debug.stock", (int) Math.floor(state.stock()), (int) p.targetStock(),
-				(int) p.maxStock()).withStyle(net.minecraft.ChatFormatting.GRAY));
+		String maxStock = p.maxStock() >= 1e9 ? "∞" : String.valueOf((long) p.maxStock()); // E-5: unlimited emerald coins
+		lines.add(Component.translatable("screen.ak_trade_expansion.debug.stock", (long) Math.floor(state.stock()), (long) p.targetStock(),
+				maxStock).withStyle(net.minecraft.ChatFormatting.GRAY));
 		// Recovery forecast (B-3): the price gap halves every H days; stock moves to T at r (below) or c (above) per day.
 		if (Math.abs(v - 1) >= 0.005) {
 			lines.add(Component.translatable("screen.ak_trade_expansion.debug.price_recovery", minutes(p.halfLifeDays())).withStyle(net.minecraft.ChatFormatting.GRAY));

@@ -15,7 +15,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.0.23（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.0.24（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -88,7 +88,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - ずれた相場はゲーム内2日で半分元に戻ります。在庫も時間で補充されます。
 - 売りすぎて在庫が上限に達すると「買取停止」になりますが、市場が在庫を少しずつ使うので、時間がたつとまた買い取ってもらえます。
 - 食料・松明・燃料・原木・木材・丸石・砂・ガラス・花などの**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります。消耗品は後から追加・削除できます（設定画面の「商品」タブ →「追加の商品と消耗品」でアイコンから選ぶ、管理コマンド `/aktradeex consumable add|remove <アイテム>`、設定の `consumables.add`・`consumables.remove`、データパックのアイテムタグ `#ak_trade_expansion:consumables`）。
-- 取引の影響は近くの市場にも伝わります（128ブロック以内は100%、1,536ブロックで0%）。在庫は伝わりません。
+- 取引の影響は近くの市場にも伝わります（128ブロック以内は100%、1,536ブロックで0%）。在庫は伝わりません。ネザーの市場は、座標を8倍してオーバーワールドの市場とも連動します（設定 `distance.linkNetherToOverworld`）。
 
 ### 品揃えと市場の規模
 
