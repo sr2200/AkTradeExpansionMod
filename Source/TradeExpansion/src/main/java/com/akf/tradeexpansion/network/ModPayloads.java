@@ -30,6 +30,7 @@ public final class ModPayloads {
 		PayloadTypeRegistry.serverboundPlay().register(BoardRequestC2S.TYPE, BoardRequestC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(QuestDeliverC2S.TYPE, QuestDeliverC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(QuestAcceptC2S.TYPE, QuestAcceptC2S.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(SellAllC2S.TYPE, SellAllC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TradeRequestC2S.TYPE, TradeRequestC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(BankRequestC2S.TYPE, BankRequestC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(WalletWithdrawC2S.TYPE, WalletWithdrawC2S.CODEC);
@@ -45,6 +46,8 @@ public final class ModPayloads {
 				(payload, context) -> BoardService.handle(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(QuestDeliverC2S.TYPE,
 				(payload, context) -> QuestService.deliver(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(SellAllC2S.TYPE,
+				(payload, context) -> com.akf.tradeexpansion.trade.SellAllService.handle(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(QuestAcceptC2S.TYPE,
 				(payload, context) -> QuestService.accept(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(WalletWithdrawC2S.TYPE,

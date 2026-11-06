@@ -617,18 +617,26 @@ public final class TradeExpansionConfig {
 	public static final class Client {
 		public boolean showDebugTooltip = false;
 		public BalancePosition balancePosition = BalancePosition.INVENTORY_RIGHT;
+		/** A-4 "sell all" (v0.32): item ids never sold by it. */
+		public List<String> sellAllExclude = new ArrayList<>();
+		/** A-4 "sell all": tools / armour (excluded by default) that it may sell anyway. */
+		public List<String> sellAllInclude = new ArrayList<>();
 
 		public Client() {
 		}
 
-		Client(boolean showDebugTooltip, BalancePosition balancePosition) {
+		Client(boolean showDebugTooltip, BalancePosition balancePosition, List<String> sellAllExclude, List<String> sellAllInclude) {
 			this.showDebugTooltip = showDebugTooltip;
 			this.balancePosition = balancePosition;
+			this.sellAllExclude = new ArrayList<>(sellAllExclude);
+			this.sellAllInclude = new ArrayList<>(sellAllInclude);
 		}
 
 		static final Codec<Client> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.BOOL.fieldOf("showDebugTooltip").orElse(false).forGetter(c -> c.showDebugTooltip),
-				BalancePosition.CODEC.fieldOf("balancePosition").orElse(BalancePosition.INVENTORY_RIGHT).forGetter(c -> c.balancePosition)
+				BalancePosition.CODEC.fieldOf("balancePosition").orElse(BalancePosition.INVENTORY_RIGHT).forGetter(c -> c.balancePosition),
+				Codec.STRING.listOf().fieldOf("sellAllExclude").orElse(List.of()).forGetter(c -> c.sellAllExclude),
+				Codec.STRING.listOf().fieldOf("sellAllInclude").orElse(List.of()).forGetter(c -> c.sellAllInclude)
 		).apply(i, Client::new));
 	}
 

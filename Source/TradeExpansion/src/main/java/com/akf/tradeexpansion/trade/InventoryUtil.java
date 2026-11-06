@@ -58,19 +58,28 @@ public final class InventoryUtil {
 	}
 
 	private static List<ItemStack> stacks(Player player, Container extra) {
+		return stacks(player, extra, false);
+	}
+
+	/** @param skipHotbar leave out the 9 hotbar slots ("sell all", A-4 v0.32) */
+	private static List<ItemStack> stacks(Player player, Container extra, boolean skipHotbar) {
 		List<ItemStack> list = new ArrayList<>();
 		if (extra != null) {
 			for (int i = 0; i < extra.getContainerSize(); i++) list.add(extra.getItem(i));
 		}
 		Inventory inventory = player.getInventory();
-		for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) list.add(inventory.getItem(slot));
+		for (int slot = skipHotbar ? Inventory.getSelectionSize() : 0; slot < Inventory.INVENTORY_SIZE; slot++) list.add(inventory.getItem(slot));
 		return list;
 	}
 
 	/** Exact matches plus (if accepted) damaged-only items. */
 	public static int count(Player player, Match match, Container extra) {
+		return count(player, match, extra, false);
+	}
+
+	public static int count(Player player, Match match, Container extra, boolean skipHotbar) {
 		int count = 0;
-		for (ItemStack stack : stacks(player, extra)) {
+		for (ItemStack stack : stacks(player, extra, skipHotbar)) {
 			if (match.exact(stack) || match.damagedRatio(stack) >= 0) count += stack.getCount();
 		}
 		return count;
@@ -80,10 +89,10 @@ public final class InventoryUtil {
 	private record Unit(ItemStack stack, double ratio) {
 	}
 
-	private static List<Unit> sellOrder(Player player, Match match, Container extra) {
+	private static List<Unit> sellOrder(Player player, Match match, Container extra, boolean skipHotbar) {
 		List<Unit> exact = new ArrayList<>();
 		List<Unit> damaged = new ArrayList<>();
-		for (ItemStack stack : stacks(player, extra)) {
+		for (ItemStack stack : stacks(player, extra, skipHotbar)) {
 			if (match.exact(stack)) {
 				for (int i = 0; i < stack.getCount(); i++) exact.add(new Unit(stack, 1.0));
 			} else {
@@ -98,7 +107,11 @@ public final class InventoryUtil {
 
 	/** Price ratios of the first {@code qty} items that would be sold, or {@code null} if there are fewer. */
 	public static double[] sellRatios(Player player, Match match, Container extra, int qty) {
-		List<Unit> order = sellOrder(player, match, extra);
+		return sellRatios(player, match, extra, qty, false);
+	}
+
+	public static double[] sellRatios(Player player, Match match, Container extra, int qty, boolean skipHotbar) {
+		List<Unit> order = sellOrder(player, match, extra, skipHotbar);
 		if (order.size() < qty) return null;
 		double[] ratios = new double[qty];
 		for (int i = 0; i < qty; i++) ratios[i] = order.get(i).ratio();
@@ -107,7 +120,11 @@ public final class InventoryUtil {
 
 	/** Removes {@code qty} items in selling order (exact first, then the best damaged ones). */
 	public static void remove(Player player, Match match, Container extra, int qty) {
-		List<Unit> order = sellOrder(player, match, extra);
+		remove(player, match, extra, qty, false);
+	}
+
+	public static void remove(Player player, Match match, Container extra, int qty, boolean skipHotbar) {
+		List<Unit> order = sellOrder(player, match, extra, skipHotbar);
 		for (int i = 0; i < qty && i < order.size(); i++) order.get(i).stack().shrink(1);
 		player.getInventory().setChanged();
 		if (extra != null) extra.setChanged();

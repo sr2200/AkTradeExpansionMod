@@ -21,6 +21,8 @@ import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.RequestView;
 import com.akf.tradeexpansion.network.QuestAcceptC2S;
+import com.akf.tradeexpansion.network.SellAllC2S;
+import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.network.QuestDeliverC2S;
 import com.akf.tradeexpansion.network.QuestResultS2C;
 import com.akf.tradeexpansion.network.TradeRequestC2S;
@@ -86,6 +88,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final int BOARD_HEADER_H = 10;
 	/** Width kept free at the right end of the title row (other mods may put buttons there, A-4). */
 	private static final int TITLE_RIGHT_RESERVE = 24;
+	/** "Sell all" confirmation: over the list and the right panel (A-4, v0.32). */
+	private static final int SELL_ALL_X = 8;
+	private static final int SELL_ALL_Y = 18;
+	private static final int SELL_ALL_W = 284;
+	private static final int SELL_ALL_H = 134;
+	private static final int SELL_ALL_ROWS = 5;
 
 	private static final long[] BANK_AMOUNTS = {100, 1_000, 10_000, -1}; // -1 = everything
 
@@ -126,6 +134,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button confirmButton;
 	private Button deliverButton;
 	private Button acceptButton;
+	private Button sellAllButton;
+	private Button sellAllConfirmButton;
+	private Button sellAllCancelButton;
+	/** A-4 (v0.32): the "sell all" confirmation is open (drawn over the list and the right panel). */
+	private boolean sellAllOpen;
+	private boolean sellAllPending;
+	private final List<SellAllLine> sellAllLines = new ArrayList<>();
+	private int sellAllScroll;
 	private Button boardBackButton;
 	private final List<Button> tradeWidgets = new ArrayList<>();
 	private final List<Button> bankWidgets = new ArrayList<>();
@@ -195,6 +211,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// Request tab (J) and board (I)
 		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
 				.bounds(x + PANEL_X, y + 122, PANEL_W, 16).build());
+		// A-4 (v0.32): sell everything the market takes from the main inventory (not the hotbar) and the sell slot.
+		sellAllButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.sell_all"), b -> openSellAll())
+				.bounds(x + PANEL_X, y + 139, PANEL_W, 14).build());
+		sellAllConfirmButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.sell_all.confirm"), b -> confirmSellAll())
+				.bounds(x + SELL_ALL_X + SELL_ALL_W - 108, y + SELL_ALL_Y + SELL_ALL_H - 18, 52, 14).build());
+		sellAllCancelButton = addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> closeSellAll())
+				.bounds(x + SELL_ALL_X + SELL_ALL_W - 54, y + SELL_ALL_Y + SELL_ALL_H - 18, 50, 14).build());
 		// M (v0.29): accepting a request gives more reputation when delivered, and costs some if it expires.
 		acceptButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.accept"), b -> accept())
 				.bounds(x + PANEL_X, y + 102, PANEL_W, 14).build());
@@ -212,6 +235,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (newSnapshot.marketId() != menu.marketId()) return;
 		snapshot = newSnapshot;
 		recordBaseline(newSnapshot);
+		if (sellAllOpen) rebuildSellAll(); // latest prices while the confirmation is open
 		updateButtons();
 	}
 
@@ -224,6 +248,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	public void onResult(TradeResultS2C result) {
 		pending = false;
+		if (sellAllPending) {
+			// A-4: result of "sell all"
+			sellAllPending = false;
+			if (result.result() == TradeResult.SUCCESS) {
+				sellAllOpen = false;
+				setStatus(Component.translatable("screen.ak_trade_expansion.sell_all.done", result.quantity(), CoinItem.formatCopper(result.total())), true);
+			} else {
+				rebuildSellAll(); // latest prices (a new snapshot follows)
+				setStatus(Component.translatable(result.result().translationKey()), false);
+			}
+			updateButtons();
+			return;
+		}
 		if (result.result() == TradeResult.SUCCESS) {
 			GoodView view = selectedView();
 			Component name = view == null ? Component.empty() : view.displayStack().getHoverName();
@@ -460,6 +497,147 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		acceptButton.active = r != null && !r.accepted();
 		acceptButton.setMessage(Component.translatable(r != null && r.accepted() ? "screen.ak_trade_expansion.quest.accepted" : "screen.ak_trade_expansion.quest.accept"));
 		boardBackButton.visible = tab == Tab.BOARD && boardMarket >= 0;
+		sellAllButton.visible = tab == Tab.SELL && !sellAllOpen;
+		sellAllButton.active = !pending && snapshot != null;
+		if (sellAllOpen) {
+			// The confirmation covers the list and the right panel: only its own buttons work.
+			for (Button b : tradeWidgets) b.visible = false;
+			tabButtons.values().forEach(b -> b.visible = false);
+			paymentButton.visible = false;
+		} else {
+			tabButtons.values().forEach(b -> b.visible = true);
+			tabButtons.get(Tab.BANK).visible = bankAvailable();
+		}
+		sellAllConfirmButton.visible = sellAllOpen;
+		sellAllCancelButton.visible = sellAllOpen;
+		sellAllConfirmButton.active = sellAllOpen && !sellAllPending && sellAllTotal() > 0;
+	}
+
+	// ---- sell all (A-4, v0.32) ----
+
+	/** One good of the "sell all" confirmation. */
+	private record SellAllLine(GoodView view, ItemStack stack, String itemId, int heldUnits, int units, long total, boolean excluded) {
+	}
+
+	private void openSellAll() {
+		sellAllOpen = true;
+		sellAllScroll = 0;
+		rebuildSellAll();
+		updateButtons();
+	}
+
+	private void closeSellAll() {
+		sellAllOpen = false;
+		sellAllPending = false;
+		updateButtons();
+	}
+
+	/** Goods the market takes that the player holds outside the hotbar, priced like single sales. */
+	private void rebuildSellAll() {
+		sellAllLines.clear();
+		Player player = player();
+		if (player == null || snapshot == null) return;
+		TradeExpansionConfig.Client client = TradeExpansionConfig.get().client;
+		for (GoodView view : snapshot.goods()) {
+			if (!view.sell()) continue;
+			InventoryUtil.Match match = view.match();
+			int heldUnits = PriceModel.units(InventoryUtil.count(player, match, menu.sellSlot(), true), view.unit());
+			if (heldUnits <= 0) continue;
+			GoodState state = currentState(view);
+			int units = Math.min(heldUnits, PriceModel.sellCapacity(view.params(), state));
+			double[] ratios = view.unit() == 1 && units > 0 ? InventoryUtil.sellRatios(player, match, menu.sellSlot(), units, true) : null;
+			long total = units <= 0 ? 0 : ratios != null ? PriceModel.sumSell(view.params(), state.pressure(), ratios) : PriceModel.sumSell(view.params(), state.pressure(), units);
+			ItemStack stack = view.displayStack();
+			String itemId = view.item().toString();
+			// Tools and armour (items with durability) are left out unless the player included them.
+			boolean excluded = client.sellAllExclude.contains(itemId) || stack.isDamageableItem() && !client.sellAllInclude.contains(itemId);
+			sellAllLines.add(new SellAllLine(view, stack, itemId, heldUnits, units, total, excluded));
+		}
+	}
+
+	private long sellAllTotal() {
+		long total = 0;
+		for (SellAllLine line : sellAllLines) if (!line.excluded()) total += line.total();
+		return total;
+	}
+
+	private void confirmSellAll() {
+		List<SellAllC2S.Line> lines = new ArrayList<>();
+		for (SellAllLine line : sellAllLines) {
+			if (!line.excluded() && line.units() > 0) lines.add(new SellAllC2S.Line(line.view().goods(), line.units()));
+		}
+		if (lines.isEmpty() || sellAllPending) return;
+		sellAllPending = true;
+		pending = true;
+		ClientPlayNetworking.send(new SellAllC2S(menu.marketId(), lines, sellAllTotal(), useCard()));
+		updateButtons();
+	}
+
+	/** Clicking a line includes / excludes its item; the choice is kept in the client settings (all worlds). */
+	private void toggleSellAll(SellAllLine line) {
+		TradeExpansionConfig live = ConfigManager.copy(TradeExpansionConfig.get());
+		List<String> exclude = live.client.sellAllExclude;
+		List<String> include = live.client.sellAllInclude;
+		exclude.remove(line.itemId());
+		include.remove(line.itemId());
+		boolean byDefault = line.stack().isDamageableItem();
+		if (line.excluded()) {
+			if (byDefault) include.add(line.itemId());
+		} else {
+			exclude.add(line.itemId());
+		}
+		TradeExpansionConfig.set(live);
+		TradeExpansionConfig file = ConfigManager.read(ConfigManager.path());
+		file.client = live.client;
+		ConfigManager.write(ConfigManager.path(), file);
+		rebuildSellAll();
+		updateButtons();
+	}
+
+	private void extractSellAll(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		int x = leftPos + SELL_ALL_X;
+		int y = topPos + SELL_ALL_Y;
+		g.fill(x - 1, y - 1, x + SELL_ALL_W + 1, y + SELL_ALL_H + 1, COLOR_DARK);
+		g.fill(x, y, x + SELL_ALL_W, y + SELL_ALL_H, 0xFF3A3A3A);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.title"), x + 4, y + 4, COLOR_GOLD);
+		int listY = y + 16;
+		if (sellAllLines.isEmpty()) {
+			g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.none"), x + 4, listY + 4, COLOR_GRAY);
+		}
+		SellAllLine hovered = null;
+		for (int row = 0; row < SELL_ALL_ROWS && sellAllScroll + row < sellAllLines.size(); row++) {
+			SellAllLine line = sellAllLines.get(sellAllScroll + row);
+			int ry = listY + row * ROW_H;
+			boolean over = mouseX >= x && mouseX < x + SELL_ALL_W && mouseY >= ry && mouseY < ry + ROW_H;
+			if (over) {
+				g.fill(x + 1, ry, x + SELL_ALL_W - 1, ry + ROW_H, 0xFF505050);
+				hovered = line;
+			}
+			g.item(line.stack(), x + 3, ry + 1);
+			int color = line.excluded() ? COLOR_GRAY : COLOR_WHITE;
+			int items = line.units() * line.view().unit();
+			String count = line.units() < line.heldUnits()
+					? Component.translatable("screen.ak_trade_expansion.sell_all.partial", items, line.heldUnits() * line.view().unit()).getString()
+					: "×" + items;
+			String right = line.excluded() ? Component.translatable("screen.ak_trade_expansion.sell_all.excluded").getString()
+					: line.units() <= 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(line.total());
+			int rightWidth = font.width(right);
+			g.text(font, right, x + SELL_ALL_W - 8 - rightWidth, ry + 5, line.excluded() ? COLOR_GRAY : line.units() <= 0 ? COLOR_RED : COLOR_GOLD);
+			int countX = x + SELL_ALL_W - 16 - rightWidth - font.width(count);
+			g.text(font, count, countX, ry + 5, color);
+			fitText(g, line.stack().getHoverName().getString(), x + 22, ry + 5, countX - x - 26, color, true);
+		}
+		if (sellAllLines.size() > SELL_ALL_ROWS) {
+			int trackH = SELL_ALL_ROWS * ROW_H;
+			int thumbH = Math.max(8, trackH * SELL_ALL_ROWS / sellAllLines.size());
+			int thumbY = (trackH - thumbH) * sellAllScroll / (sellAllLines.size() - SELL_ALL_ROWS);
+			g.fill(x + SELL_ALL_W - 3, listY + thumbY, x + SELL_ALL_W - 1, listY + thumbY + thumbH, COLOR_LIGHT);
+		}
+		int count = (int) sellAllLines.stream().filter(l -> !l.excluded() && l.units() > 0).count();
+		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.total", CoinItem.formatCopper(sellAllTotal()), count),
+				x + 4, y + SELL_ALL_H - 14, COLOR_GOLD);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_all.hint"), x + 4, y + SELL_ALL_H - 25, COLOR_GRAY);
+		if (hovered != null) g.setTooltipForNextFrame(font, hovered.stack(), mouseX, mouseY);
 	}
 
 	@Override
@@ -491,6 +669,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (sellAllOpen) {
+			int x = leftPos + SELL_ALL_X;
+			int listY = topPos + SELL_ALL_Y + 16;
+			if (event.x() >= x && event.x() < x + SELL_ALL_W && event.y() >= listY && event.y() < listY + SELL_ALL_ROWS * ROW_H) {
+				int index = sellAllScroll + (int) ((event.y() - listY) / ROW_H);
+				if (index < sellAllLines.size() && !sellAllPending) toggleSellAll(sellAllLines.get(index));
+				return true;
+			}
+			return super.mouseClicked(event, doubleClick); // its buttons and the inventory still work
+		}
 		double mx = event.x() - leftPos;
 		double my = event.y() - topPos;
 		if (mx >= LIST_X && mx < LIST_X + LIST_W && my >= LIST_Y && my < LIST_Y + ROWS * ROW_H
@@ -524,6 +712,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		if (sellAllOpen) {
+			int maxScroll = Math.max(0, sellAllLines.size() - SELL_ALL_ROWS);
+			sellAllScroll = Math.clamp(sellAllScroll - (int) Math.signum(scrollY), 0, maxScroll);
+			return true;
+		}
 		int maxScroll = Math.max(0, rowCount() - ROWS);
 		if (maxScroll > 0 && mouseX - leftPos < PANEL_X && mouseY - topPos < LIST_Y + ROWS * ROW_H) {
 			scroll = Math.clamp(scroll - (int) Math.signum(scrollY), 0, maxScroll);
@@ -582,6 +775,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			}
 		}
 		extractScrollbar(g, lx, ly);
+		if (sellAllOpen) extractSellAll(g, mouseX, mouseY);
 	}
 
 	/** The item in the sell slot is a good of this market that it does not take right now (stock at Scap). */
@@ -820,7 +1014,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		} else {
 			fitText(g, Component.translatable("screen.ak_trade_expansion.max_quantity", maxQuantity(false)).getString(), px, line2, PANEL_W, COLOR_DARK, false);
 		}
-		if (TradeExpansionConfig.get().trade.allowShiftAll) {
+		if (TradeExpansionConfig.get().trade.allowShiftAll && tab == Tab.BUY) {
 			g.text(font, Component.translatable("screen.ak_trade_expansion.shift_all"), px, y + 141, COLOR_DARK, false);
 		}
 	}
@@ -1065,7 +1259,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		Player player = player();
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
-		g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,
+		if (!sellAllOpen) g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + ROWS * ROW_H + 3,
 				statusColor == COLOR_GREEN ? 0xFF207020 : statusColor == COLOR_RED ? 0xFFA02020 : COLOR_TEXT, false);
 		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_slot"), MarketMenu.SELL_SLOT_X - 6, MarketMenu.SELL_SLOT_Y - 11, COLOR_TEXT, false);
 	}
@@ -1149,7 +1343,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
 		super.extractRenderState(g, mouseX, mouseY, partialTick);
-		if (!tradeTab() || snapshot == null) return;
+		if (!tradeTab() || snapshot == null || sellAllOpen) return;
 		int rx = leftPos + LIST_X;
 		int ry = topPos + LIST_Y;
 		if (mouseX < rx + 18 || mouseX >= rx + LIST_W || mouseY < ry || mouseY >= ry + ROWS * ROW_H) return;
