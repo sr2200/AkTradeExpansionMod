@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.34.1（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
+- 版：v0.35（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -333,6 +333,10 @@ n は最大でもインベントリ分（2,304個）なのでループで十分�
 | `STOCK_FULL` | 売却数 > floor(Scap − S) |
 | `PRICE_CHANGED` | サーバーの合計額がプレビュー額から許容範囲を超えてずれた |
 | `CARD_INVALID` | カード払いを選んだが、有効なカード（自分のもので最新の番号）を持っていない（v0.11、E-8） |
+| `REPUTATION_TOO_LOW` | ★★★の依頼に評判が足りない（v0.29、M章） |
+| `CARGO_TAKEN` | 輸送依頼の荷箱を、ほかのプレイヤーがすでに受け取った（v0.35、J-2） |
+| `NO_CARGO` | この市場あての荷箱を持っていない（v0.35、J-2） |
+| `CARGO_EXPIRED` | この市場あての荷箱が、どれも期限切れ（v0.35、J-2） |
 
 検証の順序：`INVALID_REQUEST` → `TOO_FAR` → `CREATIVE_NOT_ALLOWED` → `CARD_INVALID` → `NOT_AVAILABLE` →（遅延回復）→ 在庫系（`INSUFFICIENT_STOCK` / `STOCK_FULL`）→ `PRICE_CHANGED` → 所持系（`INSUFFICIENT_FUNDS` / `INVENTORY_FULL` / `INSUFFICIENT_ITEMS`）。
 
@@ -877,8 +881,9 @@ MarketRegistry
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
 | `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も。v0.29.1：預金の利率と上限も） | ログイン時／`/aktradeex reload` 時 | 実装済 |
 | `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・中心座標（v0.34、地図への登録用）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
-| `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 報酬額 | 依頼タブの「納品する」 | 実装済（段階13） |
-| `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号 | 「依頼を受ける」（v0.29、J章・M章） | 実装済 |
+| `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 種類（納品・荷箱の受け取り・荷箱の届け、v0.35）, 金額（報酬・払った保証金・受け取った報酬＋保証金）, 届けた荷箱の数 | 依頼タブの「納品する」 | 実装済（段階13） |
+| `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号, カード払いか（v0.35） | 「依頼を受ける」（v0.29、J章・M章）。輸送依頼では「荷箱を受け取る」（保証金を払う、v0.35、J-2）。結果は輸送依頼の時だけ `QuestResultS2C` で返す | 実装済 |
+| `CargoDeliverC2S` | C→S | 市場ID, カード払いか | 依頼タブの「荷箱を届ける」（v0.35、J-2）。インベントリにあるこの市場あての荷箱をすべて届ける。結果は `QuestResultS2C` | 実装済 |
 
 - 【v0.9】`TradeRequestC2S` に支払い方法（カード／現金）を追加した（段階12、実装済）。カードを選んだのに有効なカードが無い時は新しい結果コード `CARD_INVALID`。
 
@@ -1005,6 +1010,12 @@ MarketRegistry
 | 依頼 | `quest.durationDays` | 3.0 | 0.5〜30 | 依頼の期限（ゲーム内日） |
 | 依頼 | `quest.rewardMultipliers` | `[1.2, 1.5, 2.0]` | 各 0.1〜10 | ★1〜3 の報酬倍率 |
 | 依頼 | `quest.difficultyThresholds` | `[200, 1000]` | 昇順の整数2つ | ★2・★3 になる依頼の金額（c） |
+| 依頼 | `quest.transportPerMarket` | 1 | 0〜5 | 【v0.35】1市場の輸送依頼の最大数（普通の依頼とは別に数える。0 で輸送依頼なし、J-2） |
+| 依頼 | `quest.transportMinDistance` | 300 | 0〜100000 | 【v0.35】届け先の市場までの最短距離（ブロック、J-2） |
+| 依頼 | `quest.transportMaxDistance` | 2000 | 0〜100000 | 【v0.35】届け先の市場までの最長距離（最短より小さい時は最短に合わせる、J-2） |
+| 依頼 | `quest.transportBaseMultiplier` | 0.2 | 0〜10 | 【v0.35】輸送依頼の報酬倍率の基本（J-2） |
+| 依頼 | `quest.transportPerThousandBlocks` | 0.8 | 0〜10 | 【v0.35】距離1000ブロックごとに報酬倍率へ足す値（J-2） |
+| 依頼 | `quest.transportMaxMultiplier` | 2.0 | 0〜10 | 【v0.35】輸送依頼の報酬倍率の上限（J-2） |
 | 評判 | `reputation.enabled` | true | bool | 【v0.29】評判を使う。OFF で全員レベル0、評判は上下しない（M章） |
 | 評判 | `reputation.levelThresholds` | `[50,150,400,1000,2500]` | 昇順の整数5つ | 【v0.29】レベル1〜5に必要なポイント（M章） |
 | 評判 | `reputation.halfLifeDays` | 30.0 | 0〜1000 | 【v0.29】ポイントが半分になる日数（ゲーム内。0 で減らない）（M章） |
@@ -1137,6 +1148,29 @@ MarketRegistry
 
 - 報酬は新しく生まれるお金なので、依頼の数・入れ替え頻度・倍率でお金の増え方を抑える。抜け道（依頼の品を別の市場で安く買って納める等）は、地域間の価格差を使う遊び（Q7）でもあるので禁止はせず、倍率で調整する（Q40）。
 - 【v0.29】報酬は納める人の評判のレベルで増える（`reputation.rewardBonusPerLevel`、M章）。画面に出す報酬も、見ている人の評判を反映した額。
+
+#### J-2. 輸送依頼【v0.35 追加】
+
+ある市場（依頼元 A）が「この品を、ほかの市場（届け先 B）へ運んでほしい」という依頼を出す。品は**荷箱**というアイテムにして渡す（荷箱方式）。A で買って B で売る価格差の遊び（Q7）に、運ぶこと自体の報酬を足すもの。
+
+| 項目 | 内容（既定案） |
+|---|---|
+| 依頼の数 | 1市場に最大 `quest.transportPerMarket`（既定 1）件。普通の依頼（`quest.maxPerMarket`）とは別に数える。入れ替え・期限（`quest.durationDays`）は普通の依頼と同じ |
+| 届け先 | A と相場が連動する市場（同じ次元。`distance.linkNetherToOverworld` が ON ならオーバーワールドとネザーの間も、C-2）のうち、距離が `quest.transportMinDistance`（既定 300）〜 `transportMaxDistance`（既定 2000）ブロックのもの。ネザーの市場は座標を8倍して測る。当てはまる市場が無ければ輸送依頼は出ない |
+| 品 | A がプレイヤーに売っている商品（普通の依頼と同じく、取引単位1・`auto_add` なし・付加情報なしのもの）。**B が扱っていない品を優先**する（運ぶ意味がある品）。同じ品の依頼は同時に2件出さない |
+| 数量 | 1〜その品の目標在庫 T |
+| 保証金 | 品の値段＝A での基準価格 B × 数量（切り上げ）。荷箱を受け取る時に払う（カード払いを選んでいれば口座から、カードの手数料つき、E-8） |
+| 報酬 | `ceil(品の値段 × 倍率)`。倍率 ＝ min(`transportMaxMultiplier`, `transportBaseMultiplier` ＋ `transportPerThousandBlocks` × 距離 ÷ 1000)。既定では 300 ブロックで 0.44 倍、1000 ブロックで 1.0 倍、2000 ブロックで 1.8 倍（上限 2.0 倍）。受け取る人の A での評判で増える（M章）。報酬は荷箱を受け取った時に決まる |
+| 難易度 | 品の値段で ★1〜3（普通の依頼と同じ `quest.difficultyThresholds`）。★★★は A での評判 `reputation.hardQuestLevel` 以上でないと受け取れない |
+| 受け取り | A の依頼タブで輸送依頼を選び「荷箱を受け取る」。保証金を払い、荷箱（中身・届け先・期限の入ったアイテム、1個ずつ）をもらう。**先着1人**で、受け取られた依頼はほかの人には「運送中」と表示され、受け取れない |
+| 届け | B の依頼タブで「荷箱を届ける（個数）」。インベントリ（ホットバーを含む）にある B あての荷箱をすべて届け、報酬＋保証金を受け取る（カード払いを選んでいれば口座へ）。誰が届けてもよい（拾った荷箱でも届けられる） |
+| 評判 | 届けると、A では「受けた依頼を納めた」時と同じポイント（`reputation.questPoints` × `acceptedQuestMultiplier`）、B では `questPoints` が増える。受け取ったまま期限が切れると、A で普通の依頼と同じく減る（`reputation.questFailPenalty` × ★の数） |
+| 期限切れ | 期限を過ぎた荷箱は届けられず、保証金は戻らない。荷箱はアイテムとして残るが使い道はない（捨ててよい） |
+| 荷箱 | `ak_trade_expansion:cargo_crate`。1個ずつしか重ならない。開けられない・クラフトできない。中身はアイテムの付加情報 `ak_trade_expansion:cargo`（依頼元・届け先の ID と名前・届け先の座標と次元・品・数量・報酬・保証金・期限・難易度・依頼の番号）。説明に中身・届け先・場所・報酬と保証金・依頼元・残り時間を出す |
+
+- 荷箱に払い出しに必要な値がすべて入っているので、A の依頼が `market reroll` などで消えても、期限内なら B で届けられる。
+- 保証金は品の値段なので、荷箱を持ち逃げしても得にならない（中身は取り出せない）。報酬は新しく生まれるお金なので、数・距離の倍率・上限で増え方を抑える。
+- 画面：依頼の一覧では「品 ×数 → 届け先」と表示し、選ぶと右側に届け先・方角と距離・報酬・保証金・残り時間を出す。
 
 ---
 
@@ -1352,7 +1386,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ModMenus.java              ✅
 │   ├─ ModEntities.java           ✅ … TraderEntity・商人のスポーンエッグ・属性（段階10）
 │   ├─ ModCreativeTab.java        ✅
-│   └─ ModDataComponents.java     ✅ … `wallet_balance`・`card_owner`
+│   └─ ModDataComponents.java     ✅ … `wallet_balance`・`card_owner`・`cargo`（荷箱の中身と届け先、v0.35）
 ├─ crafting/
 │   ├─ MintingRecipe.java         ✅ … 鋳造レシピ `ak_trade_expansion:minting`（銅換算額→枚数、読み込み条件 `minting_enabled`、E-2）
 │   └─ EmeraldCoinRecipe.java     ✅ … 石切台でエメラルド貨の枚数を設定値にする派生レシピと読み込み条件（E-5）
@@ -1362,7 +1396,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ CoinItem.java              ✅ … 価値ツールチップ、スニーク＋右クリックで崩す（v0.4 追加）
 │   ├─ EmeraldCoinItem.java       ✅ … 補助コイン（CoinItem とは別クラスにして所持金の計算から外す、E-5）
 │   ├─ WalletItem.java            ✅ … 財布（残高のデータコンポーネント、重ねて入れる操作、E-6）
-│   └─ BankCardItem.java          ✅ … カード（持ち主・カード番号、E-8）
+│   ├─ BankCardItem.java          ✅ … カード（持ち主・カード番号、E-8）
+│   └─ CargoCrateItem.java        ✅ … 荷箱（輸送依頼の品。開けられない。説明に中身・届け先・期限、J-2・v0.35）
 ├─ currency/
 │   ├─ CoinType.java (enum)       ✅ … COPPER..NETHERITE、価値（比率から計算）
 │   ├─ ExchangeService.java       ✅ … 両替タブ（手数料の掛け方は A-4、E-3）
@@ -1391,8 +1426,9 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ condition/MarketCondition.java ✅ … 条件（dimension, biome, structure, villager_type, origin, distance_from_spawn, all_of / any_of / not）
 │   └─ DataReloadListener.java    ✅ … データパック読込（Fabric の ResourceLoader、`/reload` 対応）
 ├─ quest/                          … 段階13
-│   ├─ Request.java               ✅ … 依頼（品・数量・報酬・期限・難易度、J章）
-│   ├─ QuestService.java          ✅ … 依頼の入れ替え・納品
+│   ├─ Request.java               ✅ … 依頼（品・数量・報酬・期限・難易度、J章。輸送依頼は届け先と保証金つき、v0.35）
+│   ├─ Cargo.java                 ✅ … 荷箱の中身（依頼元・届け先・品・報酬・保証金・期限、J-2・v0.35）
+│   ├─ QuestService.java          ✅ … 依頼の入れ替え・納品。輸送依頼の生成・荷箱の受け取りと届け（v0.35）
 │   └─ DemandService.java         ✅ … 不足品の選び直し・倍率（K章）
 ├─ board/                          … 段階13
 │   └─ BoardService.java          ✅ … 近くの市場の価格を集める（I章）
@@ -1423,7 +1459,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ AccountS2C.java / BankRequestC2S.java / WalletWithdrawC2S.java ✅ … 段階12
 │   ├─ ExchangeRequestC2S.java / ExchangeResultS2C.java ✅ … 両替（段階11）
 │   ├─ VillagerPricesS2C.java     ✅ … 村人の取引ごとの代金（14a）
-│   └─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
+│   └─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
 ├─ config/
 │   ├─ TradeExpansionConfig.java  ✅ … 全設定（カテゴリごとのクラス、Codec）
 │   ├─ ConfigManager.java         ✅ … 設定ファイルの読み書き・反映・コピー（設定画面用）
@@ -1464,7 +1500,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（4件）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（10件）、`data/BundledDataTest`（3件。エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計87件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（10件）、`data/BundledDataTest`（3件。エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計88件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -1528,7 +1564,7 @@ src/main/resources/
 ├─ assets/ak_trade_expansion/
 │   ├─ icon.png                                            ✅（v0.23：屋台と金貨のドット絵 128×128。`tools/icon/genicon.js` で生成）
 │   ├─ lang/ja_jp.json, en_us.json                         ✅（設定画面の項目名・説明を含む）
-│   ├─ items/*.json, models/item/*.json                    ✅（コイン5種・エメラルド貨・財布・カード・交易所・商人のスポーンエッグ（行商人のモデルを流用））
+│   ├─ items/*.json, models/item/*.json                    ✅（コイン5種・エメラルド貨・財布・カード・荷箱（v0.35。テクスチャは `tools/icon/gencrate.js` で作る）・交易所・商人のスポーンエッグ（行商人のモデルを流用））
 │   ├─ models/block/market_stall.json, blockstates/market_stall.json ✅（屋台風のモデル、facing 4方向）
 │   └─ textures/item/*.png, textures/block/market_stall_{front,side,top}.png ✅（仮テクスチャ）
 └─ data/
@@ -1602,7 +1638,7 @@ src/main/resources/
 | 〃 | 鋳造の枚数 | 比率10で64枚、比率20で32枚、上限64枚で頭打ち（E-2。`MintingCountTest`、v0.31。鋳造の損得は `/aktradeex audit` で確認できる） |
 | 〃 | 財布での支払い | 財布だけ・コインだけ・両方で払う場合、財布の容量を超えるお釣り、支払い前後の総価値の差 = 価格（E-6。計算部分は純Javaにしてテストする） |
 | 〃 | 取引単位 | `unit=10` で、単位の数による合計額・最大数量、端数（所持19枚なら1単位）の扱い（B-5。`TradeUnitTest`、v0.31） |
-| 〃 | 依頼・不足品 | `QuestMathTest`：難易度の判定（200c・1,000c の境目）、報酬の切り上げ、期間の番号、不足品の倍率の範囲（J・K章）。扱っていない品の B と期間ごとの選び直しはゲーム内で確認する |
+| 〃 | 依頼・不足品 | `QuestMathTest`：難易度の判定（200c・1,000c の境目）、報酬の切り上げ、期間の番号、不足品の倍率の範囲（J・K章）、輸送依頼の報酬倍率（距離・上限、J-2）。扱っていない品の B と期間ごとの選び直しはゲーム内で確認する |
 | 〃 | 消耗品 | `PriceModelTest`：消費量 c と半減期 H が商品ごとに効くこと、既定（消耗品でない）は `r/2`・2日のまま。`ConfigTest`：`consumables.add/remove` の ID の直し方（B-3） |
 | 〃 | 買取停止・まとめ買い（v0.27） | `PriceModelTest`：買取再開までの日数、割引の段階（個数で数える）、売り戻しで儲からないこと、割引つきの最大数量を総当たりと比べる。`ConfigTest`：`market.specialGoods` のレベルごとの数と誤った長さの扱い |
 | 〃 | 商品の値の上書き | `ConfigTest`：`goods` の商品IDに名前空間を補う、範囲外の値を直す、空の項目を捨てる（D-2）。`BundledDataTest`：同梱の商品81件・プロファイル12件を読み込み、プロファイルが知らない商品を指していない |
@@ -1763,3 +1799,4 @@ test {
 | v0.33.1 | 2026-11-07 | 一覧にスクロールバー（溝・ドラッグできるつまみ・溝のクリックで1ページ）を付けた（A-4）。v0.33 で行数の名前を変えた時に、スクロールバーの処理の変数と名前が重なり、スクロールバーが表示されなくなっていた不具合も直した |
 | v0.34 | 2026-11-07 | 地図 Mod との連携（段階1・2）：掲示板で選んだ市場を JourneyMap の地点として登録（公式 API、任意の連携、配布物に含めない、JourneyMap の仕組みで読み込む）。JourneyMap が無い時は座標をチャットに出す（コピー・Xaero's の共有の書式つき）。`BoardS2C` に中心座標を追加（I章・F-2・4-2） |
 | v0.34.1 | 2026-11-07 | 公開用の文書をソースと照合：チェックリストの時間の進め方（`market advance` は相場と在庫の回復だけで、日付や期限・利息は進まない。`recovery.clock=DAY_TIME` と `/time add` を使う）、投稿ページの下書き・`src/dist/README.txt` に新しい機能と JourneyMap を追記、`README.txt` の古い jar 名の重複を修正。ソース：所持金の表示位置が「右上」の時、市場名・評判が所持金に重ならないようにした（A-4） |
+| v0.35 | 2026-11-07 | 輸送依頼（J-2）を追加：依頼元で保証金を払って荷箱を受け取り、届け先の市場で報酬（距離で増える）と保証金を受け取る。評判は両方の市場で上がる。荷箱のアイテムと付加情報 `cargo`、`CargoDeliverC2S`、`QuestAcceptC2S` にカード払い、`QuestResultS2C` に種類と個数、結果コード `CARGO_TAKEN`・`NO_CARGO`・`CARGO_EXPIRED`、設定 `quest.transport*`（6項目）、`QuestMathTest` に1件（計88件）。0.1.1 |

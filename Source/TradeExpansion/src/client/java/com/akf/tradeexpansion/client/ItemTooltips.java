@@ -1,6 +1,9 @@
 package com.akf.tradeexpansion.client;
 
 import com.akf.tradeexpansion.item.BankCardItem;
+import com.akf.tradeexpansion.item.CargoCrateItem;
+import com.akf.tradeexpansion.market.MarketClock;
+import net.minecraft.client.Minecraft;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.item.EmeraldCoinItem;
 import com.akf.tradeexpansion.item.WalletItem;
@@ -26,6 +29,10 @@ public final class ItemTooltips {
 				case EmeraldCoinItem coin -> coin.addTooltip(stack, extra::add);
 				case WalletItem wallet -> wallet.addTooltip(stack, extra::add);
 				case BankCardItem card -> card.addTooltip(stack, extra::add);
+				case CargoCrateItem crate -> {
+					Minecraft mc = Minecraft.getInstance();
+					crate.addTooltip(stack, mc.level == null ? null : MarketClock.now(mc.level), extra::add);
+				}
 				default -> {
 					return;
 				}

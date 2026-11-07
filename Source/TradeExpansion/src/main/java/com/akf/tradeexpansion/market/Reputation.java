@@ -5,6 +5,7 @@ import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.core.ReputationMath;
 import com.akf.tradeexpansion.entity.TraderEntity;
+import com.akf.tradeexpansion.quest.Cargo;
 import com.akf.tradeexpansion.quest.Request;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.minecraft.core.BlockPos;
@@ -97,6 +98,17 @@ public final class Reputation {
 		double points = config().questPoints.isEmpty() ? 0 : config().questPoints.get(index);
 		if (request.accepted().contains(player)) points *= config().acceptedQuestMultiplier;
 		add(market, player, points, now);
+	}
+
+	/**
+	 * J-2 (v0.35): a cargo crate delivered. The source market counts it as a delivered, accepted request; the destination
+	 * gives the plain points of a request of the same difficulty. {@code source} may be gone ({@code null}).
+	 */
+	public static void onCargoDelivered(Market source, Market destination, UUID player, Cargo cargo, long now) {
+		if (config().questPoints.isEmpty()) return;
+		double points = config().questPoints.get(Math.clamp(cargo.difficulty() - 1, 0, config().questPoints.size() - 1));
+		if (source != null) add(source, player, points * config().acceptedQuestMultiplier, now);
+		add(destination, player, points, now);
 	}
 
 	/** Accepted request expired undelivered: every player who accepted it loses points. */

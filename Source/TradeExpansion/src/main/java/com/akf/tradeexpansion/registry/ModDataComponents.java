@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.registry;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.quest.Cargo;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
@@ -13,7 +14,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 import java.util.UUID;
 
-/** Item data of the wallet and the bank card (design E-6 / E-8). */
+/** Item data of the wallet, the bank card (design E-6 / E-8) and the cargo crate (J-2). */
 public final class ModDataComponents {
 	/** Copper held by a wallet. */
 	public static final DataComponentType<Long> WALLET_BALANCE = register("wallet_balance",
@@ -35,6 +36,10 @@ public final class ModDataComponents {
 
 	public static final DataComponentType<CardOwner> CARD_OWNER = register("card_owner",
 			DataComponentType.<CardOwner>builder().persistent(CardOwner.CODEC).networkSynchronized(CardOwner.STREAM_CODEC).build());
+
+	/** J-2 (v0.35): what a cargo crate carries, and where to. */
+	public static final DataComponentType<Cargo> CARGO = register("cargo",
+			DataComponentType.<Cargo>builder().persistent(Cargo.CODEC).networkSynchronized(Cargo.STREAM_CODEC).build());
 
 	private ModDataComponents() {
 	}

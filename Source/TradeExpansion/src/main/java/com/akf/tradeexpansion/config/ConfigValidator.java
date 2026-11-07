@@ -86,6 +86,16 @@ public final class ConfigValidator {
 		q.durationDays = clamp("quest.durationDays", q.durationDays, 0.5, 30);
 		q.rewardMultipliers = doubleList("quest.rewardMultipliers", q.rewardMultipliers, 3, 0.1, 10, List.of(1.2, 1.5, 2.0));
 		q.difficultyThresholds = intList("quest.difficultyThresholds", q.difficultyThresholds, 2, 0, 1_000_000_000, true, List.of(200, 1000));
+		q.transportPerMarket = clamp("quest.transportPerMarket", q.transportPerMarket, 0, 5);
+		q.transportMinDistance = clamp("quest.transportMinDistance", q.transportMinDistance, 0, 100_000);
+		q.transportMaxDistance = clamp("quest.transportMaxDistance", q.transportMaxDistance, 0, 100_000);
+		if (q.transportMaxDistance < q.transportMinDistance) {
+			TradeExpansionConfig.warn("quest.transportMaxDistance = {} is below quest.transportMinDistance, using {}", q.transportMaxDistance, q.transportMinDistance);
+			q.transportMaxDistance = q.transportMinDistance;
+		}
+		q.transportBaseMultiplier = clamp("quest.transportBaseMultiplier", q.transportBaseMultiplier, 0, 10);
+		q.transportPerThousandBlocks = clamp("quest.transportPerThousandBlocks", q.transportPerThousandBlocks, 0, 10);
+		q.transportMaxMultiplier = clamp("quest.transportMaxMultiplier", q.transportMaxMultiplier, 0, 10);
 
 		TradeExpansionConfig.Demand dm = c.demand;
 		dm.maxShortages = clamp("demand.maxShortages", dm.maxShortages, 0, 10);

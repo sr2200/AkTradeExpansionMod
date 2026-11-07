@@ -4,7 +4,13 @@ import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.BulkDiscount;
 import com.akf.tradeexpansion.core.ReputationMath;
+import com.akf.tradeexpansion.market.MarketNames;
+import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.Reputation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.world.level.Level;
+import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.UUID;
 import com.akf.tradeexpansion.core.GoodParams;
@@ -115,16 +121,48 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	/**
 	 * A request with the item to show (J). The reward includes the player's reputation bonus (M).
 	 *
-	 * @param accepted the player accepted it
-	 * @param locked   3-star request the player cannot deliver yet (reputation.hardQuestLevel)
+	 * @param accepted  the player accepted it (J-2: took its cargo crate)
+	 * @param locked    3-star request the player cannot deliver yet (reputation.hardQuestLevel)
+	 * @param transport J-2 (v0.35): where a transport request goes
 	 */
-	public record RequestView(Request request, Identifier item, boolean accepted, boolean locked) {
+	public record RequestView(Request request, Identifier item, boolean accepted, boolean locked, Optional<TransportView> transport) {
 		static final StreamCodec<RegistryFriendlyByteBuf, RequestView> CODEC = StreamCodec.composite(
 				Request.STREAM_CODEC, RequestView::request,
 				Identifier.STREAM_CODEC, RequestView::item,
 				ByteBufCodecs.BOOL, RequestView::accepted,
 				ByteBufCodecs.BOOL, RequestView::locked,
+				ByteBufCodecs.optional(TransportView.CODEC), RequestView::transport,
 				RequestView::new);
+	}
+
+	/**
+	 * J-2: destination of a transport request, seen from this market.
+	 *
+	 * @param dx       east-west offset in Overworld blocks (Nether ×8 when the dimensions are linked)
+	 * @param dz       north-south offset, likewise
+	 * @param distance horizontal distance in the same blocks
+	 */
+	public record TransportView(Component destinationName, int dx, int dz, int distance, long deposit) {
+		static final StreamCodec<RegistryFriendlyByteBuf, TransportView> CODEC = StreamCodec.composite(
+				ComponentSerialization.STREAM_CODEC, TransportView::destinationName,
+				ByteBufCodecs.VAR_INT, TransportView::dx,
+				ByteBufCodecs.VAR_INT, TransportView::dz,
+				ByteBufCodecs.VAR_INT, TransportView::distance,
+				ByteBufCodecs.VAR_LONG, TransportView::deposit,
+				TransportView::new);
+
+		static Optional<TransportView> of(MarketRegistry registry, Market source, Request request) {
+			if (request.transport().isEmpty()) return Optional.empty();
+			Market destination = registry.get(request.transport().get().destination());
+			if (destination == null) return Optional.empty();
+			boolean sameDimension = source.dimension().equals(destination.dimension());
+			int ss = !sameDimension && source.dimension().equals(Level.NETHER) ? 8 : 1;
+			int sd = !sameDimension && destination.dimension().equals(Level.NETHER) ? 8 : 1;
+			int dx = destination.center().getX() * sd - source.center().getX() * ss;
+			int dz = destination.center().getZ() * sd - source.center().getZ() * ss;
+			return Optional.of(new TransportView(MarketNames.name(destination), dx, dz,
+					(int) Math.round(MarketRegistry.linkedDistance(source, destination)), request.transport().get().deposit()));
+		}
 	}
 
 	/**
@@ -169,11 +207,12 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 					List.copyOf(state.history())));
 		});
 		List<RequestView> requests = new ArrayList<>();
+		MarketRegistry registry = MarketRegistry.get(player.level().getServer());
 		for (Request r : market.requests()) {
 			GoodsDefinition def = GoodsCatalog.get(r.goods());
 			if (def == null) continue;
 			requests.add(new RequestView(r.withReward(Reputation.reward(market, uuid, r, gameTime)), def.item(), r.accepted().contains(uuid),
-					!Reputation.canDeliver(market, uuid, r, gameTime)));
+					!Reputation.canDeliver(market, uuid, r, gameTime), TransportView.of(registry, market, r)));
 		}
 		TradeExpansionConfig.Reputation rc = TradeExpansionConfig.get().reputation;
 		int level = Reputation.level(market, uuid, gameTime);

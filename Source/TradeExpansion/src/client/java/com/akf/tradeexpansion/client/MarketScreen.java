@@ -22,6 +22,9 @@ import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.RequestView;
 import com.akf.tradeexpansion.network.QuestAcceptC2S;
+import com.akf.tradeexpansion.network.CargoDeliverC2S;
+import com.akf.tradeexpansion.network.MarketSnapshotS2C.TransportView;
+import com.akf.tradeexpansion.quest.Cargo;
 import com.akf.tradeexpansion.client.map.MapWaypoints;
 import com.akf.tradeexpansion.network.SellAllC2S;
 import com.akf.tradeexpansion.config.ConfigManager;
@@ -131,6 +134,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button confirmButton;
 	private Button deliverButton;
 	private Button acceptButton;
+	/** J-2 (v0.35): delivers the cargo crates for this market. */
+	private Button cargoButton;
 	/** I (v0.34): adds the market shown on the board to the map (JourneyMap) or writes its coordinates to the chat. */
 	private Button mapButton;
 	private Button sellAllButton;
@@ -243,6 +248,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// M (v0.29): accepting a request gives more reputation when delivered, and costs some if it expires.
 		acceptButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.accept"), b -> accept())
 				.bounds(x + panelX, y + 102, PANEL_W, 14).build());
+		cargoButton = addRenderableWidget(Button.builder(Component.empty(), b -> deliverCargo())
+				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		mapButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map"), b -> addToMap())
 				.bounds(x + panelX, y + 104, PANEL_W, 14).build());
 		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
@@ -315,8 +322,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	public void onQuestResult(QuestResultS2C result) {
 		pending = false;
 		if (result.result() == TradeResult.SUCCESS) {
-			setStatus(Component.translatable("screen.ak_trade_expansion.quest.delivered", CoinItem.formatCopper(result.reward())), true);
-			selectedRequest = -1;
+			String amount = CoinItem.formatCopper(result.amount());
+			setStatus(switch (result.kind()) {
+				case DELIVER -> Component.translatable("screen.ak_trade_expansion.quest.delivered", amount);
+				case TAKE_CARGO -> Component.translatable("screen.ak_trade_expansion.quest.cargo.taken", amount);
+				case DELIVER_CARGO -> Component.translatable("screen.ak_trade_expansion.quest.cargo.delivered", result.count(), amount);
+			}, true);
+			if (result.kind() == QuestResultS2C.Kind.DELIVER) selectedRequest = -1;
 		} else {
 			setStatus(Component.translatable(result.result().translationKey()), false);
 		}
@@ -494,8 +506,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	private void accept() {
 		RequestView r = selectedRequestView();
-		if (r == null || r.accepted()) return;
-		ClientPlayNetworking.send(new QuestAcceptC2S(menu.marketId(), r.request().id()));
+		if (r == null || r.accepted() || pending) return;
+		// J-2: taking a cargo crate is answered with a result; plain accepting is not.
+		if (r.transport().isPresent()) pending = true;
+		ClientPlayNetworking.send(new QuestAcceptC2S(menu.marketId(), r.request().id(), useCard()));
+		updateButtons();
+	}
+
+	/** J-2: delivers every cargo crate for this market. */
+	private void deliverCargo() {
+		if (pending) return;
+		pending = true;
+		ClientPlayNetworking.send(new CargoDeliverC2S(menu.marketId(), useCard()));
+		updateButtons();
 	}
 
 	private void deliver() {
@@ -523,12 +546,21 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 		RequestView r = selectedRequestView();
 		Player player = player();
-		deliverButton.visible = tab == Tab.QUEST;
+		boolean transport = r != null && r.transport().isPresent();
+		deliverButton.visible = tab == Tab.QUEST && !transport;
 		deliverButton.active = !pending && r != null && player != null && !r.locked()
 				&& InventoryUtil.count(player, InventoryUtil.Match.plain(BuiltInRegistries.ITEM.getValue(r.item())), menu.sellSlot()) >= r.request().quantity();
-		acceptButton.visible = tab == Tab.QUEST && r != null && !r.locked() && snapshot != null && snapshot.reputation().enabled();
-		acceptButton.active = r != null && !r.accepted();
-		acceptButton.setMessage(Component.translatable(r != null && r.accepted() ? "screen.ak_trade_expansion.quest.accepted" : "screen.ak_trade_expansion.quest.accept"));
+		// J-2: on a transport request the button takes the cargo crate (unless another player already took it).
+		acceptButton.visible = tab == Tab.QUEST && r != null && !r.locked()
+				&& (transport ? !r.request().taken() || r.accepted() : snapshot != null && snapshot.reputation().enabled());
+		acceptButton.active = r != null && !r.accepted() && !pending;
+		acceptButton.setMessage(Component.translatable(transport
+				? (r.accepted() ? "screen.ak_trade_expansion.quest.cargo.took" : "screen.ak_trade_expansion.quest.cargo.take")
+				: (r != null && r.accepted() ? "screen.ak_trade_expansion.quest.accepted" : "screen.ak_trade_expansion.quest.accept")));
+		int crates = player == null ? 0 : Cargo.slotsFor(player, menu.marketId()).size();
+		cargoButton.visible = tab == Tab.QUEST && crates > 0;
+		cargoButton.active = !pending;
+		cargoButton.setMessage(Component.translatable("screen.ak_trade_expansion.quest.cargo.deliver", crates));
 		boardBackButton.visible = tab == Tab.BOARD && boardMarket >= 0;
 		mapButton.visible = tab == Tab.BOARD && boardMarket >= 0;
 		mapButton.setMessage(Component.translatable(MapWaypoints.journeyMapReady() ? "screen.ak_trade_expansion.board.map.journeymap" : "screen.ak_trade_expansion.board.map"));
@@ -1190,11 +1222,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			if (r.request().id() == selectedRequest) g.fill(rx, y, rx + listW, y + ROW_H, 0xFF6F6F9F);
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(r.item()));
 			g.item(stack, rx + 2, y + 1);
-			fitText(g, stack.getHoverName().getString() + " ×" + r.request().quantity(), rx + 20, y + 5, 100 + wide, COLOR_WHITE, true);
+			String label = stack.getHoverName().getString() + " ×" + r.request().quantity();
+			if (r.transport().isPresent()) label += " → " + r.transport().get().destinationName().getString(); // J-2
+			boolean othersCargo = r.request().taken() && !r.accepted(); // J-2: another player carries it
+			fitText(g, label, rx + 20, y + 5, 100 + wide, othersCargo ? COLOR_GRAY : COLOR_WHITE, true);
 			g.text(font, "★".repeat(r.request().difficulty()), rx + 132 + wide, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
 			if (r.accepted()) g.text(font, "✔", rx + 124 + wide, y + 5, COLOR_GREEN);
-			String reward = CoinItem.formatCopper(r.request().reward());
-			g.text(font, reward, rx + listW - 8 - font.width(reward), y + 5, COLOR_GOLD);
+			String reward = othersCargo ? Component.translatable("screen.ak_trade_expansion.quest.cargo.carrying").getString()
+					: CoinItem.formatCopper(r.request().reward());
+			g.text(font, reward, rx + listW - 8 - font.width(reward), y + 5, othersCargo ? COLOR_GRAY : COLOR_GOLD);
 			if (mouseX >= rx + 2 && mouseX < rx + 18 && mouseY >= y && mouseY < y + ROW_H) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		}
 	}
@@ -1208,6 +1244,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(r.item()));
 		g.item(stack, px, y + 36);
 		g.text(font, "×" + r.request().quantity(), px + 18, y + 40, COLOR_TEXT, false);
+		if (r.transport().isPresent()) {
+			extractTransportPanel(g, px, y, r, r.transport().get());
+			return;
+		}
 		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.reward", CoinItem.formatCopper(r.request().reward())), px, y + 60, COLOR_TEXT, false);
 		long minutes = 0;
 		if (minecraft != null && minecraft.level != null) {
@@ -1222,6 +1262,29 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			// M: 3-star requests need reputation.hardQuestLevel.
 			int needed = snapshot.reputation().hardQuestLevel();
 			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 104, PANEL_W, COLOR_WARNING, false);
+		}
+	}
+
+	/** J-2 (v0.35): destination, direction / distance, reward, deposit and time left of a transport request. */
+	private void extractTransportPanel(GuiGraphicsExtractor g, int px, int y, RequestView r, TransportView t) {
+		fitText(g, "→ " + t.destinationName().getString(), px, y + 53, PANEL_W, COLOR_TEXT, false);
+		fitText(g, Component.translatable("screen.ak_trade_expansion.quest.cargo.where", direction(t.dx(), t.dz()), t.distance()).getString(),
+				px, y + 63, PANEL_W, COLOR_TEXT, false);
+		fitText(g, Component.translatable("screen.ak_trade_expansion.quest.reward", CoinItem.formatCopper(r.request().reward())).getString(),
+				px, y + 73, PANEL_W, COLOR_TEXT, false);
+		fitText(g, Component.translatable("screen.ak_trade_expansion.quest.cargo.deposit", CoinItem.formatCopper(t.deposit())).getString(),
+				px, y + 83, PANEL_W, COLOR_TEXT, false);
+		long minutes = 0;
+		if (minecraft != null && minecraft.level != null) {
+			long left = r.request().deadline() - MarketClock.now(minecraft.level);
+			minutes = Math.max(0, (long) Math.ceil(left / (double) PriceModel.TICKS_PER_DAY * 20));
+		}
+		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.time_left", minutes), px, y + 93, COLOR_TEXT, false);
+		if (r.locked() && snapshot != null) {
+			int needed = snapshot.reputation().hardQuestLevel();
+			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 104, PANEL_W, COLOR_WARNING, false);
+		} else if (r.request().taken() && !r.accepted()) {
+			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.cargo.carrying").getString(), px, y + 104, PANEL_W, COLOR_GRAY, false);
 		}
 	}
 

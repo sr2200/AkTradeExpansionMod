@@ -199,6 +199,13 @@ public final class ConfigScreen {
 			village.option(intField("quest.difficultyThresholds." + i, d.quest.difficultyThresholds.get(i),
 					() -> quest.difficultyThresholds.get(index), v -> quest.difficultyThresholds.set(index, v), 0, 1_000_000_000));
 		}
+		// J-2 (v0.35): transport requests
+		village.option(intField("quest.transportPerMarket", d.quest.transportPerMarket, () -> quest.transportPerMarket, v -> quest.transportPerMarket = v, 0, 5))
+				.option(doubleField("quest.transportMinDistance", d.quest.transportMinDistance, () -> quest.transportMinDistance, v -> quest.transportMinDistance = v, 0, 100_000))
+				.option(doubleField("quest.transportMaxDistance", d.quest.transportMaxDistance, () -> quest.transportMaxDistance, v -> quest.transportMaxDistance = v, 0, 100_000))
+				.option(doubleField("quest.transportBaseMultiplier", d.quest.transportBaseMultiplier, () -> quest.transportBaseMultiplier, v -> quest.transportBaseMultiplier = v, 0, 10))
+				.option(doubleField("quest.transportPerThousandBlocks", d.quest.transportPerThousandBlocks, () -> quest.transportPerThousandBlocks, v -> quest.transportPerThousandBlocks = v, 0, 10))
+				.option(doubleField("quest.transportMaxMultiplier", d.quest.transportMaxMultiplier, () -> quest.transportMaxMultiplier, v -> quest.transportMaxMultiplier = v, 0, 10));
 		village.option(intField("demand.maxShortages", d.demand.maxShortages, () -> demand.maxShortages, v -> demand.maxShortages = v, 0, 10))
 				.option(doubleField("demand.durationDays", d.demand.durationDays, () -> demand.durationDays, v -> demand.durationDays = v, 0.5, 30))
 				.option(doubleField("demand.minMultiplier", d.demand.minMultiplier, () -> demand.minMultiplier, v -> demand.minMultiplier = v, 1, 5))

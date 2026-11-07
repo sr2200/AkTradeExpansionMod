@@ -27,6 +27,15 @@ class QuestMathTest {
 	}
 
 	@Test
+	void transportMultiplierGrowsWithDistanceUpToTheCap() {
+		assertEquals(0.2, QuestMath.transportMultiplier(0, 0.2, 0.8, 2.0), 1e-12);
+		assertEquals(0.44, QuestMath.transportMultiplier(300, 0.2, 0.8, 2.0), 1e-12);
+		assertEquals(1.0, QuestMath.transportMultiplier(1000, 0.2, 0.8, 2.0), 1e-12);
+		assertEquals(2.0, QuestMath.transportMultiplier(5000, 0.2, 0.8, 2.0), 1e-12); // capped
+		assertEquals(0.2, QuestMath.transportMultiplier(-50, 0.2, 0.8, 2.0), 1e-12); // negative distance counts as 0
+	}
+
+	@Test
 	void periods() {
 		assertEquals(0, QuestMath.period(0, 3));
 		assertEquals(0, QuestMath.period(71_999, 3));

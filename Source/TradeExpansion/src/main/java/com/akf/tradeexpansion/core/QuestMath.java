@@ -32,4 +32,12 @@ public final class QuestMath {
 	public static double shortageMultiplier(double fraction, double min, double max) {
 		return min + (max - min) * fraction;
 	}
+
+	/**
+	 * J-2 (v0.35): reward multiplier of a transport request: {@code base + perThousand × distance / 1000}, at most {@code max}
+	 * (never below 0). The reward is the goods' value × this; the deposit (the goods' value) is paid back on top.
+	 */
+	public static double transportMultiplier(double distance, double base, double perThousand, double max) {
+		return Math.max(0, Math.min(max, base + perThousand * Math.max(0, distance) / 1000.0));
+	}
 }

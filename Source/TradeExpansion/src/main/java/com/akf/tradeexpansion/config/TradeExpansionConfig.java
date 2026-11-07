@@ -670,16 +670,33 @@ public final class TradeExpansionConfig {
 		public double durationDays = 3.0;
 		public List<Double> rewardMultipliers = new ArrayList<>(List.of(1.2, 1.5, 2.0));
 		public List<Integer> difficultyThresholds = new ArrayList<>(List.of(200, 1000));
+		/** J-2 (v0.35): transport requests per market, on top of maxPerMarket (0 = none). */
+		public int transportPerMarket = 1;
+		/** J-2: the destination is another market this far away (blocks, Nether ×8 when linked). */
+		public double transportMinDistance = 300;
+		public double transportMaxDistance = 2000;
+		/** J-2: reward = goods' value × min(max, base + perThousandBlocks × distance / 1000); the deposit comes back too. */
+		public double transportBaseMultiplier = 0.2;
+		public double transportPerThousandBlocks = 0.8;
+		public double transportMaxMultiplier = 2.0;
 
 		public Quest() {
 		}
 
-		Quest(int maxPerMarket, double refreshDays, double durationDays, List<Double> rewardMultipliers, List<Integer> difficultyThresholds) {
+		Quest(int maxPerMarket, double refreshDays, double durationDays, List<Double> rewardMultipliers, List<Integer> difficultyThresholds,
+				int transportPerMarket, double transportMinDistance, double transportMaxDistance, double transportBaseMultiplier,
+				double transportPerThousandBlocks, double transportMaxMultiplier) {
 			this.maxPerMarket = maxPerMarket;
 			this.refreshDays = refreshDays;
 			this.durationDays = durationDays;
 			this.rewardMultipliers = new ArrayList<>(rewardMultipliers);
 			this.difficultyThresholds = new ArrayList<>(difficultyThresholds);
+			this.transportPerMarket = transportPerMarket;
+			this.transportMinDistance = transportMinDistance;
+			this.transportMaxDistance = transportMaxDistance;
+			this.transportBaseMultiplier = transportBaseMultiplier;
+			this.transportPerThousandBlocks = transportPerThousandBlocks;
+			this.transportMaxMultiplier = transportMaxMultiplier;
 		}
 
 		static final Codec<Quest> CODEC = RecordCodecBuilder.create(i -> {
@@ -689,7 +706,13 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("refreshDays").orElse(d.refreshDays).forGetter(c -> c.refreshDays),
 					Codec.DOUBLE.fieldOf("durationDays").orElse(d.durationDays).forGetter(c -> c.durationDays),
 					Codec.DOUBLE.listOf().fieldOf("rewardMultipliers").orElse(d.rewardMultipliers).forGetter(c -> c.rewardMultipliers),
-					Codec.INT.listOf().fieldOf("difficultyThresholds").orElse(d.difficultyThresholds).forGetter(c -> c.difficultyThresholds)
+					Codec.INT.listOf().fieldOf("difficultyThresholds").orElse(d.difficultyThresholds).forGetter(c -> c.difficultyThresholds),
+					Codec.INT.fieldOf("transportPerMarket").orElse(d.transportPerMarket).forGetter(c -> c.transportPerMarket),
+					Codec.DOUBLE.fieldOf("transportMinDistance").orElse(d.transportMinDistance).forGetter(c -> c.transportMinDistance),
+					Codec.DOUBLE.fieldOf("transportMaxDistance").orElse(d.transportMaxDistance).forGetter(c -> c.transportMaxDistance),
+					Codec.DOUBLE.fieldOf("transportBaseMultiplier").orElse(d.transportBaseMultiplier).forGetter(c -> c.transportBaseMultiplier),
+					Codec.DOUBLE.fieldOf("transportPerThousandBlocks").orElse(d.transportPerThousandBlocks).forGetter(c -> c.transportPerThousandBlocks),
+					Codec.DOUBLE.fieldOf("transportMaxMultiplier").orElse(d.transportMaxMultiplier).forGetter(c -> c.transportMaxMultiplier)
 			).apply(i, Quest::new);
 		});
 	}

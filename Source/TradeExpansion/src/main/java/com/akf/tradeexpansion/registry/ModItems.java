@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.currency.CoinType;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.item.BankCardItem;
+import com.akf.tradeexpansion.item.CargoCrateItem;
 import com.akf.tradeexpansion.item.EmeraldCoinItem;
 import com.akf.tradeexpansion.item.WalletItem;
 import net.minecraft.core.Registry;
@@ -31,6 +32,9 @@ public final class ModItems {
 	/** Wallet (E-6) and bank card (E-8). */
 	public static final WalletItem WALLET = register("wallet", WalletItem::new, 1);
 	public static final BankCardItem BANK_CARD = register("bank_card", BankCardItem::new, 1);
+
+	/** J-2 (v0.35): a transport request's goods, carried from one market to another. Not craftable, cannot be opened. */
+	public static final CargoCrateItem CARGO_CRATE = register("cargo_crate", CargoCrateItem::new, 1);
 
 	private ModItems() {
 	}
