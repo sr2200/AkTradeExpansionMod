@@ -72,6 +72,7 @@ public final class FacilityBuilder {
 			if (server.getTickCount() % TICK_INTERVAL == 0) tick(server);
 		});
 		MarkerPreview.register(); // N-5 (v0.41): outlines at building site stakes
+		ConstructionEffects.register(); // N-5 (v0.44): sites under construction show it
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
 			if (player.isCreative() || !(level instanceof ServerLevel serverLevel) || !isProtected(serverLevel, pos)) return true;
 			player.sendOverlayMessage(Component.translatable("message.ak_trade_expansion.facility.protected").withStyle(ChatFormatting.RED));

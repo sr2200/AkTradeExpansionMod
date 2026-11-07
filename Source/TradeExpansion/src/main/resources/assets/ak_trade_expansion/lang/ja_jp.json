@@ -701,5 +701,7 @@
   "config.ak_trade_expansion.development.requireMaterials": "資材を建てる条件にする",
   "config.ak_trade_expansion.development.requireMaterials.desc": "ON にすると、ほしい資材を全部寄付するまで建物を建てられない。OFF なら資材は発展度を稼ぐ手段だけ",
   "config.ak_trade_expansion.development.materialCountMultiplier": "資材の数の倍率",
-  "config.ak_trade_expansion.development.materialCountMultiplier.desc": "建物のデータに書かれた資材の数にこの値を掛けた数が必要になる（4.0 で4倍。端数は切り上げ）"
+  "config.ak_trade_expansion.development.materialCountMultiplier.desc": "建物のデータに書かれた資材の数にこの値を掛けた数が必要になる（4.0 で4倍。端数は切り上げ）",
+  "config.ak_trade_expansion.development.constructionEffects": "工事中の演出",
+  "config.ak_trade_expansion.development.constructionEffects.desc": "建設中の場所に、オレンジの点線の枠・木くずのパーティクル・小さな作業の音を出す（近くのプレイヤー全員に見える・聞こえる）"
 }

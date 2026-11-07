@@ -269,6 +269,7 @@ public final class ConfigScreen {
 				.option(intField("development.siteSearchLimit", dd.siteSearchLimit, () -> dev.siteSearchLimit, v -> dev.siteSearchLimit = v, 16, 4096))
 				.option(doubleField("development.rebuildCostRatio", dd.rebuildCostRatio, () -> dev.rebuildCostRatio, v -> dev.rebuildCostRatio = v, 0, 1))
 				.option(bool("development.protectFacilities", dd.protectFacilities, () -> dev.protectFacilities, v -> dev.protectFacilities = v))
+				.option(bool("development.constructionEffects", dd.constructionEffects, () -> dev.constructionEffects, v -> dev.constructionEffects = v))
 				.option(doubleField("development.warehouseStockMultiplier", dd.warehouseStockMultiplier, () -> dev.warehouseStockMultiplier, v -> dev.warehouseStockMultiplier = v, 1, 10))
 				.option(doubleField("development.warehouseRestockMultiplier", dd.warehouseRestockMultiplier, () -> dev.warehouseRestockMultiplier, v -> dev.warehouseRestockMultiplier = v, 1, 10))
 				.option(intField("development.questHallExtraQuests", dd.questHallExtraQuests, () -> dev.questHallExtraQuests, v -> dev.questHallExtraQuests = v, 0, 10))
