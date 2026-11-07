@@ -72,15 +72,20 @@ public final class QuestService {
 		if (market.lastRequestRefresh() != Long.MIN_VALUE && now - market.lastRequestRefresh() < interval) return changed;
 		market.setLastRequestRefresh(now);
 		Random random = new Random(MarketFactory.seed(level, market.center()) ^ now);
-		while (market.requests().stream().filter(r -> !r.isTransport()).count() < config.maxPerMarket) {
+		// N-4: a request hall adds slots.
+		boolean hall = market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.QUEST_HALL);
+		TradeExpansionConfig.Development dev = TradeExpansionConfig.get().development;
+		int maxRequests = config.maxPerMarket + (hall ? dev.questHallExtraQuests : 0);
+		int maxTransport = config.transportPerMarket + (hall ? dev.questHallExtraTransport : 0);
+		while (market.requests().stream().filter(r -> !r.isTransport()).count() < maxRequests) {
 			Request request = create(market, random, now);
 			if (request == null) break;
 			market.requests().add(request);
 			changed = true;
 		}
-		if (config.transportPerMarket > 0) {
+		if (maxTransport > 0) {
 			MarketRegistry registry = MarketRegistry.get(level.getServer());
-			while (market.requests().stream().filter(Request::isTransport).count() < config.transportPerMarket) {
+			while (market.requests().stream().filter(Request::isTransport).count() < maxTransport) {
 				Request request = createTransport(registry, market, random, now);
 				if (request == null) break;
 				market.requests().add(request);
@@ -231,7 +236,7 @@ public final class QuestService {
 			result = TradeResult.REPUTATION_TOO_LOW; // M: 3-star requests need reputation.hardQuestLevel
 		} else {
 			BankAccounts bank = BankService.accounts(player);
-			long charge = card ? BankService.cardCharge(deposit) : deposit;
+			long charge = card ? BankService.cardCharge(market, deposit) : deposit; // N-4: no fee with a bank building
 			boolean affordable = card ? bank.balance(player.getUUID()) >= charge : WalletService.canPay(player, deposit);
 			if (!affordable) {
 				result = TradeResult.INSUFFICIENT_FUNDS;

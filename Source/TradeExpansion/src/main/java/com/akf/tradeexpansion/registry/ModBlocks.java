@@ -1,7 +1,10 @@
 package com.akf.tradeexpansion.registry;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.block.ConstructionMarkerBlock;
+import com.akf.tradeexpansion.block.FacilitySignBlock;
 import com.akf.tradeexpansion.block.MarketStallBlock;
+import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -22,7 +25,32 @@ public final class ModBlocks {
 					.sound(SoundType.WOOD)
 					.noOcclusion()));
 
+	/** N-4: core of a facility building / construction sign. Not obtainable as an item; cannot be pushed; drops nothing. */
+	public static final FacilitySignBlock FACILITY_SIGN = registerBlock("facility_sign",
+			new FacilitySignBlock(BlockBehaviour.Properties.of()
+					.setId(blockKey("facility_sign"))
+					.mapColor(MapColor.WOOD)
+					.strength(2.0f, 6.0f)
+					.sound(SoundType.WOOD)
+					.pushReaction(PushReaction.IMMOVEABLE)
+					.noOcclusion()
+					.noLootTable()));
+
+	/** N-5: building site stake, given on the development tab. */
+	public static final ConstructionMarkerBlock CONSTRUCTION_MARKER = register("construction_marker",
+			new ConstructionMarkerBlock(BlockBehaviour.Properties.of()
+					.setId(blockKey("construction_marker"))
+					.mapColor(MapColor.WOOD)
+					.instabreak()
+					.sound(SoundType.WOOD)
+					.noOcclusion()
+					.pushReaction(PushReaction.POPPED)));
+
 	private ModBlocks() {
+	}
+
+	private static <T extends Block> T registerBlock(String name, T block) {
+		return Registry.register(BuiltInRegistries.BLOCK, blockKey(name), block);
 	}
 
 	private static ResourceKey<Block> blockKey(String name) {

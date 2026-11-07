@@ -39,6 +39,19 @@ class DevelopmentMathTest {
 	}
 
 	@Test
+	void siteOffsetsNearestFirstWithinTheRadius() {
+		java.util.List<int[]> offsets = DevelopmentMath.siteOffsets(4, 2, 1000);
+		assertEquals(12, offsets.size()); // (±2,0) (0,±2) (±2,±2) (±4,0) (0,±4); (±4,±2) is outside
+		assertEquals(2, Math.abs(offsets.get(0)[0]) + Math.abs(offsets.get(0)[1]));
+		for (int i = 1; i < offsets.size(); i++) {
+			int[] a = offsets.get(i - 1), b = offsets.get(i);
+			org.junit.jupiter.api.Assertions.assertTrue(a[0] * a[0] + a[1] * a[1] <= b[0] * b[0] + b[1] * b[1]);
+		}
+		assertEquals(3, DevelopmentMath.siteOffsets(32, 2, 3).size());
+		org.junit.jupiter.api.Assertions.assertTrue(offsets.stream().noneMatch(o -> o[0] == 0 && o[1] == 0));
+	}
+
+	@Test
 	void rebuildCostsAShare() {
 		assertEquals(2500, DevelopmentMath.cost(2500, false, 0.5));
 		assertEquals(1250, DevelopmentMath.cost(2500, true, 0.5));

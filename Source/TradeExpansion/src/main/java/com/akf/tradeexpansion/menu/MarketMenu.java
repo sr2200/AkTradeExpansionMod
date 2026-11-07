@@ -35,22 +35,29 @@ public class MarketMenu extends AbstractContainerMenu {
 	 * Sent to the client when the menu opens (Extended Menu Type).
 	 *
 	 * @param traderId entity id of the trader NPC the screen was opened from (A-5), or {@code -1} for a stall
+	 * @param tab      tab to show first (N-4, v0.38: a facility's sign opens its tab), empty for the buy tab
 	 */
-	public record OpenData(long marketId, BlockPos stallPos, int traderId) {
+	public record OpenData(long marketId, BlockPos stallPos, int traderId, String tab) {
 		public static final StreamCodec<RegistryFriendlyByteBuf, OpenData> STREAM_CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_LONG, OpenData::marketId,
 				BlockPos.STREAM_CODEC, OpenData::stallPos,
 				ByteBufCodecs.VAR_INT, OpenData::traderId,
+				ByteBufCodecs.STRING_UTF8, OpenData::tab,
 				OpenData::new);
 
 		public OpenData(long marketId, BlockPos stallPos) {
-			this(marketId, stallPos, -1);
+			this(marketId, stallPos, -1, "");
+		}
+
+		public OpenData(long marketId, BlockPos stallPos, int traderId) {
+			this(marketId, stallPos, traderId, "");
 		}
 	}
 
 	private final long marketId;
 	private final BlockPos stallPos;
 	private final int traderId;
+	private final String initialTab;
 	private final SimpleContainer sellSlot = new SimpleContainer(1);
 	private final int sellSlotIndex;
 	private final MarketLayout layout;
@@ -60,6 +67,7 @@ public class MarketMenu extends AbstractContainerMenu {
 		this.marketId = data.marketId();
 		this.stallPos = data.stallPos();
 		this.traderId = data.traderId();
+		this.initialTab = data.tab();
 		this.layout = inventory.player.level().isClientSide() ? clientLayout.get() : MarketLayout.DEFAULT;
 		this.sellSlotIndex = slots.size();
 		addSlot(new Slot(sellSlot, 0, layout.sellSlotX(), layout.sellSlotY()) {
@@ -83,6 +91,11 @@ public class MarketMenu extends AbstractContainerMenu {
 
 	public BlockPos stallPos() {
 		return stallPos;
+	}
+
+	/** N-4: tab key to open first, empty for the default. */
+	public String initialTab() {
+		return initialTab;
 	}
 
 	/** The sell slot container (A-4 操作2), used before the inventory when selling. */
@@ -126,7 +139,8 @@ public class MarketMenu extends AbstractContainerMenu {
 			Entity trader = player.level().getEntity(traderId);
 			return trader instanceof TraderEntity && trader.isAlive() && player.distanceToSqr(trader) <= max * max;
 		}
-		return player.level().getBlockState(stallPos).is(ModBlocks.MARKET_STALL)
+		// N-4: a facility's sign opens the screen like a stall.
+		return (player.level().getBlockState(stallPos).is(ModBlocks.MARKET_STALL) || player.level().getBlockState(stallPos).is(ModBlocks.FACILITY_SIGN))
 				&& player.distanceToSqr(Vec3.atCenterOf(stallPos)) <= max * max;
 	}
 }

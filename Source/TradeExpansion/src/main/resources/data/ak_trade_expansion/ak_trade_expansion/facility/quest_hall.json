@@ -1,0 +1,23 @@
+{
+  "kind": "quest_hall",
+  "order": 1,
+  "icon": "minecraft:writable_book",
+  "cost": 1500,
+  "structure": "quest_hall",
+  "wanted": [
+    {
+      "tag": "minecraft:planks",
+      "count": 64,
+      "value": 1
+    },
+    {
+      "item": "minecraft:paper",
+      "count": 32,
+      "value": 2
+    },
+    {
+      "item": "minecraft:book",
+      "count": 8
+    }
+  ]
+}

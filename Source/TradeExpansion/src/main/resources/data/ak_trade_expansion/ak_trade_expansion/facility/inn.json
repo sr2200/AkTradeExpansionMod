@@ -1,0 +1,23 @@
+{
+  "kind": "inn",
+  "order": 3,
+  "icon": "minecraft:red_bed",
+  "cost": 2500,
+  "structure": "inn",
+  "wanted": [
+    {
+      "tag": "minecraft:logs",
+      "count": 48,
+      "value": 4
+    },
+    {
+      "tag": "minecraft:wool",
+      "count": 24,
+      "value": 6
+    },
+    {
+      "item": "minecraft:glass",
+      "count": 32
+    }
+  ]
+}

@@ -9,6 +9,8 @@ import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.data.MarketProfile;
 import com.akf.tradeexpansion.data.MarketProfiles;
+import com.akf.tradeexpansion.development.Facility;
+import com.akf.tradeexpansion.development.FacilityKind;
 import com.akf.tradeexpansion.quest.Request;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
@@ -103,7 +105,8 @@ public final class Market {
 	 * and the specials shown only to players with a good reputation (v0.29), development (v0.36).
 	 */
 	private record Assortment(List<Shelved> shelved, List<Identifier> specials, long specialDay, List<Standing> reputation,
-			List<Identifier> bonusSpecials, double development, long developmentSince, List<Contributor> contributors) {
+			List<Identifier> bonusSpecials, double development, long developmentSince, List<Contributor> contributors,
+			List<Facility> facilities, Map<Identifier, Map<String, Integer>> donations, List<BlockPos> markers, int measuredLevel) {
 		static final MapCodec<Assortment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Shelved.CODEC.listOf().optionalFieldOf("shelved", List.of()).forGetter(Assortment::shelved),
 				Identifier.CODEC.listOf().optionalFieldOf("specials", List.of()).forGetter(Assortment::specials),
@@ -112,7 +115,12 @@ public final class Market {
 				Identifier.CODEC.listOf().optionalFieldOf("bonus_specials", List.of()).forGetter(Assortment::bonusSpecials),
 				Codec.DOUBLE.optionalFieldOf("development", 0.0).forGetter(Assortment::development),
 				Codec.LONG.optionalFieldOf("development_since", Long.MIN_VALUE).forGetter(Assortment::developmentSince),
-				Contributor.CODEC.listOf().optionalFieldOf("contributors", List.of()).forGetter(Assortment::contributors)
+				Contributor.CODEC.listOf().optionalFieldOf("contributors", List.of()).forGetter(Assortment::contributors),
+				Facility.CODEC.listOf().optionalFieldOf("facilities", List.of()).forGetter(Assortment::facilities),
+				Codec.unboundedMap(Identifier.CODEC, Codec.unboundedMap(Codec.STRING, Codec.INT))
+						.optionalFieldOf("facility_donations", Map.of()).forGetter(Assortment::donations),
+				BlockPos.CODEC.listOf().optionalFieldOf("markers", List.of()).forGetter(Assortment::markers),
+				Codec.INT.optionalFieldOf("measured_level", 0).forGetter(Assortment::measuredLevel)
 		).apply(i, Assortment::new));
 	}
 
@@ -147,10 +155,15 @@ public final class Market {
 		m.development = a.development();
 		m.developmentSince = a.developmentSince();
 		a.contributors().forEach(c -> m.contributors.put(c.player(), c));
+		a.facilities().forEach(f -> m.facilities.put(f.id(), f));
+		a.donations().forEach((id, counts) -> m.donations.put(id, new LinkedHashMap<>(counts)));
+		a.markers().forEach(p -> m.markers.add(p.immutable()));
+		m.measuredLevel = a.measuredLevel() > 0 ? a.measuredLevel() : m.level; // markets saved before v0.38: no bonus yet
 		return m;
 	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
-			List.copyOf(m.contributors.values())))).codec();
+			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
+			m.measuredLevel))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -186,6 +199,14 @@ public final class Market {
 	private double development;
 	private long developmentSince = Long.MIN_VALUE;
 	private final Map<UUID, Contributor> contributors = new LinkedHashMap<>();
+	/** N-4 (v0.38): facilities under construction, completed or destroyed, by facility id. */
+	private final Map<Identifier, Facility> facilities = new LinkedHashMap<>();
+	/** N-2: materials donated per facility id and wanted key (item id or #tag), reset when the facility is completed. */
+	private final Map<Identifier, Map<String, Integer>> donations = new LinkedHashMap<>();
+	/** N-5: building site stakes placed near the market, oldest first. */
+	private final List<BlockPos> markers = new ArrayList<>();
+	/** D-4 / N-3: the level measured from beds and villagers, before the facility bonus. */
+	private int measuredLevel = MarketLevel.MIN_LEVEL;
 
 	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
 			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods,
@@ -430,6 +451,46 @@ public final class Market {
 		this.developmentSince = since;
 	}
 
+	/** N-4: facilities by id (mutable; callers mark the registry dirty). */
+	public Map<Identifier, Facility> facilities() {
+		return facilities;
+	}
+
+	/** N-4: a completed facility of this kind (its effect is on). */
+	public boolean hasFacility(FacilityKind kind) {
+		for (Facility f : facilities.values()) {
+			if (f.kind() == kind && f.complete()) return true;
+		}
+		return false;
+	}
+
+	public int completedFacilities() {
+		return (int) facilities.values().stream().filter(Facility::complete).count();
+	}
+
+	/** N-2: donated counts of one facility (mutable). */
+	public Map<String, Integer> donations(Identifier facility) {
+		return donations.computeIfAbsent(facility, k -> new LinkedHashMap<>());
+	}
+
+	public void clearDonations(Identifier facility) {
+		donations.remove(facility);
+	}
+
+	/** N-5: building site stakes (mutable). */
+	public List<BlockPos> markers() {
+		return markers;
+	}
+
+	/** D-4: the level from beds and villagers alone; {@link #level()} adds the facility bonus (N-3). */
+	public int measuredLevel() {
+		return measuredLevel;
+	}
+
+	public void setMeasuredLevel(int measuredLevel) {
+		this.measuredLevel = measuredLevel;
+	}
+
 	/** N: contributors in the order they first contributed. */
 	public Map<UUID, Contributor> contributors() {
 		return contributors;
@@ -449,7 +510,16 @@ public final class Market {
 		if (state == null || def == null) return null;
 		double multiplier = profileMultiplier(goodsId, def) * shortages.getOrDefault(goodsId, 1.0); // K: shortage raises B
 		if (specials.contains(goodsId)) multiplier *= TradeExpansionConfig.get().market.specialPriceMultiplier; // D-5
-		return def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
+		GoodParams params = def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
+		return hasFacility(FacilityKind.WAREHOUSE) ? warehouse(params) : params;
+	}
+
+	/** N-4: a warehouse raises the stock cap Scap and the restock speed r (unlimited stock stays unlimited). */
+	private static GoodParams warehouse(GoodParams p) {
+		TradeExpansionConfig.Development c = TradeExpansionConfig.get().development;
+		double cap = p.maxStock() >= 1e9 ? p.maxStock() : Math.max(p.targetStock(), Math.floor(p.maxStock() * c.warehouseStockMultiplier));
+		return new GoodParams(p.basePrice(), p.elasticity(), p.spread(), p.targetStock(), cap, p.restockPerDay() * c.warehouseRestockMultiplier,
+				p.minMultiplier(), p.maxMultiplier(), p.consumePerDay(), p.halfLifeDays());
 	}
 
 	private double profileMultiplier(Identifier goodsId, GoodsDefinition def) {

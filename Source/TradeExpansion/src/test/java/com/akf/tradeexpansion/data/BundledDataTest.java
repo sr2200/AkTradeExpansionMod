@@ -41,6 +41,23 @@ class BundledDataTest {
 		return result;
 	}
 
+	/** N-4 (v0.38): the four facilities, one per kind, each with its structure in every style it falls back to. */
+	@Test
+	void facilitiesDecode() throws IOException {
+		Map<String, FacilityDefinition> facilities = decodeAll("facility", FacilityDefinition.CODEC);
+		assertEquals(4, facilities.size());
+		assertEquals(4, facilities.values().stream().map(FacilityDefinition::kind).distinct().count());
+		for (Map.Entry<String, FacilityDefinition> e : facilities.entrySet()) {
+			FacilityDefinition def = e.getValue();
+			assertTrue(def.cost() > 0, e.getKey());
+			assertFalse(def.wanted().isEmpty(), e.getKey());
+			def.wanted().forEach(w -> assertTrue(w.item().isPresent() != w.tag().isPresent(), e.getKey() + ": item or tag"));
+			assertTrue(Files.exists(Path.of("src/main/resources/data/ak_trade_expansion/structure/facility/plains/" + def.structure() + ".nbt")),
+					e.getKey() + ": plains structure");
+		}
+		assertEquals(2500, facilities.get("warehouse").cost());
+	}
+
 	@Test
 	void goodsDecode() throws IOException {
 		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);

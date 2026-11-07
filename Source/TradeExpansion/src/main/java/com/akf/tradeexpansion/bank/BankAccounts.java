@@ -29,6 +29,8 @@ public final class BankAccounts extends SavedData {
 		private int cardNumber;
 		private long interestSince;
 		private double interestFraction;
+		/** N-4 (v0.38): market whose bank building the account is registered with, -1 for none. */
+		private long bankFacility = -1;
 
 		Account(long balance, int cardNumber, long interestSince, double interestFraction) {
 			this.balance = balance;
@@ -46,13 +48,14 @@ public final class BankAccounts extends SavedData {
 		}
 	}
 
-	private record Entry(UUID uuid, long balance, int cardNumber, long interestSince, double interestFraction) {
+	private record Entry(UUID uuid, long balance, int cardNumber, long interestSince, double interestFraction, long bankFacility) {
 		static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
 				UUIDUtil.CODEC.fieldOf("uuid").forGetter(Entry::uuid),
 				Codec.LONG.fieldOf("balance").forGetter(Entry::balance),
 				Codec.INT.optionalFieldOf("card_number", 0).forGetter(Entry::cardNumber),
 				Codec.LONG.optionalFieldOf("interest_since", Long.MIN_VALUE).forGetter(Entry::interestSince),
-				Codec.DOUBLE.optionalFieldOf("interest_fraction", 0.0).forGetter(Entry::interestFraction)
+				Codec.DOUBLE.optionalFieldOf("interest_fraction", 0.0).forGetter(Entry::interestFraction),
+				Codec.LONG.optionalFieldOf("bank_facility", -1L).forGetter(Entry::bankFacility)
 		).apply(i, Entry::new));
 	}
 
@@ -68,12 +71,16 @@ public final class BankAccounts extends SavedData {
 	}
 
 	private BankAccounts(List<Entry> entries) {
-		entries.forEach(e -> accounts.put(e.uuid(), new Account(e.balance(), e.cardNumber(), e.interestSince(), e.interestFraction())));
+		entries.forEach(e -> {
+			Account a = new Account(e.balance(), e.cardNumber(), e.interestSince(), e.interestFraction());
+			a.bankFacility = e.bankFacility();
+			accounts.put(e.uuid(), a);
+		});
 	}
 
 	private List<Entry> entries() {
 		List<Entry> list = new ArrayList<>();
-		accounts.forEach((uuid, a) -> list.add(new Entry(uuid, a.balance, a.cardNumber, a.interestSince, a.interestFraction)));
+		accounts.forEach((uuid, a) -> list.add(new Entry(uuid, a.balance, a.cardNumber, a.interestSince, a.interestFraction, a.bankFacility)));
 		return list;
 	}
 
@@ -121,6 +128,19 @@ public final class BankAccounts extends SavedData {
 		a.interestFraction = total - whole;
 		a.balance = whole;
 		a.interestSince = now;
+		setDirty();
+	}
+
+	/** N-4: market whose bank building the account is registered with, or -1. */
+	public long bankFacility(UUID player) {
+		Account a = accounts.get(player);
+		return a == null ? -1 : a.bankFacility;
+	}
+
+	public void setBankFacility(UUID player, long marketId) {
+		Account a = accounts.get(player);
+		if (a == null || a.bankFacility == marketId) return;
+		a.bankFacility = marketId;
 		setDirty();
 	}
 

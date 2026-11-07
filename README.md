@@ -16,7 +16,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.1.2（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.1.3（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -148,10 +148,23 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 ### 村の発展
 
-村（市場）ごとに、みんなで貯める**発展度**があります。交易画面の「**発展**」タブで、今の発展度と、発展度を多く入れた人（上位5人）と自分の値が見られます。
+村（市場）ごとに、みんなで貯める**発展度**があります。発展度を使って村に**建物**を建てると、建物ごとの効果が付き、市場の規模も上がります。交易画面の「**発展**」タブで、発展度・建物・発展度を多く入れた人（マウスを乗せると上位5人）と自分の値が見られます。
 
-- **貯まる**：依頼を納める（報酬の半分。輸送依頼は依頼元と届け先の両方）、その市場で売り買いする（100c で 2）、「発展」タブでコインを寄付する（1c で 1。100c／1,000c／10,000c。カード払いなら口座から、手数料なし）
+- **貯まる**：依頼を納める（報酬の半分。輸送依頼は依頼元と届け先の両方）、その市場で売り買いする（100c で 2）、「発展」タブでコインを寄付する（1c で 1。100c／1,000c／10,000c。カード払いなら口座から、手数料なし）、建物の**資材**を寄付する（基準価格の1.5倍。建物を選んで「資材を寄付」。建物ごとに必要な数まで）
 - 寄付すると、その村での自分の評判も上がります（寄付した発展度 1 につき 0.03）
+
+| 建物 | 大きさ | 発展度 | ほしい資材 | 効果 |
+|---|---|---|---|---|
+| 依頼所 | 5×5 | 1,500 | 板材64・紙32・本8 | 依頼の数 +2、輸送依頼の数 +1 |
+| 倉庫 | 9×9 | 2,500 | 原木64・丸石128・チェスト8 | 全商品の在庫の上限と補充の速さが1.5倍 |
+| 宿屋 | 9×9 | 2,500 | 原木48・羊毛24・ガラス32 | ベッド4つ（市場の規模のベッドに数える）。最初に完成した時に村人が2人来る |
+| 銀行 | 7×7 | 5,000 | 石レンガ128・金インゴット16・ガラス16 | 市場のレベルに関係なく銀行タブが出る。その市場ではカード払いの手数料なし。ここで預け入れ・引き出しをすると口座がこの銀行に登録され、利息が付く上限が2倍になる（建物がある間） |
+
+- **建て方**：「発展」タブで建物を選んで「**建てる**」を押します（その村での評判が「常連」以上の人だけ。同時に建設できるのは1つ）。発展度を使い、屋台から32ブロック以内の平らな空き地に足場と看板が立ち、ゲーム内2日（現実の約40分）で完成します（その場所が読み込まれている時）。空気・草・花・雪の層しか無い場所にだけ建てるので、ほかの建物は壊しません
+- **場所を決めたい時**：「杭をもらう」で**建設予定地の杭**を受け取り、建てたい場所（建物の正面の真ん中）に置きます。置いた時に向いていた方が建物の正面になります。杭があればそこに建て、建てられない時は理由が出ます
+- **市場の規模**：完成した建物が2つで +1、4つで +2（家と村人で決まる規模に足す。最大は「都市」）
+- **壊れた時**：建物の中の**看板**を壊すと、その建物の効果がなくなります（ほかのブロックを壊しても効果は消えません）。「発展」タブで半分の発展度で建て直せます（別の場所に建ちます）。設定 `development.protectFacilities` を ON にすると、サバイバルでは壊せず、爆発でも壊れません
+- 完成した建物の看板を右クリックすると、交易画面がその建物のタブ（依頼所＝依頼、銀行＝銀行、ほか＝発展）で開きます。建設中の看板は、あと何分で完成するかを出します
 - 発展度は時間では減りません（設定 `development.halfLifeDays` で減らせます）
 - 使えるのはオーバーワールドの市場です（設定 `development.dimensions` でほかの次元も足せます）
 - 数値はすべて設定の「村の発展」タブ（`development.*`）で変えられます。
@@ -357,6 +370,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | `/aktradeex reputation set <ポイント>` | 最寄りの市場での自分の評判ポイントを設定する（テスト用） |
 | `/aktradeex development` | 最寄りの市場の発展度と、発展度を多く入れた人。OP 権限不要 |
 | `/aktradeex development add <発展度>` | 最寄りの市場の発展度を増やす（マイナスで減らす。テスト用） |
+| `/aktradeex development complete` | 最寄りの市場の建設中の建物をすぐ完成させる（テスト用。その場所が読み込まれている時） |
 | `/aktradeex where show` / `hide` | 範囲を30秒間パーティクルで表示する／表示を止める。OP 権限不要 |
 | `/aktradeex give <金額>` | 自分にコインを渡す（テスト用） |
 | `/aktradeex pay <金額>` | 自分の所持金から支払う（支払い処理のテスト用） |
@@ -650,6 +664,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 |---|---|
 | 商品定義 | `data/<namespace>/ak_trade_expansion/goods/<名前>.json` |
 | 市場プロファイル | `data/<namespace>/ak_trade_expansion/market_profile/<名前>.json` |
+| 村の建物 | `data/<namespace>/ak_trade_expansion/facility/<名前>.json`（建物の形は `data/<namespace>/structure/facility/<見た目>/<structure>.nbt`） |
 
 商品定義の例：
 
@@ -667,6 +682,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 ```
 
 主な項目：`base_price`（基準価格）、`elasticity`（大きいほど値崩れしにくい）、`target_stock`（目標在庫）、`max_stock`（在庫上限。これ以上は買い取らない）、`unit`（取引単位）、`auto_add`（条件に合う市場に自動で追加）、`link`（近くの市場への相場の伝わりやすさ、既定 1.0）、`consume_per_day`（在庫が目標より多い時に1日に減る数）、`half_life_days`（相場の半減期）、`components`（エンチャントなど付加情報付きの品。例：`{"minecraft:enchantments": {"minecraft:sharpness": 1}}`）。
+
+村の建物の定義では、種類（`kind`：`quest_hall`／`warehouse`／`inn`／`bank`。種類ごとに1つ）、並び順（`order`）、タブのアイコン（`icon`）、必要な発展度（`cost`）、建物の形の名前（`structure`）、ほしい資材（`wanted`：`item` か `tag`、`count`、商品でない品の値段 `value`）を指定します。建物の形は北向き（`z = 0` の面が正面、扉は幅の真ん中）で、中に「施設の看板」を1つ置きます。見た目は村の種類（`plains` など）ごとのフォルダから選び、無ければ `plains` を使います。
 
 市場プロファイルでは、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。同梱データ（商品95種（花20種を含む）＋エメラルド貨、プロファイル12種）は `Source/TradeExpansion/src/main/resources/data/ak_trade_expansion/ak_trade_expansion/` にあります。
 
@@ -713,9 +730,9 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `src/main/java/.../worldgen/`・`mixin/` | 村への屋台の建物の追加・財布の自動収納 |
 | `src/main/java/.../entity/` | 商人NPC |
 | `src/main/java/.../command/` | 管理コマンド（`/aktradeex`） |
-| `src/main/resources/data/ak_trade_expansion/structure/` | 村の屋台の建物（構造物NBT。`tools/structures/genstall.js` で生成） |
+| `src/main/resources/data/ak_trade_expansion/structure/` | 村の屋台の建物（構造物NBT。`tools/structures/genstall.js` で生成）と村の発展の建物（`facility/<見た目>/`、`tools/structures/genfacility.js` で生成） |
 | `src/client/java/...` | 交易画面などクライアント専用のコード |
-| `tools/structures/genstall.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js` | 村の屋台の建物の生成、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
+| `tools/structures/genstall.js`・`tools/structures/genfacility.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js` | 村の屋台の建物の生成、村の発展の建物の生成（`node tools/structures/genfacility.js src/main/resources/data/ak_trade_expansion/structure/facility`）、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
 | `build.bat`・`release.bat`・`tools/version/bump.ps1` | 普段のビルド（末尾を上げる）・配布用のビルド（真ん中を上げる）と、バージョンを上げる処理（下の「よく使うコマンド」） |
 | `src/dist/README.txt` | 配布用 zip に入れる導入方法（`@VERSION@` がバージョンに置き換わる） |
 | `src/test/java/...` | 単体テスト（価格・まとめ買い割引・取引単位・距離・コイン・鋳造の枚数・財布・市場レベル・商品の抽選・依頼の計算・評判・預金の利息・市場名・交易画面の大きさ・設定ファイル・同梱データの読み込み）。87件 |

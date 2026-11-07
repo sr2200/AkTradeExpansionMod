@@ -1,0 +1,23 @@
+{
+  "kind": "warehouse",
+  "order": 2,
+  "icon": "minecraft:barrel",
+  "cost": 2500,
+  "structure": "warehouse",
+  "wanted": [
+    {
+      "tag": "minecraft:logs",
+      "count": 64,
+      "value": 4
+    },
+    {
+      "item": "minecraft:cobblestone",
+      "count": 128
+    },
+    {
+      "item": "minecraft:chest",
+      "count": 8,
+      "value": 10
+    }
+  ]
+}

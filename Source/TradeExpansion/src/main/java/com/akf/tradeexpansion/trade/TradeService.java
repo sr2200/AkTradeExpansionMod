@@ -113,7 +113,7 @@ public final class TradeService {
 		// 5. Move items and money: card = bank account (E-8, no splitting with cash, Q34); cash = wallets then coins (E-6)
 		BankAccounts bank = BankService.accounts(player); // E-7: interest paid up to now
 		if (buy) {
-			long charge = card ? BankService.cardCharge(total) : total;
+			long charge = card ? BankService.cardCharge(market, total) : total; // N-4: no fee with a bank building
 			boolean affordable = card ? bank.balance(player.getUUID()) >= charge : WalletService.canPay(player, total);
 			if (!affordable) return fail(TradeResult.INSUFFICIENT_FUNDS, request);
 			// Coin slots count as free only when the coins are collected (cash payment, E-3).

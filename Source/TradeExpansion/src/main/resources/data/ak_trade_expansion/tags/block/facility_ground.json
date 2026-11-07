@@ -1,0 +1,18 @@
+{
+  "values": [
+    "#minecraft:dirt",
+    "#minecraft:sand",
+    "#minecraft:base_stone_overworld",
+    "#minecraft:base_stone_nether",
+    "#minecraft:terracotta",
+    "#minecraft:nylium",
+    "minecraft:gravel",
+    "minecraft:snow_block",
+    "minecraft:sandstone",
+    "minecraft:red_sandstone",
+    "minecraft:clay",
+    "minecraft:end_stone",
+    "minecraft:soul_sand",
+    "minecraft:soul_soil"
+  ]
+}

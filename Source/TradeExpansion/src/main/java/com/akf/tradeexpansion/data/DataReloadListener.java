@@ -28,6 +28,27 @@ public final class DataReloadListener {
 		loader.registerReloadListener(TradeExpansion.id("goods"), new Goods());
 		loader.registerReloadListener(TradeExpansion.id("market_profiles"), new Profiles());
 		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("market_profiles"));
+		loader.registerReloadListener(TradeExpansion.id("facilities"), new Facilities());
+	}
+
+	/** N-4: facilities of the village development. */
+	private static final class Facilities extends SimpleJsonResourceReloadListener<FacilityDefinition> {
+		Facilities() {
+			super(FacilityDefinition.CODEC, FileToIdConverter.json("ak_trade_expansion/facility"));
+		}
+
+		@Override
+		protected void apply(Map<Identifier, FacilityDefinition> loaded, ResourceManager manager, ProfilerFiller profiler) {
+			loaded.forEach((id, def) -> def.wanted().forEach(w -> {
+				if (w.item().isEmpty() == w.tag().isEmpty()) {
+					TradeExpansion.LOGGER.warn("Facility {}: each wanted entry needs either \"item\" or \"tag\"", id);
+				} else if (w.item().isPresent() && !BuiltInRegistries.ITEM.containsKey(w.item().get())) {
+					TradeExpansion.LOGGER.warn("Facility {}: unknown item {}", id, w.item().get());
+				}
+			}));
+			FacilityCatalog.replace(loaded);
+			TradeExpansion.LOGGER.info("Loaded {} facilities", FacilityCatalog.all().size());
+		}
 	}
 
 	private static final class Goods extends SimpleJsonResourceReloadListener<GoodsDefinition> {

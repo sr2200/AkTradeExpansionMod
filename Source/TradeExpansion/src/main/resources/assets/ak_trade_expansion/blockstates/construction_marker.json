@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "ak_trade_expansion:block/construction_marker"
+    },
+    "facing=east": {
+      "model": "ak_trade_expansion:block/construction_marker",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "ak_trade_expansion:block/construction_marker",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "ak_trade_expansion:block/construction_marker",
+      "y": 270
+    }
+  }
+}

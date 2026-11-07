@@ -3,6 +3,8 @@ package com.akf.tradeexpansion.bank;
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.currency.WalletService;
+import com.akf.tradeexpansion.development.FacilityKind;
+import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.item.BankCardItem;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
@@ -51,13 +53,45 @@ public final class BankService {
 	public static BankAccounts accounts(ServerPlayer player) {
 		BankAccounts bank = BankAccounts.get(player.level().getServer());
 		TradeExpansionConfig.Bank config = TradeExpansionConfig.get().bank;
-		bank.accrue(player.getUUID(), MarketClock.now(player.level()), config.interestRatePerDay, config.interestMaxBalance);
+		bank.accrue(player.getUUID(), MarketClock.now(player.level()), config.interestRatePerDay, interestCap(player, bank));
 		return bank;
+	}
+
+	/**
+	 * E-7 / N-4: balance up to which interest is paid. An account registered with a bank building that still stands gets
+	 * {@code development.bankInterestMaxMultiplier} times the cap; a registration whose building is gone is dropped.
+	 */
+	public static long interestCap(ServerPlayer player, BankAccounts bank) {
+		long cap = TradeExpansionConfig.get().bank.interestMaxBalance;
+		Market market = registeredBank(player, bank);
+		if (market == null || cap <= 0) return cap;
+		double raised = cap * TradeExpansionConfig.get().development.bankInterestMaxMultiplier;
+		return raised >= Long.MAX_VALUE ? Long.MAX_VALUE : (long) raised;
+	}
+
+	/** The market whose standing bank building the account is registered with, or {@code null} (stale entries are cleared). */
+	private static Market registeredBank(ServerPlayer player, BankAccounts bank) {
+		long id = bank.bankFacility(player.getUUID());
+		if (id < 0) return null;
+		Market market = MarketRegistry.get(player.level().getServer()).get(id);
+		if (market != null && market.hasFacility(FacilityKind.BANK)) return market;
+		bank.setBankFacility(player.getUUID(), -1);
+		return null;
 	}
 
 	/** Card payment: price plus {@code bank.cardTransactionFee}. */
 	public static long cardCharge(long price) {
 		return price + (long) Math.ceil(price * TradeExpansionConfig.get().bank.cardTransactionFee);
+	}
+
+	/** N-4: no card fee at a market with a bank building. */
+	public static long cardCharge(Market market, long price) {
+		return market != null && market.hasFacility(FacilityKind.BANK) ? price : cardCharge(price);
+	}
+
+	/** E-7 / N-4: the bank tab shows from {@code bank.minMarketLevel}, or at any level with a bank building. */
+	public static boolean hasBank(Market market) {
+		return market.level() >= TradeExpansionConfig.get().bank.minMarketLevel || market.hasFacility(FacilityKind.BANK);
 	}
 
 	public static void sendAccount(ServerPlayer player) {
@@ -66,8 +100,11 @@ public final class BankService {
 
 	/** @param result shown on the bank tab, or {@code null} */
 	public static void sendAccount(ServerPlayer player, Result result) {
-		long balance = accounts(player).balance(player.getUUID());
-		ServerPlayNetworking.send(player, new AccountS2C(balance, hasValidCard(player), result == null ? -1 : result.ordinal()));
+		BankAccounts bank = accounts(player);
+		long balance = bank.balance(player.getUUID());
+		Market registered = registeredBank(player, bank);
+		ServerPlayNetworking.send(player, new AccountS2C(balance, hasValidCard(player), result == null ? -1 : result.ordinal(),
+				interestCap(player, bank), registered == null ? "" : MarketNames.name(registered).getString()));
 	}
 
 	public static void handle(ServerPlayer player, BankRequestC2S request) {
@@ -83,9 +120,13 @@ public final class BankService {
 		}
 		if (!menu.stillValid(player)) return Result.TOO_FAR;
 		if (player.isCreative() && !config.trade.allowCreative) return Result.CREATIVE_NOT_ALLOWED;
-		if (market.level() < config.bank.minMarketLevel) return Result.NO_BANK;
+		if (!hasBank(market)) return Result.NO_BANK;
 
 		BankAccounts bank = accounts(player);
+		// N-4: using the bank of a market with a bank building registers the account there (higher interest cap).
+		if (market.hasFacility(FacilityKind.BANK) && request.action() != BankRequestC2S.Action.ISSUE_CARD) {
+			bank.setBankFacility(player.getUUID(), market.id());
+		}
 		long amount = request.amount();
 		switch (request.action()) {
 			case DEPOSIT -> {

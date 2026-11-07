@@ -2,6 +2,7 @@ package com.akf.tradeexpansion.market;
 
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.core.DevelopmentMath;
 import com.akf.tradeexpansion.core.DistanceModel;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.GoodState;
@@ -74,7 +75,9 @@ public final class MarketFactory {
 		Random random = new Random(seed(level, market.center()));
 		MarketContext context = new MarketContext(level, market.center(), market.origin());
 
-		market.setLevel(Math.max(minLevel, measureLevel(level, market.center())));
+		int measured = measureLevel(level, market.center());
+		market.setMeasuredLevel(measured);
+		market.setLevel(Math.max(minLevel, DevelopmentMath.effectiveLevel(measured, levelBonus(market)))); // N-3
 		market.setLastLevelCheckGameTime(now);
 		market.setProfileId(MarketProfiles.choose(context, random));
 
@@ -135,9 +138,27 @@ public final class MarketFactory {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		double interval = config.market.levelCheckIntervalDays * PriceModel.TICKS_PER_DAY;
 		if (now - market.lastLevelCheckGameTime() < interval) return 0;
-		market.setLastLevelCheckGameTime(now);
+		return resize(level, market, neighbors);
+	}
 
-		int measured = measureLevel(level, market.center());
+	/** N-3: completed facilities give a level bonus ({@code development.levelBonusThresholds}). */
+	public static int levelBonus(Market market) {
+		return DevelopmentMath.levelBonus(market.completedFacilities(), TradeExpansionConfig.get().development.levelBonusThresholdArray());
+	}
+
+	/**
+	 * Measures the level now (a facility was completed or destroyed, N-3) and grows or shrinks the goods like
+	 * {@link #resizeIfDue}.
+	 *
+	 * @return {@code 1} if the market grew, {@code -1} if it shrank, {@code 0} otherwise
+	 */
+	public static int resize(ServerLevel level, Market market, List<Market> neighbors) {
+		long now = MarketClock.now(level);
+		TradeExpansionConfig config = TradeExpansionConfig.get();
+		market.setLastLevelCheckGameTime(now);
+		int measuredLevel = measureLevel(level, market.center());
+		market.setMeasuredLevel(measuredLevel);
+		int measured = DevelopmentMath.effectiveLevel(measuredLevel, levelBonus(market)); // N-3: with the facility bonus
 		if (measured == market.level() || measured < market.level() && !config.market.shrinkOnLevelDown) return 0;
 		boolean grew = measured > market.level();
 		market.refresh(now); // shelved / restored goods carry their state as of now

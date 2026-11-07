@@ -5,6 +5,11 @@ import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.BulkDiscount;
 import com.akf.tradeexpansion.core.ReputationMath;
 import com.akf.tradeexpansion.development.Development;
+import com.akf.tradeexpansion.development.Facility;
+import com.akf.tradeexpansion.development.FacilityBuilder;
+import com.akf.tradeexpansion.development.FacilityKind;
+import com.akf.tradeexpansion.data.FacilityCatalog;
+import com.akf.tradeexpansion.data.FacilityDefinition;
 import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.Reputation;
@@ -196,21 +201,78 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	}
 
 	/**
-	 * N (v0.36): development of the market as {@code player} sees it.
+	 * N (v0.37 / v0.38): development of the market as {@code player} sees it.
 	 *
-	 * @param enabled the market's dimension develops (the tab is shown)
-	 * @param mine    points the receiving player brought
-	 * @param top     contributors with the most points
+	 * @param enabled       the market's dimension develops (the tab is shown)
+	 * @param mine          points the receiving player brought
+	 * @param top           contributors with the most points
+	 * @param measuredLevel level from beds and villagers (D-4); {@code level} of the snapshot adds {@code bonus}
+	 * @param bank          the market has a bank building: bank tab at any level, no card fee (N-4)
+	 * @param canChoose     the player's reputation allows choosing a facility ({@code development.buildReputationLevel})
+	 * @param buildLevel    the reputation level needed for that
+	 * @param freeBuilds    constructions that may still start ({@code development.maxConcurrentBuilds} minus those under way)
 	 */
-	public record DevelopmentView(boolean enabled, double points, double mine, List<ContributorView> top) {
-		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of());
+	public record DevelopmentView(boolean enabled, double points, double mine, List<ContributorView> top, int measuredLevel, int bonus,
+			boolean bank, boolean canChoose, int buildLevel, int freeBuilds, List<FacilityView> facilities) {
+		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of(), 1, 0, false, false, 0, 0, List.of());
 
-		static final StreamCodec<RegistryFriendlyByteBuf, DevelopmentView> CODEC = StreamCodec.composite(
-				ByteBufCodecs.BOOL, DevelopmentView::enabled,
-				ByteBufCodecs.DOUBLE, DevelopmentView::points,
-				ByteBufCodecs.DOUBLE, DevelopmentView::mine,
-				ContributorView.CODEC.apply(ByteBufCodecs.list()), DevelopmentView::top,
-				DevelopmentView::new);
+		static final StreamCodec<RegistryFriendlyByteBuf, DevelopmentView> CODEC = StreamCodec.ofMember(DevelopmentView::write, DevelopmentView::read);
+
+		private void write(RegistryFriendlyByteBuf buf) {
+			buf.writeBoolean(enabled);
+			buf.writeDouble(points);
+			buf.writeDouble(mine);
+			ContributorView.CODEC.apply(ByteBufCodecs.list()).encode(buf, top);
+			buf.writeVarInt(measuredLevel);
+			buf.writeVarInt(bonus);
+			buf.writeBoolean(bank);
+			buf.writeBoolean(canChoose);
+			buf.writeVarInt(buildLevel);
+			buf.writeVarInt(freeBuilds);
+			FacilityView.CODEC.apply(ByteBufCodecs.list()).encode(buf, facilities);
+		}
+
+		private static DevelopmentView read(RegistryFriendlyByteBuf buf) {
+			return new DevelopmentView(buf.readBoolean(), buf.readDouble(), buf.readDouble(), ContributorView.CODEC.apply(ByteBufCodecs.list()).decode(buf),
+					buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
+					FacilityView.CODEC.apply(ByteBufCodecs.list()).decode(buf));
+		}
+	}
+
+	/**
+	 * N-4: one facility of the development tab.
+	 *
+	 * @param state 0 = not built, 1 = under construction, 2 = completed, 3 = destroyed
+	 * @param cost  development points building it costs now (half for a rebuild)
+	 * @param due   market-clock time the construction ends (state 1)
+	 */
+	public record FacilityView(String id, String kind, Identifier icon, int state, long cost, long due, List<WantedView> wanted) {
+		public static final int NONE = 0, CONSTRUCTING = 1, COMPLETE = 2, DESTROYED = 3;
+
+		static final StreamCodec<RegistryFriendlyByteBuf, FacilityView> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, FacilityView::id,
+				ByteBufCodecs.STRING_UTF8, FacilityView::kind,
+				Identifier.STREAM_CODEC, FacilityView::icon,
+				ByteBufCodecs.VAR_INT, FacilityView::state,
+				ByteBufCodecs.VAR_LONG, FacilityView::cost,
+				ByteBufCodecs.VAR_LONG, FacilityView::due,
+				WantedView.CODEC.apply(ByteBufCodecs.list()), FacilityView::wanted,
+				FacilityView::new);
+	}
+
+	/**
+	 * N-2: one wanted material.
+	 *
+	 * @param item item shown (the first item of a tag)
+	 * @param tag  item tag id when any item of the tag counts, empty otherwise
+	 */
+	public record WantedView(Identifier item, String tag, int required, int donated) {
+		static final StreamCodec<RegistryFriendlyByteBuf, WantedView> CODEC = StreamCodec.composite(
+				Identifier.STREAM_CODEC, WantedView::item,
+				ByteBufCodecs.STRING_UTF8, WantedView::tag,
+				ByteBufCodecs.VAR_INT, WantedView::required,
+				ByteBufCodecs.VAR_INT, WantedView::donated,
+				WantedView::new);
 	}
 
 	public record ContributorView(String name, double points) {
@@ -256,7 +318,30 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		List<ContributorView> top = new ArrayList<>();
 		for (Market.Contributor c : Development.top(market, TOP_CONTRIBUTORS)) top.add(new ContributorView(c.name(), c.points()));
 		Market.Contributor mine = market.contributors().get(player.getUUID());
-		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top);
+		TradeExpansionConfig.Development c = Development.config();
+		List<FacilityView> facilities = new ArrayList<>();
+		for (java.util.Map.Entry<Identifier, FacilityDefinition> e : FacilityCatalog.all().entrySet()) {
+			FacilityDefinition def = e.getValue();
+			Facility f = market.facilities().get(e.getKey());
+			int state = f == null ? FacilityView.NONE : switch (f.state()) {
+				case CONSTRUCTING -> FacilityView.CONSTRUCTING;
+				case COMPLETE -> FacilityView.COMPLETE;
+				case DESTROYED -> FacilityView.DESTROYED;
+			};
+			java.util.Map<String, Integer> donated = market.donations(e.getKey());
+			List<WantedView> wanted = new ArrayList<>();
+			for (FacilityDefinition.Wanted w : def.wanted()) {
+				wanted.add(new WantedView(BuiltInRegistries.ITEM.getKey(w.displayItem()), w.tag().map(Identifier::toString).orElse(""), w.count(),
+						donated.getOrDefault(w.key(), 0)));
+			}
+			facilities.add(new FacilityView(e.getKey().toString(), def.kind().getSerializedName(), def.icon(), state,
+					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted));
+		}
+		int buildLevel = c.buildReputationLevel;
+		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top, market.measuredLevel(),
+				com.akf.tradeexpansion.market.MarketFactory.levelBonus(market), market.hasFacility(FacilityKind.BANK),
+				Reputation.level(market, player.getUUID(), now) >= buildLevel, buildLevel,
+				(int) Math.max(0, c.maxConcurrentBuilds - FacilityBuilder.constructing(market)), facilities);
 	}
 
 	/** N-6: contributors listed on the development tab. */

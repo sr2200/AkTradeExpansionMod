@@ -158,8 +158,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private final List<Button> tradeWidgets = new ArrayList<>();
 	private final List<Button> bankWidgets = new ArrayList<>();
 	private final List<Button> exchangeWidgets = new ArrayList<>();
-	/** N (v0.36): development tab buttons (coin donations). */
+	/** N (v0.36): development tab buttons (coin donations), shown while no facility is selected. */
 	private final List<Button> townWidgets = new ArrayList<>();
+	/** N-6 (v0.38): selected facility id on the development tab, or {@code null}. */
+	private String selectedFacility;
+	private Button buildButton;
+	private Button donateItemsButton;
+	private Button markerButton;
 
 	/** A-4 (v0.33): sizes from the layout the menu was made with (fits the window when the screen opened). */
 	private final MarketLayout layout;
@@ -184,6 +189,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		this.sellAllRows = 5 + layout.extraRows();
 		this.snapshot = ClientMarketCache.get(menu.marketId());
 		if (snapshot != null) recordBaseline(snapshot);
+		// N-4: a facility's sign opens its tab.
+		for (Tab t : Tab.values()) {
+			if (t.key.equals(menu.initialTab())) tab = t;
+		}
 	}
 
 	@Override
@@ -243,12 +252,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↑10"), b -> exchange(tier, true, 10)).bounds(x + LIST_X + 177, ry, 20, 14).build()));
 		}
 
-		// Development tab (N-6): coin donations in the right panel.
+		// Development tab (N-6): coin donations and the stake in the right panel; a selected facility's buttons.
 		for (int i = 0; i < DONATIONS.length; i++) {
 			long amount = DONATIONS[i];
 			townWidgets.add(addRenderableWidget(Button.builder(Component.literal(CoinItem.formatCopper(amount)), b -> donate(amount))
 					.bounds(x + panelX, y + 50 + i * 16, PANEL_W, 14).build()));
 		}
+		markerButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.town.marker"),
+				b -> townRequest(DevelopmentRequestC2S.Action.MARKER, "")).bounds(x + panelX, y + 104, PANEL_W, 14).build());
+		buildButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.town.build"),
+				b -> townRequest(DevelopmentRequestC2S.Action.BUILD, selectedFacility)).bounds(x + panelX, y + 122, PANEL_W, 16).build());
+		donateItemsButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.town.donate_items"),
+				b -> townRequest(DevelopmentRequestC2S.Action.DONATE_ITEMS, selectedFacility)).bounds(x + panelX, y + 139, PANEL_W, 14).build());
 
 		// Request tab (J) and board (I)
 		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
@@ -375,6 +390,43 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		return snapshot != null && snapshot.development().enabled();
 	}
 
+	private void townRequest(DevelopmentRequestC2S.Action action, String facility) {
+		if (pending || facility == null) return;
+		pending = true;
+		ClientPlayNetworking.send(new DevelopmentRequestC2S(menu.marketId(), action, 0, facility, useCard()));
+		updateButtons();
+	}
+
+	private MarketSnapshotS2C.FacilityView selectedFacilityView() {
+		if (snapshot == null || selectedFacility == null) return null;
+		for (MarketSnapshotS2C.FacilityView f : snapshot.development().facilities()) {
+			if (f.id().equals(selectedFacility)) return f;
+		}
+		return null;
+	}
+
+	/** Wanted materials of a facility the player carries (inventory and sell slot), up to what it still wants. */
+	private int donatable(MarketSnapshotS2C.FacilityView f) {
+		Player player = player();
+		if (player == null) return 0;
+		int total = 0;
+		for (MarketSnapshotS2C.WantedView w : f.wanted()) {
+			int held = 0;
+			for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) held += wantedCount(w, player.getInventory().getItem(slot));
+			held += wantedCount(w, menu.sellSlotItem());
+			total += Math.min(held, Math.max(0, w.required() - w.donated()));
+		}
+		return total;
+	}
+
+	private static int wantedCount(MarketSnapshotS2C.WantedView w, ItemStack stack) {
+		if (stack.isEmpty() || !stack.getComponentsPatch().isEmpty()) return 0;
+		boolean match = w.tag().isEmpty()
+				? BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(w.item())
+				: stack.is(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, Identifier.parse(w.tag())));
+		return match ? stack.getCount() : 0;
+	}
+
 	private void donate(long amount) {
 		if (pending) return;
 		pending = true;
@@ -399,7 +451,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	}
 
 	private boolean bankAvailable() {
-		return snapshot != null && snapshot.level() >= TradeExpansionConfig.get().bank.minMarketLevel;
+		return snapshot != null && (snapshot.level() >= TradeExpansionConfig.get().bank.minMarketLevel || snapshot.development().bank()); // N-4
 	}
 
 	/** Card payment is used when chosen and a valid card is carried (E-8). */
@@ -412,6 +464,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		scroll = 0;
 		selected = null;
 		selectedRequest = -1;
+		selectedFacility = null;
 		quantity = 1;
 		if (newTab == Tab.BOARD) {
 			boardMarket = -1;
@@ -510,7 +563,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			int max = (int) Math.min(limit, Math.max(0, Math.floor(state.stock())));
 			max = Math.min(max, PriceModel.units(InventoryUtil.freeSpaceFor(player, match, !useCard()), view.unit()));
 			long funds = useCard()
-					? (long) Math.floor(account.bankBalance() / (1 + TradeExpansionConfig.get().bank.cardTransactionFee))
+					? (long) Math.floor(account.bankBalance() / (1 + (snapshot.development().bank() ? 0 : TradeExpansionConfig.get().bank.cardTransactionFee)))
 					: WalletService.balance(player);
 			return PriceModel.maxAffordable(params, state.pressure(), funds, max, view.unit(), snapshot.bulkDiscount());
 		}
@@ -587,9 +640,27 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		for (Button b : tradeWidgets) b.visible = tradeTab();
 		for (Button b : bankWidgets) b.visible = tab == Tab.BANK;
 		for (Button b : exchangeWidgets) b.visible = tab == Tab.EXCHANGE;
+		MarketSnapshotS2C.FacilityView facility = tab == Tab.TOWN ? selectedFacilityView() : null;
 		for (Button b : townWidgets) {
-			b.visible = tab == Tab.TOWN;
+			b.visible = tab == Tab.TOWN && facility == null;
 			b.active = !pending;
+		}
+		markerButton.visible = tab == Tab.TOWN && facility == null;
+		markerButton.active = !pending;
+		boolean open = facility != null && (facility.state() == MarketSnapshotS2C.FacilityView.NONE || facility.state() == MarketSnapshotS2C.FacilityView.DESTROYED);
+		buildButton.visible = open;
+		donateItemsButton.visible = open && !facility.wanted().isEmpty();
+		if (open) {
+			MarketSnapshotS2C.DevelopmentView d = snapshot.development();
+			Component reason = !d.canChoose() ? Component.translatable("screen.ak_trade_expansion.town.reason.reputation", reputationName(d.buildLevel()))
+					: d.freeBuilds() <= 0 ? Component.translatable("screen.ak_trade_expansion.town.reason.limit")
+					: d.points() + 1e-9 < facility.cost() ? Component.translatable("screen.ak_trade_expansion.town.reason.points", points(facility.cost() - d.points()))
+					: null;
+			buildButton.active = !pending && reason == null;
+			buildButton.setTooltip(reason == null ? null : net.minecraft.client.gui.components.Tooltip.create(reason));
+			int donatable = donatable(facility);
+			donateItemsButton.active = !pending && donatable > 0;
+			donateItemsButton.setMessage(Component.translatable("screen.ak_trade_expansion.town.donate_items", donatable));
 		}
 		bankWidgets.getLast().setMessage(Component.translatable("screen.ak_trade_expansion.bank.issue_card",
 				CoinItem.formatCopper(TradeExpansionConfig.get().bank.cardFee)));
@@ -623,6 +694,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			for (Button b : tradeWidgets) b.visible = false;
 			tabButtons.values().forEach(b -> b.visible = false);
 			paymentButton.visible = false;
+			buildButton.visible = false;
+			donateItemsButton.visible = false;
+			markerButton.visible = false;
 		} else {
 			tabButtons.values().forEach(b -> b.visible = true);
 			tabButtons.get(Tab.BANK).visible = bankAvailable();
@@ -806,6 +880,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		double mx = event.x() - leftPos;
 		double my = event.y() - topPos;
+		if (tab == Tab.TOWN && snapshot != null && mx >= LIST_X && mx < LIST_X + listW && my >= LIST_Y + TOWN_HEADER_H) {
+			int index = (int) ((my - LIST_Y - TOWN_HEADER_H) / ROW_H);
+			List<MarketSnapshotS2C.FacilityView> facilities = snapshot.development().facilities();
+			if (index < facilities.size()) {
+				String id = facilities.get(index).id();
+				selectedFacility = id.equals(selectedFacility) ? null : id; // a second click goes back to the donations
+				updateButtons();
+				return true;
+			}
+		}
 		if (mx >= LIST_X && mx < LIST_X + listW - SCROLLBAR_W && my >= LIST_Y && my < LIST_Y + rows * ROW_H
 				&& (tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD)) {
 			int index = scroll + (int) ((my - LIST_Y) / ROW_H);
@@ -881,7 +965,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		switch (tab) {
 			case BANK -> extractBank(g, lx, ly);
 			case EXCHANGE -> extractExchange(g, lx, ly);
-			case TOWN -> extractTown(g, lx, ly, x + panelX, y);
+			case TOWN -> extractTown(g, lx, ly, x + panelX, y, mouseX, mouseY);
 			case QUEST -> {
 				extractRequests(g, lx, ly, mouseX, mouseY);
 				extractRequestPanel(g, x + panelX, y);
@@ -1238,8 +1322,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (bankConfig.interestRatePerDay > 0) {
 			// E-7: interest rate (and the balance it is paid on)
 			String rate = String.valueOf(Math.round(bankConfig.interestRatePerDay * 100_000) / 1000.0).replaceAll("\\.?0+$", "");
-			Component text = bankConfig.interestMaxBalance > 0
-					? Component.translatable("screen.ak_trade_expansion.bank.interest", rate, CoinItem.formatCopper(bankConfig.interestMaxBalance))
+			long cap = account == null ? bankConfig.interestMaxBalance : account.interestCap(); // N-4: higher with a bank building
+			Component text = cap > 0
+					? (account != null && !account.bankName().isEmpty()
+							? Component.translatable("screen.ak_trade_expansion.bank.interest.registered", rate, CoinItem.formatCopper(cap), account.bankName())
+							: Component.translatable("screen.ak_trade_expansion.bank.interest", rate, CoinItem.formatCopper(cap)))
 					: Component.translatable("screen.ak_trade_expansion.bank.interest.no_cap", rate);
 			fitText(g, text.getString(), bx + 4, by + 25, listW - 8, COLOR_GRAY, true);
 		}
@@ -1247,24 +1334,150 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.withdraw"), bx + 4, by + 64, COLOR_WHITE);
 	}
 
-	/** N-6: development points, how they are gained and the contributors; donations in the right panel. */
-	private void extractTown(GuiGraphicsExtractor g, int tx, int ty, int px, int y) {
+	/** Height of the development tab's header line (points and level). */
+	private static final int TOWN_HEADER_H = 10;
+
+	/**
+	 * N-6: header (points, level breakdown), one row per facility, the contributors; in the right panel the coin
+	 * donations and the stake, or the selected facility with its materials and buttons.
+	 */
+	private void extractTown(GuiGraphicsExtractor g, int tx, int ty, int px, int y, int mouseX, int mouseY) {
 		if (snapshot == null) return;
 		MarketSnapshotS2C.DevelopmentView d = snapshot.development();
-		g.text(font, Component.translatable("screen.ak_trade_expansion.town.points", points(d.points())), tx + 4, ty + 4, COLOR_GOLD);
-		fitText(g, Component.translatable("screen.ak_trade_expansion.town.how").getString(), tx + 4, ty + 15, listW - 12, COLOR_GRAY, true);
-		g.text(font, Component.translatable("screen.ak_trade_expansion.town.contributors"), tx + 4, ty + 30, COLOR_WHITE);
-		List<MarketSnapshotS2C.ContributorView> top = d.top();
-		if (top.isEmpty()) g.text(font, Component.translatable("screen.ak_trade_expansion.town.contributors.none"), tx + 8, ty + 41, COLOR_GRAY);
-		for (int i = 0; i < top.size(); i++) {
-			MarketSnapshotS2C.ContributorView c = top.get(i);
-			int rowY = ty + 41 + i * 10;
-			String value = points(c.points());
-			g.text(font, value, tx + listW - 12 - font.width(value), rowY, COLOR_GOLD);
-			fitText(g, (i + 1) + ". " + c.name(), tx + 8, rowY, listW - 24 - font.width(value), COLOR_WHITE, true);
+		g.fill(tx, ty, tx + listW, ty + TOWN_HEADER_H, COLOR_DARK);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.town.points", points(d.points())), tx + 4, ty + 1, COLOR_GOLD);
+		String level = Component.translatable("screen.ak_trade_expansion.town.level", com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(snapshot.level()), snapshot.level()).getString();
+		g.text(font, level, tx + listW - 4 - font.width(level), ty + 1, COLOR_WHITE);
+		boolean overHeader = mouseX >= tx && mouseX < tx + listW && mouseY >= ty && mouseY < ty + TOWN_HEADER_H;
+
+		List<MarketSnapshotS2C.FacilityView> facilities = d.facilities();
+		if (facilities.isEmpty()) {
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.town.no_facilities"), tx + 4, ty + TOWN_HEADER_H + 4, listW - 8, COLOR_WHITE, false);
 		}
-		g.text(font, Component.translatable("screen.ak_trade_expansion.town.mine", points(d.mine())), tx + 4, ty + 94, COLOR_WHITE);
-		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.town.donate"), px, y + 38, PANEL_W, COLOR_TEXT, false);
+		MarketSnapshotS2C.FacilityView hovered = null;
+		for (int i = 0; i < facilities.size(); i++) {
+			MarketSnapshotS2C.FacilityView f = facilities.get(i);
+			int rowY = ty + TOWN_HEADER_H + i * ROW_H;
+			if (rowY + ROW_H > ty + rows * ROW_H - 20) break;
+			boolean over = mouseX >= tx && mouseX < tx + listW && mouseY >= rowY && mouseY < rowY + ROW_H;
+			if (f.id().equals(selectedFacility)) g.fill(tx, rowY, tx + listW, rowY + ROW_H, 0xFF6F6F9F);
+			else if (over) g.fill(tx, rowY, tx + listW, rowY + ROW_H, 0xFF9B9B9B);
+			if (over) hovered = f;
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(f.icon())), tx + 2, rowY + 1);
+			String status;
+			int color;
+			switch (f.state()) {
+				case MarketSnapshotS2C.FacilityView.CONSTRUCTING -> {
+					status = Component.translatable("screen.ak_trade_expansion.town.state.constructing", minutesUntil(f.due())).getString();
+					color = COLOR_ORANGE;
+				}
+				case MarketSnapshotS2C.FacilityView.COMPLETE -> {
+					status = Component.translatable("screen.ak_trade_expansion.town.state.complete").getString();
+					color = COLOR_GREEN;
+				}
+				case MarketSnapshotS2C.FacilityView.DESTROYED -> {
+					status = Component.translatable("screen.ak_trade_expansion.town.state.destroyed", points(f.cost())).getString();
+					color = COLOR_RED;
+				}
+				default -> {
+					status = Component.translatable("screen.ak_trade_expansion.town.state.cost", points(f.cost())).getString();
+					color = d.points() + 1e-9 >= f.cost() ? COLOR_GOLD : COLOR_GRAY;
+				}
+			}
+			g.text(font, status, tx + listW - 6 - font.width(status), rowY + 5, color);
+			fitText(g, facilityName(f).getString(), tx + 20, rowY + 5, listW - 32 - font.width(status), COLOR_WHITE, true);
+		}
+		// Contributors: the first one and the player; the top five on hover.
+		int bottom = ty + rows * ROW_H;
+		List<MarketSnapshotS2C.ContributorView> top = d.top();
+		String first = top.isEmpty() ? Component.translatable("screen.ak_trade_expansion.town.contributors.none").getString()
+				: "1. " + top.getFirst().name() + " " + points(top.getFirst().points());
+		String mine = Component.translatable("screen.ak_trade_expansion.town.mine", points(d.mine())).getString();
+		g.text(font, mine, tx + listW - 4 - font.width(mine), bottom - 10, COLOR_WHITE);
+		fitText(g, Component.translatable("screen.ak_trade_expansion.town.contributors").getString() + " " + first, tx + 4, bottom - 10,
+				listW - 16 - font.width(mine), COLOR_GRAY, true);
+		boolean overContributors = mouseX >= tx && mouseX < tx + listW && mouseY >= bottom - 12 && mouseY < bottom;
+
+		MarketSnapshotS2C.FacilityView facility = selectedFacilityView();
+		if (facility == null) {
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.town.donate"), px, y + 38, PANEL_W, COLOR_TEXT, false);
+		} else {
+			extractFacilityPanel(g, facility, px, y, mouseX, mouseY);
+		}
+
+		if (hovered != null) g.setTooltipForNextFrame(font, facilityTooltip(hovered), Optional.empty(), mouseX, mouseY);
+		else if (overHeader) g.setTooltipForNextFrame(font, levelTooltip(d), Optional.empty(), mouseX, mouseY);
+		else if (overContributors) g.setTooltipForNextFrame(font, contributorsTooltip(d), Optional.empty(), mouseX, mouseY);
+	}
+
+	/** N-6: the selected facility: name, effect, cost, wanted materials (still wanted / required). */
+	private void extractFacilityPanel(GuiGraphicsExtractor g, MarketSnapshotS2C.FacilityView f, int px, int y, int mouseX, int mouseY) {
+		g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(f.icon())), px, y + 36);
+		fitText(g, facilityName(f).getString(), px + 18, y + 40, PANEL_W - 18, COLOR_TEXT, false);
+		List<FormattedCharSequence> effect = font.split(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect"), PANEL_W);
+		for (int i = 0; i < Math.min(3, effect.size()); i++) g.text(font, effect.get(i), px, y + 54 + i * 9, COLOR_DARK, false);
+		if (f.state() == MarketSnapshotS2C.FacilityView.CONSTRUCTING || f.state() == MarketSnapshotS2C.FacilityView.COMPLETE) return;
+		fitText(g, Component.translatable("screen.ak_trade_expansion.town.cost", points(f.cost())).getString(), px, y + 83, PANEL_W, COLOR_TEXT, false);
+		// Wanted materials: icon and the number still wanted (green when done).
+		for (int i = 0; i < Math.min(3, f.wanted().size()); i++) {
+			MarketSnapshotS2C.WantedView w = f.wanted().get(i);
+			int ix = px + i * 26;
+			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(w.item()));
+			g.item(stack, ix, y + 94);
+			int left = Math.max(0, w.required() - w.donated());
+			String text = left == 0 ? "✔" : String.valueOf(left);
+			g.text(font, text, ix + 17 - font.width(text) / 2, y + 112, left == 0 ? 0xFF207020 : COLOR_TEXT, false);
+			if (mouseX >= ix && mouseX < ix + 16 && mouseY >= y + 94 && mouseY < y + 110) {
+				List<Component> lines = new ArrayList<>();
+				lines.add(w.tag().isEmpty() ? stack.getHoverName() : Component.translatable("screen.ak_trade_expansion.town.wanted.tag", stack.getHoverName()));
+				lines.add(Component.translatable("screen.ak_trade_expansion.town.wanted.count", w.donated(), w.required()));
+				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+			}
+		}
+	}
+
+	private static Component facilityName(MarketSnapshotS2C.FacilityView f) {
+		return Component.translatable("facility.ak_trade_expansion." + f.kind());
+	}
+
+	private int minutesUntil(long time) {
+		if (minecraft == null || minecraft.level == null) return 0;
+		return minutes(Math.max(0, time - MarketClock.now(minecraft.level)) / (double) PriceModel.TICKS_PER_DAY);
+	}
+
+	private List<Component> facilityTooltip(MarketSnapshotS2C.FacilityView f) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(facilityName(f));
+		lines.add(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect").withStyle(net.minecraft.ChatFormatting.GRAY));
+		for (MarketSnapshotS2C.WantedView w : f.wanted()) {
+			Component name = new ItemStack(BuiltInRegistries.ITEM.getValue(w.item())).getHoverName();
+			if (!w.tag().isEmpty()) name = Component.translatable("screen.ak_trade_expansion.town.wanted.tag", name);
+			lines.add(Component.translatable("screen.ak_trade_expansion.town.wanted.line", name, w.donated(), w.required()).withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.select_hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+		return lines;
+	}
+
+	/** N-3: level from beds and villagers + bonus from completed facilities. */
+	private List<Component> levelTooltip(MarketSnapshotS2C.DevelopmentView d) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.level.measured", com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(d.measuredLevel()), d.measuredLevel()));
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.level.bonus", d.bonus()));
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.level.total", com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(snapshot.level()), snapshot.level()));
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.how").withStyle(net.minecraft.ChatFormatting.GRAY));
+		return lines;
+	}
+
+	private List<Component> contributorsTooltip(MarketSnapshotS2C.DevelopmentView d) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.contributors.title"));
+		if (d.top().isEmpty()) lines.add(Component.translatable("screen.ak_trade_expansion.town.contributors.none").withStyle(net.minecraft.ChatFormatting.GRAY));
+		for (int i = 0; i < d.top().size(); i++) {
+			MarketSnapshotS2C.ContributorView c = d.top().get(i);
+			lines.add(Component.literal((i + 1) + ". " + c.name() + "  " + points(c.points())));
+		}
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.mine", points(d.mine())).withStyle(net.minecraft.ChatFormatting.GOLD));
+		return lines;
 	}
 
 	/** E-3: loose coins per tier and the exchange buttons. */

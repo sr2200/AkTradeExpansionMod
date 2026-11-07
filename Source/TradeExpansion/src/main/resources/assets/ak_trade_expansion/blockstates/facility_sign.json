@@ -1,0 +1,124 @@
+{
+  "variants": {
+    "built=false,facing=north,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_quest_hall"
+    },
+    "built=false,facing=north,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_warehouse"
+    },
+    "built=false,facing=north,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_inn"
+    },
+    "built=false,facing=north,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_bank"
+    },
+    "built=false,facing=east,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_quest_hall",
+      "y": 90
+    },
+    "built=false,facing=east,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_warehouse",
+      "y": 90
+    },
+    "built=false,facing=east,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_inn",
+      "y": 90
+    },
+    "built=false,facing=east,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_bank",
+      "y": 90
+    },
+    "built=false,facing=south,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_quest_hall",
+      "y": 180
+    },
+    "built=false,facing=south,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_warehouse",
+      "y": 180
+    },
+    "built=false,facing=south,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_inn",
+      "y": 180
+    },
+    "built=false,facing=south,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_bank",
+      "y": 180
+    },
+    "built=false,facing=west,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=quest_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_quest_hall",
+      "y": 270
+    },
+    "built=false,facing=west,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=warehouse": {
+      "model": "ak_trade_expansion:block/facility_sign_warehouse",
+      "y": 270
+    },
+    "built=false,facing=west,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=inn": {
+      "model": "ak_trade_expansion:block/facility_sign_inn",
+      "y": 270
+    },
+    "built=false,facing=west,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=bank": {
+      "model": "ak_trade_expansion:block/facility_sign_bank",
+      "y": 270
+    }
+  }
+}

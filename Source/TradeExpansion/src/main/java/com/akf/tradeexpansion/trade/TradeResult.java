@@ -28,7 +28,23 @@ public enum TradeResult {
 	/** J-2: no cargo crate for this market in the inventory. */
 	NO_CARGO,
 	/** J-2: the only crates for this market are past their deadline. */
-	CARGO_EXPIRED;
+	CARGO_EXPIRED,
+	/** N (v0.38): the market lacks the development points for the facility. */
+	NOT_ENOUGH_POINTS,
+	/** N-5: development.maxConcurrentBuilds facilities are already under construction. */
+	BUILD_LIMIT,
+	/** N-5: no free, flat place around the market. */
+	NO_SITE,
+	/** N-5: the building site stake stands where the building cannot be built. */
+	MARKER_BLOCKED,
+	/** N-4: the facility is already built or under construction. */
+	ALREADY_BUILT,
+	/** N-2: no wanted materials in the inventory (or the facility has all it needs). */
+	NOTHING_TO_DONATE,
+	/** N-5: the player already carries a building site stake. */
+	HAS_MARKER,
+	/** N-4: the building's structure file is missing from the data packs. */
+	NO_TEMPLATE;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

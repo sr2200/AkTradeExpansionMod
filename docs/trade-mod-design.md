@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.37（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
+- 版：v0.38（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -886,7 +886,7 @@ MarketRegistry
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 種類（納品・荷箱の受け取り・荷箱の届け、v0.35）, 金額（報酬・払った保証金・受け取った報酬＋保証金）, 届けた荷箱の数 | 依頼タブの「納品する」 | 実装済（段階13） |
 | `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号, カード払いか（v0.35） | 「依頼を受ける」（v0.29、J章・M章）。輸送依頼では「荷箱を受け取る」（保証金を払う、v0.35、J-2）。結果は輸送依頼の時だけ `QuestResultS2C` で返す | 実装済 |
 | `CargoDeliverC2S` | C→S | 市場ID, カード払いか | 依頼タブの「荷箱を届ける」（v0.35、J-2）。インベントリにあるこの市場あての荷箱をすべて届ける。結果は `QuestResultS2C` | 実装済 |
-| `DevelopmentRequestC2S` / `DevelopmentResultS2C` | C→S / S→C | 市場ID, 操作（コインの寄付・資材の寄付・建てる・杭をもらう）, 金額, 建物のID, カード払いか ／ 結果コード, 操作, 金額または個数, 増えた・使った発展度 | 「発展」タブ（v0.37、N-6）。スナップショットには発展度・寄付した人の上位5人・自分の値（`DevelopmentView`）を足した | 実装済（コインの寄付。ほかは段階 b） |
+| `DevelopmentRequestC2S` / `DevelopmentResultS2C` | C→S / S→C | 市場ID, 操作（コインの寄付・資材の寄付・建てる・杭をもらう）, 金額, 建物のID, カード払いか ／ 結果コード, 操作, 金額または個数, 増えた・使った発展度 | 「発展」タブ（v0.37、N-6）。スナップショットには発展度・寄付した人・建物の一覧など（`DevelopmentView`、N-7）を足した | 実装済 |
 
 - 【v0.9】`TradeRequestC2S` に支払い方法（カード／現金）を追加した（段階12、実装済）。カードを選んだのに有効なカードが無い時は新しい結果コード `CARD_INVALID`。
 
@@ -1300,7 +1300,7 @@ MarketRegistry
 
 ### N. 村の発展【v0.36 追加、Q56・Q57】
 
-**状態：段階 a（発展度・コインの寄付・「発展」タブ・設定）を実装済み（v0.37）**。方針（N-1）は Q56、細部（N-9）は Q57 で決めた。数値はすべて【既定案】で、ゲーム内で遊んで調整する。
+**状態：段階 a（発展度・コインの寄付・「発展」タブ・設定、v0.37）と段階 b（建物、v0.38）を実装済み**。方針（N-1）は Q56、細部（N-9）は Q57 で決めた。数値はすべて【既定案】で、ゲーム内で遊んで調整する。
 
 プレイヤーが依頼・寄付・取引で村に貢献すると、村の**発展度**が貯まる。発展度を使って村に**施設の建物**（倉庫・銀行・依頼所・宿屋）を建てると、建物ごとの効果が付き、完成した建物の数に応じて**市場レベル（D-4）にボーナス**が付く。
 
@@ -1376,7 +1376,7 @@ MarketRegistry
 
 （資材の必要数も【既定案】。データパックで変えられる）
 
-- 各建物には**中心ブロック**（施設の看板。建物の種類を持つブロックエンティティ）が1つある。中心ブロックが壊れると、その建物の効果が消える（ほかのブロックが壊れても効果は消えない）。中心ブロックを右クリックすると、交易画面のその建物に合うタブ（依頼所＝依頼、銀行＝銀行、ほか＝発展）が開く。
+- 各建物には**中心ブロック**（施設の看板 `ak_trade_expansion:facility_sign`。ブロックの状態に種類 `kind`・完成したか `built`・向き `facing` を持つ。ブロックエンティティは無い）が1つある。中心ブロックが壊れると、その建物の効果が消える（ほかのブロックが壊れても効果は消えない）。中心ブロックを右クリックすると、交易画面のその建物に合うタブ（依頼所＝依頼、銀行＝銀行、ほか＝発展）が開く。
 - 建て直しに必要な発展度は半分（`development.rebuildCostRatio`、既定 0.5）。
 - 設定 `development.protectFacilities`（既定 OFF）を ON にすると、村の屋台（`worldgen.protectNaturalStalls`）と同じく、サバイバルでは建物のブロックを壊せず、爆発でも壊れない。クリエイティブでは壊せる。守る範囲は、完成した建物の構造物の範囲。
 - 宿屋のベッドは普通のベッドなので、村人が使い、D-4 のベッド数に入る。やって来た村人は普通の村人（職業なし）。村人を呼ぶのは**最初に完成した時だけ**（建物の記録に「呼んだ」印を持ち、建て直しでは呼ばない）。
@@ -1421,15 +1421,16 @@ MarketRegistry
 対象の次元（`development.dimensions`）の市場の交易画面に「発展」タブを足す。
 
 - 上：発展度、今のレベルの内訳（N-3）、次のボーナスまであと何棟か。
-- 左：建物の一覧（状態：未建設・建設中（あと何日）・完成・壊れた）。選ぶと右に効果・必要な発展度・ほしい品（あと何個）・大きさ。「建てる」ボタン（押せない時は理由を出す：発展度が足りない・評判が足りない・同時に建てられる数を超える）。
-- 寄付：コインは金額を指定（100c／1,000c／10,000c、支払いと同じ順で財布 → コイン、カード払いなら口座）。品物は、インベントリにある「ほしい品」を一覧にし、選んで寄付する（必要数を超える分は寄付しない）。
-- 「杭をもらう」ボタン（N-5）。
-- 寄付した人：その村に入れた発展度の多い順に5人と、自分の値。
+- 【v0.38 実装】上の行：発展度と市場の規模（マウスを乗せると「家と村人：村（2）／建物のボーナス：+1／市場の規模：大きな村（3）」）。
+- 左：建物の一覧（状態：必要な発展度・建設中 約N分・✔ 完成・壊れた（建て直しの発展度））。行にマウスを乗せると効果とほしい品（寄付した数／必要数）。クリックで選び、もう一度クリックで外す。一番下の行に寄付した人の1位と自分の値（マウスを乗せると上位5人）。
+- 右（建物を選んでいない時）：コインの寄付（100c／1,000c／10,000c、支払いと同じ順で財布 → コイン、カード払いなら口座）と「杭をもらう」（N-5）。
+- 右（建物を選んだ時）：名前・効果・必要な発展度・ほしい品3つ（アイコンと残りの数、全部集まると ✔）・「建てる」（押せない時はマウスを乗せると理由：評判・同時に建てられる数・発展度の不足）・「資材を寄付（N）」（持っているほしい品を、必要数まで全部まとめて寄付する。売却枠 → インベントリの順に取る）。建設中・完成の建物はボタンを出さない。
+- 完成した建物の看板から開いた時は、その建物のタブ（依頼所＝依頼、銀行＝銀行、ほか＝発展）で開く（`MarketMenu.OpenData` の `tab`、v0.38）。
 
-#### N-7. 保存・同期・設定（案）
+#### N-7. 保存・同期・設定
 
-- 保存（F-1、`ak_trade_expansion:markets`）：市場に `development`（発展度、小数）・`development_since`（減らす設定の時に前回計算した時刻）・`contributors`（プレイヤーUUID・最後の名前・入れた発展度）・`facilities`（建物ごとに 種類・状態・中心の座標・向き・建設を始めた時刻・完成した時刻・村人を呼んだか・寄付の数）。口座（`ak_trade_expansion:bank`）に `bank_facility`（登録した銀行の市場ID）。どれも省略可能（無いときは発展度 0・建物なし・登録なし）。
-- パケット（F-2）：`DevelopmentRequestC2S`（コインの寄付・品物の寄付・建てる・杭をもらう）。スナップショット（`MarketSnapshotS2C`）に発展度・建物の一覧・ほしい品と残りの数・建てられるかどうか・寄付した人の上位を足す。受け取った処理では、画面の市場 ID・屋台までの距離・金額と個数の範囲・評判・対象の次元を必ず確かめる。
+- 保存（F-1、`ak_trade_expansion:markets`）：市場に `development`（発展度、小数）・`development_since`（減らす設定の時に前回計算した時刻）・`contributors`（プレイヤーUUID `player`・最後の名前 `name`・入れた発展度 `points`）・【v0.38】`facilities`（建物ごとに `id`・`kind`・`state`（constructing／complete／destroyed）・`origin`（構造物の原点）・`rotation`（0〜3）・`front`（正面の真ん中）・`min`／`max`（建物の範囲）・`core`（看板の座標）・`style`（見た目）・`started`・`due`（完成する時刻）・`villagers_called`）・`facility_donations`（建物ID → ほしい品のキー（アイテムID か `#タグ`）→ 寄付した数）・`markers`（杭の座標）・`measured_level`（家と村人で測ったレベル。無い古いデータは今のレベル）。口座（`ak_trade_expansion:bank`）に `bank_facility`（登録した銀行の市場ID、-1 で無し）。どれも省略可能。
+- パケット（F-2）：`DevelopmentRequestC2S`（コインの寄付・品物の寄付・建てる・杭をもらう）・`DevelopmentResultS2C`。スナップショット（`MarketSnapshotS2C`）の `DevelopmentView` に発展度・寄付した人の上位・自分の値・家と村人のレベル・ボーナス・銀行の建物があるか・建物を選べるか・あと何棟建設できるか・建物の一覧（`FacilityView`：状態・今の必要な発展度・完成する時刻・ほしい品 `WantedView`）。【v0.38】`AccountS2C` に利息が付く上限と登録した銀行の市場名。受け取った処理では、画面の市場 ID・屋台までの距離・金額と個数の範囲・評判・対象の次元を必ず確かめる。
 - 設定（G章）：下の表。
 
 | 設定 | 既定 | 範囲（案） | 内容 |
@@ -1463,12 +1464,23 @@ MarketRegistry
 #### N-8. 作る順（案）
 
 1. **段階 a**（v0.37 で実装）：発展度・コインの寄付・「発展」タブ（建物の選択は無し）。依頼・取引で貯まる。管理コマンド `/aktradeex development`・`development add`。品物の寄付は「ほしい品」を持つ建物の定義と一緒に段階 b で作る。
-2. **段階 b**：建物の定義・場所探し・建設中・完成・効果・レベルのボーナス・目印。見た目は仮の1種類。
+2. **段階 b**（v0.38 で実装）：建物の定義・場所探し・建設中・完成・効果・レベルのボーナス・杭・資材の寄付・保護。見た目は平原の1種類（ほかの村も平原の見た目を使う）。
 3. **段階 c**：村の種類ごとの見た目（5種類 × 4建物）。
 
 #### N-9. 決めたこと（Q57）
 
 v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部」）。残りは数値の調整だけで、ゲーム内で遊んで決める（必要な発展度・資材の必要数・効果の倍率）。
+
+#### N-10. 実装の詳細（v0.38）
+
+- **建物の定義**（データパック `ak_trade_expansion/facility/<id>.json`、`FacilityDefinition`）：`kind`（`quest_hall`／`warehouse`／`inn`／`bank`）・`order`（タブの並び）・`icon`・`cost`・`structure`（構造物の名前）・`wanted`（`item` か `tag`、`count`、`value`）。同じ種類が複数あれば `order` が小さい1つだけ使う。ほしい品の発展度は、その品が商品（取引単位1・付加情報なし）ならその市場の基準価格 B、そうでなければ（タグを含む）`value` を使う。同梱：依頼所（板材のタグ・紙・本）、倉庫（原木のタグ・丸石・チェスト）、宿屋（原木のタグ・羊毛のタグ・ガラス）、銀行（石レンガ・金インゴット・ガラス）。
+- **構造物**：`data/ak_trade_expansion/structure/facility/<見た目>/<structure>.nbt`。北向き（`z = 0` が正面、扉は `x = 幅 ÷ 2`）、`y = 0` が床。中に `facility_sign`（built=true）を1つ置く。見た目のフォルダが無ければ `plains`。見た目は市場の中心のバイオームの村の種類（`VillagerType.BY_BIOME`。plains／desert／savanna／snowy／taiga 以外は plains）、ネザーは `nether`、エンドは `end`。`tools/structures/genfacility.js` で作る。
+- **場所探し**（`SiteFinder`）：正面の真ん中を候補の点にし、杭（市場の `markers` の古い順。杭が消えていれば一覧から外す）→ 中心から 2 ブロックおきの点（`DevelopmentMath.siteOffsets`、近い順、最大 `siteSearchLimit` 点）。各点で正面を中心向き・左右・反対の順に試す。地面は高さマップ（`MOTION_BLOCKING_NO_LEAVES`）から置き換えてよいブロックを下へたどった高さ。建物の列の地面はブロックタグ `ak_trade_expansion:facility_ground`（土・砂・石・テラコッタ・ネザーラック・エンドストーンなど。土の道・氷・液体は入らない）。床の高さ＝建物の列の地面の一番高い所。周り1マスを含めた高さの差が 1 以下。床から屋根まで空気か置き換えてよいブロック（液体は不可）。ほかの建物（壊れたものを除く）と屋台から 1 マス以上離す。チャンクが読み込まれていない点は使わない。
+- **建設**（`FacilityBuilder`）：四隅に高さ3の足場、正面の真ん中に `facility_sign`（built=false）。杭は消す。完成はサーバーの 40 tick ごとの見回りで、期日を過ぎて建物の範囲のチャンクが読み込まれていれば行う：足場と建設中の看板を消し、その間に置かれたブロックはアイテムとして落とし、構造物を置き、床より低い列の下に床と同じブロックを1つ入れる。看板の座標を `core` に記録する。依頼所は次の画面で依頼の枠をすぐ埋める（依頼の入れ替えの時刻を戻す）。
+- **壊れた判定**：看板が置き換わった時（`affectNeighborsAfterRemoval`）と、見回りで `core` に看板が無い時。看板は押せない（ピストン不可）、何も落とさない。
+- **保護**（`protectFacilities`）：完成した建物の範囲のブロックは、クリエイティブ以外の破壊を止め（`PlayerBlockBreakEvents.BEFORE`）、爆発で壊れる位置から外す（Mixin `ServerExplosionMixin`、`ServerExplosion.calculateExplodedPositions` の戻り値）。
+- **結果コード**（`TradeResult` の末尾に追加）：`NOT_ENOUGH_POINTS`・`BUILD_LIMIT`・`NO_SITE`・`MARKER_BLOCKED`（理由はチャットにも出す）・`ALREADY_BUILT`・`NOTHING_TO_DONATE`・`HAS_MARKER`・`NO_TEMPLATE`。
+- **ブロック**：`facility_sign`（アイテム無し）、`construction_marker`（杭。当たり判定なし、壊すと杭が落ちる）。モデルはバニラのテクスチャを使う。
 
 ---
 
@@ -1642,7 +1654,10 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   └─ DevelopmentRequestC2S.java / DevelopmentResultS2C.java ✅ … 「発展」タブ（N章、v0.37）
 ├─ development/
 │   ├─ Development.java           ✅ … 市場の発展度：加算（寄付・依頼・取引）・使う・減衰・寄付した人（N-2、v0.37）
-│   └─ DevelopmentService.java    ✅ … 「発展」タブの操作（コインの寄付。画面・距離・次元・金額を確かめる、N-6）
+│   ├─ DevelopmentService.java    ✅ … 「発展」タブの操作（コイン・資材の寄付、建てる、杭。画面・距離・次元・金額を確かめる、N-6）
+│   ├─ FacilityKind.java / Facility.java ✅ … 建物の種類と、市場ごとの建物の記録（v0.38）
+│   ├─ SiteFinder.java            ✅ … 建てる場所探し（杭・空き地、N-5）
+│   └─ FacilityBuilder.java       ✅ … 建設・完成・壊れた判定・看板と杭・保護（N-4・N-5）
 ├─ config/
 │   ├─ TradeExpansionConfig.java  ✅ … 全設定（カテゴリごとのクラス、Codec）
 │   ├─ ConfigManager.java         ✅ … 設定ファイルの読み書き・反映・コピー（設定画面用）
@@ -1683,7 +1698,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（5件。発展度の減衰・レベルのボーナス・資材の数・建て直し、v0.37）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（3件。エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計94件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（6件。発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（4件。村の建物の定義と構造物（v0.38）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計96件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -1753,6 +1768,8 @@ src/main/resources/
 └─ data/
     ├─ ak_trade_expansion/recipe/market_stall.json, wallet.json, emerald_coin.json, copper_coin_minting.json, iron_coin_minting.json ✅（エメラルド貨は石切台、鋳造は独自形式。どちらも読み込み条件つき）
     ├─ ak_trade_expansion/structure/village/<5種類>/market_stall.nbt ✅（村の屋台の建物、段階9。`tools/structures/genstall.js` で生成）
+    ├─ ak_trade_expansion/structure/facility/<見た目>/<建物>.nbt ✅（村の発展の建物、v0.38。`tools/structures/genfacility.js` で生成）
+    ├─ ak_trade_expansion/ak_trade_expansion/facility/*.json ✅（村の発展の建物の定義、v0.38）
     ├─ ak_trade_expansion/tags/item/consumables.json, tags/entity_type/drops_coins.json ✅（消耗品 B-3、コインを落とすモブ E-2）
     ├─ ak_trade_expansion/loot_table/blocks/market_stall.json ✅
     ├─ minecraft/tags/block/mineable/axe.json              ✅
@@ -1986,3 +2003,4 @@ test {
 | v0.36 | 2026-11-07 | 村の発展（N章、Q56）の方針を決め、仕様の案を追加（未実装）：発展度（依頼・寄付・取引で貯まり、建物を建てると減る）、建物4種（倉庫・銀行・依頼所・宿屋）の効果・自動の建設（空き地の自動探索と目印、数日かけて完成）・レベルのボーナス（最大 +2）・「発展」タブ・保存と設定の案・作る順。実装前に確かめる点を N-9 に記録 |
 | v0.36.1 | 2026-11-07 | 村の発展の細部を決めた（Q57、N章）：設定を追加（`development.questHallExtraQuests`・`questHallExtraTransport`・`maxConcurrentBuilds`・`halfLifeDays`・`protectFacilities`・`dimensions`・`siteSearchLimit`・`bankInterestMaxMultiplier`）、ネザー・エンドを対象にした時の扱い、品物の寄付は建物ごとの必要数まで、宿屋の村人は最初の完成の時だけ、銀行の利息の上限（建物に口座を登録）、杭は発展タブで無料、雪の上も可、寄付した人の上位5人。設定の一覧表を N-7 に。未実装 |
 | v0.37 | 2026-11-07 | 村の発展の段階 a を実装（N章）：市場ごとの発展度（依頼の報酬の半分・取引額・コインの寄付で貯まる、減衰は設定で）、寄付した人の記録、交易画面の「発展」タブ（発展度・上位5人と自分・コインの寄付 100c／1,000c／10,000c、カード払いは手数料なし）、寄付で評判も上がる、設定 `development.*`（23項目、`reputation` は項目数の上限なので評判の値も `development.reputationPerPoint` に置いた）と設定画面のタブ、管理コマンド `/aktradeex development`・`development add`、パケット `DevelopmentRequestC2S`・`DevelopmentResultS2C`、スナップショットの `DevelopmentView`、保存項目 `development`・`development_since`・`contributors`。テスト `DevelopmentMathTest`（5件）と `ConfigTest` に1件（計94件） |
+| v0.38 | 2026-11-07 | 村の発展の段階 b を実装（N章、N-10 に実装の詳細）：建物4種（依頼所・倉庫・宿屋・銀行）の定義（データパック `facility`）と構造物（平原の見た目、`tools/structures/genfacility.js`）、場所探し（杭・空き地、地面のタグ `facility_ground`）、建設中（足場と看板）と完成（40 tick ごとの見回り）、看板を壊すと効果が消える、建て直し、効果（倉庫：在庫上限と補充、依頼所：依頼の枠、宿屋：ベッドと村人、銀行：銀行タブ・カード手数料なし・利息の上限、口座の `bank_facility`）、市場レベルのボーナス（`measured_level`）、資材の寄付、保護（破壊と爆発）、看板から建物のタブで開く（`OpenData.tab`）、管理コマンド `development complete`、結果コード8つ、`AccountS2C` に利息の上限と登録した銀行。テスト2件（計96件） |
