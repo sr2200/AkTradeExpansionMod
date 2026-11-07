@@ -14,6 +14,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | Mod ID | `ak_trade_expansion`（表示名は「AK Trade Expansion」。0.0.10 までは「Trade Expansion」） |
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
+| 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
 | バージョン | 0.1.0（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 

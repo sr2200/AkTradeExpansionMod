@@ -30,9 +30,13 @@
 
 公開前:
   ☐ 公開前のゲーム内確認チェックリストを一通り確認する（docs/release/ingame-checklist.md。新しいワールドで） @公開前
-  ☐ 投稿ページの下書きのスクリーンショットを撮る（交易画面・村の屋台と商人・掲示板タブ・村人の取引画面。docs/release/post-draft.md） @公開前
-  ☐ 投稿ページの下書きの【バージョン】【ソースコードのURL】を埋める（docs/release/post-draft.md） @公開前
-  ☐ release.bat で配布用 zip を作る（0.1.0 になる） @公開前
+  ✔ 投稿ページの下書きのスクリーンショットを撮る（交易画面・村の屋台と商人・掲示板タブ・村人の取引画面。docs/release/post-draft.md） @公開前 @done(26-11-07 12:00)
+  ✔ 投稿ページの下書きの【バージョン】【ソースコードのURL】を埋める（docs/release/post-draft.md） @公開前 @done(26-11-07 12:00)
+  ✔ release.bat で配布用 zip を作る（0.1.0 になる） @公開前 @done(26-11-07 12:00)
+  ✔ 公開用のサムネイル画像を作る（docs/release/thumbnail.png。tools/thumbnail/genthumb.ps1 で作り直せる） @公開前 @done(26-11-07 12:00)
+  ✔ Crafters Colony に 0.1.0 を公開する @公開前 @done(26-11-07 12:00)
+  ✔ 投稿ページの URL を README.md に載せる（https://minecraft-mcworld.com/272453/） @公開後 @done(26-11-07 12:30)
+  ☐ 版を上げて配布する時は、投稿ページの zip・本文・サムネイル（版の番号入り）も差し替える @公開後
 
 今後の予定（拡張案。作る前に仕様を相談して決める）:
   A. 遊びやすさ・他 Mod との相性:
