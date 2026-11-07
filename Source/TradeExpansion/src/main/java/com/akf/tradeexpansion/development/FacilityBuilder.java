@@ -71,6 +71,7 @@ public final class FacilityBuilder {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % TICK_INTERVAL == 0) tick(server);
 		});
+		MarkerPreview.register(); // N-5 (v0.41): outlines at building site stakes
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
 			if (player.isCreative() || !(level instanceof ServerLevel serverLevel) || !isProtected(serverLevel, pos)) return true;
 			player.sendOverlayMessage(Component.translatable("message.ak_trade_expansion.facility.protected").withStyle(ChatFormatting.RED));
@@ -375,6 +376,7 @@ public final class FacilityBuilder {
 			Direction facing = level.getBlockState(pos).getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
 			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_placed", MarketNames.name(market),
 					Component.translatable("direction.ak_trade_expansion." + facing.getSerializedName().charAt(0))).withStyle(ChatFormatting.GREEN));
+			MarkerPreview.show(player, level, pos); // where each building would stand
 		}
 	}
 

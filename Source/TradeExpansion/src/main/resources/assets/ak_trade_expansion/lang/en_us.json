@@ -690,5 +690,10 @@
   "message.ak_trade_expansion.facility.site.overlap": "too close to another building or stall",
   "command.ak_trade_expansion.development.completed": "Completed %s constructions",
   "screen.ak_trade_expansion.board.map.here": "Coords: here",
-  "screen.ak_trade_expansion.board.map.here.journeymap": "Map: here"
+  "screen.ak_trade_expansion.board.map.here.journeymap": "Map: here",
+  "message.ak_trade_expansion.facility.preview.header": "Building site for %s (front faces %s). Outlines shown for 30 seconds (green: can be built, red: cannot)",
+  "message.ak_trade_expansion.facility.preview.ok": "- %s (%s): can be built",
+  "message.ak_trade_expansion.facility.preview.blocked": "- %s (%s): cannot be built: %s",
+  "message.ak_trade_expansion.facility.preview.none": "- Every building is already built",
+  "message.ak_trade_expansion.facility.preview.not_first": "While the stake placed earlier (%s, %s, %s) stands, buildings go there"
 }

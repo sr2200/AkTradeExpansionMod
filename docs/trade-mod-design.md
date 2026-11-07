@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.40（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
+- 版：v0.41（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -1480,6 +1480,7 @@ v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部�
 - **壊れた判定**：看板が置き換わった時（`affectNeighborsAfterRemoval`）と、見回りで `core` に看板が無い時。看板は押せない（ピストン不可）、何も落とさない。
 - **保護**（`protectFacilities`）：完成した建物の範囲のブロックは、クリエイティブ以外の破壊を止め（`PlayerBlockBreakEvents.BEFORE`）、爆発で壊れる位置から外す（Mixin `ServerExplosionMixin`、`ServerExplosion.calculateExplodedPositions` の戻り値）。
 - **結果コード**（`TradeResult` の末尾に追加）：`NOT_ENOUGH_POINTS`・`BUILD_LIMIT`・`NO_SITE`・`MARKER_BLOCKED`（理由はチャットにも出す）・`ALREADY_BUILT`・`NOTHING_TO_DONATE`・`HAS_MARKER`・`NO_TEMPLATE`。
+- **杭の場所の表示**（v0.41、`MarkerPreview`）：杭を置いた時と右クリックした時、まだ建っていない（壊れたものを含む）建物ごとに、その杭で建つ範囲を `SiteFinder.preview`（`find` と同じ判定）で求め、範囲の床の四角と四隅の柱をパーティクルで30秒間描く（10 tick ごと、そのプレイヤーにだけ、64 ブロック以内）。今建てられる建物の範囲は緑、建てられない範囲は赤。同じ範囲の建物（倉庫と宿屋）は1つの枠にまとめ、どれかが建てられれば緑。チャットに建物ごとの「建てられます」／「建てられません：理由」を出す。市場に先に置いた杭がある時は、そちらに建つことも伝える。
 - **ブロック**：`facility_sign`（アイテム無し）、`construction_marker`（杭。当たり判定なし、壊すと杭が落ちる）。モデルはバニラのテクスチャを使う。
 
 ---
@@ -1657,7 +1658,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ DevelopmentService.java    ✅ … 「発展」タブの操作（コイン・資材の寄付、建てる、杭。画面・距離・次元・金額を確かめる、N-6）
 │   ├─ FacilityKind.java / Facility.java ✅ … 建物の種類と、市場ごとの建物の記録（v0.38）
 │   ├─ SiteFinder.java            ✅ … 建てる場所探し（杭・空き地、N-5）
-│   └─ FacilityBuilder.java       ✅ … 建設・完成・壊れた判定・看板と杭・保護（N-4・N-5）
+│   ├─ FacilityBuilder.java       ✅ … 建設・完成・壊れた判定・看板と杭・保護（N-4・N-5）
+│   └─ MarkerPreview.java         ✅ … 杭の場所に建物の枠を表示（v0.41、N-10）
 ├─ config/
 │   ├─ TradeExpansionConfig.java  ✅ … 全設定（カテゴリごとのクラス、Codec）
 │   ├─ ConfigManager.java         ✅ … 設定ファイルの読み書き・反映・コピー（設定画面用）
@@ -2006,3 +2008,4 @@ test {
 | v0.38 | 2026-11-07 | 村の発展の段階 b を実装（N章、N-10 に実装の詳細）：建物4種（依頼所・倉庫・宿屋・銀行）の定義（データパック `facility`）と構造物（平原の見た目、`tools/structures/genfacility.js`）、場所探し（杭・空き地、地面のタグ `facility_ground`）、建設中（足場と看板）と完成（40 tick ごとの見回り）、看板を壊すと効果が消える、建て直し、効果（倉庫：在庫上限と補充、依頼所：依頼の枠、宿屋：ベッドと村人、銀行：銀行タブ・カード手数料なし・利息の上限、口座の `bank_facility`）、市場レベルのボーナス（`measured_level`）、資材の寄付、保護（破壊と爆発）、看板から建物のタブで開く（`OpenData.tab`）、管理コマンド `development complete`、結果コード8つ、`AccountS2C` に利息の上限と登録した銀行。テスト2件（計96件） |
 | v0.39 | 2026-11-07 | 村の発展の段階 c を実装（N-8・N-10）：建物の見た目を村の種類ごと（平原・砂漠・サバンナ・雪原・タイガ）と、ネザー・エンド用（宿屋にベッドなし）の 7 種類 × 4 建物にした（`tools/structures/genfacility.js`）。`BundledDataTest` に全構造物のブロック・看板・ベッドの確認を1件（計97件） |
 | v0.40 | 2026-11-07 | 掲示板（I章、地図への登録）：市場の一覧に「この市場を登録」ボタンを追加し、画面を開いている市場そのものも地図に登録できるようにした |
+| v0.41 | 2026-11-07 | 村の発展（N-10）：建設予定地の杭を置いた時・右クリックした時に、まだ建っていない建物が建つ範囲の枠をパーティクルで30秒間表示（緑：建てられる／赤：建てられない）し、建物ごとの結果と理由をチャットに出す（`MarkerPreview`・`SiteFinder.preview`） |

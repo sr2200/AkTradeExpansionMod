@@ -690,5 +690,10 @@
   "message.ak_trade_expansion.facility.site.overlap": "ほかの建物や屋台に近すぎます",
   "command.ak_trade_expansion.development.completed": "%s 件の建設を完成させました",
   "screen.ak_trade_expansion.board.map.here": "この市場の座標",
-  "screen.ak_trade_expansion.board.map.here.journeymap": "この市場を登録"
+  "screen.ak_trade_expansion.board.map.here.journeymap": "この市場を登録",
+  "message.ak_trade_expansion.facility.preview.header": "%sの建設予定地（正面は%s向き）。30秒間、建物の枠を表示します（緑：建てられる／赤：建てられない）",
+  "message.ak_trade_expansion.facility.preview.ok": "・%s（%s）：建てられます",
+  "message.ak_trade_expansion.facility.preview.blocked": "・%s（%s）：建てられません：%s",
+  "message.ak_trade_expansion.facility.preview.none": "・まだ建っていない建物はありません",
+  "message.ak_trade_expansion.facility.preview.not_first": "先に置いた杭（%s, %s, %s）がある間は、そちらに建ちます"
 }

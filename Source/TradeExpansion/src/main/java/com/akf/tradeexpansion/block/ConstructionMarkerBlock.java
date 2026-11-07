@@ -1,6 +1,10 @@
 package com.akf.tradeexpansion.block;
 
 import com.akf.tradeexpansion.development.FacilityBuilder;
+import com.akf.tradeexpansion.development.MarkerPreview;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -54,6 +58,15 @@ public class ConstructionMarkerBlock extends HorizontalDirectionalBlock {
 	@Override
 	protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
 		return Shapes.empty();
+	}
+
+	/** N-5 (v0.41): right-click shows again where each building would stand. */
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+			MarkerPreview.show(serverPlayer, serverLevel, pos);
+		}
+		return InteractionResult.SUCCESS;
 	}
 
 	@Override

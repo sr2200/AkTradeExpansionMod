@@ -79,6 +79,25 @@ public final class SiteFinder {
 		return new Result(null, null, false);
 	}
 
+	/** Where a building would stand at a stake, and why it cannot ({@code null} = it can). */
+	public record Preview(BoundingBox box, Component reason) {
+	}
+
+	/**
+	 * N-5 (v0.41): the box {@code template} would fill at the stake {@code marker} facing {@code facing}, and whether it
+	 * could be built there now (the same checks as {@link #find}).
+	 */
+	public static Preview preview(ServerLevel level, Market market, StructureTemplate template, BlockPos marker, Direction facing) {
+		Rotation rotation = rotation(facing);
+		Check check = check(level, market, template, marker.getX(), marker.getZ(), rotation, marker);
+		if (check.site() != null) return new Preview(check.site().box(), null);
+		BlockPos frontLocal = StructureTemplate.transform(new BlockPos(template.getSize().getX() / 2, 0, 0), Mirror.NONE, rotation, BlockPos.ZERO);
+		BlockPos origin = new BlockPos(marker.getX() - frontLocal.getX(), marker.getY(), marker.getZ() - frontLocal.getZ());
+		BoundingBox box = template.getBoundingBox(new net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings()
+				.setRotation(rotation), origin);
+		return new Preview(box, check.reason());
+	}
+
 	/** The front faces the market center first, then the two sides, then away from it. */
 	private static List<Direction> facingsToward(int dx, int dz) {
 		Direction toCenter = Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? Direction.WEST : Direction.EAST) : (dz > 0 ? Direction.NORTH : Direction.SOUTH);
