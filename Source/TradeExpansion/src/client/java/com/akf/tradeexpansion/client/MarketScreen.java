@@ -1360,6 +1360,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// Title, then (M) the player's reputation right after it: "市場名（町）│ 評判：常連". The right end stays free for
 		// buttons other mods add there; a long title shrinks so the reputation always shows.
 		int room = imageWidth - 16 - TITLE_RIGHT_RESERVE;
+		Player viewer = player();
+		if (viewer != null && TradeExpansionConfig.get().client.balancePosition == TradeExpansionConfig.BalancePosition.TOP_RIGHT) {
+			// The balance takes the right end of the title row: the title and the reputation stop before it.
+			room = imageWidth - 16 - font.width(topRightBalance(viewer)) - 8;
+		}
 		String titleText = title.getString();
 		if (snapshot != null && snapshot.reputation().enabled()) {
 			String label = Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString();
@@ -1389,6 +1394,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	 * Cash = coins + wallets (E-6); the bank balance is shown once known (E-7). Position: {@code client.balancePosition}
 	 * (A-4). Hovering shows the breakdown (Q17).
 	 */
+	/** The one-line balance shown at the right end of the title row ({@code client.balancePosition = TOP_RIGHT}). */
+	private Component topRightBalance(Player player) {
+		long cash = WalletService.balance(player);
+		return account == null
+				? Component.translatable("screen.ak_trade_expansion.balance", CoinItem.formatCopper(cash))
+				: Component.translatable("screen.ak_trade_expansion.balance_bank", CoinItem.formatCopper(cash), CoinItem.formatCopper(account.bankBalance()));
+	}
+
 	private void extractBalance(GuiGraphicsExtractor g, Player player, int mx, int my, int mouseX, int mouseY) {
 		long cash = WalletService.balance(player);
 		int x0;
@@ -1397,9 +1410,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int y1;
 		TradeExpansionConfig.BalancePosition position = TradeExpansionConfig.get().client.balancePosition;
 		if (position == TradeExpansionConfig.BalancePosition.TOP_RIGHT) {
-			Component balance = account == null
-					? Component.translatable("screen.ak_trade_expansion.balance", CoinItem.formatCopper(cash))
-					: Component.translatable("screen.ak_trade_expansion.balance_bank", CoinItem.formatCopper(cash), CoinItem.formatCopper(account.bankBalance()));
+			Component balance = topRightBalance(player);
 			x0 = imageWidth - 8 - font.width(balance);
 			x1 = imageWidth - 8;
 			y0 = 5;
