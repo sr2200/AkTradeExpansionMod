@@ -2,6 +2,7 @@ package com.akf.tradeexpansion.network;
 
 import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.board.BoardService;
+import com.akf.tradeexpansion.development.DevelopmentService;
 import com.akf.tradeexpansion.quest.QuestService;
 import com.akf.tradeexpansion.currency.ExchangeService;
 import com.akf.tradeexpansion.currency.WalletService;
@@ -35,6 +36,8 @@ public final class ModPayloads {
 		PayloadTypeRegistry.serverboundPlay().register(TradeRequestC2S.TYPE, TradeRequestC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(BankRequestC2S.TYPE, BankRequestC2S.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(WalletWithdrawC2S.TYPE, WalletWithdrawC2S.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(DevelopmentRequestC2S.TYPE, DevelopmentRequestC2S.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DevelopmentResultS2C.TYPE, DevelopmentResultS2C.CODEC);
 
 		// Handlers run on the server thread, so trades never race each other (F-2).
 		ServerPlayNetworking.registerGlobalReceiver(TradeRequestC2S.TYPE,
@@ -55,5 +58,7 @@ public final class ModPayloads {
 				(payload, context) -> QuestService.deliverCargo(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(WalletWithdrawC2S.TYPE,
 				(payload, context) -> WalletService.withdraw(context.player(), payload.offhand(), payload.coin(), payload.count()));
+		ServerPlayNetworking.registerGlobalReceiver(DevelopmentRequestC2S.TYPE,
+				(payload, context) -> DevelopmentService.handle(context.player(), payload));
 	}
 }

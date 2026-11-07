@@ -127,6 +127,22 @@ class ConfigTest {
 		assertEquals(8, original.trade.maxDistance);
 	}
 
+	/** N (v0.36): both halves of the development section round-trip; bonus thresholds are corrected to 1..4, ascending. */
+	@Test
+	void developmentSection() throws IOException {
+		Path file = dir.resolve("ak_trade_expansion.json");
+		Files.writeString(file, "{\"development\": {\"halfLifeDays\": 30, \"innVillagers\": 3, \"levelBonusThresholds\": [3, 1, 9],"
+				+ " \"dimensions\": [\"minecraft:overworld\", \"minecraft:the_nether\"]}}");
+		TradeExpansionConfig config = ConfigManager.read(file);
+		assertEquals(30, config.development.halfLifeDays);
+		assertEquals(3, config.development.innVillagers);
+		assertEquals(List.of(3, 3, 4), config.development.levelBonusThresholds);
+		assertEquals(List.of("minecraft:overworld", "minecraft:the_nether"), config.development.dimensions);
+		assertEquals(1.5, config.development.warehouseStockMultiplier);
+		assertEquals(0.03, config.development.reputationPerPoint);
+		assertEquals(List.of(2, 4), TradeExpansionConfig.defaults().development.levelBonusThresholds);
+	}
+
 	/** D-5: specials per level; a short list repeats its last entry, a wrong size falls back to the defaults. */
 	@Test
 	void specialGoodsPerLevel() throws IOException {

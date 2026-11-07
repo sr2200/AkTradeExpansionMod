@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.36.1（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
+- 版：v0.37（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -178,7 +178,7 @@ v0.29 時点ですべて決定済み（Q44〜Q50 は実装時の決定を後か�
 | 数量 | `[−][+][1][8][64][最大]`。上限は `trade.maxPerTransaction`。「最大」は B-5 の可能な最大数量（購入：在庫・所持金・空き枠、売却：所持数・Scap までの余裕） |
 | 右パネル | 合計額（耐久が減った品は D-2 の減額を反映。購入はまとめ買い割引を反映し、割引がある時は「まとめ買い −x%」、B-5）、最大数量（売り切れ時は「入荷まで約x分」、買取停止時は「買取停止」と「買取再開まで約x分」。ゲーム内1日＝20分で換算）。Shift を押している間は数量が「Shift で全数」の数に変わる（`trade.allowShiftAll`、1回の上限は 2,304＝36スタック） |
 | 結果表示 | 一覧の下に1行（成功は緑、失敗は結果コードの翻訳を赤） |
-| タブ | 購入／売却／銀行（市場レベル3以上だけ表示、E-7）／掲示板（I章）／依頼（J章）／両替（E-3） |
+| タブ | 購入／売却／銀行（市場レベル3以上だけ表示、E-7）／掲示板（I章）／依頼（J章）／両替（E-3）／発展（`development.dimensions` の次元の市場だけ表示、N-6、v0.37。タブが7つになったので、幅は一覧の幅に収まるよう縮める） |
 | 支払い方法 | 有効なカードを持っている時だけ、右上に「支払い：カード／現金」の切り替えボタン（既定はカード、E-8） |
 | 所持金 | 【v0.14.3】既定は**プレイヤーインベントリの右**に「現金」と金額、銀行の情報を受け取った後は「銀行」と金額を2行ずつ表示（右上は他のModがボタンを足すことがあるため空ける）。幅に収まらない金額は「1.2Mc」のように縮め、正確な額はツールチップで出す。表示位置はクライアントの設定 `client.balancePosition` で「インベントリの右」「売却枠の下」「右上（タイトル行に1行で表示、v0.14 までの位置）」から選べる。マウスを乗せると内訳（コインの種類ごとの枚数・財布・銀行、Q17） |
 | 銀行タブ | 銀行残高・現金、預け入れ・引き出し（100c／1,000c／10,000c／全額）、カード発行。操作の結果は結果表示の行に出す。【v0.29.1】利率の行「利息：1日 0.03%（100,000c まで）」（E-7） |
@@ -886,6 +886,7 @@ MarketRegistry
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 種類（納品・荷箱の受け取り・荷箱の届け、v0.35）, 金額（報酬・払った保証金・受け取った報酬＋保証金）, 届けた荷箱の数 | 依頼タブの「納品する」 | 実装済（段階13） |
 | `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号, カード払いか（v0.35） | 「依頼を受ける」（v0.29、J章・M章）。輸送依頼では「荷箱を受け取る」（保証金を払う、v0.35、J-2）。結果は輸送依頼の時だけ `QuestResultS2C` で返す | 実装済 |
 | `CargoDeliverC2S` | C→S | 市場ID, カード払いか | 依頼タブの「荷箱を届ける」（v0.35、J-2）。インベントリにあるこの市場あての荷箱をすべて届ける。結果は `QuestResultS2C` | 実装済 |
+| `DevelopmentRequestC2S` / `DevelopmentResultS2C` | C→S / S→C | 市場ID, 操作（コインの寄付・資材の寄付・建てる・杭をもらう）, 金額, 建物のID, カード払いか ／ 結果コード, 操作, 金額または個数, 増えた・使った発展度 | 「発展」タブ（v0.37、N-6）。スナップショットには発展度・寄付した人の上位5人・自分の値（`DevelopmentView`）を足した | 実装済（コインの寄付。ほかは段階 b） |
 
 - 【v0.9】`TradeRequestC2S` に支払い方法（カード／現金）を追加した（段階12、実装済）。カードを選んだのに有効なカードが無い時は新しい結果コード `CARD_INVALID`。
 
@@ -1034,6 +1035,7 @@ MarketRegistry
 | 評判 | `reputation.hardQuestLevel` | 3 | 0〜5 | 【v0.29】★★★の依頼を納めるのに必要なレベル（0 で誰でも）（M章） |
 | 評判 | `reputation.specialBonusLevel` | 4 | 0〜5 | 【v0.29】評判の掘り出し物が見えるレベル（M章） |
 | 評判 | `reputation.specialBonusCount` | 1 | 0〜5 | 【v0.29】評判の掘り出し物の数（M章） |
+| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 23 項目（一覧は N-7）。設定画面の「村の発展」タブ |
 | 需要 | `demand.maxShortages` | 2 | 0〜10 | 1市場の不足品の最大数（0 で不足なし、K章） |
 | 需要 | `demand.durationDays` | 3.0 | 0.5〜30 | 不足品を選び直す間隔（ゲーム内日） |
 | 需要 | `demand.minMultiplier` / `demand.maxMultiplier` | 1.5 / 2.0 | 1〜5 | 不足品の基準価格に掛ける倍率の範囲 |
@@ -1298,7 +1300,7 @@ MarketRegistry
 
 ### N. 村の発展【v0.36 追加、Q56・Q57】
 
-**状態：仕様は決定、未実装**。方針（N-1）は Q56、細部（N-9）は Q57 で決めた。数値はすべて【既定案】で、ゲーム内で遊んで調整する。
+**状態：段階 a（発展度・コインの寄付・「発展」タブ・設定）を実装済み（v0.37）**。方針（N-1）は Q56、細部（N-9）は Q57 で決めた。数値はすべて【既定案】で、ゲーム内で遊んで調整する。
 
 プレイヤーが依頼・寄付・取引で村に貢献すると、村の**発展度**が貯まる。発展度を使って村に**施設の建物**（倉庫・銀行・依頼所・宿屋）を建てると、建物ごとの効果が付き、完成した建物の数に応じて**市場レベル（D-4）にボーナス**が付く。
 
@@ -1351,7 +1353,7 @@ MarketRegistry
 - 建物が完成すると、その建物の寄付の数は 0 に戻す（壊れた後に建て直す時は、また必要数まで寄付できる）。
 - 寄付した人ごとの発展度（寄付・依頼・取引の合計。使って減っても減らさない）を記録し、「発展」タブで上位5人と自分の値を出す（N-6）。
 - 時間で減らす設定（`development.halfLifeDays` が 0 より大きい）の時は、評判（M章）と同じく、市場に触れた時に経過日数からまとめて計算する（遅延計算）。寄付した人ごとの記録は減らさない。
-- 評判（M章）：寄付した発展度 1 につき 0.03（`reputation.donationPointsPerPoint`。取引の3倍）。依頼・取引で貯まる発展度には評判を付けない（それぞれ M章の評判がすでに付くため）。
+- 評判（M章）：寄付した発展度 1 につき 0.03（`development.reputationPerPoint`。取引の3倍。`reputation` の設定は項目数の上限に達しているので `development` に置く）。依頼・取引で貯まる発展度には評判を付けない（それぞれ M章の評判がすでに付くため）。
 - `market reset`・`market reroll` は発展度と建物をそのまま残す。
 
 #### N-3. レベルのボーナス
@@ -1428,7 +1430,7 @@ MarketRegistry
 
 - 保存（F-1、`ak_trade_expansion:markets`）：市場に `development`（発展度、小数）・`development_since`（減らす設定の時に前回計算した時刻）・`contributors`（プレイヤーUUID・最後の名前・入れた発展度）・`facilities`（建物ごとに 種類・状態・中心の座標・向き・建設を始めた時刻・完成した時刻・村人を呼んだか・寄付の数）。口座（`ak_trade_expansion:bank`）に `bank_facility`（登録した銀行の市場ID）。どれも省略可能（無いときは発展度 0・建物なし・登録なし）。
 - パケット（F-2）：`DevelopmentRequestC2S`（コインの寄付・品物の寄付・建てる・杭をもらう）。スナップショット（`MarketSnapshotS2C`）に発展度・建物の一覧・ほしい品と残りの数・建てられるかどうか・寄付した人の上位を足す。受け取った処理では、画面の市場 ID・屋台までの距離・金額と個数の範囲・評判・対象の次元を必ず確かめる。
-- 設定（G章）：下の表と `reputation.donationPointsPerPoint`（既定 0.03）。
+- 設定（G章）：下の表。
 
 | 設定 | 既定 | 範囲（案） | 内容 |
 |---|---|---|---|
@@ -1453,13 +1455,14 @@ MarketRegistry
 | `development.questHallExtraTransport` | 1 | 0〜5 | 依頼所：輸送依頼の枠の増分 |
 | `development.innVillagers` | 2 | 0〜10 | 宿屋：最初の完成で来る村人の数 |
 | `development.bankInterestMaxMultiplier` | 2.0 | 1〜100 | 銀行：登録した口座の利息の上限の倍率 |
+| `development.reputationPerPoint` | 0.03 | 0〜10 | 寄付した発展度 1 あたりに上がる評判のポイント（M章） |
 
 - `levelBonusThresholds` の数がボーナスの上限になる（既定は2つなので最大 +2）。合計のレベルは 5 で頭打ち。
 - 管理コマンド：`/aktradeex development info`（最寄りの市場の発展度と建物）、`development add <発展度>`、`development complete`（建設中の建物をすぐ完成させる、テスト用）。
 
 #### N-8. 作る順（案）
 
-1. **段階 a**：発展度・寄付・「発展」タブ（建物の選択は無し）。依頼・取引で貯まる。
+1. **段階 a**（v0.37 で実装）：発展度・コインの寄付・「発展」タブ（建物の選択は無し）。依頼・取引で貯まる。管理コマンド `/aktradeex development`・`development add`。品物の寄付は「ほしい品」を持つ建物の定義と一緒に段階 b で作る。
 2. **段階 b**：建物の定義・場所探し・建設中・完成・効果・レベルのボーナス・目印。見た目は仮の1種類。
 3. **段階 c**：村の種類ごとの見た目（5種類 × 4建物）。
 
@@ -1553,6 +1556,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ MarketLevel.java           ✅ … ベッド数・村人の人数→レベル（v0.27.5：両方の低い方 `levelOfBoth`）、レベル→商品数 N（D-4）
 │   ├─ WalletMath.java            ✅ … 財布での支払い・受け取りの計算（E-6）
 │   ├─ QuestMath.java             ✅ … 依頼の難易度・報酬・期間、不足品の倍率（J章・K章）
+│   ├─ DevelopmentMath.java       ✅ … 発展度の減衰・レベルのボーナス・資材の受け付ける数・建て直しの発展度（N章、v0.37）
 │   └─ GoodsSelector.java         ✅ … 商品の抽選（always・プール・追加抽選・レベルアップ時の追加、D-1・D-4）
 ├─ registry/
 │   ├─ ModItems.java              ✅ … コイン5種、エメラルド貨、財布、カード
@@ -1634,7 +1638,11 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ AccountS2C.java / BankRequestC2S.java / WalletWithdrawC2S.java ✅ … 段階12
 │   ├─ ExchangeRequestC2S.java / ExchangeResultS2C.java ✅ … 両替（段階11）
 │   ├─ VillagerPricesS2C.java     ✅ … 村人の取引ごとの代金（14a）
-│   └─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
+│   ├─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
+│   └─ DevelopmentRequestC2S.java / DevelopmentResultS2C.java ✅ … 「発展」タブ（N章、v0.37）
+├─ development/
+│   ├─ Development.java           ✅ … 市場の発展度：加算（寄付・依頼・取引）・使う・減衰・寄付した人（N-2、v0.37）
+│   └─ DevelopmentService.java    ✅ … 「発展」タブの操作（コインの寄付。画面・距離・次元・金額を確かめる、N-6）
 ├─ config/
 │   ├─ TradeExpansionConfig.java  ✅ … 全設定（カテゴリごとのクラス、Codec）
 │   ├─ ConfigManager.java         ✅ … 設定ファイルの読み書き・反映・コピー（設定画面用）
@@ -1675,7 +1683,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（10件）、`data/BundledDataTest`（3件。エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計88件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（5件。発展度の減衰・レベルのボーナス・資材の数・建て直し、v0.37）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（3件。エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計94件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -1977,3 +1985,4 @@ test {
 | v0.35 | 2026-11-07 | 輸送依頼（J-2）を追加：依頼元で保証金を払って荷箱を受け取り、届け先の市場で報酬（距離で増える）と保証金を受け取る。評判は両方の市場で上がる。荷箱のアイテムと付加情報 `cargo`、`CargoDeliverC2S`、`QuestAcceptC2S` にカード払い、`QuestResultS2C` に種類と個数、結果コード `CARGO_TAKEN`・`NO_CARGO`・`CARGO_EXPIRED`、設定 `quest.transport*`（6項目）、`QuestMathTest` に1件（計88件）。0.1.1 |
 | v0.36 | 2026-11-07 | 村の発展（N章、Q56）の方針を決め、仕様の案を追加（未実装）：発展度（依頼・寄付・取引で貯まり、建物を建てると減る）、建物4種（倉庫・銀行・依頼所・宿屋）の効果・自動の建設（空き地の自動探索と目印、数日かけて完成）・レベルのボーナス（最大 +2）・「発展」タブ・保存と設定の案・作る順。実装前に確かめる点を N-9 に記録 |
 | v0.36.1 | 2026-11-07 | 村の発展の細部を決めた（Q57、N章）：設定を追加（`development.questHallExtraQuests`・`questHallExtraTransport`・`maxConcurrentBuilds`・`halfLifeDays`・`protectFacilities`・`dimensions`・`siteSearchLimit`・`bankInterestMaxMultiplier`）、ネザー・エンドを対象にした時の扱い、品物の寄付は建物ごとの必要数まで、宿屋の村人は最初の完成の時だけ、銀行の利息の上限（建物に口座を登録）、杭は発展タブで無料、雪の上も可、寄付した人の上位5人。設定の一覧表を N-7 に。未実装 |
+| v0.37 | 2026-11-07 | 村の発展の段階 a を実装（N章）：市場ごとの発展度（依頼の報酬の半分・取引額・コインの寄付で貯まる、減衰は設定で）、寄付した人の記録、交易画面の「発展」タブ（発展度・上位5人と自分・コインの寄付 100c／1,000c／10,000c、カード払いは手数料なし）、寄付で評判も上がる、設定 `development.*`（23項目、`reputation` は項目数の上限なので評判の値も `development.reputationPerPoint` に置いた）と設定画面のタブ、管理コマンド `/aktradeex development`・`development add`、パケット `DevelopmentRequestC2S`・`DevelopmentResultS2C`、スナップショットの `DevelopmentView`、保存項目 `development`・`development_since`・`contributors`。テスト `DevelopmentMathTest`（5件）と `ConfigTest` に1件（計94件） |

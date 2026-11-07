@@ -126,6 +126,28 @@ public final class ConfigValidator {
 		rp.specialBonusLevel = clamp("reputation.specialBonusLevel", rp.specialBonusLevel, 0, 5);
 		rp.specialBonusCount = clamp("reputation.specialBonusCount", rp.specialBonusCount, 0, 5);
 
+		TradeExpansionConfig.Development dv = c.development;
+		dv.dimensions = itemIds("development.dimensions", dv.dimensions);
+		dv.pointsPerCoin = clamp("development.pointsPerCoin", dv.pointsPerCoin, 0, 100);
+		dv.materialMultiplier = clamp("development.materialMultiplier", dv.materialMultiplier, 0, 10);
+		dv.questRewardRatio = clamp("development.questRewardRatio", dv.questRewardRatio, 0, 10);
+		dv.tradePointsPerCoin = clamp("development.tradePointsPerCoin", dv.tradePointsPerCoin, 0, 1);
+		dv.halfLifeDays = clamp("development.halfLifeDays", dv.halfLifeDays, 0, 1000);
+		dv.levelBonusThresholds = bonusThresholds(dv.levelBonusThresholds);
+		dv.buildReputationLevel = clamp("development.buildReputationLevel", dv.buildReputationLevel, 0, 5);
+		dv.maxConcurrentBuilds = clamp("development.maxConcurrentBuilds", dv.maxConcurrentBuilds, 1, 4);
+		dv.buildDays = clamp("development.buildDays", dv.buildDays, 0, 100);
+		dv.siteRadius = clamp("development.siteRadius", dv.siteRadius, 8, 64);
+		dv.siteSearchLimit = clamp("development.siteSearchLimit", dv.siteSearchLimit, 16, 4096);
+		dv.rebuildCostRatio = clamp("development.rebuildCostRatio", dv.rebuildCostRatio, 0, 1);
+		dv.warehouseStockMultiplier = clamp("development.warehouseStockMultiplier", dv.warehouseStockMultiplier, 1, 10);
+		dv.warehouseRestockMultiplier = clamp("development.warehouseRestockMultiplier", dv.warehouseRestockMultiplier, 1, 10);
+		dv.questHallExtraQuests = clamp("development.questHallExtraQuests", dv.questHallExtraQuests, 0, 10);
+		dv.questHallExtraTransport = clamp("development.questHallExtraTransport", dv.questHallExtraTransport, 0, 5);
+		dv.innVillagers = clamp("development.innVillagers", dv.innVillagers, 0, 10);
+		dv.bankInterestMaxMultiplier = clamp("development.bankInterestMaxMultiplier", dv.bankInterestMaxMultiplier, 1, 100);
+		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
+
 		c.consumables.add = itemIds("consumables.add", c.consumables.add);
 		c.consumables.remove = itemIds("consumables.remove", c.consumables.remove);
 		c.goods = goodsOverrides(c.goods);
@@ -192,6 +214,27 @@ public final class ConfigValidator {
 		}
 		List<Double> fixed = new ArrayList<>(size);
 		for (int i = 0; i < size; i++) fixed.add(clamp(key + "[" + i + "]", values.get(i), min, max));
+		return fixed;
+	}
+
+	/** N-3: 0..4 ascending counts of completed facilities, each 1..4 (there are four facilities). */
+	private static List<Integer> bonusThresholds(List<Integer> values) {
+		String key = "development.levelBonusThresholds";
+		if (values == null || values.size() > 4) {
+			TradeExpansionConfig.warn("{} takes at most 4 values, using [2, 4]", key);
+			return new ArrayList<>(List.of(2, 4));
+		}
+		List<Integer> fixed = new ArrayList<>(values.size());
+		int previous = 1;
+		for (int i = 0; i < values.size(); i++) {
+			int v = clamp(key + "[" + i + "]", values.get(i), 1, 4);
+			if (v < previous) {
+				TradeExpansionConfig.warn("{} must be ascending, {} raised to {}", key, v, previous);
+				v = previous;
+			}
+			fixed.add(v);
+			previous = v;
+		}
 		return fixed;
 	}
 

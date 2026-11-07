@@ -12,6 +12,7 @@ import dev.isxander.yacl3.api.controller.DoubleFieldControllerBuilder;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
 import dev.isxander.yacl3.api.controller.IntegerFieldControllerBuilder;
 import dev.isxander.yacl3.api.controller.LongFieldControllerBuilder;
+import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -244,6 +245,35 @@ public final class ConfigScreen {
 				.option(intField("reputation.specialBonusLevel", d.reputation.specialBonusLevel, () -> rep.specialBonusLevel, v -> rep.specialBonusLevel = v, 0, 5))
 				.option(intField("reputation.specialBonusCount", d.reputation.specialBonusCount, () -> rep.specialBonusCount, v -> rep.specialBonusCount = v, 0, 5));
 
+		// N (v0.36): village development.
+		TradeExpansionConfig.Development dev = edit.development;
+		TradeExpansionConfig.Development dd = d.development;
+		ConfigCategory.Builder development = category("development")
+				.option(bool("development.enabled", dd.enabled, () -> dev.enabled, v -> dev.enabled = v))
+				.option(stringField("development.dimensions", String.join(", ", dd.dimensions), () -> String.join(", ", dev.dimensions),
+						v -> dev.dimensions = splitList(v)))
+				.option(doubleField("development.pointsPerCoin", dd.pointsPerCoin, () -> dev.pointsPerCoin, v -> dev.pointsPerCoin = v, 0, 100))
+				.option(doubleField("development.materialMultiplier", dd.materialMultiplier, () -> dev.materialMultiplier, v -> dev.materialMultiplier = v, 0, 10))
+				.option(doubleField("development.questRewardRatio", dd.questRewardRatio, () -> dev.questRewardRatio, v -> dev.questRewardRatio = v, 0, 10))
+				.option(doubleField("development.tradePointsPerCoin", dd.tradePointsPerCoin, () -> dev.tradePointsPerCoin, v -> dev.tradePointsPerCoin = v, 0, 1))
+				.option(doubleField("development.halfLifeDays", dd.halfLifeDays, () -> dev.halfLifeDays, v -> dev.halfLifeDays = v, 0, 1000))
+				.option(doubleField("development.reputationPerPoint", dd.reputationPerPoint, () -> dev.reputationPerPoint, v -> dev.reputationPerPoint = v, 0, 10))
+				.option(stringField("development.levelBonusThresholds", joinInts(dd.levelBonusThresholds), () -> joinInts(dev.levelBonusThresholds),
+						v -> dev.levelBonusThresholds = splitInts(v)))
+				.option(intField("development.buildReputationLevel", dd.buildReputationLevel, () -> dev.buildReputationLevel, v -> dev.buildReputationLevel = v, 0, 5))
+				.option(intField("development.maxConcurrentBuilds", dd.maxConcurrentBuilds, () -> dev.maxConcurrentBuilds, v -> dev.maxConcurrentBuilds = v, 1, 4))
+				.option(doubleField("development.buildDays", dd.buildDays, () -> dev.buildDays, v -> dev.buildDays = v, 0, 100))
+				.option(intField("development.siteRadius", dd.siteRadius, () -> dev.siteRadius, v -> dev.siteRadius = v, 8, 64))
+				.option(intField("development.siteSearchLimit", dd.siteSearchLimit, () -> dev.siteSearchLimit, v -> dev.siteSearchLimit = v, 16, 4096))
+				.option(doubleField("development.rebuildCostRatio", dd.rebuildCostRatio, () -> dev.rebuildCostRatio, v -> dev.rebuildCostRatio = v, 0, 1))
+				.option(bool("development.protectFacilities", dd.protectFacilities, () -> dev.protectFacilities, v -> dev.protectFacilities = v))
+				.option(doubleField("development.warehouseStockMultiplier", dd.warehouseStockMultiplier, () -> dev.warehouseStockMultiplier, v -> dev.warehouseStockMultiplier = v, 1, 10))
+				.option(doubleField("development.warehouseRestockMultiplier", dd.warehouseRestockMultiplier, () -> dev.warehouseRestockMultiplier, v -> dev.warehouseRestockMultiplier = v, 1, 10))
+				.option(intField("development.questHallExtraQuests", dd.questHallExtraQuests, () -> dev.questHallExtraQuests, v -> dev.questHallExtraQuests = v, 0, 10))
+				.option(intField("development.questHallExtraTransport", dd.questHallExtraTransport, () -> dev.questHallExtraTransport, v -> dev.questHallExtraTransport = v, 0, 5))
+				.option(intField("development.innVillagers", dd.innVillagers, () -> dev.innVillagers, v -> dev.innVillagers = v, 0, 10))
+				.option(doubleField("development.bankInterestMaxMultiplier", dd.bankInterestMaxMultiplier, () -> dev.bankInterestMaxMultiplier, v -> dev.bankInterestMaxMultiplier = v, 1, 100));
+
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")
 				.option(Option.<Boolean>createBuilder()
@@ -263,7 +293,7 @@ public final class ConfigScreen {
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.translatable(KEY + "title"))
 				.categories(List.of(currency.build(), priceCat.build(), goods.build(), recovery.build(), distance.build(), marketCat.build(),
-						wallet.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), other.build(), client.build()))
+						wallet.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), development.build(), other.build(), client.build()))
 				.save(this::save)
 				.build();
 	}
@@ -345,6 +375,40 @@ public final class ConfigScreen {
 				.description(description(key))
 				.binding(def, get, set)
 				.controller(o -> LongFieldControllerBuilder.create(o).range(min, max)));
+	}
+
+	private Option<String> stringField(String key, String def, Supplier<String> get, Consumer<String> set) {
+		return server(Option.<String>createBuilder()
+				.name(Component.translatable(KEY + key))
+				.description(description(key))
+				.binding(def, get, set)
+				.controller(StringControllerBuilder::create));
+	}
+
+	/** "a, b , c" → [a, b, c] (empty entries dropped). */
+	private static List<String> splitList(String value) {
+		List<String> list = new ArrayList<>();
+		for (String part : value.split(",")) {
+			if (!part.isBlank()) list.add(part.trim());
+		}
+		return list;
+	}
+
+	private static String joinInts(List<Integer> values) {
+		return String.join(", ", values.stream().map(String::valueOf).toList());
+	}
+
+	/** "2, 4" → [2, 4]; entries that are not numbers are dropped (the validator corrects the rest). */
+	private static List<Integer> splitInts(String value) {
+		List<Integer> list = new ArrayList<>();
+		for (String part : splitList(value)) {
+			try {
+				list.add(Integer.parseInt(part));
+			} catch (NumberFormatException ignored) {
+				// not a number
+			}
+		}
+		return list;
 	}
 
 	private Option<Double> doubleField(String key, double def, Supplier<Double> get, Consumer<Double> set, double min, double max) {

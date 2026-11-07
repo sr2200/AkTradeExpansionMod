@@ -23,6 +23,8 @@ import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.RequestView;
 import com.akf.tradeexpansion.network.QuestAcceptC2S;
 import com.akf.tradeexpansion.network.CargoDeliverC2S;
+import com.akf.tradeexpansion.network.DevelopmentRequestC2S;
+import com.akf.tradeexpansion.network.DevelopmentResultS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.TransportView;
 import com.akf.tradeexpansion.quest.Cargo;
 import com.akf.tradeexpansion.client.map.MapWaypoints;
@@ -96,9 +98,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 
 	private static final long[] BANK_AMOUNTS = {100, 1_000, 10_000, -1}; // -1 = everything
+	/** N-6: coin donations of the development tab. */
+	private static final long[] DONATIONS = {100, 1_000, 10_000};
 
 	private enum Tab {
-		BUY("buy"), SELL("sell"), BANK("bank"), BOARD("board"), QUEST("quest"), EXCHANGE("exchange");
+		BUY("buy"), SELL("sell"), BANK("bank"), BOARD("board"), QUEST("quest"), EXCHANGE("exchange"), TOWN("town");
 
 		final String key;
 
@@ -154,6 +158,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private final List<Button> tradeWidgets = new ArrayList<>();
 	private final List<Button> bankWidgets = new ArrayList<>();
 	private final List<Button> exchangeWidgets = new ArrayList<>();
+	/** N (v0.36): development tab buttons (coin donations). */
+	private final List<Button> townWidgets = new ArrayList<>();
 
 	/** A-4 (v0.33): sizes from the layout the menu was made with (fits the window when the screen opened). */
 	private final MarketLayout layout;
@@ -189,12 +195,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		tradeWidgets.clear();
 		bankWidgets.clear();
 		exchangeWidgets.clear();
+		townWidgets.clear();
 
 		Tab[] tabs = Tab.values();
+		int tabW = Math.min(TAB_W, (listW + 1) / tabs.length - 1); // the tabs fit above the list
 		for (int i = 0; i < tabs.length; i++) {
 			Tab t = tabs[i];
 			tabButtons.put(t, addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.tab." + t.key), b -> setTab(t))
-					.bounds(x + LIST_X + i * (TAB_W + 1), y + 18, TAB_W, 14).build()));
+					.bounds(x + LIST_X + i * (tabW + 1), y + 18, tabW, 14).build()));
 		}
 		paymentButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
 			payByCard = !payByCard;
@@ -233,6 +241,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↓10"), b -> exchange(tier, false, 10)).bounds(x + LIST_X + 133, ry, 20, 14).build()));
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↑1"), b -> exchange(tier, true, 1)).bounds(x + LIST_X + 156, ry, 20, 14).build()));
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↑10"), b -> exchange(tier, true, 10)).bounds(x + LIST_X + 177, ry, 20, 14).build()));
+		}
+
+		// Development tab (N-6): coin donations in the right panel.
+		for (int i = 0; i < DONATIONS.length; i++) {
+			long amount = DONATIONS[i];
+			townWidgets.add(addRenderableWidget(Button.builder(Component.literal(CoinItem.formatCopper(amount)), b -> donate(amount))
+					.bounds(x + panelX, y + 50 + i * 16, PANEL_W, 14).build()));
 		}
 
 		// Request tab (J) and board (I)
@@ -332,6 +347,38 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		} else {
 			setStatus(Component.translatable(result.result().translationKey()), false);
 		}
+		updateButtons();
+	}
+
+	/** N-6: outcome of a donation / build / marker request. */
+	public void onDevelopmentResult(DevelopmentResultS2C result) {
+		pending = false;
+		if (result.result() == TradeResult.SUCCESS) {
+			setStatus(switch (result.action()) {
+				case DONATE_COINS -> Component.translatable("screen.ak_trade_expansion.town.donated", CoinItem.formatCopper(result.amount()), points(result.points()));
+				case DONATE_ITEMS -> Component.translatable("screen.ak_trade_expansion.town.donated_items", result.amount(), points(result.points()));
+				case BUILD -> Component.translatable("screen.ak_trade_expansion.town.build_started", points(result.points()));
+				case MARKER -> Component.translatable("screen.ak_trade_expansion.town.marker_given");
+			}, true);
+		} else {
+			setStatus(Component.translatable(result.result().translationKey()), false);
+		}
+		updateButtons();
+	}
+
+	/** Development points as a whole number with digit grouping. */
+	private static String points(double value) {
+		return String.format(Locale.ROOT, "%,d", (long) Math.floor(value + 1e-9));
+	}
+
+	private boolean townAvailable() {
+		return snapshot != null && snapshot.development().enabled();
+	}
+
+	private void donate(long amount) {
+		if (pending) return;
+		pending = true;
+		ClientPlayNetworking.send(new DevelopmentRequestC2S(menu.marketId(), DevelopmentRequestC2S.Action.DONATE_COINS, amount, "", useCard()));
 		updateButtons();
 	}
 
@@ -531,14 +578,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	private void updateButtons() {
 		if (confirmButton == null) return;
-		if (tab == Tab.BANK && !bankAvailable()) tab = Tab.BUY;
+		if (tab == Tab.BANK && !bankAvailable() || tab == Tab.TOWN && !townAvailable()) tab = Tab.BUY;
 		tabButtons.forEach((t, b) -> b.active = t != tab);
 		tabButtons.get(Tab.BANK).visible = bankAvailable();
-		paymentButton.visible = (tradeTab() || tab == Tab.QUEST) && account != null && account.validCard();
+		tabButtons.get(Tab.TOWN).visible = townAvailable();
+		paymentButton.visible = (tradeTab() || tab == Tab.QUEST || tab == Tab.TOWN) && account != null && account.validCard();
 		paymentButton.setMessage(Component.translatable(payByCard ? "screen.ak_trade_expansion.pay.card" : "screen.ak_trade_expansion.pay.cash"));
 		for (Button b : tradeWidgets) b.visible = tradeTab();
 		for (Button b : bankWidgets) b.visible = tab == Tab.BANK;
 		for (Button b : exchangeWidgets) b.visible = tab == Tab.EXCHANGE;
+		for (Button b : townWidgets) {
+			b.visible = tab == Tab.TOWN;
+			b.active = !pending;
+		}
 		bankWidgets.getLast().setMessage(Component.translatable("screen.ak_trade_expansion.bank.issue_card",
 				CoinItem.formatCopper(TradeExpansionConfig.get().bank.cardFee)));
 		confirmButton.setMessage(Component.translatable(tab == Tab.BUY ? "screen.ak_trade_expansion.confirm.buy" : "screen.ak_trade_expansion.confirm.sell"));
@@ -574,6 +626,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		} else {
 			tabButtons.values().forEach(b -> b.visible = true);
 			tabButtons.get(Tab.BANK).visible = bankAvailable();
+			tabButtons.get(Tab.TOWN).visible = townAvailable();
 		}
 		sellAllConfirmButton.visible = sellAllOpen;
 		sellAllCancelButton.visible = sellAllOpen;
@@ -828,6 +881,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		switch (tab) {
 			case BANK -> extractBank(g, lx, ly);
 			case EXCHANGE -> extractExchange(g, lx, ly);
+			case TOWN -> extractTown(g, lx, ly, x + panelX, y);
 			case QUEST -> {
 				extractRequests(g, lx, ly, mouseX, mouseY);
 				extractRequestPanel(g, x + panelX, y);
@@ -1191,6 +1245,26 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.deposit"), bx + 4, by + 34, COLOR_WHITE);
 		g.text(font, Component.translatable("screen.ak_trade_expansion.bank.withdraw"), bx + 4, by + 64, COLOR_WHITE);
+	}
+
+	/** N-6: development points, how they are gained and the contributors; donations in the right panel. */
+	private void extractTown(GuiGraphicsExtractor g, int tx, int ty, int px, int y) {
+		if (snapshot == null) return;
+		MarketSnapshotS2C.DevelopmentView d = snapshot.development();
+		g.text(font, Component.translatable("screen.ak_trade_expansion.town.points", points(d.points())), tx + 4, ty + 4, COLOR_GOLD);
+		fitText(g, Component.translatable("screen.ak_trade_expansion.town.how").getString(), tx + 4, ty + 15, listW - 12, COLOR_GRAY, true);
+		g.text(font, Component.translatable("screen.ak_trade_expansion.town.contributors"), tx + 4, ty + 30, COLOR_WHITE);
+		List<MarketSnapshotS2C.ContributorView> top = d.top();
+		if (top.isEmpty()) g.text(font, Component.translatable("screen.ak_trade_expansion.town.contributors.none"), tx + 8, ty + 41, COLOR_GRAY);
+		for (int i = 0; i < top.size(); i++) {
+			MarketSnapshotS2C.ContributorView c = top.get(i);
+			int rowY = ty + 41 + i * 10;
+			String value = points(c.points());
+			g.text(font, value, tx + listW - 12 - font.width(value), rowY, COLOR_GOLD);
+			fitText(g, (i + 1) + ". " + c.name(), tx + 8, rowY, listW - 24 - font.width(value), COLOR_WHITE, true);
+		}
+		g.text(font, Component.translatable("screen.ak_trade_expansion.town.mine", points(d.mine())), tx + 4, ty + 94, COLOR_WHITE);
+		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.town.donate"), px, y + 38, PANEL_W, COLOR_TEXT, false);
 	}
 
 	/** E-3: loose coins per tier and the exchange buttons. */

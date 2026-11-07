@@ -9,6 +9,7 @@ import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.data.GoodsCatalog;
+import com.akf.tradeexpansion.development.Development;
 import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
@@ -140,6 +141,7 @@ public final class TradeService {
 		state.setLastTradeGameTime(now);
 		// M: reputation for the trade (selling a good the market is short of counts more)
 		Reputation.onTrade(market, player.getUUID(), total, !buy && market.shortages().containsKey(goodsId), now);
+		Development.onTrade(market, player, total, now); // N-2
 
 		// 6-7. Propagate X to nearby markets (C-2)
 		double deltaX = buy ? -qty : qty;

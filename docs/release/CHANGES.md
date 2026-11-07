@@ -11,6 +11,10 @@
 - **輸送依頼**：依頼タブに「○○村へ運ぶ」依頼が出るようになりました。保証金（品物の値段）を払って「荷箱」を受け取り、届け先の市場の依頼タブで「荷箱を届ける」を押すと、報酬と保証金が戻ります。遠い村ほど報酬が増え、依頼を出した村と届け先の村の両方で評判が上がります。期限を過ぎると届けられず、保証金は戻りません（受けた村の評判も下がります）
   - 設定（`quest`）：`transportPerMarket`（市場ごとの輸送依頼の数）、`transportMinDistance`・`transportMaxDistance`（届け先までの距離）、`transportBaseMultiplier`・`transportPerThousandBlocks`・`transportMaxMultiplier`（報酬の倍率）
 
+- **村の発展（その1）**：交易画面に「発展」タブを追加しました。村（市場）ごとに、みんなで貯める「発展度」があります。依頼を納める（報酬の半分。輸送依頼は両方の村）、その市場で売り買いする、「発展」タブでコインを寄付すると貯まります。寄付すると、その村での評判も上がります。タブには発展度を多く入れた人（上位5人）と自分の値が出ます。発展度を使って村に建物を建てる仕組みは、次の更新で追加します
+  - 設定（`development`、設定画面の「村の発展」タブ）：`enabled`（使うか）、`dimensions`（使える次元。既定はオーバーワールド）、`pointsPerCoin`・`questRewardRatio`・`tradePointsPerCoin`（貯まり方）、`halfLifeDays`（減り方。既定は減らない）、`reputationPerPoint`（寄付で上がる評判）など
+  - 管理コマンド：`/aktradeex development`（最寄りの市場の発展度）、`/aktradeex development add <発展度>`（テスト用）
+
 ### 変更
 
 ### 修正

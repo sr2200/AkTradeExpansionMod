@@ -8,6 +8,7 @@ import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.core.QuestMath;
 import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.data.GoodsCatalog;
+import com.akf.tradeexpansion.development.Development;
 import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.market.Market;
@@ -314,6 +315,9 @@ public final class QuestService {
 				delivered++;
 				Market source = registry.get(cargo.source());
 				Reputation.onCargoDelivered(source, market, player.getUUID(), cargo, now);
+				// N-2: the reward counts for both the source and this market.
+				if (source != null) Development.onRequest(source, player, cargo.reward(), now);
+				Development.onRequest(market, player, cargo.reward(), now);
 				if (source != null) {
 					source.requests().removeIf(r -> r.id() == cargo.requestId() && r.isTransport());
 					changed.add(source.id());
@@ -372,6 +376,7 @@ public final class QuestService {
 					WalletService.give(player, reward);
 				}
 				Reputation.onDeliver(market, player.getUUID(), target, now);
+				Development.onRequest(market, player, reward, now); // N-2
 				market.requests().remove(target);
 				registry.setDirty();
 				result = TradeResult.SUCCESS;

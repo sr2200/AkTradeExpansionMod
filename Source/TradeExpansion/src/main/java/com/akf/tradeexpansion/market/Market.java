@@ -89,18 +89,30 @@ public final class Market {
 		).apply(i, Standing::new));
 	}
 
+	/** N (v0.36): development points one player brought to the market (donations, requests, trades), never decayed. */
+	public record Contributor(UUID player, String name, double points) {
+		static final Codec<Contributor> CODEC = RecordCodecBuilder.create(i -> i.group(
+				UUIDUtil.CODEC.fieldOf("player").forGetter(Contributor::player),
+				Codec.STRING.optionalFieldOf("name", "").forGetter(Contributor::name),
+				Codec.DOUBLE.fieldOf("points").forGetter(Contributor::points)
+		).apply(i, Contributor::new));
+	}
+
 	/**
 	 * Fields added after the 16-field limit of RecordCodecBuilder: shelved goods and today's specials (v0.27), reputation
-	 * and the specials shown only to players with a good reputation (v0.29).
+	 * and the specials shown only to players with a good reputation (v0.29), development (v0.36).
 	 */
 	private record Assortment(List<Shelved> shelved, List<Identifier> specials, long specialDay, List<Standing> reputation,
-			List<Identifier> bonusSpecials) {
+			List<Identifier> bonusSpecials, double development, long developmentSince, List<Contributor> contributors) {
 		static final MapCodec<Assortment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Shelved.CODEC.listOf().optionalFieldOf("shelved", List.of()).forGetter(Assortment::shelved),
 				Identifier.CODEC.listOf().optionalFieldOf("specials", List.of()).forGetter(Assortment::specials),
 				Codec.LONG.optionalFieldOf("special_day", Long.MIN_VALUE).forGetter(Assortment::specialDay),
 				Standing.CODEC.listOf().optionalFieldOf("reputation", List.of()).forGetter(Assortment::reputation),
-				Identifier.CODEC.listOf().optionalFieldOf("bonus_specials", List.of()).forGetter(Assortment::bonusSpecials)
+				Identifier.CODEC.listOf().optionalFieldOf("bonus_specials", List.of()).forGetter(Assortment::bonusSpecials),
+				Codec.DOUBLE.optionalFieldOf("development", 0.0).forGetter(Assortment::development),
+				Codec.LONG.optionalFieldOf("development_since", Long.MIN_VALUE).forGetter(Assortment::developmentSince),
+				Contributor.CODEC.listOf().optionalFieldOf("contributors", List.of()).forGetter(Assortment::contributors)
 		).apply(i, Assortment::new));
 	}
 
@@ -132,9 +144,13 @@ public final class Market {
 		m.specialDay = a.specialDay();
 		a.reputation().forEach(st -> m.reputation.put(st.player(), st));
 		m.bonusSpecials.addAll(a.bonusSpecials());
+		m.development = a.development();
+		m.developmentSince = a.developmentSince();
+		a.contributors().forEach(c -> m.contributors.put(c.player(), c));
 		return m;
 	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
-			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials)))).codec();
+			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
+			List.copyOf(m.contributors.values())))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -166,6 +182,10 @@ public final class Market {
 	private final Set<Identifier> bonusSpecials = new LinkedHashSet<>();
 	/** M (Q39): reputation of each player with this market (decay applied lazily, see {@code Reputation}). */
 	private final Map<UUID, Standing> reputation = new LinkedHashMap<>();
+	/** N (v0.36): development points (decay applied lazily when development.halfLifeDays > 0) and who brought them. */
+	private double development;
+	private long developmentSince = Long.MIN_VALUE;
+	private final Map<UUID, Contributor> contributors = new LinkedHashMap<>();
 
 	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
 			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods,
@@ -394,6 +414,25 @@ public final class Market {
 
 	public void setStanding(Standing standing) {
 		reputation.put(standing.player(), standing);
+	}
+
+	/** N: stored development points (use {@code Development.points} for the value with decay applied). */
+	public double development() {
+		return development;
+	}
+
+	public long developmentSince() {
+		return developmentSince;
+	}
+
+	public void setDevelopment(double points, long since) {
+		this.development = Math.max(0, points);
+		this.developmentSince = since;
+	}
+
+	/** N: contributors in the order they first contributed. */
+	public Map<UUID, Contributor> contributors() {
+		return contributors;
 	}
 
 	/** Schema 1 → 2: goods were keyed by item id; the built-in goods ids share the item's path. */

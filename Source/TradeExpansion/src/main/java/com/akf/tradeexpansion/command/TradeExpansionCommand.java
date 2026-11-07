@@ -90,6 +90,13 @@ public final class TradeExpansionCommand {
 						.then(admin(Commands.literal("set"))
 								.then(Commands.argument("points", DoubleArgumentType.doubleArg(0, 1_000_000))
 										.executes(TradeExpansionCommand::reputationSet))))
+				// N (v0.36): development of the nearest market
+				.then(Commands.literal("development")
+						.executes(DevelopmentCommand::info)
+						.then(Commands.literal("info").executes(DevelopmentCommand::info))
+						.then(admin(Commands.literal("add"))
+								.then(Commands.argument("points", DoubleArgumentType.doubleArg(-1_000_000_000, 1_000_000_000))
+										.executes(DevelopmentCommand::add))))
 				.then(Commands.literal("where")
 						.executes(c -> where(c, 0))
 						.then(Commands.literal("show").executes(c -> where(c, 1)))
@@ -217,7 +224,7 @@ public final class TradeExpansionCommand {
 	}
 
 	/** The market whose center is nearest to the player in the same dimension. */
-	private static Market nearestMarket(ServerPlayer player) {
+	static Market nearestMarket(ServerPlayer player) {
 		return MarketRegistry.get(player.level().getServer()).inDimension(player.level().dimension()).stream()
 				.min(Comparator.comparingDouble(m -> m.horizontalDistanceTo(player.blockPosition())))
 				.orElse(null);

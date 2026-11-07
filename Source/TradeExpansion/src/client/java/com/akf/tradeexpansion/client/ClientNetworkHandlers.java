@@ -43,6 +43,11 @@ public final class ClientNetworkHandlers {
 				screen.onQuestResult(payload);
 			}
 		});
+		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.DevelopmentResultS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof MarketScreen screen) {
+				screen.onDevelopmentResult(payload);
+			}
+		});
 		ClientPlayNetworking.registerGlobalReceiver(ExchangeResultS2C.TYPE, (payload, context) -> {
 			if (context.client().gui.screen() instanceof MarketScreen screen) {
 				screen.onExchangeResult(payload);

@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.BulkDiscount;
 import com.akf.tradeexpansion.core.ReputationMath;
+import com.akf.tradeexpansion.development.Development;
 import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.Reputation;
@@ -43,9 +44,10 @@ import java.util.List;
  * @param bulkDiscount the server's {@code trade.bulkDiscounts} (B-5), so the preview matches the server
  * @param reputation   the receiving player's reputation with the market (M, v0.29); prices, rewards and the goods list
  *                     are already those of that player
+ * @param development  N (v0.36): development points and facilities of the market
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
-		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation) implements CustomPacketPayload {
+		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation, DevelopmentView development) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -193,6 +195,31 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		}
 	}
 
+	/**
+	 * N (v0.36): development of the market as {@code player} sees it.
+	 *
+	 * @param enabled the market's dimension develops (the tab is shown)
+	 * @param mine    points the receiving player brought
+	 * @param top     contributors with the most points
+	 */
+	public record DevelopmentView(boolean enabled, double points, double mine, List<ContributorView> top) {
+		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of());
+
+		static final StreamCodec<RegistryFriendlyByteBuf, DevelopmentView> CODEC = StreamCodec.composite(
+				ByteBufCodecs.BOOL, DevelopmentView::enabled,
+				ByteBufCodecs.DOUBLE, DevelopmentView::points,
+				ByteBufCodecs.DOUBLE, DevelopmentView::mine,
+				ContributorView.CODEC.apply(ByteBufCodecs.list()), DevelopmentView::top,
+				DevelopmentView::new);
+	}
+
+	public record ContributorView(String name, double points) {
+		static final StreamCodec<RegistryFriendlyByteBuf, ContributorView> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ContributorView::name,
+				ByteBufCodecs.DOUBLE, ContributorView::points,
+				ContributorView::new);
+	}
+
 	/** Builds the snapshot {@code player} sees; the caller must have refreshed the market to {@code gameTime}. */
 	public static MarketSnapshotS2C of(Market market, ServerPlayer player, long gameTime) {
 		UUID uuid = player.getUUID();
@@ -220,8 +247,20 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				ReputationMath.nextThreshold(level, rc.levelThresholdArray()), Reputation.priceBonus(level), Reputation.rewardBonus(level),
 				rc.hardQuestLevel, rc.specialBonusLevel);
 		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
-				TradeExpansionConfig.get().trade.bulkDiscount(), reputation);
+				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime));
 	}
+
+	/** N: points, contributors (top 5 and the player) of a market that develops. */
+	private static DevelopmentView developmentView(Market market, ServerPlayer player, long now) {
+		if (!Development.enabled(market)) return DevelopmentView.DISABLED;
+		List<ContributorView> top = new ArrayList<>();
+		for (Market.Contributor c : Development.top(market, TOP_CONTRIBUTORS)) top.add(new ContributorView(c.name(), c.points()));
+		Market.Contributor mine = market.contributors().get(player.getUUID());
+		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top);
+	}
+
+	/** N-6: contributors listed on the development tab. */
+	private static final int TOP_CONTRIBUTORS = 5;
 
 	private void write(RegistryFriendlyByteBuf buf) {
 		buf.writeVarLong(marketId);
@@ -237,6 +276,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeDouble(tier.rate());
 		}
 		ReputationView.CODEC.encode(buf, reputation);
+		DevelopmentView.CODEC.encode(buf, development);
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -252,7 +292,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		List<BulkDiscount.Tier> tiers = new ArrayList<>(tierCount);
 		for (int i = 0; i < tierCount; i++) tiers.add(new BulkDiscount.Tier(buf.readVarInt(), buf.readDouble()));
 		ReputationView reputation = ReputationView.CODEC.decode(buf);
-		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation);
+		DevelopmentView development = DevelopmentView.CODEC.decode(buf);
+		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development);
 	}
 
 	@Override

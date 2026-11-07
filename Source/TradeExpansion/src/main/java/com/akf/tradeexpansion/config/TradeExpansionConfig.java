@@ -42,6 +42,8 @@ public final class TradeExpansionConfig {
 	public Villager villager = new Villager();
 	public Consumables consumables = new Consumables();
 	public Reputation reputation = new Reputation();
+	/** N (v0.36): village development. */
+	public Development development = new Development();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -91,7 +93,7 @@ public final class TradeExpansionConfig {
 
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
-			Map<String, GoodsOverride> goods, Reputation reputation) {
+			Map<String, GoodsOverride> goods, Reputation reputation, Development development) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -100,7 +102,8 @@ public final class TradeExpansionConfig {
 				section("villager", Villager.CODEC, new Villager()).forGetter(Extra::villager),
 				section("consumables", Consumables.CODEC, new Consumables()).forGetter(Extra::consumables),
 				section("goods", Codec.unboundedMap(Codec.STRING, GoodsOverride.CODEC), Map.<String, GoodsOverride>of()).forGetter(Extra::goods),
-				section("reputation", Reputation.CODEC, new Reputation()).forGetter(Extra::reputation)
+				section("reputation", Reputation.CODEC, new Reputation()).forGetter(Extra::reputation),
+				section("development", Development.CODEC, new Development()).forGetter(Extra::development)
 		).apply(i, Extra::new));
 	}
 
@@ -115,8 +118,9 @@ public final class TradeExpansionConfig {
 		c.consumables = e.consumables();
 		c.goods = new TreeMap<>(e.goods());
 		c.reputation = e.reputation();
+		c.development = e.development();
 		return c;
-	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation))).codec();
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -891,6 +895,134 @@ public final class TradeExpansionConfig {
 
 		public int[] levelThresholdArray() {
 			return levelThresholds.stream().mapToInt(Integer::intValue).toArray();
+		}
+	}
+
+	/** N (Q56 / Q57): village development points, facilities and their effects. */
+	public static final class Development {
+		/** Development on / off (off: no tab, nothing is counted; facilities already built keep their effects). */
+		public boolean enabled = true;
+		/** Dimensions whose markets can develop. */
+		public List<String> dimensions = new ArrayList<>(List.of("minecraft:overworld"));
+		/** Development points per copper donated. */
+		public double pointsPerCoin = 1.0;
+		/** Donated materials give base price B × count × this. */
+		public double materialMultiplier = 1.5;
+		/** Share of a request's reward added as development points (transport: to both markets). */
+		public double questRewardRatio = 0.5;
+		/** Development points per copper traded at the market. */
+		public double tradePointsPerCoin = 0.02;
+		/** Points halve over this many in-game days (0 = no decay). */
+		public double halfLifeDays = 0.0;
+		/** Completed facilities needed for level bonus +1, +2, ... (ascending). */
+		public List<Integer> levelBonusThresholds = new ArrayList<>(List.of(2, 4));
+		/** Reputation level needed to choose a facility to build. */
+		public int buildReputationLevel = 2;
+		/** Facilities that may be under construction at the same time per market. */
+		public int maxConcurrentBuilds = 1;
+		/** In-game days a facility takes to build. */
+		public double buildDays = 2.0;
+		/** Horizontal radius around the market center searched for a site (and for markers). */
+		public int siteRadius = 32;
+		/** Positions tried by one site search. */
+		public int siteSearchLimit = 256;
+		/** Share of the development cost paid to rebuild a destroyed facility. */
+		public double rebuildCostRatio = 0.5;
+		/** Completed facilities cannot be broken in survival or by explosions. */
+		public boolean protectFacilities = false;
+		/** Warehouse: multiplier of the stock cap Scap. */
+		public double warehouseStockMultiplier = 1.5;
+		/** Warehouse: multiplier of the restock speed r. */
+		public double warehouseRestockMultiplier = 1.5;
+		/** Request hall: extra request slots. */
+		public int questHallExtraQuests = 2;
+		/** Request hall: extra transport request slots. */
+		public int questHallExtraTransport = 1;
+		/** Inn: villagers arriving when it is completed for the first time. */
+		public int innVillagers = 2;
+		/** Bank: interest cap multiplier for accounts registered with the bank building. */
+		public double bankInterestMaxMultiplier = 2.0;
+		/** Reputation points per development point donated (M). */
+		public double reputationPerPoint = 0.03;
+
+		public Development() {
+		}
+
+		/** Second half of the fields (RecordCodecBuilder takes 16 at most). */
+		private record Facilities(int siteSearchLimit, double rebuildCostRatio, boolean protectFacilities, double warehouseStockMultiplier,
+				double warehouseRestockMultiplier, int questHallExtraQuests, int questHallExtraTransport, int innVillagers,
+				double bankInterestMaxMultiplier, double reputationPerPoint) {
+			static final MapCodec<Facilities> CODEC = RecordCodecBuilder.mapCodec(i -> {
+				Development d = new Development();
+				return i.group(
+						Codec.INT.fieldOf("siteSearchLimit").orElse(d.siteSearchLimit).forGetter(Facilities::siteSearchLimit),
+						Codec.DOUBLE.fieldOf("rebuildCostRatio").orElse(d.rebuildCostRatio).forGetter(Facilities::rebuildCostRatio),
+						Codec.BOOL.fieldOf("protectFacilities").orElse(d.protectFacilities).forGetter(Facilities::protectFacilities),
+						Codec.DOUBLE.fieldOf("warehouseStockMultiplier").orElse(d.warehouseStockMultiplier).forGetter(Facilities::warehouseStockMultiplier),
+						Codec.DOUBLE.fieldOf("warehouseRestockMultiplier").orElse(d.warehouseRestockMultiplier).forGetter(Facilities::warehouseRestockMultiplier),
+						Codec.INT.fieldOf("questHallExtraQuests").orElse(d.questHallExtraQuests).forGetter(Facilities::questHallExtraQuests),
+						Codec.INT.fieldOf("questHallExtraTransport").orElse(d.questHallExtraTransport).forGetter(Facilities::questHallExtraTransport),
+						Codec.INT.fieldOf("innVillagers").orElse(d.innVillagers).forGetter(Facilities::innVillagers),
+						Codec.DOUBLE.fieldOf("bankInterestMaxMultiplier").orElse(d.bankInterestMaxMultiplier).forGetter(Facilities::bankInterestMaxMultiplier),
+						Codec.DOUBLE.fieldOf("reputationPerPoint").orElse(d.reputationPerPoint).forGetter(Facilities::reputationPerPoint)
+				).apply(i, Facilities::new);
+			});
+		}
+
+		private static final MapCodec<Development> POINTS_CODEC = RecordCodecBuilder.mapCodec(i -> {
+			Development d = new Development();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.STRING.listOf().fieldOf("dimensions").orElse(d.dimensions).forGetter(c -> c.dimensions),
+					Codec.DOUBLE.fieldOf("pointsPerCoin").orElse(d.pointsPerCoin).forGetter(c -> c.pointsPerCoin),
+					Codec.DOUBLE.fieldOf("materialMultiplier").orElse(d.materialMultiplier).forGetter(c -> c.materialMultiplier),
+					Codec.DOUBLE.fieldOf("questRewardRatio").orElse(d.questRewardRatio).forGetter(c -> c.questRewardRatio),
+					Codec.DOUBLE.fieldOf("tradePointsPerCoin").orElse(d.tradePointsPerCoin).forGetter(c -> c.tradePointsPerCoin),
+					Codec.DOUBLE.fieldOf("halfLifeDays").orElse(d.halfLifeDays).forGetter(c -> c.halfLifeDays),
+					Codec.INT.listOf().fieldOf("levelBonusThresholds").orElse(d.levelBonusThresholds).forGetter(c -> c.levelBonusThresholds),
+					Codec.INT.fieldOf("buildReputationLevel").orElse(d.buildReputationLevel).forGetter(c -> c.buildReputationLevel),
+					Codec.INT.fieldOf("maxConcurrentBuilds").orElse(d.maxConcurrentBuilds).forGetter(c -> c.maxConcurrentBuilds),
+					Codec.DOUBLE.fieldOf("buildDays").orElse(d.buildDays).forGetter(c -> c.buildDays),
+					Codec.INT.fieldOf("siteRadius").orElse(d.siteRadius).forGetter(c -> c.siteRadius)
+			).apply(i, (enabled, dimensions, pointsPerCoin, materialMultiplier, questRewardRatio, tradePointsPerCoin, halfLifeDays,
+					levelBonusThresholds, buildReputationLevel, maxConcurrentBuilds, buildDays, siteRadius) -> {
+				Development c = new Development();
+				c.enabled = enabled;
+				c.dimensions = new ArrayList<>(dimensions);
+				c.pointsPerCoin = pointsPerCoin;
+				c.materialMultiplier = materialMultiplier;
+				c.questRewardRatio = questRewardRatio;
+				c.tradePointsPerCoin = tradePointsPerCoin;
+				c.halfLifeDays = halfLifeDays;
+				c.levelBonusThresholds = new ArrayList<>(levelBonusThresholds);
+				c.buildReputationLevel = buildReputationLevel;
+				c.maxConcurrentBuilds = maxConcurrentBuilds;
+				c.buildDays = buildDays;
+				c.siteRadius = siteRadius;
+				return c;
+			});
+		});
+
+		static final Codec<Development> CODEC = Codec.mapPair(POINTS_CODEC, Facilities.CODEC).xmap(pair -> {
+			Development c = pair.getFirst();
+			Facilities f = pair.getSecond();
+			c.siteSearchLimit = f.siteSearchLimit();
+			c.rebuildCostRatio = f.rebuildCostRatio();
+			c.protectFacilities = f.protectFacilities();
+			c.warehouseStockMultiplier = f.warehouseStockMultiplier();
+			c.warehouseRestockMultiplier = f.warehouseRestockMultiplier();
+			c.questHallExtraQuests = f.questHallExtraQuests();
+			c.questHallExtraTransport = f.questHallExtraTransport();
+			c.innVillagers = f.innVillagers();
+			c.bankInterestMaxMultiplier = f.bankInterestMaxMultiplier();
+			c.reputationPerPoint = f.reputationPerPoint();
+			return c;
+		}, c -> Pair.of(c, new Facilities(c.siteSearchLimit, c.rebuildCostRatio, c.protectFacilities, c.warehouseStockMultiplier,
+				c.warehouseRestockMultiplier, c.questHallExtraQuests, c.questHallExtraTransport, c.innVillagers, c.bankInterestMaxMultiplier,
+				c.reputationPerPoint))).codec();
+
+		public int[] levelBonusThresholdArray() {
+			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();
 		}
 	}
 

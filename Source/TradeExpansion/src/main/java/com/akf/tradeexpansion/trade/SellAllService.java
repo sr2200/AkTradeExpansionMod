@@ -16,6 +16,7 @@ import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.market.Propagation;
 import com.akf.tradeexpansion.market.Reputation;
+import com.akf.tradeexpansion.development.Development;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.SellAllC2S;
@@ -108,6 +109,7 @@ public final class SellAllService {
 			p.state().setLastTradeGameTime(now);
 			Propagation.apply(registry, market, p.goods(), p.units(), now).forEach(m -> changed.add(m.id()));
 			Reputation.onTrade(market, player.getUUID(), p.total(), market.shortages().containsKey(p.goods()), now);
+			Development.onTrade(market, player, p.total(), now); // N-2
 			if (config.log.trades) {
 				TradeExpansion.LOGGER.info("{} SELL {} x{} @market#{} total={}{} (sell all)", player.getPlainTextName(), p.def().item(),
 						p.units() * p.def().unit(), market.id(), CoinItem.formatCopper(p.total()), card ? " (card)" : "");

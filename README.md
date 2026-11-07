@@ -16,7 +16,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.1.1（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.1.2（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -73,6 +73,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 銀行 | 市場レベル3以上の市場だけ。預け入れ・引き出し・カード発行 |
 | 掲示板・依頼 | 下の「掲示板・依頼・品不足」 |
 | 両替 | コインを1段下に崩す・1段下からまとめる |
+| 発展 | 村の発展度・発展度を多く入れた人・コインの寄付（「村の発展」を参照。オーバーワールドの市場だけ） |
 
 - 一覧の右端のスクロールバーは、つまみをドラッグしたり溝をクリックしたりして動かせます（マウスホイールも使えます）。
 - 交易画面は、ウィンドウに余裕があると開いた時に大きくなります（商品一覧は最大10行、名前の欄も広くなる）。マイクラの「GUIの大きさ」を小さくすると、より大きく表示されます。
@@ -144,6 +145,16 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - **下がる**：時間がたつ（ゲーム内30日で半分）、市場の近くの村人や商人を攻撃する（1回 −20、倒すと −100）、受けた依頼の期限が切れる（★1つあたり −10）
 - **効果**：レベル1つごとに買値が1%安く・売値が1%高くなる（レベル5で5%。売り戻して儲からないよう、商品によっては小さくなります）、依頼の報酬が4%増える、レベル3から★★★の依頼を納品できる、レベル4から「評判の掘り出し物」が1品見える
 - 数値はすべて設定の「評判」タブ（`reputation.*`）で変えられます。
+
+### 村の発展
+
+村（市場）ごとに、みんなで貯める**発展度**があります。交易画面の「**発展**」タブで、今の発展度と、発展度を多く入れた人（上位5人）と自分の値が見られます。
+
+- **貯まる**：依頼を納める（報酬の半分。輸送依頼は依頼元と届け先の両方）、その市場で売り買いする（100c で 2）、「発展」タブでコインを寄付する（1c で 1。100c／1,000c／10,000c。カード払いなら口座から、手数料なし）
+- 寄付すると、その村での自分の評判も上がります（寄付した発展度 1 につき 0.03）
+- 発展度は時間では減りません（設定 `development.halfLifeDays` で減らせます）
+- 使えるのはオーバーワールドの市場です（設定 `development.dimensions` でほかの次元も足せます）
+- 数値はすべて設定の「村の発展」タブ（`development.*`）で変えられます。
 
 ### 村人との取引
 
@@ -344,6 +355,8 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | `/aktradeex where` | 今いる場所の情報（村の範囲内か・一番近い市場・ベッドと村人の数・ここに市場を作った場合の規模・交易所を置いた時の結果）。OP 権限不要 |
 | `/aktradeex reputation` | 最寄りの市場での自分の評判（レベル・ポイント）。OP 権限不要 |
 | `/aktradeex reputation set <ポイント>` | 最寄りの市場での自分の評判ポイントを設定する（テスト用） |
+| `/aktradeex development` | 最寄りの市場の発展度と、発展度を多く入れた人。OP 権限不要 |
+| `/aktradeex development add <発展度>` | 最寄りの市場の発展度を増やす（マイナスで減らす。テスト用） |
 | `/aktradeex where show` / `hide` | 範囲を30秒間パーティクルで表示する／表示を止める。OP 権限不要 |
 | `/aktradeex give <金額>` | 自分にコインを渡す（テスト用） |
 | `/aktradeex pay <金額>` | 自分の所持金から支払う（支払い処理のテスト用） |
@@ -570,6 +583,28 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `reputation.hardQuestLevel` | `3` | 0〜5 | ★★★の依頼を納めるのに必要なレベル（0 で誰でも） | `"hardQuestLevel": 0` |
 | `reputation.specialBonusLevel` | `4` | 0〜5 | 評判の掘り出し物が見えるレベル | `"specialBonusLevel": 3` |
 | `reputation.specialBonusCount` | `1` | 0〜5 | 評判の高い人だけに見える掘り出し物の数 | `"specialBonusCount": 2` |
+| `development.enabled` | `true` | true / false | 村の発展を使う。OFF にすると「発展」タブが消え、発展度も貯まらない（建っている建物の効果は残る） | `"enabled": false` |
+| `development.dimensions` | `["minecraft:overworld"]` | 次元 ID の一覧 | 村の発展を使える次元 | `"dimensions": ["minecraft:overworld", "minecraft:the_nether"]` |
+| `development.pointsPerCoin` | `1.0` | 0〜100 | コインの寄付 1c あたりの発展度 | `"pointsPerCoin": 0.5` |
+| `development.materialMultiplier` | `1.5` | 0〜10 | 資材の寄付の発展度（基準価格×個数に掛ける） | `"materialMultiplier": 2.0` |
+| `development.questRewardRatio` | `0.5` | 0〜10 | 依頼の報酬のうち発展度になる割合 | `"questRewardRatio": 1.0` |
+| `development.tradePointsPerCoin` | `0.02` | 0〜1 | 取引額 1c あたりの発展度 | `"tradePointsPerCoin": 0` |
+| `development.halfLifeDays` | `0` | 0〜1000 | 発展度が半分になる日数（ゲーム内）。0 で減らない | `"halfLifeDays": 60` |
+| `development.reputationPerPoint` | `0.03` | 0〜10 | 寄付した発展度 1 あたりに上がる評判のポイント | `"reputationPerPoint": 0` |
+| `development.levelBonusThresholds` | `[2, 4]` | 昇順の整数（1〜4、4つまで） | レベルのボーナス +1、+2 … になる完成した建物の数 | `"levelBonusThresholds": [1, 2, 3, 4]` |
+| `development.buildReputationLevel` | `2` | 0〜5 | 建物を選べる評判のレベル（0 で誰でも） | `"buildReputationLevel": 0` |
+| `development.maxConcurrentBuilds` | `1` | 1〜4 | 1つの市場で同時に建設中にできる数 | `"maxConcurrentBuilds": 2` |
+| `development.buildDays` | `2.0` | 0〜100 | 建物が完成するまでの日数（ゲーム内） | `"buildDays": 0.5` |
+| `development.siteRadius` | `32` | 8〜64 | 建てる場所と杭を探す、市場の中心からの水平距離 | `"siteRadius": 48` |
+| `development.siteSearchLimit` | `256` | 16〜4096 | 1回の場所探しで調べる地点の数 | `"siteSearchLimit": 1024` |
+| `development.rebuildCostRatio` | `0.5` | 0〜1 | 壊れた建物を建て直す時の発展度の割合 | `"rebuildCostRatio": 1.0` |
+| `development.protectFacilities` | `false` | true / false | 完成した建物をサバイバルで壊せない・爆発で壊れないようにする | `"protectFacilities": true` |
+| `development.warehouseStockMultiplier` | `1.5` | 1〜10 | 倉庫：在庫上限の倍率 | `"warehouseStockMultiplier": 2.0` |
+| `development.warehouseRestockMultiplier` | `1.5` | 1〜10 | 倉庫：補充の速さの倍率 | `"warehouseRestockMultiplier": 2.0` |
+| `development.questHallExtraQuests` | `2` | 0〜10 | 依頼所：増える依頼の枠 | `"questHallExtraQuests": 3` |
+| `development.questHallExtraTransport` | `1` | 0〜5 | 依頼所：増える輸送依頼の枠 | `"questHallExtraTransport": 2` |
+| `development.innVillagers` | `2` | 0〜10 | 宿屋：最初の完成で来る村人の数 | `"innVillagers": 4` |
+| `development.bankInterestMaxMultiplier` | `2.0` | 1〜100 | 銀行：登録した口座の利息の上限の倍率 | `"bankInterestMaxMultiplier": 3.0` |
 | `demand.maxShortages` | `2` | 0〜10 | 1つの市場で同時に品不足になる商品の最大数。0 で無効 | `"maxShortages": 0`（品不足なし） |
 | `demand.durationDays` | `3.0` | 0.5〜30 | 品不足の商品を選び直す間隔（ゲーム内日） | `"durationDays": 7.0` |
 | `demand.minMultiplier` | `1.5` | 1〜5 | 品不足の商品の基準価格に掛ける倍率の下限 | `"minMultiplier": 1.2` |
