@@ -19,4 +19,4 @@
 
 ## 0.1.0（2026-11-07）
 
-初公開（Crafters Colony：https://minecraft-mcworld.com/272453/）
+初公開（Crafters Colony：<https://minecraft-mcworld.com/272453/>）
