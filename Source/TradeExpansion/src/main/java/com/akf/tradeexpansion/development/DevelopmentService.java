@@ -90,7 +90,7 @@ public final class DevelopmentService {
 		int items = 0;
 		double points = 0;
 		for (FacilityDefinition.Wanted wanted : def.wanted()) {
-			int want = DevelopmentMath.acceptable(wanted.count(), donated.getOrDefault(wanted.key(), 0), Integer.MAX_VALUE);
+			int want = DevelopmentMath.acceptable(FacilityBuilder.required(market, id, wanted), donated.getOrDefault(wanted.key(), 0), Integer.MAX_VALUE);
 			if (want <= 0) continue;
 			int taken = take(player, menu.sellSlot(), wanted, want);
 			if (taken <= 0) continue;

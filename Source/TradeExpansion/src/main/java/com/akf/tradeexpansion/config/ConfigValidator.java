@@ -147,6 +147,7 @@ public final class ConfigValidator {
 		dv.innVillagers = clamp("development.innVillagers", dv.innVillagers, 0, 10);
 		dv.bankInterestMaxMultiplier = clamp("development.bankInterestMaxMultiplier", dv.bankInterestMaxMultiplier, 1, 100);
 		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
+		dv.materialCountMultiplier = clamp("development.materialCountMultiplier", dv.materialCountMultiplier, 0.1, 100);
 
 		c.consumables.add = itemIds("consumables.add", c.consumables.add);
 		c.consumables.remove = itemIds("consumables.remove", c.consumables.remove);

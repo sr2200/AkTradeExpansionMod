@@ -695,5 +695,11 @@
   "message.ak_trade_expansion.facility.preview.ok": "・%s（%s）：建てられます",
   "message.ak_trade_expansion.facility.preview.blocked": "・%s（%s）：建てられません：%s",
   "message.ak_trade_expansion.facility.preview.none": "・まだ建っていない建物はありません",
-  "message.ak_trade_expansion.facility.preview.not_first": "先に置いた杭（%s, %s, %s）がある間は、そちらに建ちます"
+  "message.ak_trade_expansion.facility.preview.not_first": "先に置いた杭（%s, %s, %s）がある間は、そちらに建ちます",
+  "trade.ak_trade_expansion.result.materials_missing": "資材がまだ足りません（「資材を寄付」で集めてください）",
+  "screen.ak_trade_expansion.town.reason.materials": "資材があと %s 個必要です",
+  "config.ak_trade_expansion.development.requireMaterials": "資材を建てる条件にする",
+  "config.ak_trade_expansion.development.requireMaterials.desc": "ON にすると、ほしい資材を全部寄付するまで建物を建てられない。OFF なら資材は発展度を稼ぐ手段だけ",
+  "config.ak_trade_expansion.development.materialCountMultiplier": "資材の数の倍率",
+  "config.ak_trade_expansion.development.materialCountMultiplier.desc": "建物のデータに書かれた資材の数にこの値を掛けた数が必要になる（4.0 で4倍。端数は切り上げ）"
 }

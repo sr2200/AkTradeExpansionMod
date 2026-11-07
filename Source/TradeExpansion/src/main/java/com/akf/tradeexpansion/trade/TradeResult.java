@@ -44,7 +44,9 @@ public enum TradeResult {
 	/** N-5: the player already carries a building site stake. */
 	HAS_MARKER,
 	/** N-4: the building's structure file is missing from the data packs. */
-	NO_TEMPLATE;
+	NO_TEMPLATE,
+	/** N-2 (v0.42, development.requireMaterials): not all wanted materials are donated yet. */
+	MATERIALS_MISSING;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

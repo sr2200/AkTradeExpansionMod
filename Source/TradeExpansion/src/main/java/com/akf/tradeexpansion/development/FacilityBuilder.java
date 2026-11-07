@@ -101,6 +101,28 @@ public final class FacilityBuilder {
 		return DevelopmentMath.cost(def.cost(), rebuild, Development.config().rebuildCostRatio);
 	}
 
+	/**
+	 * N-2 (v0.42): how many of a wanted material the facility needs now: the data's count × {@code development.materialCountMultiplier}
+	 * (rounded up, at least 1), or {@code development.rebuildCostRatio} of that (rounded up) when rebuilding a destroyed one.
+	 */
+	public static int required(Market market, Identifier id, FacilityDefinition.Wanted wanted) {
+		Facility existing = market.facilities().get(id);
+		boolean rebuild = existing != null && existing.state() == Facility.State.DESTROYED;
+		long full = DevelopmentMath.materialCount(wanted.count(), Development.config().materialCountMultiplier);
+		return (int) Math.min(Integer.MAX_VALUE, DevelopmentMath.cost(full, rebuild, Development.config().rebuildCostRatio));
+	}
+
+	/** N-2 (v0.42): every wanted material is donated (always true when {@code development.requireMaterials} is off). */
+	public static boolean materialsReady(Market market, Identifier id) {
+		FacilityDefinition def = FacilityCatalog.get(id);
+		if (def == null || !Development.config().requireMaterials) return true;
+		java.util.Map<String, Integer> donated = market.donations(id);
+		for (FacilityDefinition.Wanted w : def.wanted()) {
+			if (donated.getOrDefault(w.key(), 0) < required(market, id, w)) return false;
+		}
+		return true;
+	}
+
 	public static long constructing(Market market) {
 		return market.facilities().values().stream().filter(f -> f.state() == Facility.State.CONSTRUCTING).count();
 	}
@@ -114,6 +136,7 @@ public final class FacilityBuilder {
 		if (existing != null && existing.state() != Facility.State.DESTROYED) return Outcome.fail(TradeResult.ALREADY_BUILT);
 		if (constructing(market) >= c.maxConcurrentBuilds) return Outcome.fail(TradeResult.BUILD_LIMIT);
 		if (Reputation.level(market, player.getUUID(), now) < c.buildReputationLevel) return Outcome.fail(TradeResult.REPUTATION_TOO_LOW);
+		if (!materialsReady(market, id)) return Outcome.fail(TradeResult.MATERIALS_MISSING);
 		long cost = cost(market, id);
 		if (Development.points(market, now) + 1e-9 < cost) return Outcome.fail(TradeResult.NOT_ENOUGH_POINTS);
 		String style = style(level, market.center());

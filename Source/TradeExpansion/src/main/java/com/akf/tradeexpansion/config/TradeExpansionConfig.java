@@ -944,6 +944,10 @@ public final class TradeExpansionConfig {
 		public double bankInterestMaxMultiplier = 2.0;
 		/** Reputation points per development point donated (M). */
 		public double reputationPerPoint = 0.03;
+		/** v0.42: a facility can only be built once all its wanted materials are donated. */
+		public boolean requireMaterials = true;
+		/** v0.42: wanted counts of the facility data are multiplied by this. */
+		public double materialCountMultiplier = 4.0;
 
 		public Development() {
 		}
@@ -951,7 +955,7 @@ public final class TradeExpansionConfig {
 		/** Second half of the fields (RecordCodecBuilder takes 16 at most). */
 		private record Facilities(int siteSearchLimit, double rebuildCostRatio, boolean protectFacilities, double warehouseStockMultiplier,
 				double warehouseRestockMultiplier, int questHallExtraQuests, int questHallExtraTransport, int innVillagers,
-				double bankInterestMaxMultiplier, double reputationPerPoint) {
+				double bankInterestMaxMultiplier, double reputationPerPoint, boolean requireMaterials, double materialCountMultiplier) {
 			static final MapCodec<Facilities> CODEC = RecordCodecBuilder.mapCodec(i -> {
 				Development d = new Development();
 				return i.group(
@@ -964,7 +968,9 @@ public final class TradeExpansionConfig {
 						Codec.INT.fieldOf("questHallExtraTransport").orElse(d.questHallExtraTransport).forGetter(Facilities::questHallExtraTransport),
 						Codec.INT.fieldOf("innVillagers").orElse(d.innVillagers).forGetter(Facilities::innVillagers),
 						Codec.DOUBLE.fieldOf("bankInterestMaxMultiplier").orElse(d.bankInterestMaxMultiplier).forGetter(Facilities::bankInterestMaxMultiplier),
-						Codec.DOUBLE.fieldOf("reputationPerPoint").orElse(d.reputationPerPoint).forGetter(Facilities::reputationPerPoint)
+						Codec.DOUBLE.fieldOf("reputationPerPoint").orElse(d.reputationPerPoint).forGetter(Facilities::reputationPerPoint),
+						Codec.BOOL.fieldOf("requireMaterials").orElse(d.requireMaterials).forGetter(Facilities::requireMaterials),
+						Codec.DOUBLE.fieldOf("materialCountMultiplier").orElse(d.materialCountMultiplier).forGetter(Facilities::materialCountMultiplier)
 				).apply(i, Facilities::new);
 			});
 		}
@@ -1016,10 +1022,12 @@ public final class TradeExpansionConfig {
 			c.innVillagers = f.innVillagers();
 			c.bankInterestMaxMultiplier = f.bankInterestMaxMultiplier();
 			c.reputationPerPoint = f.reputationPerPoint();
+			c.requireMaterials = f.requireMaterials();
+			c.materialCountMultiplier = f.materialCountMultiplier();
 			return c;
 		}, c -> Pair.of(c, new Facilities(c.siteSearchLimit, c.rebuildCostRatio, c.protectFacilities, c.warehouseStockMultiplier,
 				c.warehouseRestockMultiplier, c.questHallExtraQuests, c.questHallExtraTransport, c.innVillagers, c.bankInterestMaxMultiplier,
-				c.reputationPerPoint))).codec();
+				c.reputationPerPoint, c.requireMaterials, c.materialCountMultiplier))).codec();
 
 		public int[] levelBonusThresholdArray() {
 			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();

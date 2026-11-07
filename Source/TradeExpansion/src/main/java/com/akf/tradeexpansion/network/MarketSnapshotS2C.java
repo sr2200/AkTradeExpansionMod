@@ -245,8 +245,10 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param state 0 = not built, 1 = under construction, 2 = completed, 3 = destroyed
 	 * @param cost  development points building it costs now (half for a rebuild)
 	 * @param due   market-clock time the construction ends (state 1)
+	 * @param materialsReady every wanted material is donated, or materials are not required (v0.42, development.requireMaterials)
 	 */
-	public record FacilityView(String id, String kind, Identifier icon, int state, long cost, long due, List<WantedView> wanted) {
+	public record FacilityView(String id, String kind, Identifier icon, int state, long cost, long due, List<WantedView> wanted,
+			boolean materialsReady) {
 		public static final int NONE = 0, CONSTRUCTING = 1, COMPLETE = 2, DESTROYED = 3;
 
 		static final StreamCodec<RegistryFriendlyByteBuf, FacilityView> CODEC = StreamCodec.composite(
@@ -257,6 +259,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				ByteBufCodecs.VAR_LONG, FacilityView::cost,
 				ByteBufCodecs.VAR_LONG, FacilityView::due,
 				WantedView.CODEC.apply(ByteBufCodecs.list()), FacilityView::wanted,
+				ByteBufCodecs.BOOL, FacilityView::materialsReady,
 				FacilityView::new);
 	}
 
@@ -331,11 +334,11 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			java.util.Map<String, Integer> donated = market.donations(e.getKey());
 			List<WantedView> wanted = new ArrayList<>();
 			for (FacilityDefinition.Wanted w : def.wanted()) {
-				wanted.add(new WantedView(BuiltInRegistries.ITEM.getKey(w.displayItem()), w.tag().map(Identifier::toString).orElse(""), w.count(),
+				wanted.add(new WantedView(BuiltInRegistries.ITEM.getKey(w.displayItem()), w.tag().map(Identifier::toString).orElse(""), FacilityBuilder.required(market, e.getKey(), w),
 						donated.getOrDefault(w.key(), 0)));
 			}
 			facilities.add(new FacilityView(e.getKey().toString(), def.kind().getSerializedName(), def.icon(), state,
-					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted));
+					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted, FacilityBuilder.materialsReady(market, e.getKey())));
 		}
 		int buildLevel = c.buildReputationLevel;
 		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top, market.measuredLevel(),

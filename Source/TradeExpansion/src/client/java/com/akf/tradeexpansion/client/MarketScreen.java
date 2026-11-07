@@ -423,6 +423,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		return total;
 	}
 
+	/** v0.42: materials still to donate before the facility can be built. */
+	private static int missing(MarketSnapshotS2C.FacilityView f) {
+		int total = 0;
+		for (MarketSnapshotS2C.WantedView w : f.wanted()) total += Math.max(0, w.required() - w.donated());
+		return total;
+	}
+
 	private static int wantedCount(MarketSnapshotS2C.WantedView w, ItemStack stack) {
 		if (stack.isEmpty() || !stack.getComponentsPatch().isEmpty()) return 0;
 		boolean match = w.tag().isEmpty()
@@ -666,6 +673,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			MarketSnapshotS2C.DevelopmentView d = snapshot.development();
 			Component reason = !d.canChoose() ? Component.translatable("screen.ak_trade_expansion.town.reason.reputation", reputationName(d.buildLevel()))
 					: d.freeBuilds() <= 0 ? Component.translatable("screen.ak_trade_expansion.town.reason.limit")
+					: !facility.materialsReady() ? Component.translatable("screen.ak_trade_expansion.town.reason.materials", missing(facility))
 					: d.points() + 1e-9 < facility.cost() ? Component.translatable("screen.ak_trade_expansion.town.reason.points", points(facility.cost() - d.points()))
 					: null;
 			buildButton.active = !pending && reason == null;

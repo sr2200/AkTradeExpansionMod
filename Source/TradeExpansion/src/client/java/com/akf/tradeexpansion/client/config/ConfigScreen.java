@@ -254,6 +254,8 @@ public final class ConfigScreen {
 						v -> dev.dimensions = splitList(v)))
 				.option(doubleField("development.pointsPerCoin", dd.pointsPerCoin, () -> dev.pointsPerCoin, v -> dev.pointsPerCoin = v, 0, 100))
 				.option(doubleField("development.materialMultiplier", dd.materialMultiplier, () -> dev.materialMultiplier, v -> dev.materialMultiplier = v, 0, 10))
+				.option(bool("development.requireMaterials", dd.requireMaterials, () -> dev.requireMaterials, v -> dev.requireMaterials = v))
+				.option(doubleField("development.materialCountMultiplier", dd.materialCountMultiplier, () -> dev.materialCountMultiplier, v -> dev.materialCountMultiplier = v, 0.1, 100))
 				.option(doubleField("development.questRewardRatio", dd.questRewardRatio, () -> dev.questRewardRatio, v -> dev.questRewardRatio = v, 0, 10))
 				.option(doubleField("development.tradePointsPerCoin", dd.tradePointsPerCoin, () -> dev.tradePointsPerCoin, v -> dev.tradePointsPerCoin = v, 0, 1))
 				.option(doubleField("development.halfLifeDays", dd.halfLifeDays, () -> dev.halfLifeDays, v -> dev.halfLifeDays = v, 0, 1000))

@@ -52,6 +52,13 @@ class DevelopmentMathTest {
 	}
 
 	@Test
+	void materialCountsScaleWithTheSetting() {
+		assertEquals(512, DevelopmentMath.materialCount(128, 4.0));
+		assertEquals(13, DevelopmentMath.materialCount(25, 0.5)); // 12.5 rounds up
+		assertEquals(1, DevelopmentMath.materialCount(1, 0.1));
+	}
+
+	@Test
 	void rebuildCostsAShare() {
 		assertEquals(2500, DevelopmentMath.cost(2500, false, 0.5));
 		assertEquals(1250, DevelopmentMath.cost(2500, true, 0.5));

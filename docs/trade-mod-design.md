@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.41（段階0〜14の実装結果、確認事項 Q1〜Q57 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
+- 版：v0.42（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -92,6 +92,7 @@ v0.29 時点ですべて決定済み（Q44〜Q50 は実装時の決定を後か�
 | Q55 | 【v0.27追加】既定の商品に、ダイヤの剣以外の装備・道具と、オーバーワールドのすべての原木を加えるか？ | **決定**：加える。ダイヤの防具4種・道具4種（エンチャント付きは扱わない）と、シラカバ・ダークオーク・サクラ・ペールオーク・ポプラの原木。値段は別紙 goods-design v0.6 | D-3、別紙 2-3・2-7 |
 | Q56 | 【v0.36追加】依頼や寄付で村が発展し、建物が増える仕組み（TODO の拡張案）をどうするか？ | **決定（方針）**：発展度を依頼・コインと品物の寄付・取引で貯め、建物（倉庫・銀行・依頼所・宿屋、各1つ）を建てる時に使う。建物は自動で数日かけて建ち（場所は自動で探すか目印で指定）、完成した建物の数で市場レベルに最大 +2 のボーナス。壊すと効果が消える。銀行タブはレベル3以上または銀行の建物で出る。オーバーワールドの全市場が対象。数値と細部は N章の【既定案】（未実装） | N章、D-4、E-7 |
 | Q57 | 【v0.36.1追加】村の発展の細部（設定にするもの・寄付の上限・宿屋の村人・銀行の特典・杭の入手・雪の上・寄付した人の表示）は？ | **決定**：依頼所の枠・同時に建設できる数・発展度の減り方・建物を守るか・対象の次元を設定にする（既定は今までの案）。品物の寄付は建物ごとの必要数まで。宿屋の村人は最初の完成の時だけ。銀行はカード払いの手数料なしと、登録した口座の利息の上限が上がる（建物がある間）。杭は発展タブで無料でもらう。雪の上にも建てられる。寄付した人は上位5人と自分を出す | N章 |
+| Q58 | 【v0.42追加】資材の寄付が簡単すぎる。どう難しくするか？ | **決定**：資材を建てる条件にする（全部寄付してから建てられる。`development.requireMaterials`）。必要数は既定で4倍にし、倍率を設定 `development.materialCountMultiplier` で変えられるようにする | N-4 |
 | Q47 | 【v0.17追加】商品に花を追加するか？ | **決定**：20種を追加し、すべて消耗品にする（価格は別紙 2-12）。花に限らず、商品の値は設定 `goods` と `/aktradeex goods` で後から変えられるようにする | D-2、G章、goods-design |
 
 ---
@@ -1035,7 +1036,7 @@ MarketRegistry
 | 評判 | `reputation.hardQuestLevel` | 3 | 0〜5 | 【v0.29】★★★の依頼を納めるのに必要なレベル（0 で誰でも）（M章） |
 | 評判 | `reputation.specialBonusLevel` | 4 | 0〜5 | 【v0.29】評判の掘り出し物が見えるレベル（M章） |
 | 評判 | `reputation.specialBonusCount` | 1 | 0〜5 | 【v0.29】評判の掘り出し物の数（M章） |
-| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 23 項目（一覧は N-7）。設定画面の「村の発展」タブ |
+| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 25 項目（一覧は N-7）。設定画面の「村の発展」タブ |
 | 需要 | `demand.maxShortages` | 2 | 0〜10 | 1市場の不足品の最大数（0 で不足なし、K章） |
 | 需要 | `demand.durationDays` | 3.0 | 0.5〜30 | 不足品を選び直す間隔（ゲーム内日） |
 | 需要 | `demand.minMultiplier` / `demand.maxMultiplier` | 1.5 / 2.0 | 1〜5 | 不足品の基準価格に掛ける倍率の範囲 |
@@ -1369,12 +1370,14 @@ MarketRegistry
 
 | 建物 | 大きさ（既定案） | 必要な発展度（既定案） | ほしい品（既定案） | 効果（既定案） |
 |---|---|---|---|---|
-| 依頼所 | 5×5 | 1,500 | 板材 64・紙 32・本 8 | 普通の依頼の枠 +2（`development.questHallExtraQuests`、`quest.maxPerMarket` に足す）、輸送依頼の枠 +1（`development.questHallExtraTransport`） |
-| 倉庫 | 9×9 | 2,500 | 原木 64・丸石 128・チェスト 8 | その市場のすべての商品の在庫上限 Scap と補充速度 r を 1.5 倍（`development.warehouseStockMultiplier`・`warehouseRestockMultiplier`） |
-| 宿屋 | 9×9 | 2,500 | 原木 48・羊毛 24・ガラス 32 | 建物の中にベッド4つ（D-4 のベッド数に数える）。最初に完成した時に村人が2人やって来る（`development.innVillagers`） |
-| 銀行 | 7×7 | 5,000 | 石レンガ 128・金インゴット 16・ガラス 16 | 市場レベルに関係なく銀行タブが出る（E-7）。その市場ではカード払いの手数料が掛からない（E-8）。登録した口座の利息の上限が上がる（下） |
+| 依頼所 | 5×5 | 1,500 | 板材 64・紙 32・本 8（×4） | 普通の依頼の枠 +2（`development.questHallExtraQuests`、`quest.maxPerMarket` に足す）、輸送依頼の枠 +1（`development.questHallExtraTransport`） |
+| 倉庫 | 9×9 | 2,500 | 原木 64・丸石 128・チェスト 8（×4） | その市場のすべての商品の在庫上限 Scap と補充速度 r を 1.5 倍（`development.warehouseStockMultiplier`・`warehouseRestockMultiplier`） |
+| 宿屋 | 9×9 | 2,500 | 原木 48・羊毛 24・ガラス 32（×4） | 建物の中にベッド4つ（D-4 のベッド数に数える）。最初に完成した時に村人が2人やって来る（`development.innVillagers`） |
+| 銀行 | 7×7 | 5,000 | 石レンガ 128・金インゴット 16・ガラス 16（×4） | 市場レベルに関係なく銀行タブが出る（E-7）。その市場ではカード払いの手数料が掛からない（E-8）。登録した口座の利息の上限が上がる（下） |
 
 （資材の必要数も【既定案】。データパックで変えられる）
+
+【v0.42、Q58】**資材を建てる条件にした**（`development.requireMaterials`、既定 ON）：ほしい資材をすべて必要数まで寄付してからでないと「建てる」を押せない（結果コード `MATERIALS_MISSING`、ボタンの説明に「資材があと N 個必要です」）。必要数は「データの `count` × `development.materialCountMultiplier`（既定 4.0）」を切り上げた数（最低1）で、上の表の数の4倍になる。壊れた建物の建て直しは、発展度と同じく `rebuildCostRatio` の割合（既定 半分）の資材が要る。寄付した資材は今までどおり発展度にもなる。OFF にすると v0.41 までと同じく、資材は発展度を稼ぐ手段だけ。
 
 - 各建物には**中心ブロック**（施設の看板 `ak_trade_expansion:facility_sign`。ブロックの状態に種類 `kind`・完成したか `built`・向き `facing` を持つ。ブロックエンティティは無い）が1つある。中心ブロックが壊れると、その建物の効果が消える（ほかのブロックが壊れても効果は消えない）。中心ブロックを右クリックすると、交易画面のその建物に合うタブ（依頼所＝依頼、銀行＝銀行、ほか＝発展）が開く。
 - 建て直しに必要な発展度は半分（`development.rebuildCostRatio`、既定 0.5）。
@@ -1439,6 +1442,8 @@ MarketRegistry
 | `development.dimensions` | `["minecraft:overworld"]` | 次元IDの一覧 | 対象の次元 |
 | `development.pointsPerCoin` | 1.0 | 0〜100 | コインの寄付 1c あたりの発展度 |
 | `development.materialMultiplier` | 1.5 | 0〜10 | 品物の寄付の倍率（基準価格 B × 個数に掛ける） |
+| `development.requireMaterials` | true | bool | 【v0.42】ほしい資材を全部寄付するまで建てられない |
+| `development.materialCountMultiplier` | 4.0 | 0.1〜100 | 【v0.42】データの資材の数に掛ける倍率 |
 | `development.questRewardRatio` | 0.5 | 0〜10 | 依頼の報酬のうち発展度になる割合 |
 | `development.tradePointsPerCoin` | 0.02 | 0〜1 | 取引額 1c あたりの発展度 |
 | `development.halfLifeDays` | 0 | 0〜1000 | 発展度が半分になる日数（0 で減らない） |
@@ -1700,7 +1705,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（6件。発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（5件。村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計97件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（5件。村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計98件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -2009,3 +2014,4 @@ test {
 | v0.39 | 2026-11-07 | 村の発展の段階 c を実装（N-8・N-10）：建物の見た目を村の種類ごと（平原・砂漠・サバンナ・雪原・タイガ）と、ネザー・エンド用（宿屋にベッドなし）の 7 種類 × 4 建物にした（`tools/structures/genfacility.js`）。`BundledDataTest` に全構造物のブロック・看板・ベッドの確認を1件（計97件） |
 | v0.40 | 2026-11-07 | 掲示板（I章、地図への登録）：市場の一覧に「この市場を登録」ボタンを追加し、画面を開いている市場そのものも地図に登録できるようにした |
 | v0.41 | 2026-11-07 | 村の発展（N-10）：建設予定地の杭を置いた時・右クリックした時に、まだ建っていない建物が建つ範囲の枠をパーティクルで30秒間表示（緑：建てられる／赤：建てられない）し、建物ごとの結果と理由をチャットに出す（`MarkerPreview`・`SiteFinder.preview`） |
+| v0.42 | 2026-11-07 | Q58：資材を建てる条件にした（`development.requireMaterials`、既定 ON、結果コード `MATERIALS_MISSING`）。必要数はデータの数 × `development.materialCountMultiplier`（既定 4.0）、建て直しは `rebuildCostRatio` の割合。`FacilityView` に資材がそろったか。テスト1件（計98件） |

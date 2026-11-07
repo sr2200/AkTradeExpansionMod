@@ -695,5 +695,11 @@
   "message.ak_trade_expansion.facility.preview.ok": "- %s (%s): can be built",
   "message.ak_trade_expansion.facility.preview.blocked": "- %s (%s): cannot be built: %s",
   "message.ak_trade_expansion.facility.preview.none": "- Every building is already built",
-  "message.ak_trade_expansion.facility.preview.not_first": "While the stake placed earlier (%s, %s, %s) stands, buildings go there"
+  "message.ak_trade_expansion.facility.preview.not_first": "While the stake placed earlier (%s, %s, %s) stands, buildings go there",
+  "trade.ak_trade_expansion.result.materials_missing": "Materials are still missing (donate them with \"Donate items\")",
+  "screen.ak_trade_expansion.town.reason.materials": "%s more materials needed",
+  "config.ak_trade_expansion.development.requireMaterials": "Materials required",
+  "config.ak_trade_expansion.development.requireMaterials.desc": "On: a facility can be built only once all its wanted materials are donated. Off: materials only earn development points",
+  "config.ak_trade_expansion.development.materialCountMultiplier": "Material count multiplier",
+  "config.ak_trade_expansion.development.materialCountMultiplier.desc": "The material counts of the facility data are multiplied by this (4.0 = four times, rounded up)"
 }

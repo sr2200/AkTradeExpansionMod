@@ -60,6 +60,11 @@ public final class DevelopmentMath {
 		return list.subList(0, Math.min(Math.max(0, limit), list.size()));
 	}
 
+	/** N-2 (v0.42): wanted count of the data × development.materialCountMultiplier, rounded up, at least 1. */
+	public static long materialCount(int count, double multiplier) {
+		return Math.max(1, (long) Math.ceil(count * multiplier - 1e-9));
+	}
+
 	/** N-4: development points a facility costs; rebuilding a destroyed one costs {@code rebuildRatio} of it (rounded up). */
 	public static long cost(long baseCost, boolean rebuild, double rebuildRatio) {
 		if (!rebuild) return baseCost;
