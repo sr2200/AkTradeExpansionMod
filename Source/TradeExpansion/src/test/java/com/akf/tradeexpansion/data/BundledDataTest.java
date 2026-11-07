@@ -41,6 +41,36 @@ class BundledDataTest {
 		return result;
 	}
 
+	/**
+	 * N-5 (v0.43): the ground tag, resolved through the vanilla tags of the game jar, takes grass and the usual natural
+	 * ground but not dirt paths or ice. Every referenced vanilla tag must exist (a missing one would empty the whole tag).
+	 */
+	@Test
+	void facilityGroundTag() throws IOException {
+		java.util.Set<String> blocks = new java.util.HashSet<>();
+		resolveTag(Files.readString(Path.of("src/main/resources/data/ak_trade_expansion/tags/block/facility_ground.json")), blocks);
+		for (String id : List.of("grass_block", "podzol", "mycelium", "dirt", "coarse_dirt", "sand", "red_sand", "stone", "snow_block", "gravel", "netherrack", "end_stone")) {
+			assertTrue(blocks.contains("minecraft:" + id), id);
+		}
+		for (String id : List.of("dirt_path", "ice", "packed_ice", "water", "farmland")) assertFalse(blocks.contains("minecraft:" + id), id);
+	}
+
+	private static void resolveTag(String json, java.util.Set<String> blocks) throws IOException {
+		for (JsonElement value : JsonParser.parseString(json).getAsJsonObject().getAsJsonArray("values")) {
+			String id = value.isJsonObject() ? value.getAsJsonObject().get("id").getAsString() : value.getAsString();
+			if (!id.startsWith("#")) {
+				blocks.add(id);
+				continue;
+			}
+			net.minecraft.resources.Identifier tag = net.minecraft.resources.Identifier.parse(id.substring(1));
+			String resource = "data/" + tag.getNamespace() + "/tags/block/" + tag.getPath() + ".json";
+			try (java.io.InputStream in = BundledDataTest.class.getClassLoader().getResourceAsStream(resource)) {
+				assertNotNull(in, "tag " + id + " does not exist");
+				resolveTag(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8), blocks);
+			}
+		}
+	}
+
 	/** N-4 (v0.38): the four facilities, one per kind, each with its structure in every style it falls back to. */
 	@Test
 	void facilitiesDecode() throws IOException {

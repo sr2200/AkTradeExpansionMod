@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.42（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
+- 版：v0.43（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -1480,7 +1480,7 @@ v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部�
 
 - **建物の定義**（データパック `ak_trade_expansion/facility/<id>.json`、`FacilityDefinition`）：`kind`（`quest_hall`／`warehouse`／`inn`／`bank`）・`order`（タブの並び）・`icon`・`cost`・`structure`（構造物の名前）・`wanted`（`item` か `tag`、`count`、`value`）。同じ種類が複数あれば `order` が小さい1つだけ使う。ほしい品の発展度は、その品が商品（取引単位1・付加情報なし）ならその市場の基準価格 B、そうでなければ（タグを含む）`value` を使う。同梱：依頼所（板材のタグ・紙・本）、倉庫（原木のタグ・丸石・チェスト）、宿屋（原木のタグ・羊毛のタグ・ガラス）、銀行（石レンガ・金インゴット・ガラス）。
 - **構造物**：`data/ak_trade_expansion/structure/facility/<見た目>/<structure>.nbt`。北向き（`z = 0` が正面、扉は `x = 幅 ÷ 2`）、`y = 0` が床。中に `facility_sign`（built=true）を1つ置く。見た目のフォルダが無ければ `plains`。見た目は市場の中心のバイオームの村の種類（`VillagerType.BY_BIOME`。plains／desert／savanna／snowy／taiga 以外は plains）、ネザーは `nether`、エンドは `end`。`tools/structures/genfacility.js` で作る。【v0.39】見た目ごとの材料：平原（丸石の床・オークの柱と壁・トウヒの屋根）、砂漠（砂岩）、サバンナ（アカシアと粗い土・橙色のテラコッタの屋根）、雪原（雪ブロックの壁・トウヒ）、タイガ（トウヒ・丸石・ダークオークの屋根）、ネザー（真紅の木材・ブラックストーン・ネザーレンガの屋根・魂のランタン）、エンド（プルプァ・エンドストーンレンガ）。銀行はどの見た目でも石系の材料（石レンガ・砂岩・テラコッタ・閃緑岩・苔むした石レンガなど）。ネザー・エンドの宿屋はベッドの代わりにカーペット。
-- **場所探し**（`SiteFinder`）：正面の真ん中を候補の点にし、杭（市場の `markers` の古い順。杭が消えていれば一覧から外す）→ 中心から 2 ブロックおきの点（`DevelopmentMath.siteOffsets`、近い順、最大 `siteSearchLimit` 点）。各点で正面を中心向き・左右・反対の順に試す。地面は高さマップ（`MOTION_BLOCKING_NO_LEAVES`）から置き換えてよいブロックを下へたどった高さ。建物の列の地面はブロックタグ `ak_trade_expansion:facility_ground`（土・砂・石・テラコッタ・ネザーラック・エンドストーンなど。土の道・氷・液体は入らない）。床の高さ＝建物の列の地面の一番高い所。周り1マスを含めた高さの差が 1 以下。床から屋根まで空気か置き換えてよいブロック（液体は不可）。ほかの建物（壊れたものを除く）と屋台から 1 マス以上離す。チャンクが読み込まれていない点は使わない。
+- **場所探し**（`SiteFinder`）：正面の真ん中を候補の点にし、杭（市場の `markers` の古い順。杭が消えていれば一覧から外す）→ 中心から 2 ブロックおきの点（`DevelopmentMath.siteOffsets`、近い順、最大 `siteSearchLimit` 点）。各点で正面を中心向き・左右・反対の順に試す。地面は高さマップ（`MOTION_BLOCKING_NO_LEAVES`）から置き換えてよいブロックを下へたどった高さ。建物の列の地面はブロックタグ `ak_trade_expansion:facility_ground`（土・草ブロック・砂・石・テラコッタ・ネザーラック・エンドストーンなど。土の道・氷・液体は入らない。【v0.43】26.3 の `#minecraft:dirt` には草ブロックが入っていないので、土と草は `#minecraft:substrate_overworld`（土・泥・苔・草ブロック類）で指定する）。床の高さ＝建物の列の地面の一番高い所。周り1マスを含めた高さの差が 1 以下。床から屋根まで空気か置き換えてよいブロック（液体は不可）。ほかの建物（壊れたものを除く）と屋台から 1 マス以上離す。チャンクが読み込まれていない点は使わない。
 - **建設**（`FacilityBuilder`）：四隅に高さ3の足場、正面の真ん中に `facility_sign`（built=false）。杭は消す。完成はサーバーの 40 tick ごとの見回りで、期日を過ぎて建物の範囲のチャンクが読み込まれていれば行う：足場と建設中の看板を消し、その間に置かれたブロックはアイテムとして落とし、構造物を置き、床より低い列の下に床と同じブロックを1つ入れる。看板の座標を `core` に記録する。依頼所は次の画面で依頼の枠をすぐ埋める（依頼の入れ替えの時刻を戻す）。
 - **壊れた判定**：看板が置き換わった時（`affectNeighborsAfterRemoval`）と、見回りで `core` に看板が無い時。看板は押せない（ピストン不可）、何も落とさない。
 - **保護**（`protectFacilities`）：完成した建物の範囲のブロックは、クリエイティブ以外の破壊を止め（`PlayerBlockBreakEvents.BEFORE`）、爆発で壊れる位置から外す（Mixin `ServerExplosionMixin`、`ServerExplosion.calculateExplodedPositions` の戻り値）。
@@ -1705,7 +1705,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（5件。村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計98件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（6件。建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計99件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -2015,3 +2015,4 @@ test {
 | v0.40 | 2026-11-07 | 掲示板（I章、地図への登録）：市場の一覧に「この市場を登録」ボタンを追加し、画面を開いている市場そのものも地図に登録できるようにした |
 | v0.41 | 2026-11-07 | 村の発展（N-10）：建設予定地の杭を置いた時・右クリックした時に、まだ建っていない建物が建つ範囲の枠をパーティクルで30秒間表示（緑：建てられる／赤：建てられない）し、建物ごとの結果と理由をチャットに出す（`MarkerPreview`・`SiteFinder.preview`） |
 | v0.42 | 2026-11-07 | Q58：資材を建てる条件にした（`development.requireMaterials`、既定 ON、結果コード `MATERIALS_MISSING`）。必要数はデータの数 × `development.materialCountMultiplier`（既定 4.0）、建て直しは `rebuildCostRatio` の割合。`FacilityView` に資材がそろったか。テスト1件（計98件） |
+| v0.43 | 2026-11-07 | 不具合の修正（N-10）：平らな草ブロックの上に建物を建てられなかった。地面のタグが `#minecraft:dirt` を使っていたが、26.3 ではこのタグに草ブロックが入っていないため。`#minecraft:substrate_overworld` に変えた。`BundledDataTest` にタグの中身の確認を1件（計99件） |
