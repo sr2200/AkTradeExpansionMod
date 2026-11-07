@@ -40,13 +40,15 @@ public record BoardS2C(long marketId, List<Entry> markets) implements CustomPack
 	/**
 	 * @param title  "name (level)" (C-4)
 	 * @param dx / dz offset of the market center from the current market's center
+	 * @param center  the market center (v0.34: for map waypoints)
 	 */
-	public record Entry(long id, Component title, int dx, int dz, List<Good> goods) {
+	public record Entry(long id, Component title, int dx, int dz, net.minecraft.core.BlockPos center, List<Good> goods) {
 		static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_LONG, Entry::id,
 				ComponentSerialization.STREAM_CODEC, Entry::title,
 				ByteBufCodecs.VAR_INT, Entry::dx,
 				ByteBufCodecs.VAR_INT, Entry::dz,
+				net.minecraft.core.BlockPos.STREAM_CODEC, Entry::center,
 				Good.CODEC.apply(ByteBufCodecs.list()), Entry::goods,
 				Entry::new);
 	}

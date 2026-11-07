@@ -11,6 +11,11 @@ repositories {
 	// for more information about repositories.
 	maven { url = "https://maven.isxander.dev/releases" } // YetAnotherConfigLib (config screen, design G)
 	maven { url = "https://maven.terraformersmc.com/releases" } // Mod Menu
+	// JourneyMap API (map waypoints, I v0.34). Only the JourneyMap group is looked up there.
+	maven {
+		url = "https://maven.blamejared.com"
+		content { includeGroup "info.journeymap" }
+	}
 }
 
 loom {
@@ -41,6 +46,10 @@ dependencies {
 	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	localRuntime "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	// Optional: JourneyMap waypoints for markets (I, v0.34). Compile only: not required, not in the jar; the plugin is
+	// loaded by JourneyMap itself through the "journeymap" entrypoint.
+	clientCompileOnly "info.journeymap:journeymap-api-fabric:${project.journeymap_api_version}"
 
 	// Unit tests for the Minecraft-independent core (com.akf.tradeexpansion.core).
 	testImplementation platform("org.junit:junit-bom:5.12.2")

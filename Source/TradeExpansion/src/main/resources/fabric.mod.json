@@ -19,6 +19,9 @@
 		],
 		"modmenu": [
 			"com.akf.tradeexpansion.client.config.ModMenuIntegration"
+		],
+		"journeymap": [
+			"com.akf.tradeexpansion.client.compat.journeymap.TradeExpansionJourneyMapPlugin"
 		]
 	},
 	"depends": {
@@ -29,7 +32,8 @@
 	},
 	"suggests": {
 		"modmenu": "*",
-		"yet_another_config_lib_v3": "*"
+		"yet_another_config_lib_v3": "*",
+		"journeymap": "*"
 	},
 	"mixins": [
 		"ak_trade_expansion.mixins.json",

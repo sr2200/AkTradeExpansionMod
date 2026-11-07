@@ -55,7 +55,7 @@ public final class BoardService {
 				goods.add(good(here, uuid, now, goodsId, def, p, state, m.shortages().containsKey(goodsId), threshold));
 			});
 			entries.add(new BoardS2C.Entry(m.id(), com.akf.tradeexpansion.market.MarketNames.title(m), m.center().getX() - here.center().getX(),
-					m.center().getZ() - here.center().getZ(), goods));
+					m.center().getZ() - here.center().getZ(), m.center(), goods));
 		}
 		ServerPlayNetworking.send(player, new BoardS2C(here.id(), entries));
 	}

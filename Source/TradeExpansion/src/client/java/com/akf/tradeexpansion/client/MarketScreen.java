@@ -22,6 +22,7 @@ import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.RequestView;
 import com.akf.tradeexpansion.network.QuestAcceptC2S;
+import com.akf.tradeexpansion.client.map.MapWaypoints;
 import com.akf.tradeexpansion.network.SellAllC2S;
 import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.network.QuestDeliverC2S;
@@ -130,6 +131,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button confirmButton;
 	private Button deliverButton;
 	private Button acceptButton;
+	/** I (v0.34): adds the market shown on the board to the map (JourneyMap) or writes its coordinates to the chat. */
+	private Button mapButton;
 	private Button sellAllButton;
 	private Button sellAllConfirmButton;
 	private Button sellAllCancelButton;
@@ -240,6 +243,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// M (v0.29): accepting a request gives more reputation when delivered, and costs some if it expires.
 		acceptButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.accept"), b -> accept())
 				.bounds(x + panelX, y + 102, PANEL_W, 14).build());
+		mapButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map"), b -> addToMap())
+				.bounds(x + panelX, y + 104, PANEL_W, 14).build());
 		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
 			boardMarket = -1;
 			scroll = 0;
@@ -478,6 +483,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		updateButtons();
 	}
 
+	/** I (v0.34): the selected board market as a JourneyMap waypoint, or its coordinates in the chat. */
+	private void addToMap() {
+		BoardS2C.Entry entry = boardEntry();
+		if (entry == null || minecraft == null || minecraft.level == null) return;
+		boolean journeyMap = MapWaypoints.register(entry.id(), entry.title(), entry.center(), minecraft.level.dimension());
+		setStatus(Component.translatable(journeyMap ? "screen.ak_trade_expansion.board.map.added" : "screen.ak_trade_expansion.board.map.chat",
+				entry.title()), true);
+	}
+
 	private void accept() {
 		RequestView r = selectedRequestView();
 		if (r == null || r.accepted()) return;
@@ -516,6 +530,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		acceptButton.active = r != null && !r.accepted();
 		acceptButton.setMessage(Component.translatable(r != null && r.accepted() ? "screen.ak_trade_expansion.quest.accepted" : "screen.ak_trade_expansion.quest.accept"));
 		boardBackButton.visible = tab == Tab.BOARD && boardMarket >= 0;
+		mapButton.visible = tab == Tab.BOARD && boardMarket >= 0;
+		mapButton.setMessage(Component.translatable(MapWaypoints.journeyMapReady() ? "screen.ak_trade_expansion.board.map.journeymap" : "screen.ak_trade_expansion.board.map"));
 		sellAllButton.visible = tab == Tab.SELL && !sellAllOpen;
 		sellAllButton.active = !pending && snapshot != null;
 		if (sellAllOpen) {

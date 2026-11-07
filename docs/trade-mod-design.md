@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.33.1（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
+- 版：v0.34（段階0〜14の実装結果、確認事項 Q1〜Q55 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-05（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -876,7 +876,7 @@ MarketRegistry
 | `AccountS2C` | S→C | 銀行残高, 有効なカードを持っているか, 直前の銀行操作の結果 | 画面を開いた時／取引・銀行操作の後に本人へ | 実装済 |
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
 | `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も。v0.29.1：預金の利率と上限も） | ログイン時／`/aktradeex reload` 時 | 実装済 |
-| `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
+| `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・中心座標（v0.34、地図への登録用）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 報酬額 | 依頼タブの「納品する」 | 実装済（段階13） |
 | `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号 | 「依頼を受ける」（v0.29、J章・M章） | 実装済 |
 
@@ -1111,6 +1111,7 @@ MarketRegistry
 | 通信 | タブを開いた時に `BoardRequestC2S`（市場ID）→ `BoardS2C`（市場ごとの商品と価格）。開いている間は更新しない（再度開くと最新） |
 | お買い得（v0.24） | 各商品について、**今いる市場**の値段（今いる市場が扱っていない品は標準の値段＝定義の基準価格での買値・売値）と比べ、`board.dealThreshold`（既定 10%）以上安く買える品・高く売れる品を「お買い得」とする。市場の一覧には市場ごとに「安n（安く買える品の数・水色）」「高n（高く売れる品の数・桃色）」を出し、市場にマウスを乗せると右側に一番お得な品を2つずつ（アイコンと差の割合）出す。市場を選んだ後の商品一覧では、お買い得の値段を色と矢印（↓安く買える・↑高く売れる）で示し、マウスを乗せると「ここより20%安く買える」のように出す。割合はサーバーが計算して送る |
 | 費用 | 無料 |
+| 地図への登録（v0.34） | 市場を選んだ時の右パネルに「地図に登録」ボタン。**JourneyMap が入っている時**は、その市場を JourneyMap の地点（金色、市場の中心の1つ上、保存する地点）として追加する。同じ市場をもう一度登録すると古い地点を置き換える（地点の `market_id` で見分ける）。**入っていない時**はボタン名が「座標を表示」になり、自分のチャットにだけ「市場名：X … / Y … / Z …」（クリックで座標をコピー）と、Xaero's Minimap の地点共有の書式（`xaero-waypoint:名前:頭文字:x:y:z:6:false:0:Internal-overworld-waypoints` など。公式の API ではなく、ゲーム内で未確認）を出す |
 
 - 価格だけを見る機能で、離れた市場とは取引できない。
 - 地域間の価格差で儲ける遊び（Q7）が分かりやすくなる。512ブロックより遠い市場は、実際に行かないと分からない。
@@ -1454,6 +1455,8 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ├─ WalletScreen.java              ✅ … 財布の取り出し画面（E-6）
 ├─ config/
 │   ├─ ModMenuIntegration.java    ✅ … Mod Menu のエントリーポイント（`ModMenuApi`）。YACL が無ければ画面を出さない
+│   （map/MapWaypoints.java ✅ … 地図への登録の入口。地図 Mod の型を使わない：JourneyMap があれば連携クラスへ、無ければチャットに座標、I章・v0.34）
+│   （compat/journeymap/TradeExpansionJourneyMapPlugin.java・JourneyMapCompat.java ✅ … JourneyMap のプラグインと地点の追加。JourneyMap の型はここだけで使う、v0.34）
 │   ├─ ConfigScreen.java          ✅ … YACL で作る設定画面（Q35）
 │   └─ GoodsManagerScreen.java    ✅ … 設定画面の「追加の商品と消耗品」：アイコンから商品・消耗品を選んで追加・削除（v0.27、Q53）
 ├─ mixin/client/MerchantScreenMixin.java ✅ … 村人の取引画面にコインの代金を表示（14a。`ak_trade_expansion.client.mixins.json`）
@@ -1512,6 +1515,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 - テンプレートからの変更点：`id`/`name`/`entrypoints`/アイコンのパス、`settings.gradle` の `rootProject.name = 'ak_trade_expansion'`、`build.gradle` の `loom { mods { "ak_trade_expansion" { ... } } }`、`gradle.properties` の `group=com.akf.tradeexpansion`、mixin設定ファイル名（`modid.mixins.json` → `ak_trade_expansion.mixins.json` など、中の `package` も変更）。
 - Mixin：v0.20（段階14）で村人交易のコイン化のために `Merchant*` 系の Mixin とクライアント用の設定 `ak_trade_expansion.client.mixins.json` を追加した。v0.11（段階12）で財布の自動収納のために `ak_trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`、`ItemEntityMixin`）を追加した。v0.14（段階9）で村のテンプレートプールに建物を足すための `StructureTemplatePoolAccessor` を追加した（Fabric API に同等の機能が無いため）。
 - 【v0.11】`fabric.mod.json` に `"suggests": { "modmenu": "*", "yet_another_config_lib_v3": "*" }`、`entrypoints` の `"modmenu": ["com.akf.tradeexpansion.client.config.ModMenuIntegration"]`、`"mixins": ["ak_trade_expansion.mixins.json"]` を追加済み。開発用の依存は `build.gradle` で YACL `3.9.7+26.3-fabric`・Mod Menu `21.0.0` を `compileOnly` ＋ `localRuntime`（配布物には含まれない）。
+- 【v0.34】**地図 Mod との連携（JourneyMap）**：①必須の前提にしない（`fabric.mod.json` の `suggests` に `"journeymap": "*"`）、②配布用 jar に含めない（`build.gradle` の `clientCompileOnly "info.journeymap:journeymap-api-fabric:26.3-2.0.0"`、取得元 `https://maven.blamejared.com`。API の利用条件は All Rights Reserved だが、ビルドに使うだけで配布しない）、③連携の処理を専用のクラスに分ける（`client/compat/journeymap/`。他のクラスは JourneyMap の型を使わず、`FabricLoader.isModLoaded("journeymap")` を確かめてから呼ぶ）、④地図 Mod 側の仕組みで読み込ませる（`entrypoints` の `"journeymap"` にプラグインを書き、JourneyMap がそれを探して作る。`@JourneyMapPlugin(apiVersion = "2.0.0")`）。JourneyMap が無い時、連携のクラスは一度も読み込まれない（開発用のクライアントで確認済み）。地点の追加に失敗した時（API の版が違う等）はチャットの表示に切り替える
 - **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat`・`build.bat` は `gradle.properties` の `version` と README のバージョン表記を上げてからビルドする（`nobump` で上げずにビルド、残りの引数は Gradle に渡す）。【v0.27.2 で変更】バージョンの上げ方：普段のビルド `build.bat` は末尾を上げる（0.0.11 → 0.0.12）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）。上げる処理は両方とも `tools/version/bump.ps1`（`-Part patch` / `-Part minor`）。
 - `authors` は `akf`。ライセンスは **GNU LGPL v2.1 のみ**（v2.1 以降ではない）。`fabric.mod.json` の `license` は `LGPL-2.1-only`。本文はリポジトリ直下の `LICENSE` だけで、v0.23 から `build.gradle` がこれを jar（`LICENSE_trade_expansion`）と配布用 zip に入れる。
 
@@ -1757,3 +1761,4 @@ test {
 | v0.32 | 2026-11-07 | 「まとめて売る」を追加（A-4、F-2 `SellAllC2S`、G章 `client.sellAllExclude`・`client.sellAllInclude`）：ホットバー以外の売れる物を確認の枠で一覧にして一度に売る。道具・防具は最初から除外、除外は自分の設定に保存、在庫上限の商品は売れる分だけ、表示と違えば全部中止 |
 | v0.33 | 2026-11-07 | 交易画面をウィンドウの広さに合わせて大きくする（A-4、案A）：開いた時の GUI の大きさで、商品一覧を最大10行・横幅を最大 +120 まで広げ、インベントリの位置も合わせる（`MarketLayout`、`MarketLayoutTest`） |
 | v0.33.1 | 2026-11-07 | 一覧にスクロールバー（溝・ドラッグできるつまみ・溝のクリックで1ページ）を付けた（A-4）。v0.33 で行数の名前を変えた時に、スクロールバーの処理の変数と名前が重なり、スクロールバーが表示されなくなっていた不具合も直した |
+| v0.34 | 2026-11-07 | 地図 Mod との連携（段階1・2）：掲示板で選んだ市場を JourneyMap の地点として登録（公式 API、任意の連携、配布物に含めない、JourneyMap の仕組みで読み込む）。JourneyMap が無い時は座標をチャットに出す（コピー・Xaero's の共有の書式つき）。`BoardS2C` に中心座標を追加（I章・F-2・4-2） |
