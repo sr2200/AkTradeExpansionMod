@@ -10,6 +10,7 @@ import com.akf.tradeexpansion.data.DataReloadListener;
 import com.akf.tradeexpansion.network.ModPayloads;
 import com.akf.tradeexpansion.registry.ModBlockEntities;
 import com.akf.tradeexpansion.registry.ModBlocks;
+import com.akf.tradeexpansion.registry.ModSounds;
 import com.akf.tradeexpansion.registry.ModDataComponents;
 import com.akf.tradeexpansion.registry.ModEntities;
 import com.akf.tradeexpansion.registry.ModCreativeTab;
@@ -35,6 +36,7 @@ public class TradeExpansion implements ModInitializer {
 		ModItems.init();
 		ModEntities.init();
 		ModBlocks.init();
+		ModSounds.init();
 		ModBlockEntities.init();
 		ModMenus.init();
 		ModCreativeTab.init();

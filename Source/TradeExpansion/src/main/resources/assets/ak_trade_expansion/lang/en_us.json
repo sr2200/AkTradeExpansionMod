@@ -703,5 +703,6 @@
   "config.ak_trade_expansion.development.materialCountMultiplier": "Material count multiplier",
   "config.ak_trade_expansion.development.materialCountMultiplier.desc": "The material counts of the facility data are multiplied by this (4.0 = four times, rounded up)",
   "config.ak_trade_expansion.development.constructionEffects": "Construction effects",
-  "config.ak_trade_expansion.development.constructionEffects.desc": "Sites under construction show an orange dotted outline, wood chips and a quiet hammering sound to the players nearby"
+  "config.ak_trade_expansion.development.constructionEffects.desc": "Sites under construction show an orange dotted outline, wood chips and a quiet hammering sound to the players nearby",
+  "subtitles.ak_trade_expansion.facility.construction": "Construction work"
 }

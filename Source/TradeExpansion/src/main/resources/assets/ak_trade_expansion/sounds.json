@@ -1,0 +1,17 @@
+{
+  "facility.construction": {
+    "subtitle": "subtitles.ak_trade_expansion.facility.construction",
+    "sounds": [
+      "minecraft:step/wood1",
+      "minecraft:step/wood2",
+      "minecraft:step/wood3",
+      "minecraft:step/wood4",
+      "minecraft:step/wood5",
+      "minecraft:step/wood6",
+      "minecraft:step/scaffold1",
+      "minecraft:step/scaffold2",
+      "minecraft:step/scaffold3",
+      "minecraft:step/scaffold4"
+    ]
+  }
+}

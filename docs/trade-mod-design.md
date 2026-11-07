@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.44（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
+- 版：v0.45（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-07（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -1483,7 +1483,7 @@ v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部�
 - **構造物**：`data/ak_trade_expansion/structure/facility/<見た目>/<structure>.nbt`。北向き（`z = 0` が正面、扉は `x = 幅 ÷ 2`）、`y = 0` が床。中に `facility_sign`（built=true）を1つ置く。見た目のフォルダが無ければ `plains`。見た目は市場の中心のバイオームの村の種類（`VillagerType.BY_BIOME`。plains／desert／savanna／snowy／taiga 以外は plains）、ネザーは `nether`、エンドは `end`。`tools/structures/genfacility.js` で作る。【v0.39】見た目ごとの材料：平原（丸石の床・オークの柱と壁・トウヒの屋根）、砂漠（砂岩）、サバンナ（アカシアと粗い土・橙色のテラコッタの屋根）、雪原（雪ブロックの壁・トウヒ）、タイガ（トウヒ・丸石・ダークオークの屋根）、ネザー（真紅の木材・ブラックストーン・ネザーレンガの屋根・魂のランタン）、エンド（プルプァ・エンドストーンレンガ）。銀行はどの見た目でも石系の材料（石レンガ・砂岩・テラコッタ・閃緑岩・苔むした石レンガなど）。ネザー・エンドの宿屋はベッドの代わりにカーペット。
 - **場所探し**（`SiteFinder`）：正面の真ん中を候補の点にし、杭（市場の `markers` の古い順。杭が消えていれば一覧から外す）→ 中心から 2 ブロックおきの点（`DevelopmentMath.siteOffsets`、近い順、最大 `siteSearchLimit` 点）。各点で正面を中心向き・左右・反対の順に試す。地面は高さマップ（`MOTION_BLOCKING_NO_LEAVES`）から置き換えてよいブロックを下へたどった高さ。建物の列の地面はブロックタグ `ak_trade_expansion:facility_ground`（土・草ブロック・砂・石・テラコッタ・ネザーラック・エンドストーンなど。土の道・氷・液体は入らない。【v0.43】26.3 の `#minecraft:dirt` には草ブロックが入っていないので、土と草は `#minecraft:substrate_overworld`（土・泥・苔・草ブロック類）で指定する）。床の高さ＝建物の列の地面の一番高い所。周り1マスを含めた高さの差が 1 以下。床から屋根まで空気か置き換えてよいブロック（液体は不可）。ほかの建物（壊れたものを除く）と屋台から 1 マス以上離す。チャンクが読み込まれていない点は使わない。
 - **建設**（`FacilityBuilder`）：四隅に高さ3の足場、正面の真ん中に `facility_sign`（built=false）。杭は消す。完成はサーバーの 40 tick ごとの見回りで、期日を過ぎて建物の範囲のチャンクが読み込まれていれば行う：足場と建設中の看板を消し、その間に置かれたブロックはアイテムとして落とし、構造物を置き、床より低い列の下に床と同じブロックを1つ入れる。看板の座標を `core` に記録する。依頼所は次の画面で依頼の枠をすぐ埋める（依頼の入れ替えの時刻を戻す）。
-- **工事中の演出**（v0.44、`ConstructionEffects`、`development.constructionEffects`）：建設中の建物の範囲から水平 48 ブロック以内のプレイヤーに、10 tick ごとに木くず（オークの板材のブロックのパーティクル、範囲の中の空気の所）、20 tick ごとに範囲の床のオレンジの点線の枠（1 ブロックおき）を送る。約 3 秒に1回、範囲の中で木を叩く音か足場を叩く音（音量 0.4）。
+- **工事中の演出**（v0.44、`ConstructionEffects`、`development.constructionEffects`）：建設中の建物の範囲から水平 48 ブロック以内のプレイヤーに、10 tick ごとに木くず（オークの板材のブロックのパーティクル、範囲の中の空気の所）、20 tick ごとに範囲の床のオレンジの点線の枠（1 ブロックおき）を送る。約 3 秒に1回、範囲の中で作業の音（音量 0.4）。【v0.45】音は Mod の音 `ak_trade_expansion:facility.construction`（`ModSounds`、`assets/ak_trade_expansion/sounds.json`）。中身はバニラの木と足場の足音のファイルで、字幕は「工事の音」（バニラの音のままだと字幕が「ブロックが採掘される」になるため）。
 - **壊れた判定**：看板が置き換わった時（`affectNeighborsAfterRemoval`）と、見回りで `core` に看板が無い時。看板は押せない（ピストン不可）、何も落とさない。
 - **保護**（`protectFacilities`）：完成した建物の範囲のブロックは、クリエイティブ以外の破壊を止め（`PlayerBlockBreakEvents.BEFORE`）、爆発で壊れる位置から外す（Mixin `ServerExplosionMixin`、`ServerExplosion.calculateExplodedPositions` の戻り値）。
 - **結果コード**（`TradeResult` の末尾に追加）：`NOT_ENOUGH_POINTS`・`BUILD_LIMIT`・`NO_SITE`・`MARKER_BLOCKED`（理由はチャットにも出す）・`ALREADY_BUILT`・`NOTHING_TO_DONATE`・`HAS_MARKER`・`NO_TEMPLATE`。
@@ -2020,3 +2020,4 @@ test {
 | v0.42 | 2026-11-07 | Q58：資材を建てる条件にした（`development.requireMaterials`、既定 ON、結果コード `MATERIALS_MISSING`）。必要数はデータの数 × `development.materialCountMultiplier`（既定 4.0）、建て直しは `rebuildCostRatio` の割合。`FacilityView` に資材がそろったか。テスト1件（計98件） |
 | v0.43 | 2026-11-07 | 不具合の修正（N-10）：平らな草ブロックの上に建物を建てられなかった。地面のタグが `#minecraft:dirt` を使っていたが、26.3 ではこのタグに草ブロックが入っていないため。`#minecraft:substrate_overworld` に変えた。`BundledDataTest` にタグの中身の確認を1件（計99件） |
 | v0.44 | 2026-11-07 | 村の発展（N-10）：建設中の場所に工事中の演出（オレンジの点線の枠・木くずのパーティクル・ときどき作業の音、近くのプレイヤー全員に）。設定 `development.constructionEffects`（既定 ON） |
+| v0.45 | 2026-11-07 | 工事中の作業の音を Mod の音 `ak_trade_expansion:facility.construction` にし、字幕を「工事の音」にした（バニラの音の字幕は「ブロックが採掘される」だったため）。`ModSounds`・`sounds.json` を追加 |

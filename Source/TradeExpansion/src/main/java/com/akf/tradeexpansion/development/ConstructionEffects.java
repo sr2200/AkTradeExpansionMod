@@ -10,7 +10,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
@@ -59,7 +58,7 @@ public final class ConstructionEffects {
 				if (RANDOM.nextInt(6) == 0) {
 					double x = box.minX() + RANDOM.nextDouble() * box.getXSpan();
 					double z = box.minZ() + RANDOM.nextDouble() * box.getZSpan();
-					level.playSound(null, x, box.minY() + 1, z, RANDOM.nextBoolean() ? SoundEvents.WOOD_HIT : SoundEvents.SCAFFOLDING_HIT,
+					level.playSound(null, x, box.minY() + 1, z, com.akf.tradeexpansion.registry.ModSounds.CONSTRUCTION, // own subtitle "construction work" (v0.45)
 							SoundSource.BLOCKS, 0.4f, 0.8f + RANDOM.nextFloat() * 0.4f);
 				}
 			}
