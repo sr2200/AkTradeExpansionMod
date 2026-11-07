@@ -688,5 +688,7 @@
   "message.ak_trade_expansion.facility.site.uneven": "地面の高さの差が大きすぎます",
   "message.ak_trade_expansion.facility.site.space": "建物の場所に物があります",
   "message.ak_trade_expansion.facility.site.overlap": "ほかの建物や屋台に近すぎます",
-  "command.ak_trade_expansion.development.completed": "%s 件の建設を完成させました"
+  "command.ak_trade_expansion.development.completed": "%s 件の建設を完成させました",
+  "screen.ak_trade_expansion.board.map.here": "この市場の座標",
+  "screen.ak_trade_expansion.board.map.here.journeymap": "この市場を登録"
 }

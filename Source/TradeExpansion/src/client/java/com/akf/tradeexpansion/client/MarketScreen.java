@@ -142,6 +142,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button cargoButton;
 	/** I (v0.34): adds the market shown on the board to the map (JourneyMap) or writes its coordinates to the chat. */
 	private Button mapButton;
+	/** I (v0.40): adds the market of this screen itself to the map (the board's market list). */
+	private Button mapHereButton;
 	private Button sellAllButton;
 	private Button sellAllConfirmButton;
 	private Button sellAllCancelButton;
@@ -282,6 +284,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		mapButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map"), b -> addToMap())
 				.bounds(x + panelX, y + 104, PANEL_W, 14).build());
+		mapHereButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map.here"), b -> addHereToMap())
+				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
 			boardMarket = -1;
 			scroll = 0;
@@ -604,6 +608,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				entry.title()), true);
 	}
 
+	/** I (v0.40): this market as a JourneyMap waypoint, or its coordinates in the chat. */
+	private void addHereToMap() {
+		if (snapshot == null || minecraft == null || minecraft.level == null) return;
+		boolean journeyMap = MapWaypoints.register(menu.marketId(), title, snapshot.center(), minecraft.level.dimension());
+		setStatus(Component.translatable(journeyMap ? "screen.ak_trade_expansion.board.map.added" : "screen.ak_trade_expansion.board.map.chat",
+				title), true);
+	}
+
 	private void accept() {
 		RequestView r = selectedRequestView();
 		if (r == null || r.accepted() || pending) return;
@@ -687,6 +699,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		boardBackButton.visible = tab == Tab.BOARD && boardMarket >= 0;
 		mapButton.visible = tab == Tab.BOARD && boardMarket >= 0;
 		mapButton.setMessage(Component.translatable(MapWaypoints.journeyMapReady() ? "screen.ak_trade_expansion.board.map.journeymap" : "screen.ak_trade_expansion.board.map"));
+		mapHereButton.visible = tab == Tab.BOARD && boardMarket < 0 && snapshot != null;
+		mapHereButton.setMessage(Component.translatable(MapWaypoints.journeyMapReady() ? "screen.ak_trade_expansion.board.map.here.journeymap" : "screen.ak_trade_expansion.board.map.here"));
 		sellAllButton.visible = tab == Tab.SELL && !sellAllOpen;
 		sellAllButton.active = !pending && snapshot != null;
 		if (sellAllOpen) {
@@ -694,6 +708,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			for (Button b : tradeWidgets) b.visible = false;
 			tabButtons.values().forEach(b -> b.visible = false);
 			paymentButton.visible = false;
+			mapHereButton.visible = false;
 			buildButton.visible = false;
 			donateItemsButton.visible = false;
 			markerButton.visible = false;

@@ -688,5 +688,7 @@
   "message.ak_trade_expansion.facility.site.uneven": "the ground is too uneven",
   "message.ak_trade_expansion.facility.site.space": "something is in the way",
   "message.ak_trade_expansion.facility.site.overlap": "too close to another building or stall",
-  "command.ak_trade_expansion.development.completed": "Completed %s constructions"
+  "command.ak_trade_expansion.development.completed": "Completed %s constructions",
+  "screen.ak_trade_expansion.board.map.here": "Coords: here",
+  "screen.ak_trade_expansion.board.map.here.journeymap": "Map: here"
 }
