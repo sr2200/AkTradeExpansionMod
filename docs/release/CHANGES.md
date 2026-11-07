@@ -14,7 +14,7 @@
 - **村の発展（その1）**：交易画面に「発展」タブを追加しました。村（市場）ごとに、みんなで貯める「発展度」があります。依頼を納める（報酬の半分。輸送依頼は両方の村）、その市場で売り買いする、「発展」タブでコインを寄付すると貯まります。寄付すると、その村での評判も上がります。タブには発展度を多く入れた人（上位5人）と自分の値が出ます。
   - 設定（`development`、設定画面の「村の発展」タブ）：`enabled`（使うか）、`dimensions`（使える次元。既定はオーバーワールド）、`pointsPerCoin`・`questRewardRatio`・`tradePointsPerCoin`（貯まり方）、`halfLifeDays`（減り方。既定は減らない）、`reputationPerPoint`（寄付で上がる評判）など
   - 管理コマンド：`/aktradeex development`（最寄りの市場の発展度）、`/aktradeex development add <発展度>`（テスト用）
-- **村の発展（その2）：村の建物**：発展度を使って、村に「依頼所」「倉庫」「宿屋」「銀行」を建てられるようになりました。「発展」タブで建物を選んで「建てる」を押すと、屋台の周りの空き地に足場が立ち、ゲーム内2日で完成します。「杭をもらう」で受け取る「建設予定地の杭」を置くと、そこに建ちます。建物ごとに効果があり（依頼が増える・在庫が増える・村人が来る・銀行が使えて手数料なし）、2つ完成すると市場の規模が1つ、4つで2つ上がります。建物の資材（木材・丸石など）を寄付しても発展度が貯まります。建物の中の看板を壊すと効果がなくなり、建て直せます
+- **村の発展（その2）：村の建物**：発展度を使って、村に「依頼所」「倉庫」「宿屋」「銀行」を建てられるようになりました。「発展」タブで建物を選んで「建てる」を押すと、屋台の周りの空き地に足場が立ち、ゲーム内2日で完成します。「杭をもらう」で受け取る「建設予定地の杭」を置くと、そこに建ちます。建物ごとに効果があり（依頼が増える・在庫が増える・村人が来る・銀行が使えて手数料なし）、2つ完成すると市場の規模が1つ、4つで2つ上がります。建物の資材（木材・丸石など）を寄付しても発展度が貯まります。建物の中の看板を壊すと効果がなくなり、建て直せます。建物の見た目は村の種類（平原・砂漠・サバンナ・雪原・タイガ）ごとに変わります
   - 設定（`development`）：`levelBonusThresholds`（規模が上がる建物の数）、`buildReputationLevel`（建物を選べる評判）、`maxConcurrentBuilds`（同時に建設できる数）、`buildDays`（建設の日数）、`siteRadius`・`siteSearchLimit`（場所探し）、`rebuildCostRatio`（建て直し）、`protectFacilities`（建物を守る）、`materialMultiplier`（資材の寄付）、各建物の効果（`warehouseStockMultiplier`・`warehouseRestockMultiplier`・`questHallExtraQuests`・`questHallExtraTransport`・`innVillagers`・`bankInterestMaxMultiplier`）
   - 管理コマンド：`/aktradeex development complete`（建設中の建物をすぐ完成させる、テスト用）
 

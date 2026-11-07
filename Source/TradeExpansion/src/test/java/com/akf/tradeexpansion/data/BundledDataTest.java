@@ -58,6 +58,38 @@ class BundledDataTest {
 		assertEquals(2500, facilities.get("warehouse").cost());
 	}
 
+	/**
+	 * N-5 (v0.39): every style has every building; each holds exactly one facility sign of its own kind, uses only blocks
+	 * that exist, and the Nether / End inns have no beds (they explode there).
+	 */
+	@Test
+	void facilityStructures() throws IOException {
+		Map<String, FacilityDefinition> facilities = decodeAll("facility", FacilityDefinition.CODEC);
+		Path root = Path.of("src/main/resources/data/ak_trade_expansion/structure/facility");
+		List<String> styles = List.of("plains", "desert", "savanna", "snowy", "taiga", "nether", "end");
+		for (String style : styles) {
+			for (FacilityDefinition def : facilities.values()) {
+				Path file = root.resolve(style).resolve(def.structure() + ".nbt");
+				net.minecraft.nbt.CompoundTag tag = net.minecraft.nbt.NbtIo.readCompressed(file, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+				net.minecraft.nbt.ListTag palette = tag.getListOrEmpty("palette");
+				int signs = 0;
+				for (int i = 0; i < palette.size(); i++) {
+					net.minecraft.nbt.CompoundTag entry = palette.getCompoundOrEmpty(i);
+					String id = entry.getStringOr("id", ""); // 26.x block state keys (Name / Properties are the legacy ones)
+					// The mod's own blocks are not registered by the bootstrap; the sign is the only one used.
+					if (id.startsWith("ak_trade_expansion:")) assertEquals("ak_trade_expansion:facility_sign", id, file.toString());
+					else assertTrue(net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(net.minecraft.resources.Identifier.parse(id)), file + ": " + id);
+					if (id.equals("ak_trade_expansion:facility_sign")) {
+						signs++;
+						assertEquals(def.kind().getSerializedName(), entry.getCompoundOrEmpty("properties").getStringOr("kind", ""), file + ": sign kind");
+					}
+					if ((style.equals("nether") || style.equals("end")) && id.endsWith("_bed")) fail(file + ": bed in " + style);
+				}
+				assertEquals(1, signs, file + ": one facility sign");
+			}
+		}
+	}
+
 	@Test
 	void goodsDecode() throws IOException {
 		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);

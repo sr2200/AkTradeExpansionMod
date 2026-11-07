@@ -2,7 +2,9 @@
 // data/ak_trade_expansion/structure/facility/<style>/<facility>.nbt
 // Every template faces north: the front is the z = 0 side with the door at x = width / 2. Layer y = 0 is the floor,
 // the walls stand on it, a stepped roof covers them. The facility sign (built=true) inside is the building's core.
-// Styles share the shapes and only change the materials.
+// Styles share the shapes and only change the materials: one per village type (plains, desert, savanna, snowy, taiga)
+// and one each for the Nether and the End (used when development.dimensions includes them). Beds explode there, so the
+// inn of those styles has none (its effect is the villagers who arrive).
 const n = require('./nbt.js');
 const fs = require('fs');
 const path = require('path');
@@ -14,9 +16,42 @@ const styles = {
 	plains: {
 		floor: 'minecraft:cobblestone', pillar: 'minecraft:oak_log', wall: 'minecraft:oak_planks', roof: 'minecraft:spruce_planks',
 		window: 'minecraft:glass', door: 'minecraft:oak_door', bed: 'minecraft:red_bed', stone: 'minecraft:stone_bricks',
-		stonePillar: 'minecraft:polished_andesite', carpet: 'minecraft:red_carpet',
+		stonePillar: 'minecraft:polished_andesite', carpet: 'minecraft:red_carpet', lantern: 'minecraft:lantern',
+	},
+	desert: {
+		floor: 'minecraft:smooth_sandstone', pillar: 'minecraft:chiseled_sandstone', wall: 'minecraft:sandstone', roof: 'minecraft:cut_sandstone',
+		window: 'minecraft:glass', door: 'minecraft:birch_door', bed: 'minecraft:orange_bed', stone: 'minecraft:cut_sandstone',
+		stonePillar: 'minecraft:chiseled_sandstone', carpet: 'minecraft:orange_carpet', lantern: 'minecraft:lantern',
+	},
+	savanna: {
+		floor: 'minecraft:coarse_dirt', pillar: 'minecraft:acacia_log', wall: 'minecraft:acacia_planks', roof: 'minecraft:orange_terracotta',
+		window: 'minecraft:glass', door: 'minecraft:acacia_door', bed: 'minecraft:yellow_bed', stone: 'minecraft:terracotta',
+		stonePillar: 'minecraft:stripped_acacia_log', carpet: 'minecraft:yellow_carpet', lantern: 'minecraft:lantern',
+	},
+	snowy: {
+		floor: 'minecraft:spruce_planks', pillar: 'minecraft:spruce_log', wall: 'minecraft:snow_block', roof: 'minecraft:spruce_planks',
+		window: 'minecraft:glass', door: 'minecraft:spruce_door', bed: 'minecraft:light_blue_bed', stone: 'minecraft:polished_diorite',
+		stonePillar: 'minecraft:stripped_spruce_log', carpet: 'minecraft:light_blue_carpet', lantern: 'minecraft:lantern',
+	},
+	taiga: {
+		floor: 'minecraft:cobblestone', pillar: 'minecraft:spruce_log', wall: 'minecraft:spruce_planks', roof: 'minecraft:dark_oak_planks',
+		window: 'minecraft:glass', door: 'minecraft:spruce_door', bed: 'minecraft:green_bed', stone: 'minecraft:mossy_stone_bricks',
+		stonePillar: 'minecraft:cobblestone', carpet: 'minecraft:green_carpet', lantern: 'minecraft:lantern',
+	},
+	nether: {
+		floor: 'minecraft:polished_blackstone', pillar: 'minecraft:crimson_stem', wall: 'minecraft:crimson_planks', roof: 'minecraft:nether_bricks',
+		window: 'minecraft:glass', door: 'minecraft:crimson_door', bed: null, stone: 'minecraft:polished_blackstone_bricks',
+		stonePillar: 'minecraft:gilded_blackstone', carpet: 'minecraft:red_carpet', lantern: 'minecraft:soul_lantern',
+	},
+	end: {
+		floor: 'minecraft:end_stone_bricks', pillar: 'minecraft:purpur_pillar', wall: 'minecraft:purpur_block', roof: 'minecraft:end_stone_bricks',
+		window: 'minecraft:glass', door: 'minecraft:warped_door', bed: null, stone: 'minecraft:end_stone_bricks',
+		stonePillar: 'minecraft:purpur_pillar', carpet: 'minecraft:purple_carpet', lantern: 'minecraft:lantern',
 	},
 };
+
+/** Blocks with an axis property (logs, stems, pillars) stand upright. */
+const AXIS = /(_log|_stem|_pillar|basalt)$/;
 
 const S = (v) => ({ t: 8, v });
 const I = (v) => ({ t: 3, v });
@@ -51,10 +86,11 @@ function build(style, m, kind, spec) {
 	const mid = Math.floor(W / 2);
 	const stoneHouse = kind === 'bank';
 	const wallBlock = stoneHouse ? m.stone : m.wall;
-	const pillar = stoneHouse ? state(m.stonePillar) : state(m.pillar, { axis: 'y' });
+	const upright = (id) => AXIS.test(id) ? state(id, { axis: 'y' }) : state(id);
+	const pillar = upright(stoneHouse ? m.stonePillar : m.pillar);
 
 	for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) for (let z = 0; z < D; z++) set(x, y, z, state('minecraft:air'));
-	for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) set(x, 0, z, state(stoneHouse ? m.stonePillar : m.floor));
+	for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) set(x, 0, z, stoneHouse ? upright(m.stonePillar) : state(m.floor));
 	// Walls with corner pillars and windows on the sides and the back.
 	for (let y = 1; y <= wall; y++) {
 		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
@@ -74,7 +110,7 @@ function build(style, m, kind, spec) {
 	// Stepped roof.
 	for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) set(x, wall + 1, z, state(m.roof));
 	for (let x = 1; x < W - 1; x++) for (let z = 1; z < D - 1; z++) set(x, wall + 2, z, state(m.roof));
-	set(mid, wall, Math.floor(D / 2), state('minecraft:lantern', { hanging: 'true', waterlogged: 'false' }));
+	set(mid, wall, Math.floor(D / 2), state(m.lantern, { hanging: 'true', waterlogged: 'false' }));
 	// The core: the facility sign at the back, its board facing the door.
 	set(mid, 1, D - 2, state('ak_trade_expansion:facility_sign', { facing: 'north', kind, built: 'true' }));
 
@@ -92,12 +128,16 @@ function build(style, m, kind, spec) {
 			set(mid - 1, 1, D - 2, state('minecraft:hay_block', { axis: 'y' }));
 			break;
 		case 'inn':
-			// Four beds along the side walls (head at the wall).
+			// Four beds along the side walls (head at the wall); rugs instead where beds explode.
 			for (const z of [2, D - 4]) {
-				set(1, 1, z, state(m.bed, { facing: 'west', part: 'head', occupied: 'false' }));
-				set(2, 1, z, state(m.bed, { facing: 'west', part: 'foot', occupied: 'false' }));
-				set(W - 2, 1, z, state(m.bed, { facing: 'east', part: 'head', occupied: 'false' }));
-				set(W - 3, 1, z, state(m.bed, { facing: 'east', part: 'foot', occupied: 'false' }));
+				if (m.bed) {
+					set(1, 1, z, state(m.bed, { facing: 'west', part: 'head', occupied: 'false' }));
+					set(2, 1, z, state(m.bed, { facing: 'west', part: 'foot', occupied: 'false' }));
+					set(W - 2, 1, z, state(m.bed, { facing: 'east', part: 'head', occupied: 'false' }));
+					set(W - 3, 1, z, state(m.bed, { facing: 'east', part: 'foot', occupied: 'false' }));
+				} else {
+					for (const x of [1, 2, W - 3, W - 2]) set(x, 1, z, state(m.carpet));
+				}
 			}
 			for (let z = 1; z < D - 2; z++) set(mid, 1, z, state(m.carpet));
 			break;
