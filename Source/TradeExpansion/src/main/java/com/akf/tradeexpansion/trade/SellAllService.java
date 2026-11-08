@@ -122,6 +122,12 @@ public final class SellAllService {
 		}
 		registry.setDirty();
 		TradeService.broadcast(player.level().getServer(), registry, changed, now);
+		// R: advancements (the whole sale counts as one trade)
+		for (Planned p : plan) {
+			com.akf.tradeexpansion.advancement.TradeAdvancements.afterSale(player, registry, market, p.goods(),
+					PriceModel.sellCapacity(p.params(), p.state()) < 1, now);
+		}
+		com.akf.tradeexpansion.advancement.TradeAdvancements.afterTrade(player, market, false, items, total, now);
 		return new TradeResultS2C(TradeResult.SUCCESS, false, items, total);
 	}
 

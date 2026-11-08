@@ -1,0 +1,30 @@
+{
+  "parent": "ak_trade_expansion:first_trade",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "shortage_sold"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:hay_block"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.shortage.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.shortage.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

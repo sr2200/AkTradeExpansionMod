@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:first_trade",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "markets",
+        "min": 3
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:map"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.peddler.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.peddler.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

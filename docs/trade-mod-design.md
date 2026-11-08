@@ -1,9 +1,9 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.48.6（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
+- 版：v0.49（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
-- 実装状況：段階0〜14 と拡張機能（輸送依頼 J-2、評判 M、村の発展 N、商会 O、村の流行 P、雇い人 Q）を実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
+- 実装状況：段階0〜14 と拡張機能（輸送依頼 J-2、評判 M、村の発展 N、商会 O、村の流行 P、雇い人 Q、進捗 R）を実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
 - Mod名：**AK Trade Expansion**（v0.25 で「Trade Expansion」から変更。Mod ID・アイテムID・コマンド・設定ファイル名・パッケージ名は変えていない）
 - 配布ファイル：jar は `ak_trade_expansion-<バージョン>.jar`、配布用 zip は `AKTradeExpansion-<バージョン>.zip`（v0.25）
 - ライセンス：GNU LGPL v2.1 のみ（`LGPL-2.1-only`。リポジトリ直下の [LICENSE](../LICENSE)）
@@ -1747,6 +1747,77 @@ v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部�
 
 - 番頭は、市場が受け付けない分を日をまたいで売れる。高い品ほど得で、安い品は給金の割合が大きい。
 
+### R. 進捗【v0.49 追加】
+
+Mod 専用の進捗タブ「商いの始まり」を足す。進捗はデータパック（`data/ak_trade_expansion/advancement/*.json`、29個）で、`tools/advancements/genadv.js` が JSON と言語ファイルの title・description をまとめて作る（表を直したらスクリプトを実行し直す）。報酬は経験値だけ（コインを報酬にすると経済の調整が崩れるため）。
+
+#### R-1 トリガー
+
+| 種類 | 内容 |
+|---|---|
+| バニラのトリガー | コイン・財布・ネザライト貨を持つ（`minecraft:inventory_changed`）、交易所を置く（`minecraft:placed_block`） |
+| `ak_trade_expansion:trade_event` | Mod の出来事すべてに使う1つのトリガー（`TradeEventTrigger`）。サーバーが出来事の名前と値を渡し、条件の `event` が同じで、値が `min`（省略時 0）以上なら達成。例：`{"event": "trade", "min": 1000}` |
+
+出来事の名前（`AdvancementEvents`）：
+
+| 名前 | 起きる時 | 値 |
+|---|---|---|
+| `trade` | 市場で買う・売る（まとめて売るは全体で1回） | 合計額（c） |
+| `bulk_buy` | 買う | 1回に買った数（取引単位） |
+| `sell_stopped` | 売って在庫が上限に届いた（買取停止） | 1 |
+| `shortage_sold` | 品不足の商品を売る | 1 |
+| `rival_sold` | 商会が買い集めている商品を、その影響が届く市場で売る（`RivalService.strongest` が買い集め） | 1 |
+| `markets` | 買う・売る、ログイン | 取引したことのある市場の数 |
+| `trade_nether` / `trade_end` | ネザー／エンドの市場で買う・売る | 1 |
+| `wealth` | 取引・銀行・依頼の後、交易画面を開いた時、ログイン | 現金（財布とコイン）＋銀行残高 |
+| `bank_deposit` / `card_issued` | 銀行に預ける／カードを発行する | 預けた額／1 |
+| `quest_delivered` / `cargo_delivered` | 依頼を納める／輸送依頼を届ける | 依頼の★の数／1 |
+| `reputation` | 取引・依頼・寄付の後、交易画面を開いた時、ログイン（全市場の最大） | その市場での評判レベル |
+| `donated` | 「発展」タブでコインか資材を寄付する | 1 |
+| `facilities` / `facility_kinds` | 発展度を入れた（`contributors` にいる）市場で、建物が完成した時（オンラインの人）・交易画面を開いた時・ログイン | 完成している建物の数／種類の数 |
+| `staff_hired` | 運び屋か番頭を雇う | 1 |
+| `staff_profit` | 運び屋の往復が、歩合を払った後で利益になった（持ち主がオンラインの時だけ） | 利益（c） |
+
+- 「今の状態」で決まる進捗（評判・所持金・建物・取引した市場の数）は、ログインした時と交易画面を開いた時にも判定するので、進捗を足す前に達成していた人にも付く。
+- 取引した市場は、プレイヤーのデータアタッチメント `ak_trade_expansion:traded_markets`（市場 ID の一覧。死んでも消えない）に覚える。進捗を足す前の取引は数えない。
+
+#### R-2 進捗の一覧
+
+| 進捗 | 親 | 条件 | 枠 | 経験値 |
+|---|---|---|---|---|
+| 商いの始まり | （タブの最初） | コインを手に入れる | 通常 | － |
+| 店開き | 商いの始まり | 交易所を置く | 通常 | 10 |
+| 初めての商い | 商いの始まり | 市場で売るか買う | 通常 | 10 |
+| 大口取引 | 初めての商い | 1回の取引で 1,000c 以上 | 通常 | 20 |
+| まとめ買い | 初めての商い | 1回に64個以上買う | 通常 | 20 |
+| 市場をあふれさせる（隠し） | 初めての商い | 売りすぎて買取停止にする | 目標 | 30 |
+| 渡りに船 | 初めての商い | 品不足の商品を売る | 通常 | 20 |
+| 商会の裏をかく | 初めての商い | 商会が買い集めている商品を売る | 目標 | 30 |
+| 行商 | 初めての商い | 3つの市場で取引する | 通常 | 20 |
+| 旅商人 | 行商 | 10の市場で取引する | 挑戦 | 100 |
+| 地底の商談 | 行商 | ネザーの市場で取引する | 目標 | 30 |
+| 果ての商談 | 行商 | エンドの市場で取引する | 目標 | 50 |
+| 頼れる人 | 初めての商い | 依頼を納める | 通常 | 20 |
+| 腕利き | 頼れる人 | ★3の依頼を納める | 目標 | 50 |
+| 長い旅路 | 頼れる人 | 輸送依頼を届ける | 通常 | 30 |
+| 顔見知り | 初めての商い | 評判レベル1 | 通常 | 20 |
+| お得意様 | 顔見知り | 評判レベル3 | 目標 | 50 |
+| 名士 | お得意様 | 評判レベル5 | 挑戦 | 100 |
+| 人を使う身 | 顔見知り | 運び屋か番頭を雇う | 通常 | 30 |
+| 留守を任せて | 人を使う身 | 運び屋の往復で利益を出す | 目標 | 50 |
+| 村への投資 | 初めての商い | 「発展」タブで寄付する | 通常 | 20 |
+| 槌音 | 村への投資 | 発展度を入れた村に建物が完成する | 目標 | 50 |
+| 村おこし | 槌音 | 発展度を入れた1つの村に4種類の建物がそろう | 挑戦 | 100 |
+| 財布の紐 | 商いの始まり | 財布を手に入れる | 通常 | 10 |
+| 堅実な蓄え | 財布の紐 | 銀行に預ける | 通常 | 20 |
+| 顔パス | 堅実な蓄え | クレジットカードを発行する | 通常 | 20 |
+| 小金持ち | 財布の紐 | 現金＋銀行で 10,000c | 目標 | 50 |
+| 豪商 | 小金持ち | 現金＋銀行で 100,000c | 挑戦 | 100 |
+| 燃えない財産 | 財布の紐 | ネザライト貨を手に入れる | 目標 | 30 |
+
+- 雇い人の売買・村人との取引は「取引」に数えない。クリエイティブモードで取引できない設定（既定）の時は、取引の進捗も付かない。
+- 検証：`BundledDataTest.advancements`（親がある・トリガーが存在する・`trade_event` の条件を実際のコーデックで読む・出来事の名前がすべて使われている・アイコンと条件のアイテムがある・両方の言語ファイルに訳がある）。
+
 ---
 
 ## 3. 数値例
@@ -1908,6 +1979,10 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ VillagerTradeToggle.java       ✅ … バニラ村人の交易を無効化（`vanilla.disableVillagerTrades`、Q5）
 ├─ villager/                       … 段階14：村人交易のコイン化（H章）
 │   └─ VillagerCoins.java         ✅ … 取引ごとの代金（エメラルド換算・市場の買値の下限）、代金の保管と送信、支払い（14a）
+├─ advancement/                    … v0.49
+│   ├─ TradeEventTrigger.java     ✅ … 進捗のトリガー `trade_event`（出来事の名前と値、R-1）
+│   ├─ AdvancementEvents.java     ✅ … 出来事の名前の一覧（Minecraft 非依存、テストでも使う）
+│   └─ TradeAdvancements.java     ✅ … 出来事の通知、ログイン・画面を開いた時の判定、取引した市場（データアタッチメント）
 ├─ bank/                           … 段階12
 │   ├─ BankAccounts.java          ✅ … SavedData `ak_trade_expansion:bank`（口座・カード番号）
 │   └─ BankService.java           ✅ … 預け入れ・引き出し・カード発行・カードの有効性・手数料
@@ -1990,7 +2065,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（7件。商品グループと商会（v0.46）、建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）、`core/RivalMathTest`（5件。商会の動きの強さ・減衰・遅延計算、v0.46）、`core/TrendMathTest`（3件。流行の期間のずれ・倍率の範囲、v0.46）、`core/StaffMathTest`（11件。雇い人の片道の時間・事故の確率・失う数・値段の上限／下限、v0.48。問屋値・自動の仕入れ・下限での売り・見込みと歩合、v0.48.1）、`staff/EmployeeCodecTest`（4件。雇い人の保存の往復・古い保存の既定値・ログの行数、v0.48。おまかせの荷、v0.48.1）。計123件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（8件。同梱の進捗（v0.49）、商品グループと商会（v0.46）、建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）、`core/RivalMathTest`（5件。商会の動きの強さ・減衰・遅延計算、v0.46）、`core/TrendMathTest`（3件。流行の期間のずれ・倍率の範囲、v0.46）、`core/StaffMathTest`（11件。雇い人の片道の時間・事故の確率・失う数・値段の上限／下限、v0.48。問屋値・自動の仕入れ・下限での売り・見込みと歩合、v0.48.1）、`staff/EmployeeCodecTest`（4件。雇い人の保存の往復・古い保存の既定値・ログの行数、v0.48。おまかせの荷、v0.48.1）。計124件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -2315,3 +2390,4 @@ test {
 | v0.48.4 | 2026-11-08 | 雇い人（Q-1・Q-2・Q-3）：運び屋・番頭とも、雇った後に品と行き先を選び直せる「変更」（雇う時と同じ手順、持っている品は手元に戻る、契約金なし）。操作 `CHANGE`、ログ「変えた」。「休ませる」を「休止／再開」にして「変更」と並べた |
 | v0.48.5 | 2026-11-08 | 文書とソースの照合：先頭の実装状況（拡張機能 J-2・M〜Q章）、1章の説明（Q1〜Q58 すべて決定）と Q47 の並び、Q56 の「未実装」、G章の村の発展の設定の数（25 項目）、N-7・N-8 の「（案）」、F-2 に `VillagerPricesS2C` を追加、4-2 のパッケージ構成に抜けていたクラス（`RivalMath`・`TrendMath`・`ModSounds`・`FacilityDefinition`／`FacilityCatalog`・`FacilitySignBlock`・`ConstructionMarkerBlock`・`ServerExplosionMixin`・`DevelopmentCommand`・`RivalCommand`）、テストの内訳（`RivalMathTest`・`TrendMathTest`、`BundledDataTest` は7件）、リソースの一覧（`goods_group`・`rival_guild`・`sounds.json`）。仕様は変更なし |
 | v0.48.6 | 2026-11-08 | N-5 建物の見た目を作り直した（敷地の大きさは同じ）：依頼所・倉庫・宿屋は柱と梁の木組み、正面のポーチ、切妻屋根（砂漠は平屋根と塀）、宿屋の煙突。銀行は列柱の玄関・帯・鉄格子の窓・寄棟屋根・窓口のカウンター。`BundledDataTest` で構造物のブロックの状態（プロパティ名と値）も確かめる |
+| v0.49 | 2026-11-08 | R章 進捗を追加：Mod 専用の進捗タブ（29個、報酬は経験値だけ）。出来事を1つのトリガー `ak_trade_expansion:trade_event`（出来事の名前と値、`min` 以上で達成）で知らせ、評判・所持金・建物・取引した市場の数はログインした時と交易画面を開いた時にも判定する。取引した市場はプレイヤーのデータアタッチメント `traded_markets` に覚える。進捗の JSON と訳は `tools/advancements/genadv.js` で作る |

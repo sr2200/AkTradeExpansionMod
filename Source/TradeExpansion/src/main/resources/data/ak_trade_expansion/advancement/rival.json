@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:first_trade",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "rival_sold"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:iron_ingot"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.rival.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.rival.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 30
+  }
+}

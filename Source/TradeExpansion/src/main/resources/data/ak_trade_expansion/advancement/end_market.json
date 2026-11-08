@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:peddler",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "trade_end"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:chorus_fruit"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.end_market.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.end_market.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 50
+  }
+}

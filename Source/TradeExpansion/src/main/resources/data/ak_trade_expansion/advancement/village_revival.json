@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:builder",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "facility_kinds",
+        "min": 4
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:lectern"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.village_revival.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.village_revival.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

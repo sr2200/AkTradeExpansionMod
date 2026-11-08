@@ -1,0 +1,30 @@
+{
+  "parent": "ak_trade_expansion:first_trade",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "donated"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:oak_planks"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.investor.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.investor.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

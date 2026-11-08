@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:wallet",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "bank_deposit",
+        "min": 1
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:gold_block"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.savings.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.savings.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

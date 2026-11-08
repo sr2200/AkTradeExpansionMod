@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.staff;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.bank.BankAccounts;
 import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
@@ -287,6 +288,8 @@ public final class StaffService {
 				e.purse -= commission;
 				e.wages += commission;
 				log(e, now, "returned", null, -1, e.trips, profit - commission, commission);
+				ServerPlayer owner = profit - commission > 0 ? server.getPlayerList().getPlayer(e.owner) : null;
+				if (owner != null) TradeAdvancements.event(owner, TradeAdvancements.STAFF_PROFIT, profit - commission); // R
 				e.tripRevenue = 0;
 				e.tripCost = 0;
 				e.phase = Employee.Phase.HOME;
@@ -995,6 +998,7 @@ public final class StaffService {
 			TradeExpansion.LOGGER.info("{} HIRE {} #{} {} @market#{}{} fee={}", player.getPlainTextName(), e.role.name().toLowerCase(java.util.Locale.ROOT),
 					e.id, auto ? goodsId : def.item(), market.id(), carrier ? " -> market#" + destinationId : " x" + units * def.unit(), CoinItem.formatCopper(fee));
 		}
+		TradeAdvancements.event(player, TradeAdvancements.STAFF_HIRED); // R
 		return new Outcome(TradeResult.SUCCESS, fee, e.id);
 	}
 

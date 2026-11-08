@@ -1,0 +1,37 @@
+{
+  "parent": "ak_trade_expansion:wallet",
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "ak_trade_expansion:netherite_coin"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:netherite_coin"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.fireproof.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.fireproof.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 30
+  }
+}

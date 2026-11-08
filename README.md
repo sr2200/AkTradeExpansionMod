@@ -16,7 +16,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
 | 状態 | 開発中（段階0〜14 と拡張機能を実装済み。下の「実装状況」を参照） |
-| バージョン | 0.1.21（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.1.22（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -226,6 +226,19 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 事故・辞めた・給金が払えない・売り切れは、チャットでも知らせます（設定 `staff.notifyChat`）。
 - 雇い人の売買も相場を動かします。評判と村の発展度は上がりません。雇い人が働くのはサーバー（1人で遊ぶ時はワールド）が動いている間です。
 - 数値は設定の「雇い人」タブ（`staff.*`）で変えられます。`staff.enabled` を OFF にすると雇えなくなり、雇い人は止まり、「雇い人」タブも出なくなります。まだ雇い人がいる人にはタブが出たままで、所持金と品の受け取り・解雇ができます（全員を解雇すると消えます）。
+
+### 進捗
+
+進捗の画面（L キー）に、この Mod のタブ「**商いの始まり**」があります（全部で29個。達成すると経験値がもらえます）。
+
+- **商い**：交易所を置く、初めて売り買いする、1回で 1,000c 以上の取引、64個以上のまとめ買い、品不足の商品を売る、商会が買い集めている商品を売る、売りすぎて買取停止にする（隠し進捗）
+- **旅**：3つ・10の市場で取引する、ネザー・エンドの市場で取引する
+- **依頼**：依頼を納める、★3の依頼を納める、輸送依頼を届ける
+- **評判と雇い人**：評判「顔見知り」「お得意様」「名士」、運び屋か番頭を雇う、運び屋の往復で利益を出す
+- **村の発展**：寄付する、発展度を入れた村に建物が完成する、1つの村に4種類の建物がそろう
+- **お金**：財布を手に入れる、銀行に預ける、カードを発行する、現金と銀行の合計で 10,000c・100,000c、ネザライト貨を手に入れる
+
+評判・所持金・建物の進捗は、ログインした時と交易画面を開いた時にも判定するので、この機能が入る前に達成していた分も付きます（取引した市場の数は、この機能が入ってから数えます）。
 
 ### 村人との取引
 
@@ -837,13 +850,14 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `src/main/java/.../rival/` | 商会の動き（キャンペーンの抽選と、市場への効かせ方） |
 | `src/main/java/.../development/` | 村の発展（発展度・建物の建設と効果） |
 | `src/main/java/.../staff/` | 雇い人（運び屋・番頭の動き） |
+| `src/main/java/.../advancement/` | 進捗のトリガーと判定 |
 | `src/main/java/.../villager/` | 村人交易のコイン化 |
 | `src/main/java/.../worldgen/`・`mixin/` | 村への屋台の建物の追加・財布の自動収納・村人交易のコイン化・建物の保護 |
 | `src/main/java/.../entity/` | 商人NPC |
 | `src/main/java/.../command/` | 管理コマンド（`/aktradeex`） |
 | `src/main/resources/data/ak_trade_expansion/structure/` | 村の屋台の建物（構造物NBT。`tools/structures/genstall.js` で生成）と村の発展の建物（`facility/<見た目>/`、`tools/structures/genfacility.js` で生成） |
 | `src/client/java/...` | 交易画面などクライアント専用のコード |
-| `tools/structures/genstall.js`・`tools/structures/genfacility.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js` | 村の屋台の建物の生成、村の発展の建物の生成（`node tools/structures/genfacility.js src/main/resources/data/ak_trade_expansion/structure/facility`）、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
+| `tools/structures/genstall.js`・`tools/structures/genfacility.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js`・`tools/advancements/genadv.js` | 村の屋台の建物の生成、村の発展の建物の生成（`node tools/structures/genfacility.js src/main/resources/data/ak_trade_expansion/structure/facility`）、進捗の JSON と訳の生成（`node tools/advancements/genadv.js`）、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
 | `build.bat`・`release.bat`・`tools/version/bump.ps1` | 普段のビルド（末尾を上げる）・配布用のビルド（真ん中を上げる）と、バージョンを上げる処理（下の「よく使うコマンド」） |
 | `src/dist/README.txt` | 配布用 zip に入れる導入方法（`@VERSION@` がバージョンに置き換わる） |
 | `src/test/java/...` | 単体テスト（価格・まとめ買い割引・取引単位・距離・コイン・鋳造の枚数・財布・市場レベル・商品の抽選・依頼の計算・評判・預金の利息・発展度・商会・流行・雇い人とその保存・市場名・交易画面の大きさ・設定ファイル・同梱データの読み込み）。123件 |
@@ -865,7 +879,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | 12 | 財布・銀行・クレジットカード | ✅（ゲーム内の確認は進行中） |
 | 13 | 掲示板・依頼・品不足 | ✅（ゲーム内の確認は進行中） |
 | 14 | 村人交易のコイン化（14a 村人・14b 行商人と特殊な取引・14c 抜け道対策） | ✅（ゲーム内の確認は進行中） |
-| 拡張 | 評判・村の発展・輸送依頼・まとめて売る・地図への登録・商会の動き・村の流行（v0.46）・雇い人（v0.48）など（設計書 J-2・M〜Q章） | ✅（ゲーム内の確認は進行中） |
+| 拡張 | 評判・村の発展・輸送依頼・まとめて売る・地図への登録・商会の動き・村の流行（v0.46）・雇い人（v0.48）・進捗（v0.49）など（設計書 J-2・M〜R章） | ✅（ゲーム内の確認は進行中） |
 
 ---
 

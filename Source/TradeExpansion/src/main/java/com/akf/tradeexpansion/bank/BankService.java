@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.bank;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.development.FacilityKind;
@@ -133,6 +134,7 @@ public final class BankService {
 				if (!WalletService.pay(player, amount)) return Result.INSUFFICIENT_FUNDS;
 				bank.add(player.getUUID(), amount);
 				log(player, "DEPOSIT", amount, market);
+				TradeAdvancements.event(player, TradeAdvancements.BANK_DEPOSIT, amount); // R
 			}
 			case WITHDRAW -> {
 				if (bank.balance(player.getUUID()) < amount) return Result.INSUFFICIENT_FUNDS;
@@ -148,8 +150,10 @@ public final class BankService {
 				int number = bank.nextCardNumber(player.getUUID());
 				player.getInventory().placeItemBackInInventory(card(player, number), Prediction.SERVER_ONLY);
 				log(player, "ISSUE_CARD#" + number, fee, market);
+				TradeAdvancements.event(player, TradeAdvancements.CARD_ISSUED); // R
 			}
 		}
+		TradeAdvancements.checkWealth(player); // R
 		return Result.SUCCESS;
 	}
 

@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:first_trade",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "quest_delivered",
+        "min": 1
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:writable_book"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.first_quest.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.first_quest.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

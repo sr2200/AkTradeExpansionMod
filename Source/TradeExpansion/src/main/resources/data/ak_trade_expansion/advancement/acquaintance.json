@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:first_trade",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "reputation",
+        "min": 1
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:emerald"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.acquaintance.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.acquaintance.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

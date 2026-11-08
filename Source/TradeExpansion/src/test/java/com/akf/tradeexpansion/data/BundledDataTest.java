@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -210,5 +211,73 @@ class BundledDataTest {
 		});
 		assertEquals(List.of(), profiles.get("default_overworld").conditions());
 		assertEquals(10, profiles.get("plains_village").priority());
+	}
+
+	/**
+	 * R: the bundled advancements form one tree under "root"; criteria use existing vanilla triggers or trade_event with a
+	 * known event name (decoded with the real codec); icons and the items in conditions exist; both language files have
+	 * every title and description. (Mod items and the trigger cannot be registered here, so the whole Advancement codec
+	 * is not run.)
+	 */
+	@Test
+	void advancements() throws IOException {
+		Path dir = Path.of("src/main/resources/data/ak_trade_expansion/advancement");
+		Path assets = Path.of("src/main/resources/assets/ak_trade_expansion");
+		Map<String, com.google.gson.JsonObject> all = new HashMap<>();
+		try (Stream<Path> files = Files.list(dir)) {
+			for (Path file : files.toList()) {
+				all.put(file.getFileName().toString().replace(".json", ""), JsonParser.parseString(Files.readString(file)).getAsJsonObject());
+			}
+		}
+		assertTrue(all.size() >= 25, "advancements: " + all.size());
+		List<com.google.gson.JsonObject> langs = List.of(
+				JsonParser.parseString(Files.readString(assets.resolve("lang/ja_jp.json"))).getAsJsonObject(),
+				JsonParser.parseString(Files.readString(assets.resolve("lang/en_us.json"))).getAsJsonObject());
+		java.util.function.Consumer<String> itemExists = id -> {
+			net.minecraft.resources.Identifier item = net.minecraft.resources.Identifier.parse(id);
+			if (item.getNamespace().equals("ak_trade_expansion")) {
+				assertTrue(Files.exists(assets.resolve("items/" + item.getPath() + ".json")), "unknown item " + id);
+			} else {
+				assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(item), "unknown item " + id);
+			}
+		};
+		Set<String> events = new java.util.HashSet<>();
+		all.forEach((name, json) -> {
+			if (name.equals("root")) {
+				assertFalse(json.has("parent"), "root has a parent");
+			} else {
+				String parent = json.get("parent").getAsString();
+				assertTrue(parent.startsWith("ak_trade_expansion:") && all.containsKey(parent.substring("ak_trade_expansion:".length())),
+						name + ": unknown parent " + parent);
+			}
+			com.google.gson.JsonObject display = json.getAsJsonObject("display");
+			itemExists.accept(display.getAsJsonObject("icon").get("id").getAsString());
+			for (String part : List.of("title", "description")) {
+				String key = display.getAsJsonObject(part).get("translate").getAsString();
+				assertEquals("advancements.ak_trade_expansion." + name + "." + part, key);
+				langs.forEach(lang -> assertTrue(lang.has(key), "missing translation " + key));
+			}
+			for (Map.Entry<String, JsonElement> c : json.getAsJsonObject("criteria").entrySet()) {
+				com.google.gson.JsonObject criterion = c.getValue().getAsJsonObject();
+				String trigger = criterion.get("trigger").getAsString();
+				if (trigger.equals("ak_trade_expansion:trade_event")) {
+					com.akf.tradeexpansion.advancement.TradeEventTrigger.Instance instance = com.akf.tradeexpansion.advancement.TradeEventTrigger.Instance.CODEC
+							.parse(JsonOps.INSTANCE, criterion.get("conditions")).getOrThrow(msg -> new AssertionError(name + ": " + msg));
+					assertTrue(com.akf.tradeexpansion.advancement.AdvancementEvents.ALL.contains(instance.event()), name + ": unknown event " + instance.event());
+					events.add(instance.event());
+				} else {
+					assertTrue(net.minecraft.core.registries.BuiltInRegistries.TRIGGER_TYPES.containsKey(net.minecraft.resources.Identifier.parse(trigger)),
+							name + ": unknown trigger " + trigger);
+					if (trigger.equals("minecraft:inventory_changed")) {
+						for (JsonElement predicate : criterion.getAsJsonObject("conditions").getAsJsonArray("items")) {
+							JsonElement items = predicate.getAsJsonObject().get("items");
+							(items.isJsonArray() ? items.getAsJsonArray().asList() : List.of(items)).forEach(i -> itemExists.accept(i.getAsString()));
+						}
+					}
+				}
+			}
+		});
+		// Every event the server reports is used by some advancement.
+		assertEquals(com.akf.tradeexpansion.advancement.AdvancementEvents.ALL, events);
 	}
 }

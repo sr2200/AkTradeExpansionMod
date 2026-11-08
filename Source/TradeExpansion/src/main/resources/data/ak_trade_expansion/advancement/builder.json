@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:investor",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "facilities",
+        "min": 1
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:scaffolding"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.builder.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.builder.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 50
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "parent": "ak_trade_expansion:acquaintance",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "staff_hired"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:lead"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.employer.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.employer.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 30
+  }
+}

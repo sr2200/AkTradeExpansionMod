@@ -1,0 +1,30 @@
+{
+  "parent": "ak_trade_expansion:savings",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "card_issued"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:bank_card"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.card.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.card.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 20
+  }
+}

@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.development;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.block.FacilitySignBlock;
 import com.akf.tradeexpansion.block.MarketStallBlockEntity;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
@@ -276,6 +277,7 @@ public final class FacilityBuilder {
 		TradeExpansion.LOGGER.info("Facility {} of market #{} completed at {}", facility.id(), market.id(), box);
 		changed(level, market, Component.translatable("message.ak_trade_expansion.facility.completed", MarketNames.name(market),
 				name(facility.kind())).withStyle(ChatFormatting.GREEN));
+		TradeAdvancements.onFacilityCompleted(level.getServer(), market, MarketClock.now(level)); // R
 	}
 
 	/** Columns of the box lower than the floor get one block of the floor's own block below them. */

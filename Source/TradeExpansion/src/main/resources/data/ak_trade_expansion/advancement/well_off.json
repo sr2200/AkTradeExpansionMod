@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:wallet",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "wealth",
+        "min": 10000
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:diamond_coin"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.well_off.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.well_off.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 50
+  }
+}

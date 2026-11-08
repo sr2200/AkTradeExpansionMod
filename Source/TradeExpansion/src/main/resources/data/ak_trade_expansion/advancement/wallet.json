@@ -1,0 +1,36 @@
+{
+  "parent": "ak_trade_expansion:root",
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "ak_trade_expansion:wallet"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:wallet"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.wallet.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.wallet.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 10
+  }
+}

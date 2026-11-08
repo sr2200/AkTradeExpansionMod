@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:peddler",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "trade_nether"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:gold_ingot"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.nether_market.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.nether_market.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 30
+  }
+}

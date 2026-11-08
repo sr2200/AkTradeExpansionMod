@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:valued_customer",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "reputation",
+        "min": 5
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:bell"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.notable.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.notable.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

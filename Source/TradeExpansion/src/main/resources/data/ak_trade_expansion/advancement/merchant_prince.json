@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:well_off",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "wealth",
+        "min": 100000
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:netherite_coin"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.merchant_prince.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.merchant_prince.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

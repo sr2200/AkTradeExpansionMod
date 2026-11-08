@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:employer",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "staff_profit",
+        "min": 1
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:saddle"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.away_profit.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.away_profit.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 50
+  }
+}

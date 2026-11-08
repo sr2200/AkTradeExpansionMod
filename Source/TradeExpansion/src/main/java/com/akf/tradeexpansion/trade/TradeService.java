@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.trade;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.bank.BankAccounts;
 import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
@@ -159,6 +160,10 @@ public final class TradeService {
 		changed.add(market.id());
 		affected.forEach(m -> changed.add(m.id()));
 		broadcast(player.level().getServer(), registry, changed, now);
+
+		// R: advancements
+		if (!buy) TradeAdvancements.afterSale(player, registry, market, goodsId, PriceModel.sellCapacity(params, state) < 1, now);
+		TradeAdvancements.afterTrade(player, market, buy, qty, total, now);
 
 		return new TradeResultS2C(TradeResult.SUCCESS, buy, qty, total);
 	}

@@ -1,0 +1,38 @@
+{
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "ak_trade_expansion:copper_coin",
+              "ak_trade_expansion:iron_coin",
+              "ak_trade_expansion:gold_coin",
+              "ak_trade_expansion:diamond_coin",
+              "ak_trade_expansion:netherite_coin"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:gold_coin"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.root.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.root.description"
+    },
+    "background": "minecraft:block/spruce_planks",
+    "announce_to_chat": false
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ]
+}

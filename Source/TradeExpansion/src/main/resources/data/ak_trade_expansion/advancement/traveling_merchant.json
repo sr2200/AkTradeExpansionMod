@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:peddler",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "markets",
+        "min": 10
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:compass"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.traveling_merchant.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.traveling_merchant.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

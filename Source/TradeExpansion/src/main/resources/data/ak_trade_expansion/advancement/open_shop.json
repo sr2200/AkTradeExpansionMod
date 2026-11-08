@@ -1,0 +1,33 @@
+{
+  "parent": "ak_trade_expansion:root",
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": {
+          "type": "minecraft:match_block",
+          "blocks": "ak_trade_expansion:market_stall"
+        }
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:market_stall"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.open_shop.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.open_shop.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 10
+  }
+}

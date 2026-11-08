@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.development;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.bank.BankAccounts;
 import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
@@ -65,6 +66,10 @@ public final class DevelopmentService {
 			};
 		}
 		if (result.result() == TradeResult.SUCCESS) {
+			if (request.action() == DevelopmentRequestC2S.Action.DONATE_COINS || request.action() == DevelopmentRequestC2S.Action.DONATE_ITEMS) {
+				TradeAdvancements.event(player, TradeAdvancements.DONATED); // R
+			}
+			TradeAdvancements.checkMarket(player, market, now);
 			registry.setDirty();
 			TradeService.broadcast(player.level().getServer(), registry, Set.of(market.id()), now);
 		}

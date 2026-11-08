@@ -1,0 +1,30 @@
+{
+  "parent": "ak_trade_expansion:first_quest",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "cargo_delivered"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:cargo_crate"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.cargo.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.cargo.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 30
+  }
+}

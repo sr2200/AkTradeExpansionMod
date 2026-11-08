@@ -31,5 +31,7 @@ public final class MarketAccess {
 		long now = MarketUpkeep.touch(level, market);
 		ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
 		BankService.sendAccount(player);
+		com.akf.tradeexpansion.advancement.TradeAdvancements.checkMarket(player, market, now); // R: progress made before
+		com.akf.tradeexpansion.advancement.TradeAdvancements.checkWealth(player);
 	}
 }

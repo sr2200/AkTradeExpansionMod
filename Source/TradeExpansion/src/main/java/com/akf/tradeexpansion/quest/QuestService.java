@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.quest;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.bank.BankAccounts;
 import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
@@ -323,6 +324,7 @@ public final class QuestService {
 				// N-2: the reward counts for both the source and this market.
 				if (source != null) Development.onRequest(source, player, cargo.reward(), now);
 				Development.onRequest(market, player, cargo.reward(), now);
+				TradeAdvancements.event(player, TradeAdvancements.CARGO_DELIVERED); // R
 				if (source != null) {
 					source.requests().removeIf(r -> r.id() == cargo.requestId() && r.isTransport());
 					changed.add(source.id());
@@ -334,6 +336,8 @@ public final class QuestService {
 			}
 			inventory.setChanged();
 			if (delivered > 0) {
+				TradeAdvancements.checkMarket(player, market, now); // R
+				TradeAdvancements.checkWealth(player);
 				registry.setDirty();
 				result = TradeResult.SUCCESS;
 				TradeService.broadcast(player.level().getServer(), registry, changed, now);
@@ -382,6 +386,9 @@ public final class QuestService {
 				}
 				Reputation.onDeliver(market, player.getUUID(), target, now);
 				Development.onRequest(market, player, reward, now); // N-2
+				TradeAdvancements.event(player, TradeAdvancements.QUEST_DELIVERED, target.difficulty()); // R
+				TradeAdvancements.checkMarket(player, market, now);
+				TradeAdvancements.checkWealth(player);
 				market.requests().remove(target);
 				registry.setDirty();
 				result = TradeResult.SUCCESS;

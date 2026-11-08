@@ -1,0 +1,30 @@
+{
+  "parent": "ak_trade_expansion:root",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "trade"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "ak_trade_expansion:copper_coin"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.first_trade.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.first_trade.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 10
+  }
+}

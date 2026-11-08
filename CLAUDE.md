@@ -23,7 +23,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 - Git Bash（Bash ツール）から .bat を実行するときは、フルパスで `cmd` に渡す（`build.bat` とだけ書くと中の `gradlew.bat` が見つからず失敗する）。例：`Source/TradeExpansion` で `cmd //c "$(cygpath -w "$PWD/build.bat") --offline -q"`。`gradlew` を直接使うときも同じ形（`cmd //c "$(cygpath -w "$PWD/gradlew.bat") test --offline -q"`）。
 - バージョンの上げ方は `tools/version/bump.ps1`。手で書き換えない。
 - OneDrive の同期フォルダで `Failed to clean up stale outputs` が出たら `build` フォルダを消して再実行する。
-- README の「商品一覧」は生成物。商品データを変えたら、リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .` を実行して作り直す。村の屋台の構造物 NBT は `tools/structures/genstall.js`、Mod のアイコンは `tools/icon/genicon.js`、荷箱のテクスチャは `tools/icon/gencrate.js`、公開ページ用のサムネイルは `tools/thumbnail/genthumb.ps1` で生成する。
+- README の「商品一覧」は生成物。商品データを変えたら、リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .` を実行して作り直す。村の屋台の構造物 NBT は `tools/structures/genstall.js`、進捗の JSON と言語ファイルの訳は `tools/advancements/genadv.js`（表を直して `Source/TradeExpansion` で実行）、Mod のアイコンは `tools/icon/genicon.js`、荷箱のテクスチャは `tools/icon/gencrate.js`、公開ページ用のサムネイルは `tools/thumbnail/genthumb.ps1` で生成する。
 - .bat ファイルは CRLF で保存する。バックスラッシュを含むスクリプトをシェルのヒアドキュメントで書くと崩れることがあるので、ファイルに書いてから実行する。
 
 ## アーキテクチャ
@@ -41,7 +41,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 
 ## 文書と運用ルール
 
-- 仕様の正本は `docs/trade-mod-design.md`（章 A〜Q、`v0.xx` の版表記は設計書の版で、Mod のバージョンとは別）と `docs/goods-design.md`。仕様を変えたら設計書も更新する（先頭の版と、付録B の改版履歴も）。README は遊ぶ人向けの説明で、ソースと一致させる。
+- 仕様の正本は `docs/trade-mod-design.md`（章 A〜R、`v0.xx` の版表記は設計書の版で、Mod のバージョンとは別）と `docs/goods-design.md`。仕様を変えたら設計書も更新する（先頭の版と、付録B の改版履歴も）。README は遊ぶ人向けの説明で、ソースと一致させる。
 - TODO は `docs/TODO`（Todo+ 書式：`☐` と `✔ ... @done(yy-mm-dd HH:MM)`）。README や設計書には書かない。
 - 0.1.0 より後に入れた、遊ぶ人に見える変更は `docs/release/CHANGES.md` の「未リリース」に、遊ぶ人向けの言葉で書く（追加、変更、修正。設定を足したら設定名も書く）。`release.bat` を実行したら、「未リリース」の見出しをそのバージョンと日付に変え、新しい「未リリース」を上に作る。
 - ゲーム内で確認が必要な項目は `docs/release/ingame-checklist.md` に足す。
