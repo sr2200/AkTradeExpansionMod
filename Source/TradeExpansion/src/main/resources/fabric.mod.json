@@ -22,6 +22,12 @@
 		],
 		"journeymap": [
 			"com.akf.tradeexpansion.client.compat.journeymap.TradeExpansionJourneyMapPlugin"
+		],
+		"jei_mod_plugin": [
+			"com.akf.tradeexpansion.client.compat.jei.TradeExpansionJeiPlugin"
+		],
+		"rei_client": [
+			"com.akf.tradeexpansion.client.compat.rei.TradeExpansionReiPlugin"
 		]
 	},
 	"depends": {
@@ -33,7 +39,9 @@
 	"suggests": {
 		"modmenu": "*",
 		"yet_another_config_lib_v3": "*",
-		"journeymap": "*"
+		"journeymap": "*",
+		"jei": "*",
+		"roughlyenoughitems": "*"
 	},
 	"mixins": [
 		"ak_trade_expansion.mixins.json",

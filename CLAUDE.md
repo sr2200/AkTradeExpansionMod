@@ -28,7 +28,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 
 ## アーキテクチャ
 
-- **ソースセットの分割**（`splitEnvironmentSourceSets`）：`src/main` はサーバーとクライアントの共通コード、`src/client` はクライアント専用コード（画面、描画、JourneyMap／Mod Menu／YACL の連携）。`src/main` からクライアントのクラスを参照してはいけない。YACL・Mod Menu・JourneyMap は compileOnly の任意依存。
+- **ソースセットの分割**（`splitEnvironmentSourceSets`）：`src/main` はサーバーとクライアントの共通コード、`src/client` はクライアント専用コード（画面、描画、JourneyMap／JEI／REI／Mod Menu／YACL の連携）。`src/main` からクライアントのクラスを参照してはいけない。YACL・Mod Menu・JourneyMap・JEI・REI は compileOnly の任意依存。連携先の型は `client/compat/<mod>/` だけで使い、その Mod の entrypoint（`fabric.mod.json`）から読み込ませる（入っていない時はクラスが読み込まれない）。
 - **`core/` は Minecraft に依存しない純粋な計算**（価格モデル、距離による減衰、コイン、利息、評判、依頼、市場レベル、商品の抽選）。単体テストはほぼここに対するもの（`src/test`）。新しい計算式はまずここに置いてテストを書く。
 - **サーバーが正、クライアントはプレビュー**：取引の成否と状態の変更はすべてサーバーで行う。`MarketSnapshotS2C` は価格そのものではなく計算に使うパラメータ（B・τ・X・S など）を送り、クライアントは同じ `PriceModel` で価格と時間による回復を計算して表示する。確定時にサーバーが計算し直し、期待額と違えば `PRICE_CHANGED` を返す。そのため価格の式を変えるときは、サーバーとクライアントの両方の挙動に影響する。スナップショットは見ている人ごとに作る（評判の効果が入るため）。
 - **パケット**は `network/` にまとめ、`ModPayloads` で登録する（C2S は要求、S2C は結果・スナップショット）。受け取った処理で、画面の市場 ID、屋台までの距離、数量の範囲を必ず検証する。一覧は設計書 F-2。

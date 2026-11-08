@@ -778,5 +778,17 @@
   "config.ak_trade_expansion.trend.unpopularMax": "Plentiful multiplier (max)",
   "config.ak_trade_expansion.trend.unpopularMax.desc": "",
   "config.ak_trade_expansion.trend.minGoods": "Goods needed for a trend",
-  "config.ak_trade_expansion.trend.minGoods.desc": "Only groups with at least this many goods at the village can be in or out of fashion"
+  "config.ak_trade_expansion.trend.minGoods.desc": "Only groups with at least this many goods at the village can be in or out of fashion",
+  "recipe_viewer.ak_trade_expansion.title": "Market Prices",
+  "recipe_viewer.ak_trade_expansion.loading": "Asking the markets...",
+  "recipe_viewer.ak_trade_expansion.header": "Markets within %s blocks",
+  "recipe_viewer.ak_trade_expansion.hint": "Nearest first, your prices",
+  "recipe_viewer.ak_trade_expansion.none": "No market nearby deals in this item. To learn prices farther away, go there or check a bulletin board.",
+  "recipe_viewer.ak_trade_expansion.buy": "Buy %s",
+  "recipe_viewer.ak_trade_expansion.sell": "Sell %s",
+  "recipe_viewer.ak_trade_expansion.stock": "Stock %s",
+  "recipe_viewer.ak_trade_expansion.unit": "Traded in lots of %s (prices are per %s)",
+  "recipe_viewer.ak_trade_expansion.shortage": "Shortage: this market wants this item",
+  "recipe_viewer.ak_trade_expansion.no_buy": "Cannot be bought now (sold out, ...)",
+  "recipe_viewer.ak_trade_expansion.no_sell": "Cannot be sold now (the market is full, ...)"
 }

@@ -778,5 +778,17 @@
   "config.ak_trade_expansion.trend.unpopularMax": "余り気味の倍率（上限）",
   "config.ak_trade_expansion.trend.unpopularMax.desc": "",
   "config.ak_trade_expansion.trend.minGoods": "流行の候補に必要な商品数",
-  "config.ak_trade_expansion.trend.minGoods.desc": "その村がこの数以上の商品を扱うグループだけが、流行の候補になる"
+  "config.ak_trade_expansion.trend.minGoods.desc": "その村がこの数以上の商品を扱うグループだけが、流行の候補になる",
+  "recipe_viewer.ak_trade_expansion.title": "市場の相場",
+  "recipe_viewer.ak_trade_expansion.loading": "相場を問い合わせ中…",
+  "recipe_viewer.ak_trade_expansion.header": "近くの市場（%s ブロック以内）",
+  "recipe_viewer.ak_trade_expansion.hint": "近い順。あなたの評判で計算",
+  "recipe_viewer.ak_trade_expansion.none": "近くにこの品を扱う市場はありません。遠くの市場の相場は、実際に行くか掲示板で調べてください。",
+  "recipe_viewer.ak_trade_expansion.buy": "買 %s",
+  "recipe_viewer.ak_trade_expansion.sell": "売 %s",
+  "recipe_viewer.ak_trade_expansion.stock": "在庫 %s",
+  "recipe_viewer.ak_trade_expansion.unit": "%s個ずつ取引する（値段は %s個分）",
+  "recipe_viewer.ak_trade_expansion.shortage": "品不足：この市場はこの品を求めています",
+  "recipe_viewer.ak_trade_expansion.no_buy": "今は買えません（売り切れなど）",
+  "recipe_viewer.ak_trade_expansion.no_sell": "今は売れません（買い取りの上限など）"
 }

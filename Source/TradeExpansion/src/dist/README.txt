@@ -21,6 +21,7 @@
  - Java 25 以上（Minecraft のランチャーに含まれています）
  - Mod Menu と YetAnotherConfigLib（YACL）（任意。入れるとゲーム内の設定画面が使えます）
  - JourneyMap（任意、26.3 版。入れると掲示板の市場を地図の地点として登録できます）
+ - JEI か REI（任意、26.3 版。入れるとアイテムのレシピの画面で近くの市場の相場が見られます）
  - シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れてください）
 
 
@@ -29,7 +30,7 @@
  2. Fabric API を mods フォルダに入れる
  3. この zip の中の ak_trade_expansion-@VERSION@.jar を mods フォルダに入れる
     （古いバージョンの jar（ak_trade_expansion-*.jar）が mods フォルダにあれば、先に消してください）
- 4. （任意）Mod Menu と YACL、JourneyMap を mods フォルダに入れる
+ 4. （任意）Mod Menu と YACL、JourneyMap、JEI か REI を mods フォルダに入れる
  5. Fabric の起動構成で Minecraft を起動する
 
  mods フォルダの場所（Windows の既定）：%APPDATA%\.minecraft\mods

@@ -62,8 +62,14 @@ public final class ClientNetworkHandlers {
 			if (context.player().containerMenu instanceof net.minecraft.world.inventory.MerchantMenu menu) menu.updateSellItem();
 		});
 		ClientPlayNetworking.registerGlobalReceiver(ConfigSyncS2C.TYPE, (payload, context) -> payload.applyOnClient());
+		// I (v0.47): recipe viewer pages
+		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.TradableItemsS2C.TYPE,
+				(payload, context) -> PriceLookupCache.setTradable(payload));
+		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.PriceLookupS2C.TYPE,
+				(payload, context) -> PriceLookupCache.put(payload));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			ClientMarketCache.clear();
+			PriceLookupCache.clear();
 			ConfigManager.load();
 		});
 	}

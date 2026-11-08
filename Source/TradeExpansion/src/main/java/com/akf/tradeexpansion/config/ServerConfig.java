@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.config;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.board.PriceLookupService;
 import com.akf.tradeexpansion.currency.CoinType;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.market.MarketRegistry;
@@ -23,8 +24,15 @@ public final class ServerConfig {
 	public static void init() {
 		ServerLifecycleEvents.SERVER_STARTED.register(ServerConfig::applyRatioLock);
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> GoodsCatalog.setRegistries(server.registryAccess()));
-		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> GoodsCatalog.setRegistries(server.registryAccess()));
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> sender.sendPacket(ConfigSyncS2C.fromServer()));
+		ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resources, success) -> {
+			GoodsCatalog.setRegistries(server.registryAccess());
+			PriceLookupService.broadcastTradableItems(server); // I (v0.47): recipe viewer pages
+		});
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			sender.sendPacket(ConfigSyncS2C.fromServer());
+			sender.sendPacket(PriceLookupService.tradableItems());
+		});
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> PriceLookupService.forget(handler.getPlayer().getUUID()));
 	}
 
 	/** Re-reads the config file, applies it and pushes the synced values to every player. */
@@ -35,6 +43,7 @@ public final class ServerConfig {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			ServerPlayNetworking.send(player, sync);
 		}
+		PriceLookupService.broadcastTradableItems(server); // goods overrides of the config file may have changed
 		TradeExpansion.LOGGER.info("Reloaded {}", ConfigManager.path());
 	}
 

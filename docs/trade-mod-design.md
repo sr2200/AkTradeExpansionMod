@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.46（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
+- 版：v0.47（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -884,6 +884,8 @@ MarketRegistry
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
 | `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も。v0.29.1：預金の利率と上限も） | ログイン時／`/aktradeex reload` 時 | 実装済 |
 | `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・中心座標（v0.34、地図への登録用）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
+| `TradableItemsS2C`（v0.47） | S→C | 市場で扱う品の ID の一覧（どれかの商品定義が買う・売る品） | 参加した時・データパックの再読み込みの後・`/aktradeex reload` の後 | 実装済（I章） |
+| `PriceLookupC2S` / `PriceLookupS2C`（v0.47） | C→S / S→C | 品の ID ／ 品の ID・半径（`board.radius`）・市場ごとの（ID・表示名・距離・プレイヤーからの dx/dz・単位・買値・売値（-1 は不可）・在庫・品不足の印）。近い順に最大5つの市場 | レシピ表示 Mod の「市場の相場」のページを表示している間（5秒ごと） | 実装済（I章） |
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 種類（納品・荷箱の受け取り・荷箱の届け、v0.35）, 金額（報酬・払った保証金・受け取った報酬＋保証金）, 届けた荷箱の数 | 依頼タブの「納品する」 | 実装済（段階13） |
 | `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号, カード払いか（v0.35） | 「依頼を受ける」（v0.29、J章・M章）。輸送依頼では「荷箱を受け取る」（保証金を払う、v0.35、J-2）。結果は輸送依頼の時だけ `QuestResultS2C` で返す | 実装済 |
 | `CargoDeliverC2S` | C→S | 市場ID, カード払いか | 依頼タブの「荷箱を届ける」（v0.35、J-2）。インベントリにあるこの市場あての荷箱をすべて届ける。結果は `QuestResultS2C` | 実装済 |
@@ -1139,6 +1141,8 @@ MarketRegistry
 | お買い得（v0.24） | 各商品について、**今いる市場**の値段（今いる市場が扱っていない品は標準の値段＝定義の基準価格での買値・売値）と比べ、`board.dealThreshold`（既定 10%）以上安く買える品・高く売れる品を「お買い得」とする。市場の一覧には市場ごとに「安n（安く買える品の数・水色）」「高n（高く売れる品の数・桃色）」を出し、市場にマウスを乗せると右側に一番お得な品を2つずつ（アイコンと差の割合）出す。市場を選んだ後の商品一覧では、お買い得の値段を色と矢印（↓安く買える・↑高く売れる）で示し、マウスを乗せると「ここより20%安く買える」のように出す。割合はサーバーが計算して送る |
 | 費用 | 無料 |
 | 地図への登録（v0.34） | 市場を選んだ時の右パネルに「地図に登録」ボタン。**JourneyMap が入っている時**は、その市場を JourneyMap の地点（金色、市場の中心の1つ上、保存する地点）として追加する。同じ市場をもう一度登録すると古い地点を置き換える（地点の `market_id` で見分ける）。**入っていない時**はボタン名が「座標を表示」になり、自分のチャットにだけ「市場名：X … / Y … / Z …」（クリックで座標をコピー）と、Xaero's Minimap の地点共有の書式（`xaero-waypoint:名前:頭文字:x:y:z:6:false:0:Internal-overworld-waypoints` など。公式の API ではなく、ゲーム内で未確認）を出す。【v0.40】市場の一覧（市場を選んでいない時）の右パネルの下に「この市場を登録」（JourneyMap が無い時は「この市場の座標」）ボタン。画面を開いている市場そのもの（名前は画面のタイトル、座標はスナップショットの中心）を同じ方法で登録する。近くに市場が無い時も使える |
+| レシピ表示 Mod との連携（v0.47） | **JEI か REI が入っている時**、市場で扱う品（どれかの商品定義が買う・売る品）に「市場の相場」のページ（分類のアイコンと目印は交易所）を足す。品は出力（R：レシピ＝買える）と入力（U：使い道＝売れる）の両方に入るので、どちらのキーでも出る。中身は掲示板と同じ考え方で、**プレイヤーの今の位置から水平 `board.radius` 以内**（同じ次元）でその品を扱う市場を、近い順に最大5つ（`PriceLookupService.MAX_MARKETS`）。市場ごとに表示名・方角と距離・買値・売値（単位が2個以上なら「/n」）・在庫、品不足（K）は名前をオレンジに。値段はその場で遅延回復を計算した最新の値段で、プレイヤーの評判（M）を入れる。評判の特別品（M）は見える人にだけ出す。行にマウスを乗せると表示名と注意（売り切れ・買い取りの上限・単位）。範囲内に無い時は「近くにこの品を扱う市場はありません」。遠い市場は掲示板と同じく実際に行かないと分からない（新しい設定は足さない）。EMI は 26.3 版が無いので未対応 |
+| 通信（v0.47） | 参加した時・データパックの再読み込みの後・`/aktradeex reload` の後に `TradableItemsS2C`（扱う品の ID の一覧）。ページを表示している間、クライアントが `PriceLookupC2S`（品の ID）を送り、`PriceLookupS2C`（品の ID・半径・市場ごとの行）を受け取る。答えから5秒たつと聞き直す（表示中だけ）。答えが1.5秒来なければ聞き直す。サーバーは同じプレイヤーから2 tick 以内に続けて来た要求を捨てる。Mod の無いサーバーでは何も送らず、ページも出ない |
 
 - 価格だけを見る機能で、離れた市場とは取引できない。
 - 地域間の価格差で儲ける遊び（Q7）が分かりやすくなる。512ブロックより遠い市場は、実際に行かないと分からない。
@@ -1770,7 +1774,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ Campaign.java              ✅ … 商会の動き1件（O-3）
 │   └─ RivalService.java          ✅ … 動きを作る・市場に効かせる・ニュース（O-3〜O-5）
 ├─ board/                          … 段階13
-│   └─ BoardService.java          ✅ … 近くの市場の価格を集める（I章）
+│   ├─ BoardService.java          ✅ … 近くの市場の価格を集める（I章）
+│   └─ PriceLookupService.java    ✅ … レシピ表示 Mod のページ用に、プレイヤーの近くの市場での品の価格を集める・扱う品の一覧（I章・v0.47）
 ├─ worldgen/
 │   └─ VillageStalls.java         ✅ … 村の houses プールへ屋台の建物を追加、自然生成の屋台の保護（段階9）
 ├─ VillagerTradeToggle.java       ✅ … バニラ村人の交易を無効化（`vanilla.disableVillagerTrades`、Q5）
@@ -1798,7 +1803,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ AccountS2C.java / BankRequestC2S.java / WalletWithdrawC2S.java ✅ … 段階12
 │   ├─ ExchangeRequestC2S.java / ExchangeResultS2C.java ✅ … 両替（段階11）
 │   ├─ VillagerPricesS2C.java     ✅ … 村人の取引ごとの代金（14a）
-│   ├─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
+│   ├─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / TradableItemsS2C.java・PriceLookupC2S.java・PriceLookupS2C.java（v0.47）/ QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
 │   └─ DevelopmentRequestC2S.java / DevelopmentResultS2C.java ✅ … 「発展」タブ（N章、v0.37）
 ├─ development/
 │   ├─ Development.java           ✅ … 市場の発展度：加算（寄付・依頼・取引）・使う・減衰・寄付した人（N-2、v0.37）
@@ -1841,6 +1846,10 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 │   ├─ ModMenuIntegration.java    ✅ … Mod Menu のエントリーポイント（`ModMenuApi`）。YACL が無ければ画面を出さない
 │   （map/MapWaypoints.java ✅ … 地図への登録の入口。地図 Mod の型を使わない：JourneyMap があれば連携クラスへ、無ければチャットに座標、I章・v0.34）
 │   （compat/journeymap/TradeExpansionJourneyMapPlugin.java・JourneyMapCompat.java ✅ … JourneyMap のプラグインと地点の追加。JourneyMap の型はここだけで使う、v0.34）
+│   （PriceLookupCache.java・Directions.java ✅ … レシピ表示 Mod のページ用の、扱う品の一覧と相場の問い合わせ／方角の文字。どの Mod の型も使わない、I章・v0.47）
+│   （compat/recipeviewer/MarketPricePanel.java・MarketPriceRecipe.java ✅ … 「市場の相場」のページの描画と中身。JEI・REI で共通、v0.47）
+│   （compat/jei/TradeExpansionJeiPlugin.java・MarketPriceCategory.java ✅ … JEI のプラグインと分類。JEI の型はここだけで使う、v0.47）
+│   （compat/rei/TradeExpansionReiPlugin.java・MarketPriceDisplay.java・MarketPriceDisplayCategory.java ✅ … REI のプラグインと分類。REI の型はここだけで使う、v0.47）
 │   ├─ ConfigScreen.java          ✅ … YACL で作る設定画面（Q35）
 │   └─ GoodsManagerScreen.java    ✅ … 設定画面の「追加の商品と消耗品」：アイコンから商品・消耗品を選んで追加・削除（v0.27、Q53）
 ├─ mixin/client/MerchantScreenMixin.java ✅ … 村人の取引画面にコインの代金を表示（14a。`ak_trade_expansion.client.mixins.json`）
@@ -1900,6 +1909,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 - Mixin：v0.20（段階14）で村人交易のコイン化のために `Merchant*` 系の Mixin とクライアント用の設定 `ak_trade_expansion.client.mixins.json` を追加した。v0.11（段階12）で財布の自動収納のために `ak_trade_expansion.mixins.json`（パッケージ `com.akf.tradeexpansion.mixin`、`ItemEntityMixin`）を追加した。v0.14（段階9）で村のテンプレートプールに建物を足すための `StructureTemplatePoolAccessor` を追加した（Fabric API に同等の機能が無いため）。
 - 【v0.11】`fabric.mod.json` に `"suggests": { "modmenu": "*", "yet_another_config_lib_v3": "*" }`、`entrypoints` の `"modmenu": ["com.akf.tradeexpansion.client.config.ModMenuIntegration"]`、`"mixins": ["ak_trade_expansion.mixins.json"]` を追加済み。開発用の依存は `build.gradle` で YACL `3.9.7+26.3-fabric`・Mod Menu `21.0.0` を `compileOnly` ＋ `localRuntime`（配布物には含まれない）。
 - 【v0.34】**地図 Mod との連携（JourneyMap）**：①必須の前提にしない（`fabric.mod.json` の `suggests` に `"journeymap": "*"`）、②配布用 jar に含めない（`build.gradle` の `clientCompileOnly "info.journeymap:journeymap-api-fabric:26.3-2.0.0"`、取得元 `https://maven.blamejared.com`。API の利用条件は All Rights Reserved だが、ビルドに使うだけで配布しない）、③連携の処理を専用のクラスに分ける（`client/compat/journeymap/`。他のクラスは JourneyMap の型を使わず、`FabricLoader.isModLoaded("journeymap")` を確かめてから呼ぶ）、④地図 Mod 側の仕組みで読み込ませる（`entrypoints` の `"journeymap"` にプラグインを書き、JourneyMap がそれを探して作る。`@JourneyMapPlugin(apiVersion = "2.0.0")`）。JourneyMap が無い時、連携のクラスは一度も読み込まれない（開発用のクライアントで確認済み）。地点の追加に失敗した時（API の版が違う等）はチャットの表示に切り替える
+- 【v0.47】**レシピ表示 Mod との連携（JEI・REI）**：JourneyMap と同じ4つの決まりで作る。①`suggests` に `"jei": "*"`・`"roughlyenoughitems": "*"`、②`build.gradle` の `clientCompileOnly`（`mezz.jei:jei-26.3-common-api`・`jei-26.3-fabric-api`（`jei_version`、取得元 `https://maven.blamejared.com`）、`me.shedaniel:RoughlyEnoughItems-api-fabric`（`rei_version`、取得元 `https://maven.shedaniel.me`）と、REI の API が使う型のための `dev.architectury:architectury-fabric`・`me.shedaniel.cloth:basic-math`（REI の POM では runtime なので自分で書く））。配布物に含めない、③JEI の型は `client/compat/jei/`、REI の型は `client/compat/rei/` だけで使う。表示（`client/compat/recipeviewer/MarketPricePanel`）と問い合わせ（`client/PriceLookupCache`）は Minecraft の型だけで書き、両方から使う、④`entrypoints` の `"jei_mod_plugin"`（`@JeiPlugin`）と `"rei_client"` にプラグインを書き、それぞれの Mod が探して作る。どちらも無い時、連携のクラスは一度も読み込まれない。JEI はページを実行時に足す（`IJeiRuntime` の `addRecipes`。扱わなくなった品は `hideRecipes`）。REI は調べた時に作る（`DynamicDisplayGenerator`。保存も送信もしないので serializer なし）。JEI・REI とも描画は `GuiGraphicsExtractor`（REI の `GuiGraphics` はその子クラス）
 - **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat`・`build.bat` は `gradle.properties` の `version` と README のバージョン表記を上げてからビルドする（`nobump` で上げずにビルド、残りの引数は Gradle に渡す）。【v0.27.2 で変更】バージョンの上げ方：普段のビルド `build.bat` は末尾を上げる（0.0.11 → 0.0.12）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）。上げる処理は両方とも `tools/version/bump.ps1`（`-Part patch` / `-Part minor`）。
 - `authors` は `akf`。ライセンスは **GNU LGPL v2.1 のみ**（v2.1 以降ではない）。`fabric.mod.json` の `license` は `LGPL-2.1-only`。本文はリポジトリ直下の `LICENSE` だけで、v0.23 から `build.gradle` がこれを jar（`LICENSE_trade_expansion`）と配布用 zip に入れる。
 
@@ -2162,3 +2172,4 @@ test {
 | v0.44 | 2026-11-07 | 村の発展（N-10）：建設中の場所に工事中の演出（オレンジの点線の枠・木くずのパーティクル・ときどき作業の音、近くのプレイヤー全員に）。設定 `development.constructionEffects`（既定 ON） |
 | v0.45 | 2026-11-07 | 工事中の作業の音を Mod の音 `ak_trade_expansion:facility.construction` にし、字幕を「工事の音」にした（バニラの音の字幕は「ブロックが採掘される」だったため）。`ModSounds`・`sounds.json` を追加 |
 | v0.46 | 2026-11-08 | ソロプレイ向けに O章「商会」（目に見えない商会が地域の相場を数日間動かす。掲示板のニュース）と P章「村の流行」（商品グループごとに人気・不人気、B に倍率）を追加。データパック `goods_group`（O-1）・`rival_guild`（O-2）、設定 `rivals.*`・`trend.*`（G章） |
+| v0.47 | 2026-11-08 | レシピ表示 Mod との連携（I章）：JEI・REI が入っている時、市場で扱う品に「市場の相場」のページ（プレイヤーから `board.radius` 以内の市場を近い順に5つ、評判込みの最新の買値・売値・在庫）。任意の連携で配布物に含めず、それぞれの Mod の entrypoint で読み込む。通信 `TradableItemsS2C`・`PriceLookupC2S`・`PriceLookupS2C`（F-2）、パッケージ（4-2）、ビルドの依存 |
