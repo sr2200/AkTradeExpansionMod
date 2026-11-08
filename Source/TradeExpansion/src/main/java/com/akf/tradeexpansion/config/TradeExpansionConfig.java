@@ -814,10 +814,16 @@ public final class TradeExpansionConfig {
 		public int maxPerPlayer = 3;
 		/** Reputation level with the market needed to hire there (M; ignored while reputation is off). */
 		public int minReputationLevel = 2;
-		public long carrierHireFee = 500;
+		public long carrierHireFee = 300;
 		public long clerkHireFee = 300;
 		/** Paid from the employee's purse once a day while working (the first day is part of the hire fee). */
-		public long carrierWagePerDay = 60;
+		public long carrierWagePerDay = 0;
+		/** v0.48.1: a carrier also takes this share of the profit of every round trip (nothing when there is none). */
+		public double carrierCommission = 0.2;
+		/** v0.48.1: carriers trade at wholesale prices: the spread s of the good × this. */
+		public double carrierSpreadMultiplier = 0.5;
+		/** v0.48.1: X moves by this much per unit a carrier trades (players: 1), so one trip can carry more. */
+		public double carrierPriceImpact = 0.25;
 		public long clerkWagePerDay = 30;
 		/** Trading units a carrier takes on one trip. */
 		public int carrierCapacity = 64;
@@ -830,16 +836,16 @@ public final class TradeExpansionConfig {
 		/** Days a carrier waits at the destination for a good price before going back with what is left. */
 		public double carrierMaxWaitDays = 1.0;
 		/** Accident chance of one loaded trip: min(accidentMax, accidentBase + accidentPerThousandBlocks × distance ÷ 1000). */
-		public double accidentBase = 0.03;
-		public double accidentPerThousandBlocks = 0.04;
+		public double accidentBase = 0.01;
+		public double accidentPerThousandBlocks = 0.0;
 		public double accidentMax = 0.20;
 		/** Part of the cargo lost in an accident (drawn between the two). */
-		public double accidentLossMin = 0.25;
-		public double accidentLossMax = 1.0;
+		public double accidentLossMin = 0.1;
+		public double accidentLossMax = 0.3;
 		/** Days a carrier rests after an accident. */
 		public double accidentRestDays = 0.5;
 		/** Chance that a carrier quits after an accident (the hire fee is not paid back). */
-		public double quitChance = 0.2;
+		public double quitChance = 0.0;
 		/** Accidents, quitting, unpaid wages and sold-out clerks are told in the owner's chat. */
 		public boolean notifyChat = true;
 
@@ -848,7 +854,7 @@ public final class TradeExpansionConfig {
 
 		private Staff(boolean enabled, int maxPerPlayer, int minReputationLevel, long carrierHireFee, long clerkHireFee, long carrierWagePerDay,
 				long clerkWagePerDay, int carrierCapacity, int clerkCapacity, double carrierBlocksPerDay, double carrierMaxDistance,
-				double carrierMaxWaitDays, Accident accident) {
+				double carrierMaxWaitDays, double carrierCommission, double carrierSpreadMultiplier, double carrierPriceImpact, Accident accident) {
 			this.enabled = enabled;
 			this.maxPerPlayer = maxPerPlayer;
 			this.minReputationLevel = minReputationLevel;
@@ -861,6 +867,9 @@ public final class TradeExpansionConfig {
 			this.carrierBlocksPerDay = carrierBlocksPerDay;
 			this.carrierMaxDistance = carrierMaxDistance;
 			this.carrierMaxWaitDays = carrierMaxWaitDays;
+			this.carrierCommission = carrierCommission;
+			this.carrierSpreadMultiplier = carrierSpreadMultiplier;
+			this.carrierPriceImpact = carrierPriceImpact;
 			this.accidentBase = accident.base();
 			this.accidentPerThousandBlocks = accident.perThousandBlocks();
 			this.accidentMax = accident.max();
@@ -903,6 +912,9 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("carrierBlocksPerDay").orElse(d.carrierBlocksPerDay).forGetter(c -> c.carrierBlocksPerDay),
 					Codec.DOUBLE.fieldOf("carrierMaxDistance").orElse(d.carrierMaxDistance).forGetter(c -> c.carrierMaxDistance),
 					Codec.DOUBLE.fieldOf("carrierMaxWaitDays").orElse(d.carrierMaxWaitDays).forGetter(c -> c.carrierMaxWaitDays),
+					Codec.DOUBLE.fieldOf("carrierCommission").orElse(d.carrierCommission).forGetter(c -> c.carrierCommission),
+					Codec.DOUBLE.fieldOf("carrierSpreadMultiplier").orElse(d.carrierSpreadMultiplier).forGetter(c -> c.carrierSpreadMultiplier),
+					Codec.DOUBLE.fieldOf("carrierPriceImpact").orElse(d.carrierPriceImpact).forGetter(c -> c.carrierPriceImpact),
 					Accident.codec(d).forGetter(c -> new Accident(c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax, c.accidentLossMin,
 							c.accidentLossMax, c.accidentRestDays, c.quitChance, c.notifyChat))
 			).apply(i, Staff::new);

@@ -22,9 +22,13 @@ import java.util.Optional;
  * @param subject the employee the action was about (a new hire's id), or -1
  * @param carrierGoods goods a carrier hired here may take (this market sells them)
  * @param clerkGoods   goods a clerk hired here may sell (this market buys them)
+ * @param hints        v0.48.1 (GOODS): the recommendations below were worked out
+ * @param carrierHints for each carrier good, the best destination and the expected profit of a round trip now
+ * @param clerkHints   for each clerk good, the recommended lowest price and what a clerk would sell in a day
  */
 public record StaffS2C(long marketId, int action, Optional<TradeResult> result, long amount, int subject, Info info, List<View> staff,
-		List<Identifier> carrierGoods, List<Identifier> clerkGoods, Optional<Identifier> destinationGoods, List<Destination> destinations) implements CustomPacketPayload {
+		List<Identifier> carrierGoods, List<Identifier> clerkGoods, Optional<Identifier> destinationGoods, List<Destination> destinations,
+		boolean hints, List<CarrierHint> carrierHints, List<ClerkHint> clerkHints) implements CustomPacketPayload {
 	public static final Type<StaffS2C> TYPE = new Type<>(TradeExpansion.id("staff"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, StaffS2C> CODEC = StreamCodec.ofMember(StaffS2C::write, StaffS2C::read);
 
@@ -33,7 +37,7 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 */
 	public record Info(boolean enabled, int maxPerPlayer, int minLevel, int level, boolean reputation, long carrierFee, long clerkFee,
 			long carrierWage, long clerkWage, int carrierCapacity, int clerkCapacity, double blocksPerDay, double accidentBase,
-			double accidentPerThousand, double accidentMax, double quitChance, double maxWaitDays, double maxDistance) {
+			double accidentPerThousand, double accidentMax, double quitChance, double maxWaitDays, double maxDistance, double commission) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeBoolean(enabled);
 			buf.writeVarInt(maxPerPlayer);
@@ -53,12 +57,13 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeDouble(quitChance);
 			buf.writeDouble(maxWaitDays);
 			buf.writeDouble(maxDistance);
+			buf.writeDouble(commission);
 		}
 
 		static Info read(RegistryFriendlyByteBuf buf) {
 			return new Info(buf.readBoolean(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readVarLong(),
 					buf.readVarLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarInt(), buf.readVarInt(), buf.readDouble(), buf.readDouble(),
-					buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble());
+					buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble());
 		}
 	}
 
@@ -71,11 +76,13 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 * @param phase    {@code Employee.Phase} ordinal
 	 * @param status   {@code Employee.Status} ordinal
 	 * @param log      newest first
+	 * @param auto     v0.48.1: a carrier choosing its goods (stock is then in items, unit 1)
+	 * @param kinds    an automatic carrier: kinds of goods carried
 	 */
 	public record View(int id, int role, long home, Component homeName, boolean atHome, Identifier goods, Identifier item, int unit,
 			long destination, Component destinationName, int distance, int quantity, long buyLimit, long sellLimit, long purse, int stock,
 			int phase, boolean paused, int status, long phaseStart, long nextTime, long wage, long earned, long spent, long wages, long lost,
-			int trips, int sold, List<Component> log) {
+			int trips, int sold, List<Component> log, boolean auto, int kinds) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeVarInt(id);
 			buf.writeVarInt(role);
@@ -107,6 +114,8 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeVarInt(sold);
 			buf.writeVarInt(log.size());
 			for (Component line : log) ComponentSerialization.STREAM_CODEC.encode(buf, line);
+			buf.writeBoolean(auto);
+			buf.writeVarInt(kinds);
 		}
 
 		static View read(RegistryFriendlyByteBuf buf) {
@@ -142,7 +151,8 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			List<Component> log = new ArrayList<>(n);
 			for (int i = 0; i < n; i++) log.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 			return new View(id, role, home, homeName, atHome, goods, item, unit, destination, destinationName, distance, quantity, buyLimit,
-					sellLimit, purse, stock, phase, paused, status, phaseStart, nextTime, wage, earned, spent, wages, lost, trips, sold, log);
+					sellLimit, purse, stock, phase, paused, status, phaseStart, nextTime, wage, earned, spent, wages, lost, trips, sold, log, buf.readBoolean(),
+					buf.readVarInt());
 		}
 	}
 
@@ -150,21 +160,69 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 * A market a carrier could sell the good at.
 	 *
 	 * @param dx        offset from this market (Overworld blocks; Nether coordinates ×8), for the direction
-	 * @param sellPrice the unit price paid there now, or -1 when it takes none now (stock full)
+	 * @param buyPrice  v0.48.1: a carrier's unit price here now (wholesale)
+	 * @param sellPrice the carrier's unit price paid there now, or -1 when it takes none now (stock full)
+	 * @param units     v0.48.1: units a carrier would take there now (0 = no profit now)
+	 * @param profit    expected profit of that round trip after the commission and the accident risk
+	 * @param buyLimit  recommended highest buy price (the dearest unit of that trip)
+	 * @param sellLimit recommended lowest sell price (what a unit of that trip costs)
+	 * @param kinds     kinds of goods of that trip (an automatic carrier, {@code Employee.AUTO}; otherwise 1)
 	 */
-	public record Destination(long id, Component name, int dx, int dz, int distance, long sellPrice) {
+	public record Destination(long id, Component name, int dx, int dz, int distance, long buyPrice, long sellPrice, int units, long profit,
+			long buyLimit, long sellLimit, int kinds) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeVarLong(id);
 			ComponentSerialization.STREAM_CODEC.encode(buf, name);
 			buf.writeVarInt(dx);
 			buf.writeVarInt(dz);
 			buf.writeVarInt(distance);
+			buf.writeLong(buyPrice);
 			buf.writeLong(sellPrice);
+			buf.writeVarInt(units);
+			buf.writeLong(profit);
+			buf.writeVarLong(buyLimit);
+			buf.writeVarLong(sellLimit);
+			buf.writeVarInt(kinds);
 		}
 
 		static Destination read(RegistryFriendlyByteBuf buf) {
 			return new Destination(buf.readVarLong(), ComponentSerialization.STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readVarInt(),
+					buf.readVarInt(), buf.readLong(), buf.readLong(), buf.readVarInt(), buf.readLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarInt());
+		}
+	}
+
+	/** v0.48.1: the best destination of a carrier good now (units 0 = no profit anywhere now). */
+	public record CarrierHint(Identifier goods, long destination, Component destinationName, int units, long profit) {
+		void write(RegistryFriendlyByteBuf buf) {
+			Identifier.STREAM_CODEC.encode(buf, goods);
+			buf.writeLong(destination);
+			ComponentSerialization.STREAM_CODEC.encode(buf, destinationName);
+			buf.writeVarInt(units);
+			buf.writeLong(profit);
+		}
+
+		static CarrierHint read(RegistryFriendlyByteBuf buf) {
+			return new CarrierHint(Identifier.STREAM_CODEC.decode(buf), buf.readLong(), ComponentSerialization.STREAM_CODEC.decode(buf),
 					buf.readVarInt(), buf.readLong());
+		}
+	}
+
+	/**
+	 * v0.48.1: a clerk good: the recommended lowest price and what a clerk would sell at it in one day from now.
+	 *
+	 * @param items   items sold in a day (with enough goods left with it)
+	 * @param revenue coins of those sales
+	 */
+	public record ClerkHint(Identifier goods, long limit, int items, long revenue) {
+		void write(RegistryFriendlyByteBuf buf) {
+			Identifier.STREAM_CODEC.encode(buf, goods);
+			buf.writeVarLong(limit);
+			buf.writeVarInt(items);
+			buf.writeVarLong(revenue);
+		}
+
+		static ClerkHint read(RegistryFriendlyByteBuf buf) {
+			return new ClerkHint(Identifier.STREAM_CODEC.decode(buf), buf.readVarLong(), buf.readVarInt(), buf.readVarLong());
 		}
 	}
 
@@ -183,6 +241,11 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 		destinationGoods.ifPresent(id -> Identifier.STREAM_CODEC.encode(buf, id));
 		buf.writeVarInt(destinations.size());
 		for (Destination d : destinations) d.write(buf);
+		buf.writeBoolean(hints);
+		buf.writeVarInt(carrierHints.size());
+		for (CarrierHint h : carrierHints) h.write(buf);
+		buf.writeVarInt(clerkHints.size());
+		for (ClerkHint h : clerkHints) h.write(buf);
 	}
 
 	private static StaffS2C read(RegistryFriendlyByteBuf buf) {
@@ -201,9 +264,16 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 		int m = buf.readVarInt();
 		List<Destination> destinations = new ArrayList<>(m);
 		for (int i = 0; i < m; i++) destinations.add(Destination.read(buf));
+		boolean hints = buf.readBoolean();
+		int hc = buf.readVarInt();
+		List<CarrierHint> carrierHints = new ArrayList<>(hc);
+		for (int i = 0; i < hc; i++) carrierHints.add(CarrierHint.read(buf));
+		int hk = buf.readVarInt();
+		List<ClerkHint> clerkHints = new ArrayList<>(hk);
+		for (int i = 0; i < hk; i++) clerkHints.add(ClerkHint.read(buf));
 		TradeResult[] results = TradeResult.values();
 		Optional<TradeResult> r = result <= 0 || result > results.length ? Optional.empty() : Optional.of(results[result - 1]);
-		return new StaffS2C(marketId, action, r, amount, subject, info, staff, carrierGoods, clerkGoods, goods, destinations);
+		return new StaffS2C(marketId, action, r, amount, subject, info, staff, carrierGoods, clerkGoods, goods, destinations, hints, carrierHints, clerkHints);
 	}
 
 	private static void writeIds(RegistryFriendlyByteBuf buf, List<Identifier> ids) {

@@ -67,6 +67,25 @@ class EmployeeCodecTest {
 	}
 
 	@Test
+	void automaticCarrierKeepsItsCargoByGood() {
+		Employee e = Employee.hire(3, OWNER, "Alex", Employee.Role.CARRIER, 1, Employee.AUTO, 2, 64, 1, 1, 0, 24_000);
+		assertTrue(e.auto());
+		e.cargo.add(new Employee.CargoLine(Identifier.parse("ak_trade_expansion:iron_ingot"), 5, 300));
+		e.cargo.add(new Employee.CargoLine(Identifier.parse("ak_trade_expansion:bread"), 12, 250));
+		JsonElement json = Employee.CODEC.encodeStart(JsonOps.INSTANCE, e).getOrThrow();
+		Employee back = Employee.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+		assertTrue(back.auto());
+		assertEquals(2, back.cargo.size());
+		assertEquals(Identifier.parse("ak_trade_expansion:bread"), back.cargo.get(1).goods);
+		assertEquals(12, back.cargo.get(1).units);
+		assertEquals(250, back.cargo.get(1).cost);
+		// a carrier with one good has no cargo list
+		assertTrue(Employee.CODEC.parse(JsonOps.INSTANCE, Employee.CODEC.encodeStart(JsonOps.INSTANCE,
+				Employee.hire(4, OWNER, "Alex", Employee.Role.CARRIER, 1, Identifier.parse("ak_trade_expansion:bread"), 2, 16, 30, 20, 0, 24_000))
+				.getOrThrow()).getOrThrow().cargo.isEmpty());
+	}
+
+	@Test
 	void logKeepsTheNewestLines() {
 		Employee e = Employee.hire(1, OWNER, "Alex", Employee.Role.CLERK, 1, Identifier.parse("ak_trade_expansion:bread"), -1, 0, 0, 10, 0, 24_000);
 		for (int i = 0; i < Employee.LOG_SIZE + 5; i++) e.addLog(new Employee.LogEntry(i, "clerk_sold", Optional.empty(), -1, List.of((long) i, 1L)));

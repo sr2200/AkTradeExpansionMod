@@ -58,6 +58,82 @@ public final class StaffMath {
 		return n;
 	}
 
+	/** A carrier's prices (Q, v0.48.1): the spread s × {@code factor} (wholesale prices between merchants). */
+	public static GoodParams withSpread(GoodParams p, double factor) {
+		return new GoodParams(p.basePrice(), p.elasticity(), p.spread() * Math.clamp(factor, 0.0, 1.0), p.targetStock(), p.maxStock(),
+				p.restockPerDay(), p.minMultiplier(), p.maxMultiplier(), p.consumePerDay(), p.halfLifeDays());
+	}
+
+	/**
+	 * A carrier's purchase.
+	 *
+	 * @param highestPrice  the dearest unit bought (0 when none)
+	 * @param expectedSales what the units would fetch at the destination now, one after another
+	 */
+	public record BuyPlan(int units, long total, long highestPrice, long expectedSales) {
+		public static final BuyPlan NONE = new BuyPlan(0, 0, 0, 0);
+	}
+
+	/**
+	 * Buys at home one unit at a time (X falls by {@code step} per unit) while: fewer than {@code max} units, the unit price
+	 * is at most {@code maxPrice}, the total stays within {@code funds}, and the unit is expected to sell for more at the
+	 * destination: sellPrice(dest, destX + k × step) × {@code keep} &gt; price, where {@code keep} is the share expected to
+	 * arrive (1 − accident chance × lost share).
+	 */
+	public static BuyPlan planBuy(GoodParams home, double homeX, GoodParams dest, double destX, int max, long maxPrice, long funds,
+			double step, double keep) {
+		double x = homeX;
+		double y = destX;
+		int n = 0;
+		long total = 0;
+		long highest = 0;
+		long sales = 0;
+		while (n < max) {
+			long price = PriceModel.buyPrice(home, x);
+			long sale = PriceModel.sellPrice(dest, y);
+			if (price > maxPrice || total + price > funds || sale * keep <= price) break;
+			total += price;
+			highest = price;
+			sales += sale;
+			n++;
+			x = home.clampPressure(x - step);
+			y = dest.clampPressure(y + step);
+		}
+		return new BuyPlan(n, total, highest, sales);
+	}
+
+	/** A sale of units one at a time (X rises by {@code step} per unit) while the unit price is at least {@code minPrice}. */
+	public record SellPlan(int units, long total) {
+	}
+
+	public static SellPlan planSell(GoodParams p, double x, int max, long minPrice, double step) {
+		int n = 0;
+		long total = 0;
+		while (n < max) {
+			long price = PriceModel.sellPrice(p, x);
+			if (price < minPrice) break;
+			total += price;
+			n++;
+			x = p.clampPressure(x + step);
+		}
+		return new SellPlan(n, total);
+	}
+
+	/**
+	 * Expected profit of one round trip with {@code plan}: the sales that arrive (accidents lose {@code lostShare} of the
+	 * cargo with {@code accidentChance}) minus the purchase, minus the commission on a positive result.
+	 */
+	public static long expectedProfit(BuyPlan plan, double accidentChance, double lostShare, double commission) {
+		if (plan.units() <= 0) return 0;
+		double gross = plan.expectedSales() * (1 - accidentChance * lostShare) - plan.total();
+		return Math.round(gross > 0 ? gross * (1 - commission) : gross);
+	}
+
+	/** Commission of a round trip: {@code rate} of a positive profit, nothing otherwise. */
+	public static long commission(long profit, double rate) {
+		return profit <= 0 ? 0 : (long) Math.floor(profit * Math.clamp(rate, 0.0, 1.0));
+	}
+
 	/** Part of {@code cost} that belongs to {@code units} of {@code total} units (rounded down, 0 when nothing is held). */
 	public static long shareOf(long cost, int units, int total) {
 		if (total <= 0 || units <= 0) return 0;

@@ -57,7 +57,7 @@ final class StaffTab {
 	/** Roles and phases / statuses by ordinal (as {@code Employee}). */
 	private static final int CARRIER = 0;
 	private static final String[] STATUSES = {"working", "wait_price", "wait_stock", "wait_funds", "wait_sell", "not_dealt", "unpaid", "paused",
-			"sold_out", "resting", "quit", "home_gone"};
+			"sold_out", "resting", "quit", "home_gone", "no_margin"};
 	private static final int PHASE_HOME = 0;
 	private static final int PHASE_OUTBOUND = 1;
 	private static final int PHASE_AWAY = 2;
@@ -79,6 +79,9 @@ final class StaffTab {
 	/** Destinations of {@link #destinationGoods} from the server ({@code null} while asked for). */
 	private List<StaffS2C.Destination> destinations;
 	private Identifier destinationGoods;
+	/** v0.48.1: recommendations of every good here ({@code null} while asked for). */
+	private List<StaffS2C.CarrierHint> carrierHints;
+	private List<StaffS2C.ClerkHint> clerkHints;
 	/** Setup values: units per trip (carrier) or left with the clerk, highest buy price, lowest sell price. */
 	private int quantity;
 	private long buyLimit;
@@ -151,7 +154,7 @@ final class StaffTab {
 		if (data != null) {
 			Component blocker = hireBlocker();
 			hireCarrierButton.setTooltip(Tooltip.create(blocker != null ? blocker : Component.translatable("screen.ak_trade_expansion.staff.hire.carrier.tooltip",
-					CoinItem.formatCopper(data.info().carrierFee()), CoinItem.formatCopper(data.info().carrierWage()))));
+					CoinItem.formatCopper(data.info().carrierFee()), percent(data.info().commission()))));
 			hireClerkButton.setTooltip(Tooltip.create(blocker != null ? blocker : Component.translatable("screen.ak_trade_expansion.staff.hire.clerk.tooltip",
 					CoinItem.formatCopper(data.info().clerkFee()), CoinItem.formatCopper(data.info().clerkWage()))));
 		}
@@ -251,6 +254,10 @@ final class StaffTab {
 			destinationGoods = newData.destinationGoods().get();
 			destinations = newData.destinations();
 		}
+		if (newData.hints()) {
+			carrierHints = newData.carrierHints();
+			clerkHints = newData.clerkHints();
+		}
 		if (newData.action() >= 0) {
 			pending = false;
 			StaffRequestC2S.Action action = StaffRequestC2S.Action.values()[newData.action()];
@@ -300,8 +307,57 @@ final class StaffTab {
 		goods = null;
 		destination = null;
 		mode = Mode.PICK_GOODS;
+		requestHints();
 		screen.resetScroll();
 		screen.refreshButtons();
+	}
+
+	/** v0.48.1: asks for the recommendations of every good (they change with the prices). */
+	private void requestHints() {
+		carrierHints = null;
+		clerkHints = null;
+		ClientPlayNetworking.send(StaffRequestC2S.simple(screen.marketId(), StaffRequestC2S.Action.GOODS, -1));
+	}
+
+	private void requestDestinations(Identifier goodsId) {
+		destinations = null;
+		destinationGoods = null;
+		ClientPlayNetworking.send(new StaffRequestC2S(screen.marketId(), StaffRequestC2S.Action.DESTINATIONS, -1, goodsId, -1, 0, 0, 0, 0, false));
+	}
+
+	private StaffS2C.CarrierHint carrierHint(Identifier goodsId) {
+		if (carrierHints == null) return null;
+		for (StaffS2C.CarrierHint h : carrierHints) if (h.goods().equals(goodsId)) return h;
+		return null;
+	}
+
+	private StaffS2C.ClerkHint clerkHint(Identifier goodsId) {
+		if (clerkHints == null) return null;
+		for (StaffS2C.ClerkHint h : clerkHints) if (h.goods().equals(goodsId)) return h;
+		return null;
+	}
+
+	/** Destinations, the most profitable first (then the nearest). */
+	private List<StaffS2C.Destination> sortedDestinations() {
+		if (destinations == null || !goodsMatch()) return List.of();
+		List<StaffS2C.Destination> list = new ArrayList<>(destinations);
+		list.sort(java.util.Comparator.comparingLong((StaffS2C.Destination d) -> -d.profit()).thenComparingInt(StaffS2C.Destination::distance));
+		return list;
+	}
+
+	/** The destination entry of the carrier being set up (a new hire's choice, or the edited carrier's destination). */
+	private StaffS2C.Destination setupDestination() {
+		if (destination != null) return destination;
+		StaffS2C.View edited = editedView();
+		if (edited == null || destinations == null || !goodsMatch()) return null;
+		for (StaffS2C.Destination d : destinations) if (d.id() == edited.destination()) return d;
+		return null;
+	}
+
+	private StaffS2C.View editedView() {
+		if (editing < 0 || data == null) return null;
+		for (StaffS2C.View v : data.staff()) if (v.id() == editing) return v;
+		return null;
 	}
 
 	private void startEdit() {
@@ -315,6 +371,9 @@ final class StaffTab {
 		buyLimit = view.buyLimit();
 		sellLimit = view.sellLimit();
 		mode = Mode.SETUP;
+		// v0.48.1: today's recommendation for comparison
+		if (hiringCarrier) requestDestinations(goods);
+		else requestHints();
 		screen.refreshButtons();
 	}
 
@@ -355,8 +414,8 @@ final class StaffTab {
 	private boolean spinnerShown(int row) {
 		return switch (row) {
 			case 0 -> hiringCarrier || editing < 0;
-			case 1 -> hiringCarrier;
-			default -> true;
+			case 1 -> hiringCarrier && !auto();
+			default -> !auto();
 		};
 	}
 
@@ -386,8 +445,8 @@ final class StaffTab {
 	int rowCount() {
 		return switch (mode) {
 			case LIST -> data == null ? 0 : data.staff().size();
-			case PICK_GOODS -> pickableGoods().size();
-			case PICK_DESTINATION -> destinations == null || !goodsMatch() ? 0 : destinations.size();
+			case PICK_GOODS -> pickableGoods().size() + autoRows();
+			case PICK_DESTINATION -> sortedDestinations().size();
 			case SETUP -> 0;
 		};
 	}
@@ -410,30 +469,46 @@ final class StaffTab {
 				}
 			}
 			case PICK_GOODS -> {
+				if (hiringCarrier && index == 0) {
+					goods = com.akf.tradeexpansion.staff.Employee.AUTO; // v0.48.1: おまかせ
+					mode = Mode.PICK_DESTINATION;
+					requestDestinations(goods);
+					screen.resetScroll();
+					screen.refreshButtons();
+					return;
+				}
+				index -= autoRows();
 				List<GoodView> list = pickableGoods();
 				if (index >= list.size()) return;
 				GoodView view = list.get(index);
 				goods = view.goods();
 				if (hiringCarrier) {
-					destinations = null;
-					destinationGoods = null;
 					mode = Mode.PICK_DESTINATION;
-					ClientPlayNetworking.send(new StaffRequestC2S(screen.marketId(), StaffRequestC2S.Action.DESTINATIONS, -1, goods, -1, 0, 0, 0, 0, false));
+					requestDestinations(goods);
 				} else {
 					quantity = Math.max(1, Math.min(data.info().clerkCapacity(), heldUnits(goods)));
-					sellLimit = sellPriceHere(view);
+					// v0.48.1: the recommended lowest price (85% of the sell price now)
+					StaffS2C.ClerkHint hint = clerkHint(goods);
+					sellLimit = hint != null ? hint.limit() : Math.max(1, (long) Math.floor(sellPriceHere(view) * 0.85));
 					mode = Mode.SETUP;
 				}
 				screen.resetScroll();
 			}
 			case PICK_DESTINATION -> {
-				if (destinations == null || !goodsMatch() || index >= destinations.size()) return;
-				destination = destinations.get(index);
-				GoodView view = goodView(goods);
-				long buy = view == null ? 1 : buyPriceHere(view);
-				quantity = Math.min(16, data.info().carrierCapacity());
-				buyLimit = Math.max(1, (long) Math.ceil(buy * 1.1));
-				sellLimit = Math.max(1, buy);
+				List<StaffS2C.Destination> list = sortedDestinations();
+				if (index >= list.size()) return;
+				destination = list.get(index);
+				// v0.48.1: the recommendation of this trip (the carrier still buys only what should sell for more)
+				quantity = data.info().carrierCapacity();
+				if (auto()) {
+					buyLimit = 1;
+					sellLimit = 1;
+					mode = Mode.SETUP;
+					screen.resetScroll();
+					break;
+				}
+				buyLimit = destination.units() > 0 ? Math.max(1, (long) Math.ceil(destination.buyLimit() * 1.05)) : Math.max(1, destination.buyPrice());
+				sellLimit = Math.max(1, destination.sellLimit());
 				mode = Mode.SETUP;
 				screen.resetScroll();
 			}
@@ -450,6 +525,18 @@ final class StaffTab {
 		List<Identifier> allowed = hiringCarrier ? data.carrierGoods() : data.clerkGoods();
 		for (GoodView view : snapshot.goods()) {
 			if (allowed.contains(view.goods())) list.add(view);
+		}
+		// v0.48.1: the most promising first (carrier: expected profit; clerk: goods you carry, then the sales of a day)
+		if (hiringCarrier && carrierHints != null) {
+			list.sort(java.util.Comparator.comparingLong(v -> {
+				StaffS2C.CarrierHint h = carrierHint(v.goods());
+				return h == null ? 0 : -h.profit();
+			}));
+		} else if (!hiringCarrier && clerkHints != null) {
+			list.sort(java.util.Comparator.comparing((GoodView v) -> heldUnits(v.goods()) <= 0).thenComparingLong(v -> {
+				StaffS2C.ClerkHint h = clerkHint(v.goods());
+				return h == null ? 0 : -h.revenue();
+			}));
 		}
 		return list;
 	}
@@ -482,6 +569,20 @@ final class StaffTab {
 		if (data == null || selected < 0) return null;
 		for (StaffS2C.View v : data.staff()) if (v.id() == selected) return v;
 		return null;
+	}
+
+	/** v0.48.1: the carrier being set up chooses its goods itself (おまかせ). */
+	private boolean auto() {
+		return hiringCarrier && com.akf.tradeexpansion.staff.Employee.AUTO.equals(goods);
+	}
+
+	/** Pick-goods rows: a carrier's first row is おまかせ. */
+	private int autoRows() {
+		return hiringCarrier ? 1 : 0;
+	}
+
+	private static Component goodsName(StaffS2C.View v, ItemStack stack) {
+		return v.auto() ? Component.translatable("staff.ak_trade_expansion.auto") : stack.getHoverName();
 	}
 
 	private static boolean shift() {
@@ -539,7 +640,7 @@ final class StaffTab {
 			StatusText status = statusText(v);
 			int statusWidth = font.width(status.text());
 			g.text(font, status.text(), lx + listW - 9 - statusWidth, ry + 5, status.color());
-			String label = role(v.role()).getString() + "：" + stack.getHoverName().getString()
+			String label = role(v.role()).getString() + "：" + goodsName(v, stack).getString()
 					+ (v.role() == CARRIER ? " → " + v.destinationName().getString() : "");
 			if (!v.atHome()) label += " ＠" + v.homeName().getString();
 			screen.fit(g, label, lx + 20, ry + 5, listW - 34 - statusWidth, v.phase() == PHASE_QUIT ? COLOR_GRAY : COLOR_WHITE, true);
@@ -573,12 +674,14 @@ final class StaffTab {
 	private List<Component> tooltip(StaffS2C.View v) {
 		List<Component> lines = new ArrayList<>();
 		ItemStack stack = stack(v.item());
-		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.title", role(v.role()), stack.getHoverName()));
+		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.title", role(v.role()), goodsName(v, stack)));
 		String status = STATUSES[Math.clamp(v.status(), 0, STATUSES.length - 1)];
 		lines.add(Component.translatable("screen.ak_trade_expansion.staff.hint." + status).withStyle(ChatFormatting.GRAY));
 		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.home", v.homeName()));
 		if (v.role() == CARRIER) {
-			lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.route", v.destinationName(), v.distance(),
+			lines.add(v.auto()
+					? Component.translatable("screen.ak_trade_expansion.staff.tooltip.route.auto", v.destinationName(), v.distance(), v.quantity(), v.kinds())
+					: Component.translatable("screen.ak_trade_expansion.staff.tooltip.route", v.destinationName(), v.distance(),
 					v.quantity() * v.unit(), CoinItem.formatCopper(v.buyLimit()), CoinItem.formatCopper(v.sellLimit())));
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.carrier_totals", v.trips(), CoinItem.formatCopper(v.earned()),
 					CoinItem.formatCopper(v.spent()), CoinItem.formatCopper(v.lost())));
@@ -586,7 +689,9 @@ final class StaffTab {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.clerk", CoinItem.formatCopper(v.sellLimit()), v.sold() * v.unit(),
 					CoinItem.formatCopper(v.earned())));
 		}
-		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.wages", CoinItem.formatCopper(v.wage()), CoinItem.formatCopper(v.wages())));
+		lines.add(v.role() == CARRIER && v.wage() <= 0
+				? Component.translatable("screen.ak_trade_expansion.staff.tooltip.commission", percent(data.info().commission()), CoinItem.formatCopper(v.wages()))
+				: Component.translatable("screen.ak_trade_expansion.staff.tooltip.wages", CoinItem.formatCopper(v.wage()), CoinItem.formatCopper(v.wages())));
 		long profit = v.earned() - v.spent() - v.wages();
 		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.profit", (profit < 0 ? "-" : "") + CoinItem.formatCopper(Math.abs(profit)))
 				.withStyle(profit >= 0 ? ChatFormatting.GREEN : ChatFormatting.RED));
@@ -644,7 +749,7 @@ final class StaffTab {
 		ItemStack stack = stack(v.item());
 		g.item(stack, px, y + 34);
 		screen.fit(g, role(v.role()).getString(), px + 18, y + 34, PANEL_W - 18, COLOR_TEXT, false);
-		screen.fit(g, stack.getHoverName().getString(), px + 18, y + 43, PANEL_W - 18, COLOR_DARK, false);
+		screen.fit(g, goodsName(v, stack).getString(), px + 18, y + 43, PANEL_W - 18, COLOR_DARK, false);
 		StatusText status = statusText(v);
 		screen.fit(g, status.text(), px, y + 54, PANEL_W, status.color() == COLOR_RED ? COLOR_WARNING : status.color() == COLOR_GREEN ? COLOR_OK
 				: status.color() == COLOR_GRAY ? COLOR_DARK : 0xFF906010, false);
@@ -676,25 +781,90 @@ final class StaffTab {
 			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.staff.no_goods"), lx + 4, ly + 4, listW - 12, COLOR_WHITE, false);
 			return;
 		}
-		for (int row = 0; row < rows && scroll + row < list.size(); row++) {
-			GoodView view = list.get(scroll + row);
+		int extra = autoRows();
+		for (int row = 0; row < rows && scroll + row < list.size() + extra; row++) {
 			int ry = ly + row * ROW_H;
+			if (scroll + row < extra) {
+				extractAutoRow(g, font, lx, ry, listW, mouseX, mouseY);
+				continue;
+			}
+			GoodView view = list.get(scroll + row - extra);
 			boolean over = mouseX >= lx && mouseX < lx + listW - 6 && mouseY >= ry && mouseY < ry + ROW_H;
 			if (over) g.fill(lx, ry, lx + listW, ry + ROW_H, COLOR_HOVER);
 			ItemStack stack = view.displayStack();
 			g.item(stack, lx + 2, ry + 1);
 			String right;
+			int color = COLOR_GOLD;
+			List<Component> tip = new ArrayList<>();
 			if (hiringCarrier) {
-				right = Component.translatable("screen.ak_trade_expansion.staff.price.buy", CoinItem.formatCopper(buyPriceHere(view))).getString();
+				StaffS2C.CarrierHint h = carrierHint(view.goods());
+				if (h == null) {
+					right = carrierHints == null ? "…" : Component.translatable("screen.ak_trade_expansion.staff.hint.none").getString();
+					color = COLOR_GRAY;
+				} else if (h.units() > 0 && h.profit() > 0) {
+					right = Component.translatable("screen.ak_trade_expansion.staff.hint.profit", CoinItem.formatCopper(h.profit())).getString();
+					color = COLOR_GREEN;
+					tip.add(Component.translatable("screen.ak_trade_expansion.staff.hint.carrier", h.destinationName(), h.units() * view.unit(),
+							CoinItem.formatCopper(h.profit())));
+				} else {
+					right = Component.translatable("screen.ak_trade_expansion.staff.hint.none").getString();
+					color = COLOR_GRAY;
+					tip.add(Component.translatable("screen.ak_trade_expansion.staff.hint.carrier.none"));
+				}
 			} else {
-				right = Component.translatable("screen.ak_trade_expansion.staff.price.sell_held", CoinItem.formatCopper(sellPriceHere(view)),
-						heldUnits(view.goods()) * view.unit()).getString();
+				StaffS2C.ClerkHint h = clerkHint(view.goods());
+				int held = heldUnits(view.goods()) * view.unit();
+				right = h == null ? Component.translatable("screen.ak_trade_expansion.staff.price.sell_held", CoinItem.formatCopper(sellPriceHere(view)), held).getString()
+						: Component.translatable("screen.ak_trade_expansion.staff.hint.clerk.row", CoinItem.formatCopper(h.revenue()), held).getString();
+				color = held > 0 ? COLOR_GOLD : COLOR_GRAY;
+				if (h != null) {
+					tip.add(Component.translatable("screen.ak_trade_expansion.staff.hint.clerk", CoinItem.formatCopper(h.limit()), h.items(),
+							CoinItem.formatCopper(h.revenue())));
+				}
 			}
-			if (view.unit() > 1) right += "/" + view.unit();
 			int rw = font.width(right);
-			g.text(font, right, lx + listW - 9 - rw, ry + 5, COLOR_GOLD);
+			g.text(font, right, lx + listW - 9 - rw, ry + 5, color);
 			screen.fit(g, stack.getHoverName().getString(), lx + 20, ry + 5, listW - 34 - rw, COLOR_WHITE, true);
 			if (over && mouseX < lx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
+			else if (over && !tip.isEmpty()) {
+				tip.addFirst(stack.getHoverName());
+				g.setTooltipForNextFrame(font, tip, Optional.empty(), mouseX, mouseY);
+			}
+		}
+	}
+
+	/** v0.48.1: the おまかせ row of a carrier's goods list (chest icon, the best expected profit of all goods together). */
+	private void extractAutoRow(GuiGraphicsExtractor g, Font font, int lx, int ry, int listW, int mouseX, int mouseY) {
+		boolean over = mouseX >= lx && mouseX < lx + listW - 6 && mouseY >= ry && mouseY < ry + ROW_H;
+		g.fill(lx, ry, lx + listW, ry + ROW_H, over ? COLOR_HOVER : 0xFF7A8A6A);
+		g.item(new ItemStack(net.minecraft.world.item.Items.CHEST), lx + 2, ry + 1);
+		StaffS2C.CarrierHint h = carrierHint(com.akf.tradeexpansion.staff.Employee.AUTO);
+		String right;
+		int color;
+		if (h == null) {
+			right = carrierHints == null ? "…" : Component.translatable("screen.ak_trade_expansion.staff.hint.none").getString();
+			color = COLOR_GRAY;
+		} else if (h.profit() > 0) {
+			right = Component.translatable("screen.ak_trade_expansion.staff.hint.profit", CoinItem.formatCopper(h.profit())).getString();
+			color = COLOR_GREEN;
+		} else {
+			right = Component.translatable("screen.ak_trade_expansion.staff.hint.none").getString();
+			color = COLOR_GRAY;
+		}
+		int rw = font.width(right);
+		g.text(font, right, lx + listW - 9 - rw, ry + 5, color);
+		screen.fit(g, Component.translatable("screen.ak_trade_expansion.staff.auto.row").getString(), lx + 20, ry + 5, listW - 34 - rw, COLOR_GOLD, true);
+		if (over) {
+			List<Component> tip = new ArrayList<>();
+			tip.add(Component.translatable("screen.ak_trade_expansion.staff.auto.row"));
+			tip.add(Component.translatable("screen.ak_trade_expansion.staff.auto.tooltip").withStyle(ChatFormatting.GRAY));
+			if (h != null && h.profit() > 0) {
+				tip.add(Component.translatable("screen.ak_trade_expansion.staff.hint.auto", h.destinationName(), h.units(), CoinItem.formatCopper(h.profit()))
+						.withColor(COLOR_GREEN));
+			} else if (h != null) {
+				tip.add(Component.translatable("screen.ak_trade_expansion.staff.hint.carrier.none").withStyle(ChatFormatting.GRAY));
+			}
+			g.setTooltipForNextFrame(font, tip, Optional.empty(), mouseX, mouseY);
 		}
 	}
 
@@ -703,15 +873,16 @@ final class StaffTab {
 			g.text(font, Component.translatable("screen.ak_trade_expansion.loading"), lx + 4, ly + 4, COLOR_WHITE);
 			return;
 		}
-		if (destinations.isEmpty()) {
+		List<StaffS2C.Destination> sorted = sortedDestinations();
+		if (sorted.isEmpty()) {
 			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.staff.no_destinations", (long) data.info().maxDistance()),
 					lx + 4, ly + 4, listW - 12, COLOR_WHITE, false);
 			return;
 		}
 		GoodView here = goodView(goods);
-		long buy = here == null ? 0 : buyPriceHere(here);
-		for (int row = 0; row < rows && scroll + row < destinations.size(); row++) {
-			StaffS2C.Destination d = destinations.get(scroll + row);
+		int unit = unit(here);
+		for (int row = 0; row < rows && scroll + row < sorted.size(); row++) {
+			StaffS2C.Destination d = sorted.get(scroll + row);
 			int ry = ly + row * ROW_H;
 			boolean over = mouseX >= lx && mouseX < lx + listW - 6 && mouseY >= ry && mouseY < ry + ROW_H;
 			if (over) g.fill(lx, ry, lx + listW, ry + ROW_H, COLOR_HOVER);
@@ -720,10 +891,12 @@ final class StaffTab {
 			if (d.sellPrice() < 0) {
 				price = Component.translatable("screen.ak_trade_expansion.not_buying").getString();
 				color = COLOR_RED;
+			} else if (d.units() > 0 && d.profit() > 0) {
+				price = Component.translatable("screen.ak_trade_expansion.staff.hint.profit", CoinItem.formatCopper(d.profit())).getString();
+				color = COLOR_GREEN;
 			} else {
-				long diff = d.sellPrice() - buy;
-				price = CoinItem.formatCopper(d.sellPrice()) + " (" + (diff >= 0 ? "+" : "-") + CoinItem.formatCopper(Math.abs(diff)) + ")";
-				color = diff > 0 ? COLOR_GREEN : COLOR_RED;
+				price = Component.translatable("screen.ak_trade_expansion.staff.hint.none").getString();
+				color = COLOR_GRAY;
 			}
 			int pw = font.width(price);
 			g.text(font, price, lx + listW - 9 - pw, ry + 5, color);
@@ -734,9 +907,14 @@ final class StaffTab {
 			if (over) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(d.name());
-				lines.add(Component.translatable("screen.ak_trade_expansion.staff.destination.tooltip", CoinItem.formatCopper(buy),
-						d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice()))
-						.withStyle(ChatFormatting.GRAY));
+				if (auto()) {
+					lines.add(autoLine(d));
+				} else {
+					lines.add(Component.translatable("screen.ak_trade_expansion.staff.destination.tooltip", CoinItem.formatCopper(Math.max(0, d.buyPrice())),
+							d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice()))
+							.withStyle(ChatFormatting.GRAY));
+					lines.add(recommendLine(d, unit));
+				}
 				lines.add(travelLine(d.distance()).withStyle(ChatFormatting.GRAY));
 				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
@@ -761,29 +939,47 @@ final class StaffTab {
 		if (hiringCarrier) {
 			Component to = destination != null ? destination.name() : edited != null ? edited.destinationName() : Component.empty();
 			int distance = destination != null ? destination.distance() : edited != null ? edited.distance() : 0;
+			StaffS2C.Destination d = setupDestination();
+			if (auto()) {
+				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto", to).withColor(COLOR_GOLD));
+				lines.add(travelLine(distance));
+				if (d != null) lines.add(autoLine(d));
+				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto.how", quantity));
+			} else {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier", item, to).withColor(COLOR_GOLD));
 			lines.add(travelLine(distance));
-			if (view != null) {
-				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.prices", CoinItem.formatCopper(buyPriceHere(view)),
-						destination == null ? "-" : destination.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString()
-								: CoinItem.formatCopper(destination.sellPrice())));
+			if (d != null) {
+				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.prices", CoinItem.formatCopper(Math.max(0, d.buyPrice())),
+						d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice())));
+				lines.add(recommendLine(d, unit(view)));
 			}
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.how", quantity * unit(view), CoinItem.formatCopper(buyLimit),
 					CoinItem.formatCopper(sellLimit)));
+			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.auto"));
+			}
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.wait", minutes(Math.round(info.maxWaitDays() * PriceModel.TICKS_PER_DAY))));
-			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.accident", percent(info.quitChance())));
+			lines.add(info.quitChance() > 0 ? Component.translatable("screen.ak_trade_expansion.staff.summary.accident.quit", percent(info.quitChance()))
+					: Component.translatable("screen.ak_trade_expansion.staff.summary.accident"));
 		} else {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk", item).withColor(COLOR_GOLD));
 			if (view != null) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk.price", CoinItem.formatCopper(sellPriceHere(view))));
 			}
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk.how", CoinItem.formatCopper(sellLimit)));
+			StaffS2C.ClerkHint hint = clerkHint(goods);
+			if (hint != null) {
+				lines.add(Component.translatable("screen.ak_trade_expansion.staff.hint.clerk", CoinItem.formatCopper(hint.limit()), hint.items(),
+						CoinItem.formatCopper(hint.revenue())).withColor(COLOR_GREEN));
+			}
 			if (editing < 0) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk.held", heldUnits(goods) * unit(view)));
 		}
 		if (editing < 0) {
-			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.cost",
-					CoinItem.formatCopper(hiringCarrier ? info.carrierFee() : info.clerkFee()),
-					CoinItem.formatCopper(hiringCarrier ? info.carrierWage() : info.clerkWage())));
+			lines.add(hiringCarrier
+					? Component.translatable("screen.ak_trade_expansion.staff.summary.cost.carrier", CoinItem.formatCopper(info.carrierFee()), percent(info.commission()))
+					: Component.translatable("screen.ak_trade_expansion.staff.summary.cost", CoinItem.formatCopper(info.clerkFee()), CoinItem.formatCopper(info.clerkWage())));
+			if (hiringCarrier && info.carrierWage() > 0) {
+				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.cost.carrier_wage", CoinItem.formatCopper(info.carrierWage())));
+			}
 			lines.add(Component.translatable(hiringCarrier ? "screen.ak_trade_expansion.staff.summary.purse.carrier"
 					: "screen.ak_trade_expansion.staff.summary.purse.clerk").withStyle(ChatFormatting.GRAY));
 		}
@@ -796,6 +992,19 @@ final class StaffTab {
 				ty += LINE_H;
 			}
 		}
+	}
+
+	/** v0.48.1: "今なら1往復 約40個（5種類）・見込み +60c" of an automatic carrier. */
+	private static Component autoLine(StaffS2C.Destination d) {
+		if (d.units() <= 0 || d.profit() <= 0) return Component.translatable("screen.ak_trade_expansion.staff.hint.carrier.none").withColor(COLOR_GRAY);
+		return Component.translatable("screen.ak_trade_expansion.staff.hint.auto.trip", d.units(), d.kinds(), CoinItem.formatCopper(d.profit())).withColor(COLOR_GREEN);
+	}
+
+	/** v0.48.1: "おすすめ：上限 66c・下限 70c、今なら1往復 約12個・見込み +45c". */
+	private static Component recommendLine(StaffS2C.Destination d, int unit) {
+		if (d.units() <= 0 || d.profit() <= 0) return Component.translatable("screen.ak_trade_expansion.staff.hint.carrier.none").withColor(COLOR_GRAY);
+		return Component.translatable("screen.ak_trade_expansion.staff.hint.recommend", CoinItem.formatCopper((long) Math.ceil(d.buyLimit() * 1.05)),
+				CoinItem.formatCopper(d.sellLimit()), d.units() * unit, CoinItem.formatCopper(d.profit())).withColor(COLOR_GREEN);
 	}
 
 	private static int unit(GoodView view) {

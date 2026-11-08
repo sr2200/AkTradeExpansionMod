@@ -125,6 +125,9 @@ public final class ConfigValidator {
 		st.carrierBlocksPerDay = clamp("staff.carrierBlocksPerDay", st.carrierBlocksPerDay, 10, 1_000_000);
 		st.carrierMaxDistance = clamp("staff.carrierMaxDistance", st.carrierMaxDistance, 0, 1_000_000);
 		st.carrierMaxWaitDays = clamp("staff.carrierMaxWaitDays", st.carrierMaxWaitDays, 0, 30);
+		st.carrierCommission = clamp("staff.carrierCommission", st.carrierCommission, 0, 1);
+		st.carrierSpreadMultiplier = clamp("staff.carrierSpreadMultiplier", st.carrierSpreadMultiplier, 0, 1);
+		st.carrierPriceImpact = clamp("staff.carrierPriceImpact", st.carrierPriceImpact, 0.05, 1);
 		st.accidentBase = clamp("staff.accidentBase", st.accidentBase, 0, 1);
 		st.accidentPerThousandBlocks = clamp("staff.accidentPerThousandBlocks", st.accidentPerThousandBlocks, 0, 1);
 		st.accidentMax = clamp("staff.accidentMax", st.accidentMax, 0, 1);

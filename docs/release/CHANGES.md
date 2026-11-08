@@ -9,10 +9,11 @@
 
 ### 追加
 - **雇い人（運び屋・番頭）**：交易画面に「雇い人」タブを追加しました。その村での評判が「常連」以上なら、村人を雇って留守の間も商売をさせられます（1人3人まで）。
-  - **運び屋**（契約金 500c・給金 1日 60c）：この村で品を仕入れ、ほかの村（2000 ブロック以内）へ運んで売り、戻ってくるのを繰り返します。買値の上限・売値の下限を決められ、値段が合わない時は待ちます。荷を運ぶ途中で事故に遭うことがあり、荷の一部か全部を失って少し休みます。まれにそのまま辞めてしまいます
-  - **番頭**（契約金 300c・給金 1日 30c）：預けた品を、決めた値段以上の時だけ、この村で少しずつ売ります。値段が戻るたびに売るので、高めの値段を決めておくと留守の間に高く売れます
+  - **運び屋**（契約金 300c・給金は往復の利益の2割）：この村で品を仕入れ、ほかの村（2000 ブロック以内）へ運んで売り、戻ってくるのを繰り返します。雇う時に、行き先で高く売れる品を往復ごとに何種類も選ぶ「おまかせ」か、1種類を決めて買値の上限・売値の下限も決める形を選べます。行き先で仕入れ値より高く売れる分だけ仕入れ、差が無い時は待つので、損をしにくくなっています。商人どうしの値段（問屋値）で取引し、相場もあまり動かしません。荷を運ぶ途中で、まれに事故に遭って荷の一部を失います
+  - **番頭**（契約金 300c・給金 1日 30c）：預けた品を、決めた値段以上の時だけ、この村で少しずつ売ります。市場が一度に受け付けない分も、留守の間にさばいてくれます
+  - 雇う時に、品ごと・行き先ごとに「今なら1往復でどれくらい儲かるか」と、おすすめの値段が出ます（番頭は1日に売れる額の目安）
   - 雇い人はそれぞれ所持金を持ち、仕入れと給金は所持金から払い、売上は所持金に入ります。お金と品の出し入れ・設定の変更・解雇は雇った村でできます。一覧にはどの村で雇った人も出て、マウスを乗せると様子・売上・最近のできごとが見られます。事故や給金不足はチャットでも知らせます。雇い人の売買で評判と発展度は上がりません
-  - 設定（`staff`、設定画面の「雇い人」タブ）：`enabled`、`maxPerPlayer`（人数）、`minReputationLevel`（必要な評判）、`carrierHireFee`・`clerkHireFee`（契約金）、`carrierWagePerDay`・`clerkWagePerDay`（給金）、`carrierCapacity`・`clerkCapacity`（運ぶ数・預かる数）、`carrierBlocksPerDay`（速さ）、`carrierMaxDistance`（行き先の距離）、`carrierMaxWaitDays`（売れ残りを待つ日数）、`accidentBase`・`accidentPerThousandBlocks`・`accidentMax`（事故の確率）、`accidentLossMin`・`accidentLossMax`（失う割合）、`accidentRestDays`（休む日数）、`quitChance`（辞める確率）、`notifyChat`（チャットで知らせる）
+  - 設定（`staff`、設定画面の「雇い人」タブ）：`enabled`、`maxPerPlayer`（人数）、`minReputationLevel`（必要な評判）、`carrierHireFee`・`clerkHireFee`（契約金）、`carrierCommission`（運び屋の歩合）、`carrierWagePerDay`・`clerkWagePerDay`（固定の給金）、`carrierSpreadMultiplier`（問屋値）、`carrierPriceImpact`（運び屋の取引で動く相場）、`carrierCapacity`・`clerkCapacity`（運ぶ数・預かる数）、`carrierBlocksPerDay`（速さ）、`carrierMaxDistance`（行き先の距離）、`carrierMaxWaitDays`（売れ残りを待つ日数）、`accidentBase`・`accidentPerThousandBlocks`・`accidentMax`（事故の確率）、`accidentLossMin`・`accidentLossMax`（失う割合）、`accidentRestDays`（休む日数）、`quitChance`（辞める確率）、`notifyChat`（チャットで知らせる）
   - 管理コマンド：`/aktradeex staff`（全員の雇い人の一覧）、`/aktradeex staff hurry`（次の動きを今にする、テスト用）
 - 交易画面のタブの幅を、それぞれの文字の長さに合わせるようにしました
 - **JEI・REI との連携**：JEI か REI が入っていると、市場で扱う品で R（レシピ）か U（使い道）を押した時に「市場の相場」のページが出るようになりました。半径512ブロック以内の市場を近い順に5つまで、方角と距離・買値・売値・在庫と一緒に表示します（あなたの評判の割引込みの最新の値段）。どちらも入っていなくても、今までどおり動きます

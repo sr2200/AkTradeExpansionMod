@@ -61,6 +61,54 @@ class StaffMathTest {
 	}
 
 	@Test
+	void wholesaleSpread() {
+		GoodParams half = StaffMath.withSpread(P, 0.5);
+		assertEquals(0.2, half.spread(), 1e-12);
+		assertEquals(110, PriceModel.buyPrice(half, 0));
+		assertEquals(90, PriceModel.sellPrice(half, 0));
+	}
+
+	@Test
+	void carrierBuysOnlyWhatShouldSellForMore() {
+		GoodParams home = StaffMath.withSpread(P, 0.5);
+		GoodParams same = StaffMath.withSpread(P, 0.5);
+		// Same base price at both ends: buying at 110 to sell at 90 never pays.
+		assertEquals(0, StaffMath.planBuy(home, 0, same, 0, 64, 1000, 1_000_000, 0.25, 1.0).units());
+		// Twice the base price at the destination: buys until the margin is gone, cheaper units first.
+		GoodParams rich = StaffMath.withSpread(new GoodParams(200, 16, 0.4, 16, 32, 4, 0.25, 4.0), 0.5);
+		StaffMath.BuyPlan plan = StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 0.25, 1.0);
+		assertTrue(plan.units() > 0 && plan.units() < 64);
+		assertTrue(plan.expectedSales() > plan.total());
+		assertEquals(110, StaffMath.planBuy(home, 0, rich, 0, 1, 1000, 1_000_000, 0.25, 1.0).highestPrice());
+		// Limits: the count, the price limit and the purse.
+		assertEquals(3, StaffMath.planBuy(home, 0, rich, 0, 3, 1000, 1_000_000, 0.25, 1.0).units());
+		assertEquals(0, StaffMath.planBuy(home, 0, rich, 0, 64, 109, 1_000_000, 0.25, 1.0).units());
+		assertEquals(2, StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 225, 0.25, 1.0).units());
+		// A smaller step lets more units through before the margin is gone.
+		assertTrue(StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 1.0, 1.0).units() < plan.units());
+	}
+
+	@Test
+	void sellPlanStopsAtTheLimit() {
+		StaffMath.SellPlan all = StaffMath.planSell(P, 0, 10, 1, 1.0);
+		assertEquals(10, all.units());
+		assertEquals(PriceModel.sumSell(P, 0, 10), all.total());
+		assertEquals(0, StaffMath.planSell(P, 0, 10, 81, 1.0).units());
+		assertTrue(StaffMath.planSell(P, 0, 64, 75, 0.25).units() > StaffMath.planSell(P, 0, 64, 75, 1.0).units());
+	}
+
+	@Test
+	void profitAndCommission() {
+		StaffMath.BuyPlan plan = new StaffMath.BuyPlan(4, 400, 110, 600);
+		assertEquals(160, StaffMath.expectedProfit(plan, 0, 0, 0.2)); // 200 × 0.8
+		assertEquals(Math.round((600 * 0.98 - 400) * 0.8), StaffMath.expectedProfit(plan, 0.1, 0.2, 0.2));
+		assertEquals(-100, StaffMath.expectedProfit(new StaffMath.BuyPlan(1, 200, 200, 100), 0, 0, 0.2)); // no commission on a loss
+		assertEquals(0, StaffMath.expectedProfit(StaffMath.BuyPlan.NONE, 0.1, 0.2, 0.2));
+		assertEquals(20, StaffMath.commission(100, 0.2));
+		assertEquals(0, StaffMath.commission(-50, 0.2));
+	}
+
+	@Test
 	void costShare() {
 		assertEquals(0, StaffMath.shareOf(1000, 0, 10));
 		assertEquals(250, StaffMath.shareOf(1000, 5, 20));

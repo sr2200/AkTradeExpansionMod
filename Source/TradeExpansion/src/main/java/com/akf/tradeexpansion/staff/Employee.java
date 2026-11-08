@@ -29,7 +29,9 @@ public final class Employee {
 
 	/** What the employee is doing or waiting for (screen and log). */
 	public enum Status {
-		WORKING, WAIT_PRICE, WAIT_STOCK, WAIT_FUNDS, WAIT_SELL, NOT_DEALT, UNPAID, PAUSED, SOLD_OUT, RESTING, QUIT, HOME_GONE
+		WORKING, WAIT_PRICE, WAIT_STOCK, WAIT_FUNDS, WAIT_SELL, NOT_DEALT, UNPAID, PAUSED, SOLD_OUT, RESTING, QUIT, HOME_GONE,
+		/** v0.48.1: a carrier sees no profit in buying now (the destination would not pay more). */
+		NO_MARGIN
 	}
 
 	/**
@@ -45,6 +47,31 @@ public final class Employee {
 				Codec.LONG.optionalFieldOf("market", -1L).forGetter(LogEntry::market),
 				Codec.LONG.listOf().optionalFieldOf("values", List.of()).forGetter(LogEntry::values)
 		).apply(i, LogEntry::new));
+	}
+
+	/**
+	 * v0.48.1: the goods id of a carrier left to choose its goods ("おまかせ"): every trip it buys whatever should sell for more
+	 * at the destination, several goods at once, kept in {@link #cargo}.
+	 */
+	public static final Identifier AUTO = Identifier.fromNamespaceAndPath("ak_trade_expansion", "staff_auto");
+
+	/** v0.48.1: goods an automatic carrier carries: units and what they cost. Mutable. */
+	public static final class CargoLine {
+		static final Codec<CargoLine> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Identifier.CODEC.fieldOf("goods").forGetter(c -> c.goods),
+				Codec.INT.fieldOf("units").forGetter(c -> c.units),
+				Codec.LONG.fieldOf("cost").forGetter(c -> c.cost)
+		).apply(i, CargoLine::new));
+
+		final Identifier goods;
+		int units;
+		long cost;
+
+		CargoLine(Identifier goods, int units, long cost) {
+			this.goods = goods;
+			this.units = units;
+			this.cost = cost;
+		}
 	}
 
 	/** Lines kept in the log, newest last. */
@@ -111,7 +138,8 @@ public final class Employee {
 					e.status, e.nextTime, e.phaseStart, e.wageDue)),
 			Stats.CODEC.optionalFieldOf("stats", new Stats(0, 0, 0, 0, 0, 0, 0)).forGetter(e -> new Stats(e.earned, e.spent, e.wages, e.lost,
 					e.trips, e.sold, e.hired)),
-			LogEntry.CODEC.listOf().optionalFieldOf("log", List.of()).forGetter(e -> List.copyOf(e.log))
+			LogEntry.CODEC.listOf().optionalFieldOf("log", List.of()).forGetter(e -> List.copyOf(e.log)),
+			CargoLine.CODEC.listOf().optionalFieldOf("cargo", List.of()).forGetter(e -> List.copyOf(e.cargo))
 	).apply(i, Employee::new));
 
 	final int id;
@@ -154,8 +182,11 @@ public final class Employee {
 	int sold;
 	long hired;
 	final List<LogEntry> log = new ArrayList<>();
+	/** v0.48.1: an automatic carrier's cargo by good ({@link #stock} / {@link #cargoCost} are the totals). */
+	final List<CargoLine> cargo = new ArrayList<>();
 
-	private Employee(int id, UUID owner, String ownerName, Settings settings, State state, Stats stats, List<LogEntry> log) {
+	private Employee(int id, UUID owner, String ownerName, Settings settings, State state, Stats stats, List<LogEntry> log, List<CargoLine> cargo) {
+		this.cargo.addAll(cargo);
 		this.id = id;
 		this.owner = owner;
 		this.ownerName = ownerName;
@@ -191,7 +222,7 @@ public final class Employee {
 	static Employee hire(int id, UUID owner, String ownerName, Role role, long home, Identifier goods, long destination, int quantity,
 			long buyLimit, long sellLimit, long now, long day) {
 		Employee e = new Employee(id, owner, ownerName, new Settings(role, home, goods, destination, quantity, buyLimit, sellLimit),
-				new State(0, 0, 0, 0, 0, Phase.HOME, false, Status.WORKING, now, now, now + day), new Stats(0, 0, 0, 0, 0, 0, now), List.of());
+				new State(0, 0, 0, 0, 0, Phase.HOME, false, Status.WORKING, now, now, now + day), new Stats(0, 0, 0, 0, 0, 0, now), List.of(), List.of());
 		return e;
 	}
 
@@ -237,6 +268,11 @@ public final class Employee {
 
 	public int stock() {
 		return stock;
+	}
+
+	/** v0.48.1: a carrier choosing its goods itself. */
+	public boolean auto() {
+		return AUTO.equals(goods);
 	}
 
 	public boolean quit() {
