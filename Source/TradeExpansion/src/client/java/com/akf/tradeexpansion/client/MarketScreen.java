@@ -457,6 +457,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		return String.format(Locale.ROOT, "%,d", (long) Math.floor(value + 1e-9));
 	}
 
+	/** Q (v0.48.2): staff is on, or the player still has employees (server-side decision, MarketSnapshotS2C.staffTab). */
+	private boolean staffAvailable() {
+		return snapshot != null && snapshot.staffTab();
+	}
+
 	private boolean townAvailable() {
 		return snapshot != null && snapshot.development().enabled();
 	}
@@ -719,10 +724,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	private void updateButtons() {
 		if (confirmButton == null) return;
-		if (tab == Tab.BANK && !bankAvailable() || tab == Tab.TOWN && !townAvailable()) tab = Tab.BUY;
+		if (tab == Tab.BANK && !bankAvailable() || tab == Tab.TOWN && !townAvailable() || tab == Tab.STAFF && !staffAvailable()) tab = Tab.BUY;
 		tabButtons.forEach((t, b) -> b.active = t != tab);
 		tabButtons.get(Tab.BANK).visible = bankAvailable();
 		tabButtons.get(Tab.TOWN).visible = townAvailable();
+		tabButtons.get(Tab.STAFF).visible = staffAvailable();
 		paymentButton.visible = (tradeTab() || tab == Tab.QUEST || tab == Tab.TOWN || tab == Tab.STAFF) && account != null && account.validCard();
 		paymentButton.setMessage(Component.translatable(payByCard ? "screen.ak_trade_expansion.pay.card" : "screen.ak_trade_expansion.pay.cash"));
 		for (Button b : tradeWidgets) b.visible = tradeTab();
@@ -793,6 +799,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			tabButtons.values().forEach(b -> b.visible = true);
 			tabButtons.get(Tab.BANK).visible = bankAvailable();
 			tabButtons.get(Tab.TOWN).visible = townAvailable();
+		tabButtons.get(Tab.STAFF).visible = staffAvailable();
 		}
 		staffTab.updateButtons(tab == Tab.STAFF && !sellAllOpen);
 		sellAllConfirmButton.visible = sellAllOpen;

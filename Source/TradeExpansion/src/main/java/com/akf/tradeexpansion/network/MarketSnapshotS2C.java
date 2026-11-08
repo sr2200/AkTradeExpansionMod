@@ -52,10 +52,11 @@ import java.util.List;
  * @param reputation   the receiving player's reputation with the market (M, v0.29); prices, rewards and the goods list
  *                     are already those of that player
  * @param development  N (v0.36): development points and facilities of the market
+ * @param staffTab     Q (v0.48.2): show the staff tab: staff is on, or the player still has employees (to take their money and goods back)
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
 		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation, DevelopmentView development,
-		List<TrendView> trends) implements CustomPacketPayload {
+		List<TrendView> trends, boolean staffTab) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -372,7 +373,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				ReputationMath.nextThreshold(level, rc.levelThresholdArray()), Reputation.priceBonus(level), Reputation.rewardBonus(level),
 				rc.hardQuestLevel, rc.specialBonusLevel);
 		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
-				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime), TrendView.of(market));
+				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime), TrendView.of(market),
+				TradeExpansionConfig.get().staff.enabled || registry.employees().stream().anyMatch(e -> e.owner().equals(uuid)));
 	}
 
 	/** N: points, contributors (top 5 and the player) of a market that develops. */
@@ -426,6 +428,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		ReputationView.CODEC.encode(buf, reputation);
 		DevelopmentView.CODEC.encode(buf, development);
 		TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
+		buf.writeBoolean(staffTab);
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -443,7 +446,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		ReputationView reputation = ReputationView.CODEC.decode(buf);
 		DevelopmentView development = DevelopmentView.CODEC.decode(buf);
 		List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
-		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development, trends);
+		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development, trends,
+				buf.readBoolean());
 	}
 
 	@Override
