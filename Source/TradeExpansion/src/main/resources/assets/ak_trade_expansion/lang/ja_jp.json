@@ -193,7 +193,7 @@
   "config.ak_trade_expansion.currency.startingMoney": "初回支給額",
   "config.ak_trade_expansion.currency.startingMoney.desc": "ワールドに初めて入った時に渡す金額（c）。財布があれば財布に、無ければコインで渡す。既定 240c はパン10個分。0 で渡さない",
   "config.ak_trade_expansion.currency.mobDropCoins": "敵モブがコインを落とす",
-  "config.ak_trade_expansion.currency.mobDropCoins.desc": "プレイヤーが倒した敵対モブが少量のコインを落とす",
+  "config.ak_trade_expansion.currency.mobDropCoins.desc": "プレイヤーが倒した敵対モブが少量のコインを落とす（ネザーではごくまれに金貨も）",
   "config.ak_trade_expansion.currency.sneakUseExchange": "スニーク＋右クリックで崩す",
   "config.ak_trade_expansion.currency.sneakUseExchange.desc": "コインを持ってスニーク＋右クリックすると、1枚を下位のコインに崩す",
   "config.ak_trade_expansion.currency.emeraldCoinsPerBlock": "エメラルド貨の枚数",

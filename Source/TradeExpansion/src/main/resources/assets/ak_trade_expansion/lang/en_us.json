@@ -193,7 +193,7 @@
   "config.ak_trade_expansion.currency.startingMoney": "Starting money",
   "config.ak_trade_expansion.currency.startingMoney.desc": "Copper given the first time a player joins the world (into the wallet if any, otherwise as coins). 240c = 10 loaves of bread. 0 = none",
   "config.ak_trade_expansion.currency.mobDropCoins": "Mobs drop coins",
-  "config.ak_trade_expansion.currency.mobDropCoins.desc": "Hostile mobs killed by a player drop a few coins",
+  "config.ak_trade_expansion.currency.mobDropCoins.desc": "Hostile mobs killed by a player drop a few coins (rarely a gold coin in the Nether)",
   "config.ak_trade_expansion.currency.sneakUseExchange": "Sneak-use to break coins",
   "config.ak_trade_expansion.currency.sneakUseExchange.desc": "Sneak + use breaks one coin into the next smaller coins",
   "config.ak_trade_expansion.currency.emeraldCoinsPerBlock": "Emerald coins per block",

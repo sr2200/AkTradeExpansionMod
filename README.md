@@ -16,7 +16,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.1.17（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.1.18（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -40,7 +40,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 - 価格はすべて銅貨単位（c）。支払いは財布とインベントリのコインから自動で行い、お釣りは財布に（財布が無ければ最小の枚数のコインで）返します。入りきらない分は足元に落ちます。
 - コインを持ってスニーク＋右クリックすると、1枚を1段下のコインに崩せます。
-- 入手方法：初めてワールドに入った時に 240c（パン10個分）、市場に商品を売る、依頼を納める、プレイヤーが倒した敵対モブのドロップ（銅貨0〜2枚、まれに鉄貨）、鋳造（作業台で銅ブロック×9 → 銅貨64枚、鉄ブロック×9 → 鉄貨64枚。素材を売るよりずっと安いので、余った素材の受け皿です）。テスト用に管理コマンド `/aktradeex give` もあります。
+- 入手方法：初めてワールドに入った時に 240c（パン10個分）、市場に商品を売る、依頼を納める、プレイヤーが倒した敵対モブのドロップ（銅貨0〜2枚、まれに鉄貨。ネザーではごくまれに金貨も）、鋳造（作業台で銅ブロック×9 → 銅貨64枚、鉄ブロック×9 → 鉄貨64枚。素材を売るよりずっと安いので、余った素材の受け皿です）。テスト用に管理コマンド `/aktradeex give` もあります。
 - 交易画面の「両替」タブで、コインを1段下に崩したり、1段下のコインからまとめたりできます（手数料は既定で無し。設定 `currency.exchangeFee` で変更可）。
 
 ### 財布・銀行・クレジットカード
@@ -516,7 +516,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `currency.emeraldCoinUnlimited` | `true` | true / false | 市場がエメラルド貨をいくらでも買い取る（買取停止にならない）。OFF で在庫上限（640枚）まで | `"emeraldCoinUnlimited": false` |
 | `currency.exchangeFee` | `0.0` | 0〜0.5 | 両替タブの手数料の割合 | `"exchangeFee": 0.02`（2%） |
 | `currency.startingMoney` | `240` | 0〜1,000,000,000 | ワールドに初めて入った時に一度だけ渡す金額（c）。既定はパン10個分。財布があれば財布に、無ければコインで渡す。0 で渡さない | `"startingMoney": 1000` |
-| `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨） | `"mobDropCoins": false` |
+| `currency.mobDropCoins` | `true` | true / false | プレイヤーが倒した敵対モブがコインを落とす（銅貨0〜2枚、まれに鉄貨。ネザーではごくまれに金貨も） | `"mobDropCoins": false` |
 | `currency.sneakUseExchange` | `true` | true / false | コインを持ってスニーク＋右クリックで、1枚を下位のコインに崩す | `"sneakUseExchange": false` |
 | `currency.emeraldCoinsPerBlock` | `1` | 0〜64 | エメラルドブロック1個から石切台で作れるエメラルド貨の枚数。0 でレシピ無効。反映は再起動か `/reload` の後 | `"emeraldCoinsPerBlock": 2` |
 
