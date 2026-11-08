@@ -118,18 +118,18 @@ final class StaffTab {
 				.bounds(px, y + 104, PANEL_W, 14).build());
 		hireClerkButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.hire.clerk"), b -> startHire(false))
 				.bounds(px, y + 121, PANEL_W, 14).build());
-		depositSmallButton = add.apply(Button.builder(Component.literal("+100c"), b -> deposit(100)).bounds(px, y + 76, 38, 14).build());
-		depositLargeButton = add.apply(Button.builder(Component.literal("+1,000c"), b -> deposit(1000)).bounds(px + 40, y + 76, 38, 14).build());
+		depositSmallButton = add.apply(Button.builder(Component.literal("+100c"), b -> deposit(100)).bounds(px, y + 80, 38, 14).build());
+		depositLargeButton = add.apply(Button.builder(Component.literal("+1,000c"), b -> deposit(1000)).bounds(px + 40, y + 80, 38, 14).build());
 		withdrawButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.withdraw"),
-				b -> send(StaffRequestC2S.Action.WITHDRAW_MONEY, 0)).bounds(px, y + 91, 38, 14).build());
+				b -> send(StaffRequestC2S.Action.WITHDRAW_MONEY, 0)).bounds(px, y + 95, 38, 14).build());
 		configureButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.configure"), b -> startEdit())
-				.bounds(px + 40, y + 91, 38, 14).build());
+				.bounds(px + 40, y + 95, 38, 14).build());
 		depositItemsButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.deposit_items"),
-				b -> send(StaffRequestC2S.Action.DEPOSIT_ITEMS, 0)).bounds(px, y + 106, 38, 14).build());
+				b -> send(StaffRequestC2S.Action.DEPOSIT_ITEMS, 0)).bounds(px, y + 110, 38, 14).build());
 		withdrawItemsButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.withdraw_items"),
-				b -> send(StaffRequestC2S.Action.WITHDRAW_ITEMS, 0)).bounds(px + 40, y + 106, 38, 14).build());
-		pauseButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0)).bounds(px, y + 121, PANEL_W, 14).build());
-		dismissButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.DISMISS, 0)).bounds(px, y + 137, PANEL_W, 14).build());
+				b -> send(StaffRequestC2S.Action.WITHDRAW_ITEMS, 0)).bounds(px + 40, y + 110, 38, 14).build());
+		pauseButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0)).bounds(px, y + 125, PANEL_W, 14).build());
+		dismissButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.DISMISS, 0)).bounds(px, y + 140, PANEL_W, 14).build());
 		backButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.back"), b -> back())
 				.bounds(px, y + 137, PANEL_W, 14).build());
 		confirmButton = add.apply(Button.builder(Component.empty(), b -> confirm()).bounds(px, y + 121, PANEL_W, 14).build());
@@ -751,18 +751,20 @@ final class StaffTab {
 		screen.fit(g, role(v.role()).getString(), px + 18, y + 34, PANEL_W - 18, COLOR_TEXT, false);
 		screen.fit(g, goodsName(v, stack).getString(), px + 18, y + 43, PANEL_W - 18, COLOR_DARK, false);
 		StatusText status = statusText(v);
-		screen.fit(g, status.text(), px, y + 54, PANEL_W, status.color() == COLOR_RED ? COLOR_WARNING : status.color() == COLOR_GREEN ? COLOR_OK
+		screen.fit(g, status.text(), px, y + 53, PANEL_W, status.color() == COLOR_RED ? COLOR_WARNING : status.color() == COLOR_GREEN ? COLOR_OK
 				: status.color() == COLOR_GRAY ? COLOR_DARK : 0xFF906010, false);
 		String stock = Component.translatable(v.role() == CARRIER ? "screen.ak_trade_expansion.staff.cargo" : "screen.ak_trade_expansion.staff.stock",
 				v.stock() * v.unit()).getString();
-		screen.fit(g, Component.translatable("screen.ak_trade_expansion.staff.purse", CoinItem.formatCopper(v.purse())).getString() + " " + stock,
-				px, y + 64, PANEL_W, COLOR_TEXT, false);
+		// The purse and the goods on lines of their own (one line was too narrow for both).
+		screen.fit(g, Component.translatable("screen.ak_trade_expansion.staff.purse", CoinItem.formatCopper(v.purse())).getString(), px, y + 62, PANEL_W,
+				COLOR_TEXT, false);
+		screen.fit(g, stock, px, y + 71, PANEL_W, COLOR_TEXT, false);
 		if (!v.atHome() && v.phase() != PHASE_QUIT) {
-			// Up to the pause button (y + 121).
-			wrapped(g, font, Component.translatable("screen.ak_trade_expansion.staff.not_home", v.homeName()), px, y + 77, PANEL_W, 42, COLOR_DARK);
+			// Up to the pause button (y + 125).
+			wrapped(g, font, Component.translatable("screen.ak_trade_expansion.staff.not_home", v.homeName()), px, y + 82, PANEL_W, 42, COLOR_DARK);
 		} else if (!v.atHome()) {
 			// No buttons below: room down to the bottom of the panel.
-			wrapped(g, font, Component.translatable("screen.ak_trade_expansion.staff.quit_not_home", v.homeName()), px, y + 77, PANEL_W, 74, COLOR_WARNING);
+			wrapped(g, font, Component.translatable("screen.ak_trade_expansion.staff.quit_not_home", v.homeName()), px, y + 82, PANEL_W, 72, COLOR_WARNING);
 		}
 		// Quit at home: the money buttons take the space; "Settle" explains itself in its tooltip.
 	}
