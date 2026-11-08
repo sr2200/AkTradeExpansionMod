@@ -12,6 +12,8 @@
   - 設定（`rivals`、設定画面の「掲示板・依頼・需要」タブ）：`enabled`（使うか）、`chancePerDay`（始まる確率）、`maxActive`（同時の数）、`minDays`・`maxDays`（期間）、`minImpact`・`maxImpact`（強さ）、`nearRadius`・`farRadius`（効く範囲）
   - 管理コマンド：`/aktradeex rivals`（一覧）、`/aktradeex rivals start`（今すぐ始める、テスト用）、`/aktradeex rivals clear`（全部消す）
   - データパック：商品グループ（`goods_group`）と商会（`rival_guild`）を足せます
+- **村の流行**：村（市場）ごとに、ゲーム内5日ほど続く流行があるようになりました。分野（食料・木材・鉱物・花など11種）ごとに「人気」（基準価格が 1.15〜1.30 倍）と「余り気味」（0.80〜0.90 倍）が選ばれます。交易画面の上の行の「流行」にマウスを乗せると、その村の流行が見られます。掲示板でも、ほかの村の流行が分かります。余り気味の村で仕入れて、人気の村で売ると儲かります
+  - 設定（`trend`、設定画面の「掲示板・依頼・需要」タブ）：`durationDays`（期間）、`popularCount`・`unpopularCount`（分野の数。両方 0 で流行なし）、`popularMin`・`popularMax`・`unpopularMin`・`unpopularMax`（倍率）、`minGoods`（候補になる商品数）
 - 購入・売却の一覧で、品不足の商品にマウスを乗せると、基準価格の倍率が出るようにしました
 - **輸送依頼**：依頼タブに「○○村へ運ぶ」依頼が出るようになりました。保証金（品物の値段）を払って「荷箱」を受け取り、届け先の市場の依頼タブで「荷箱を届ける」を押すと、報酬と保証金が戻ります。遠い村ほど報酬が増え、依頼を出した村と届け先の村の両方で評判が上がります。期限を過ぎると届けられず、保証金は戻りません（受けた村の評判も下がります）
   - 設定（`quest`）：`transportPerMarket`（市場ごとの輸送依頼の数）、`transportMinDistance`・`transportMaxDistance`（届け先までの距離）、`transportBaseMultiplier`・`transportPerThousandBlocks`・`transportMaxMultiplier`（報酬の倍率）

@@ -65,6 +65,8 @@ public final class MarketFactory {
 		// Shortages and requests depend on the goods, so they are chosen again too (K).
 		market.shortages().clear();
 		market.setShortagePeriod(Long.MIN_VALUE);
+		market.trends().clear(); // P: the groups depend on the goods too
+		market.setTrendPeriod(Long.MIN_VALUE);
 		market.requests().clear();
 		market.setLastRequestRefresh(Long.MIN_VALUE);
 		populate(level, market, neighbors, previous);

@@ -286,6 +286,9 @@ public final class TradeExpansionCommand {
 		if (!market.shortages().isEmpty() || !market.requests().isEmpty()) {
 			source.sendSuccess(() -> Component.literal(String.format(" shortages=%s requests=%s", market.shortages(), market.requests())), false);
 		}
+		if (!market.trends().isEmpty()) {
+			source.sendSuccess(() -> Component.literal(" trends=" + market.trends()), false);
+		}
 		market.goods().forEach((goodsId, state) -> {
 			GoodParams p = market.params(goodsId);
 			if (p == null) return;
