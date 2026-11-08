@@ -1,0 +1,80 @@
+package com.akf.tradeexpansion.core;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class StaffMathTest {
+	/** B = 100c, tau = 16, s = 0.4: buy 120c and sell 80c at X = 0. */
+	private static final GoodParams P = new GoodParams(100, 16, 0.4, 16, 32, 4, 0.25, 4.0);
+
+	@Test
+	void travelTimeFollowsTheDistance() {
+		assertEquals(12_000, StaffMath.travelTicks(1000, 2000)); // half a day
+		assertEquals(24_000, StaffMath.travelTicks(2000, 2000));
+		assertEquals(StaffMath.MIN_TRAVEL_TICKS, StaffMath.travelTicks(10, 2000)); // at least one minute
+		assertEquals(StaffMath.MIN_TRAVEL_TICKS, StaffMath.travelTicks(1000, 0));
+	}
+
+	@Test
+	void accidentChanceGrowsWithDistanceUpToTheCap() {
+		assertEquals(0.03, StaffMath.accidentChance(0, 0.03, 0.04, 0.2), 1e-12);
+		assertEquals(0.07, StaffMath.accidentChance(1000, 0.03, 0.04, 0.2), 1e-12);
+		assertEquals(0.2, StaffMath.accidentChance(10_000, 0.03, 0.04, 0.2), 1e-12);
+		assertEquals(0.0, StaffMath.accidentChance(1000, 0, 0, 0.2), 1e-12);
+		assertEquals(1.0, StaffMath.accidentChance(1000, 2, 0, 5), 1e-12); // never above 100%
+	}
+
+	@Test
+	void lostUnitsRoundUpAndStayWithinTheCargo() {
+		assertEquals(0, StaffMath.lostUnits(0, 0.5));
+		assertEquals(1, StaffMath.lostUnits(10, 0.01)); // something is always lost
+		assertEquals(3, StaffMath.lostUnits(10, 0.25)); // 2.5 → 3
+		assertEquals(10, StaffMath.lostUnits(10, 1.0));
+		assertEquals(10, StaffMath.lostUnits(10, 1.7));
+	}
+
+	@Test
+	void buyingStopsAtThePriceLimit() {
+		long first = PriceModel.buyPrice(P, 0);
+		assertEquals(120, first);
+		assertEquals(0, StaffMath.buyableWithin(P, 0, 64, first - 1));
+		// Each unit bought makes the next one dearer; the count matches the prices one by one.
+		int n = StaffMath.buyableWithin(P, 0, 64, 130);
+		assertTrue(n > 0 && n < 64);
+		assertTrue(PriceModel.buyPrice(P, -(n - 1)) <= 130);
+		assertTrue(PriceModel.buyPrice(P, -n) > 130);
+		assertEquals(5, StaffMath.buyableWithin(P, 0, 5, 1_000_000)); // capped by the count
+	}
+
+	@Test
+	void sellingStopsAtThePriceLimit() {
+		long first = PriceModel.sellPrice(P, 0);
+		assertEquals(80, first);
+		assertEquals(0, StaffMath.sellableWithin(P, 0, 64, first + 1));
+		int n = StaffMath.sellableWithin(P, 0, 64, 75);
+		assertTrue(n > 0 && n < 64);
+		assertTrue(PriceModel.sellPrice(P, n - 1) >= 75);
+		assertTrue(PriceModel.sellPrice(P, n) < 75);
+		assertEquals(64, StaffMath.sellableWithin(P, 0, 64, 1)); // any price
+	}
+
+	@Test
+	void costShare() {
+		assertEquals(0, StaffMath.shareOf(1000, 0, 10));
+		assertEquals(250, StaffMath.shareOf(1000, 5, 20));
+		assertEquals(1000, StaffMath.shareOf(1000, 20, 20));
+		assertEquals(333, StaffMath.shareOf(1000, 1, 3));
+		assertEquals(0, StaffMath.shareOf(1000, 5, 0));
+	}
+
+	@Test
+	void priceStep() {
+		assertEquals(1, StaffMath.priceStep(20, false));
+		assertEquals(2, StaffMath.priceStep(20, true));
+		assertEquals(9, StaffMath.priceStep(900, false));
+		assertEquals(90, StaffMath.priceStep(900, true));
+		assertEquals(1, StaffMath.priceStep(0, true));
+	}
+}

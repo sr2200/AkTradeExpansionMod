@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.47（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
+- 版：v0.48（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -862,6 +862,7 @@ MarketRegistry
       └ goods: Map<GoodsId, GoodState>
            GoodState { priceFactor(double), X(double), S(double), lastTradeGameTime, history: List<X>（最大14日）, lastSampleDay }   … 基準価格 B は保存せず D-1 の式で計算。history は相場グラフ用（A-4。1日1回、市場の更新時に X を記録）
 ```
+- 【v0.48】雇い人（Q章）も同じ `ak_trade_expansion:markets` に持つ：`next_employee_id`・`employees`（項目は Q-4）。どれも省略可能。
 - 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
 - 【v0.9】銀行口座は別の SavedData `ak_trade_expansion:bank`（サーバー全体に1つ）：`accounts: Map<UUID, Account>`、`Account { balance: long, cardNumber: int }`。財布の残高はアイテム側（データコンポーネント）に持つので、保存データには入らない。
 - 交易所ブロックエンティティは `market_id`（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）と `origin`（`natural`/`crafted`。v0.4.1 で追加、段階8で実装済み。割り当て直しの判定に使う。保存されていない古い屋台は A-3 のとおり補う）を保存。【v0.16、段階10】紐付いた商人NPCの UUID（`trader`）も保存する。商人NPC 側は `market_id`・紐付いた交易所の座標 `stall`（①④のみ）・`link_nearby_stall`（村の建物で置かれ、まだ紐付けていない印）を自分のエンティティデータに持つ（保存データには入らない）。
@@ -886,6 +887,7 @@ MarketRegistry
 | `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・中心座標（v0.34、地図への登録用）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
 | `TradableItemsS2C`（v0.47） | S→C | 市場で扱う品の ID の一覧（どれかの商品定義が買う・売る品） | 参加した時・データパックの再読み込みの後・`/aktradeex reload` の後 | 実装済（I章） |
 | `PriceLookupC2S` / `PriceLookupS2C`（v0.47） | C→S / S→C | 品の ID ／ 品の ID・半径（`board.radius`）・市場ごとの（ID・表示名・距離・プレイヤーからの dx/dz・単位・買値・売値（-1 は不可）・在庫・品不足の印）。近い順に最大5つの市場 | レシピ表示 Mod の「市場の相場」のページを表示している間（5秒ごと） | 実装済（I章） |
+| `StaffRequestC2S` / `StaffS2C`（v0.48） | C→S / S→C | 市場ID・操作（一覧・行き先・雇う・設定・休ませる・お金と品の出し入れ・解雇）・雇い人の番号・品・行き先・数・買値の上限・売値の下限・金額・カード払い ／ 操作の結果・雇う条件と費用・自分の雇い人の一覧（様子・所持金・荷・合計・最近のできごと）・ここで雇える品・行き先の一覧（名前・方角・距離・今の売値） | 「雇い人」タブを開いた時・開いている間5秒ごと・操作した時 | 実装済（Q章） |
 | `QuestDeliverC2S` / `QuestResultS2C` | C→S / S→C | 市場ID, 依頼の番号, カード払いか ／ 結果コード, 種類（納品・荷箱の受け取り・荷箱の届け、v0.35）, 金額（報酬・払った保証金・受け取った報酬＋保証金）, 届けた荷箱の数 | 依頼タブの「納品する」 | 実装済（段階13） |
 | `QuestAcceptC2S` | C→S | 市場ID, 依頼の番号, カード払いか（v0.35） | 「依頼を受ける」（v0.29、J章・M章）。輸送依頼では「荷箱を受け取る」（保証金を払う、v0.35、J-2）。結果は輸送依頼の時だけ `QuestResultS2C` で返す | 実装済 |
 | `CargoDeliverC2S` | C→S | 市場ID, カード払いか | 依頼タブの「荷箱を届ける」（v0.35、J-2）。インベントリにあるこの市場あての荷箱をすべて届ける。結果は `QuestResultS2C` | 実装済 |
@@ -1053,6 +1055,20 @@ MarketRegistry
 | 流行 | `trend.popularMin` / `trend.popularMax` | 1.15 / 1.30 | 1〜5 | 【v0.46】人気のグループの基準価格に掛ける倍率の範囲 |
 | 流行 | `trend.unpopularMin` / `trend.unpopularMax` | 0.80 / 0.90 | 0.1〜1 | 【v0.46】不人気のグループの基準価格に掛ける倍率の範囲 |
 | 流行 | `trend.minGoods` | 2 | 1〜20 | 【v0.46】流行の候補になるのに、その市場が扱うグループの商品が何品以上必要か |
+| 雇い人 | `staff.enabled` | true | bool | 【v0.48】雇い人（Q章）。OFF で雇えず、雇い人は止まる（所持金・品の受け取りと解雇はできる） |
+| 雇い人 | `staff.maxPerPlayer` | 3 | 0〜50 | 【v0.48】1人が同時に雇える人数（辞めた雇い人は数えない） |
+| 雇い人 | `staff.minReputationLevel` | 2 | 0〜5 | 【v0.48】雇うのに必要な、その市場での評判のレベル（M章。評判 OFF の時は条件なし） |
+| 雇い人 | `staff.carrierHireFee` / `staff.clerkHireFee` | 500 / 300 | 0〜1億 | 【v0.48】契約金（c）。最初の1日の給金を含む |
+| 雇い人 | `staff.carrierWagePerDay` / `staff.clerkWagePerDay` | 60 / 30 | 0〜1億 | 【v0.48】働いている日ごとの給金（c、雇い人の所持金から） |
+| 雇い人 | `staff.carrierCapacity` / `staff.clerkCapacity` | 64 / 640 | 1〜2304 / 1〜100000 | 【v0.48】運び屋が1回に運ぶ数・番頭が預かる数の上限（取引の単位） |
+| 雇い人 | `staff.carrierBlocksPerDay` | 2000 | 10〜100万 | 【v0.48】運び屋がゲーム内1日に進むブロック数 |
+| 雇い人 | `staff.carrierMaxDistance` | 2000 | 0〜100万 | 【v0.48】運び屋の行き先にできる距離（ネザーは8倍で測る） |
+| 雇い人 | `staff.carrierMaxWaitDays` | 1.0 | 0〜30 | 【v0.48】行き先で売れ残りを待つ日数（過ぎたら持ち帰る） |
+| 雇い人 | `staff.accidentBase` / `staff.accidentPerThousandBlocks` / `staff.accidentMax` | 0.03 / 0.04 / 0.20 | 0〜1 | 【v0.48】荷を運ぶ片道ごとの事故の確率 ＝ min(上限, 基本 ＋ 1000ブロックごと × 距離 ÷ 1000) |
+| 雇い人 | `staff.accidentLossMin` / `staff.accidentLossMax` | 0.25 / 1.0 | 0〜1 | 【v0.48】事故で失う荷の割合の範囲 |
+| 雇い人 | `staff.accidentRestDays` | 0.5 | 0〜30 | 【v0.48】事故のあと休む日数 |
+| 雇い人 | `staff.quitChance` | 0.2 | 0〜1 | 【v0.48】事故のあと運び屋が辞める確率（残りの荷も失う） |
+| 雇い人 | `staff.notifyChat` | true | bool | 【v0.48】事故・辞めた・給金不足・売り切れを雇った人のチャットで知らせる |
 | 村人 | `villager.coinTrades` | true | bool | 村人から買う時の代金をコインにする（H章、14a） |
 | 村人 | `villager.wanderingTraderCoins` | true | bool | 【v0.21】行商人から買う時の代金もコインにする（`coinTrades` が ON の時だけ、14b） |
 | 村人 | `villager.minGoodsPriceMultiplier` | 1.4 | 0〜10 | 【v0.22】村人・行商人が商品と同じ品を売る時の代金の下限＝基準価格 × この値 × 個数（0 で無効、H-3・14c） |
@@ -1627,6 +1643,68 @@ v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部�
 - **設定**（G章）：`trend.durationDays`・`popularCount`・`unpopularCount`・`popularMin`・`popularMax`・`unpopularMin`・`unpopularMax`・`minGoods`。
 - **コマンド**：`market reroll` は品不足と一緒に流行も選び直す。`market info` に流行を出す。
 
+### Q. 雇い人（運び屋・番頭）【v0.48 追加】
+
+ソロプレイでは、プレイヤーが自分で運んで売らないと商売が進まない。そこで、村で **雇い人** を雇い、留守の間も商売をさせる。雇い人は2種類：
+
+- **運び屋**：雇った市場（A）で決めた品を仕入れ、行き先の市場（B）へ運んで売り、A へ戻る。これを繰り返す。荷を運んでいる間に **事故** に遭うことがある。
+- **番頭**：預けた品を、雇った市場で **決めた値段以上の時だけ** 少しずつ売る（売るたびに値は下がり、時間で戻るので、留守の間に高く売りさばける）。
+
+決めたこと（v0.48）：お金は **雇い人ごとの財布（所持金）**、雇えるのは **その市場での評判「常連」以上**、事故は **荷を失い、まれに辞める**、雇い人の取引では **評判・発展度は上がらない**。
+
+| 項目 | 内容（既定） |
+|---|---|
+| 形 | 目に見えない契約（エンティティは出さない）。市場の保存データに持ち、サーバーが市場の時計（`recovery.clock`）で1秒ごとに進める。村人を何千ブロックも実際に歩かせるのは、チャンクの読み込みの都合でできないため |
+| 雇う場所 | 交易画面の「雇い人」タブ。その市場での評判のレベルが `staff.minReputationLevel`（2＝常連）以上（評判を切っている時は条件なし）。1人が同時に雇えるのは `staff.maxPerPlayer`（3）人（辞めた雇い人は数えない） |
+| 契約金 | 運び屋 `staff.carrierHireFee`（500c）、番頭 `staff.clerkHireFee`（300c）。雇う時に現金かカード（手数料つき、銀行の建物があれば無し、E-8）で払う。最初の1日の給金を含む。戻らない |
+| 給金 | 運び屋 `staff.carrierWagePerDay`（60c）、番頭 `staff.clerkWagePerDay`（30c）を、**働いている日ごと** に雇い人の所持金から払う。休ませている間・番頭が品を持っていない間は払わない（再び働き始めた時にその日の分を払う）。所持金が足りないと「給金不足」で休む（休んでいた日の分はさかのぼって払わない） |
+| 所持金 | 雇い人の財布。プレイヤーが雇った市場で入れる（+100c・+1,000c、Shift で10倍）・引き出す（全部）。運び屋は所持金で仕入れ、売上は所持金に入る。番頭の売上も所持金に入る |
+| 売買 | プレイヤーの取引と同じ価格モデル（B章。逐次価格・まとめ買い割引）で、相場 X と在庫を動かし、波及（C-2）もする。評判の値引き（M）は入らない。評判・発展度（N-2）は上がらない。売買するたびに、その市場を見ている人へスナップショットを送る。品不足・流行・商会の影響もそのまま受ける |
+| 扱える品 | 運び屋：雇う市場が売っていて（`buy`）、ほかの市場で売れる（`sell`）品。番頭：雇う市場が買い取る（`sell`）品。どちらも本日の掘り出し物（D-5）・`auto_add`（エメラルド貨など）・見えない評判の特別品は除く。番頭に預けるのは付加情報の無い品だけ（傷んだ道具は不可） |
+
+#### Q-1. 運び屋
+
+| 項目 | 内容（既定） |
+|---|---|
+| 行き先 | 雇う市場と相場が連動する市場（同じ次元。`distance.linkNetherToOverworld` が ON ならオーバーワールドとネザーの間も、C-2）のうち、距離 `staff.carrierMaxDistance`（2000）以内で、その品を扱い買い取る市場。画面では近い順に最大30か所、行き先での今の売値と、ここの買値との差を出す |
+| 設定 | 1回に運ぶ数（1〜`staff.carrierCapacity`、既定の上限 64 単位）、**買値の上限**（ここで1単位をこの値段以下の時だけ仕入れる）、**売値の下限**（行き先で1単位をこの値段以上の時だけ売る）。画面の初期値は、数 16、上限 ＝ 今の買値 × 1.1、下限 ＝ 今の買値。−／＋ で 1%（Shift で 10%）ずつ変える |
+| 1往復 | ①雇った市場で、買値が上限以下の間、所持金の分だけ仕入れる（前に売れ残った荷があれば、その分を引いた数まで）。1つも持てなければ 0.1日（2分）ごとに試す（「値下がり待ち」「入荷待ち」「資金不足」）。②行き先へ向かう：片道の時間 ＝ 距離 ÷ `staff.carrierBlocksPerDay`（2000 ブロック／日）、最低1分。1000 ブロックなら片道10分。③着いたら、売値が下限以上の間売る（買い取りの上限 Scap まで）。売り切れなければ 0.1日ごとに試し、`staff.carrierMaxWaitDays`（1日）待っても残った分は持ち帰る（次の往復で運ぶ）。④雇った市場へ戻る |
+| 事故 | 荷を持って片道を終えるたびに抽選。確率 ＝ min(`accidentMax`, `accidentBase` ＋ `accidentPerThousandBlocks` × 距離 ÷ 1000)、既定 3%＋1000 ブロックごとに 4%（上限 20%）。事故に遭うと荷の `accidentLossMin`〜`accidentLossMax`（25〜100%）を失い（切り上げ、最低1単位）、`accidentRestDays`（0.5日）休む。さらに `staff.quitChance`（20%）の確率で **辞める**（残りの荷も失う。契約金は戻らない。所持金は受け取れる）。乱数は雇い人の番号・時刻・往復の回数から決まる |
+| 休ませる | 「休ませる」を押すと、今の往復を終えて雇った市場に戻った所で止まる（その間は給金なし）。「働かせる」で再開 |
+| 解雇 | 雇った市場で、運び屋が雇った市場にいる時だけ（出かけている時は「運び屋が出かけています」）。所持金と持っている荷（売れ残り）を受け取る。雇った市場で、戻っている時は荷だけ引き取ることもできる |
+
+#### Q-2. 番頭
+
+| 項目 | 内容（既定） |
+|---|---|
+| 設定 | 預ける数（手持ちの品から、`staff.clerkCapacity`（640 単位）まで。初期値は手持ち全部）、**売値の下限**（初期値 ＝ 今の売値） |
+| 売り方 | 0.05日（1分）ごとに、売値が下限以上の間、預かった品を売る（買い取りの上限 Scap まで）。売るたびに値は下がり（X が増える）、時間で戻る（B-3）ので、下限を今より高くしておけば、値が戻るたびに少しずつ売れる。同じ日の売上はログの1行にまとめる |
+| 売り切れ | 預かった品が無くなると「売り切れ」で止まる（給金なし）。チャットで知らせる。「預ける」で品を足すと再開する |
+| 引き取り・解雇 | 雇った市場で、預けた品を全部引き取る・所持金を引き出す・解雇（所持金と品を受け取る）ができる |
+
+#### Q-3. 画面（「雇い人」タブ）
+
+| 場面 | 内容 |
+|---|---|
+| 一覧 | 自分の雇い人を全部（どの市場で雇った人も。この市場で雇った人が先）。行に役目・品・行き先・雇った市場（ほかの市場の時）・様子（「→運送 3分」「←帰路 2分」「仕入れ中」「販売中」「値下がり待ち」「給金不足」「療養 5分」「辞めた」など）。マウスを乗せると、様子の説明・設定・これまでの合計（往復の回数・売上・仕入れ・事故で失った額・給金・差し引き）と最近のできごと（最大6行） |
+| 右パネル（未選択） | 雇っている人数／上限、説明か雇えない理由（評判・人数）、「運び屋を雇う」「番頭を雇う」（マウスを乗せると契約金と給金） |
+| 右パネル（選択） | 役目・品・様子・所持金・荷（預かり）の数。雇った市場では「+100c」「+1,000c」（Shift で10倍）・「出金」・「設定」・「預ける」（番頭）・「引取」・「休ませる／働かせる」・「解雇する」（辞めた雇い人は「受け取る」）。ほかの市場では様子を見るのと「休ませる」だけ |
+| 雇う | 運び屋：品を選ぶ（ここの買値）→ 行き先を選ぶ（方角と距離・行き先の売値と差、マウスで片道の時間と事故の確率）→ 設定と説明の画面 →「雇う（500c）」。番頭：品を選ぶ（ここの売値と手持ち）→ 設定と説明の画面 →「雇う（300c）」。「戻る」で1つ前へ |
+| 更新 | タブを開いた時と、開いている間5秒ごとに一覧を聞き直す。旅の残り時間はクライアントで市場の時計から計算する |
+| 通知 | `staff.notifyChat`（既定 ON）：事故・辞めた・給金不足・番頭の売り切れ・雇った市場が無くなった、を雇った人のチャットに出す（オンラインの時） |
+
+- タブが8つになったので、タブの幅をそれぞれの文字の幅に合わせるようにした（入りきらない時は同じ割合で縮める）。
+
+#### Q-4. 保存・同期・設定・コマンド
+
+- 保存（F-1）：`ak_trade_expansion:markets` に `next_employee_id` と `employees`。雇い人は `id`・`owner`・`owner_name`・`settings{role, home, goods, destination, quantity, buy_limit, sell_limit}`・`state{purse, stock, cargo_cost, trip_cost, trip_revenue, phase, paused, status, next_time, phase_start, wage_due}`・`stats{earned, spent, wages, lost, trips, sold, hired}`・`log`（最大10行。`time`・`key`・`item`・`market`・`values`。文は表示する時に読む人の言葉で作る）。どれも省略可能。`role`・`phase`・`status` は小文字の名前で保存し、知らない名前は既定値として読む。
+- 同期（F-2）：`StaffRequestC2S`（市場ID・操作・雇い人の番号・品・行き先・数・買値の上限・売値の下限・金額・カード払い）→ `StaffS2C`（操作の結果・雇う条件と費用・自分の雇い人の一覧・ここで雇える品・行き先の一覧）。サーバーは画面の市場 ID と屋台までの距離（一覧以外の操作）を確かめる。
+- 結果コード：`STAFF_LIMIT`（人数の上限）・`STAFF_AWAY`（運び屋が出かけている）・`STAFF_NOT_HOME`（雇った市場でしかできない）。
+- 雇った市場が消えた時（`market delete`）：雇い人は止まり（「市場が無い」）、どの市場でも所持金と品を受け取れる。行き先の市場が消えた時は、運び屋は帰ってきて「扱いなし」で待つ。
+- 設定（G章）：`staff.*`（20項目）。`staff.enabled` を OFF にすると雇えず、雇い人は止まる（所持金・品の受け取りと解雇はできる）。
+- コマンド：`/aktradeex staff`（全員の一覧）、`/aktradeex staff hurry`（全員の次の動きを今にする。テスト用）。権限は管理コマンドと同じ。
+- 計算（`core/StaffMath`）：片道の時間・事故の確率・失う数・上限／下限の値段で売買できる数・荷の仕入れ値の割り振り・値段のボタンの刻み。テスト `StaffMathTest`（7件）と `EmployeeCodecTest`（3件）。
+
 
 ---
 
@@ -1715,6 +1793,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ WalletMath.java            ✅ … 財布での支払い・受け取りの計算（E-6）
 │   ├─ QuestMath.java             ✅ … 依頼の難易度・報酬・期間、不足品の倍率（J章・K章）
 │   ├─ DevelopmentMath.java       ✅ … 発展度の減衰・レベルのボーナス・資材の受け付ける数・建て直しの発展度（N章、v0.37）
+│   ├─ StaffMath.java             ✅ … 雇い人の片道の時間・事故の確率・失う数・値段の上限／下限で売買できる数（Q章、v0.48）
 │   └─ GoodsSelector.java         ✅ … 商品の抽選（always・プール・追加抽選・レベルアップ時の追加、D-1・D-4）
 ├─ registry/
 │   ├─ ModItems.java              ✅ … コイン5種、エメラルド貨、財布、カード
@@ -1773,6 +1852,9 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ rival/                          … v0.46
 │   ├─ Campaign.java              ✅ … 商会の動き1件（O-3）
 │   └─ RivalService.java          ✅ … 動きを作る・市場に効かせる・ニュース（O-3〜O-5）
+├─ staff/                          … v0.48
+│   ├─ Employee.java              ✅ … 雇い人1人（役目・設定・所持金・荷・様子・合計・ログ、Q-4）
+│   └─ StaffService.java          ✅ … 雇い人を時計で進める（仕入れ・旅・事故・販売・給金）・タブの操作・行き先の一覧・通知（Q章）
 ├─ board/                          … 段階13
 │   ├─ BoardService.java          ✅ … 近くの市場の価格を集める（I章）
 │   └─ PriceLookupService.java    ✅ … レシピ表示 Mod のページ用に、プレイヤーの近くの市場での品の価格を集める・扱う品の一覧（I章・v0.47）
@@ -1803,7 +1885,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ AccountS2C.java / BankRequestC2S.java / WalletWithdrawC2S.java ✅ … 段階12
 │   ├─ ExchangeRequestC2S.java / ExchangeResultS2C.java ✅ … 両替（段階11）
 │   ├─ VillagerPricesS2C.java     ✅ … 村人の取引ごとの代金（14a）
-│   ├─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / TradableItemsS2C.java・PriceLookupC2S.java・PriceLookupS2C.java（v0.47）/ QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）
+│   ├─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / TradableItemsS2C.java・PriceLookupC2S.java・PriceLookupS2C.java（v0.47）/ QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）。StaffRequestC2S.java・StaffS2C.java（v0.48、Q章）
 │   └─ DevelopmentRequestC2S.java / DevelopmentResultS2C.java ✅ … 「発展」タブ（N章、v0.37）
 ├─ development/
 │   ├─ Development.java           ✅ … 市場の発展度：加算（寄付・依頼・取引）・使う・減衰・寄付した人（N-2、v0.37）
@@ -1837,6 +1919,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 ├─ TradeExpansionClient.java      ✅ … ClientModInitializer（MenuScreens.register、S2C受信の登録）
 ├─ MarketScreen.java              ✅ … 購入・売却・銀行・掲示板・依頼・両替タブ、一覧・数量・プレビュー・相場グラフ、支払い方法の切り替え（一覧は画面クラス内で直接描画）
+├─ StaffTab.java                  ✅ … 交易画面の「雇い人」タブ（一覧・雇う手順・所持金と品の出し入れ。Q-3、v0.48）
 ├─ ItemTooltips.java              ✅ … コイン・財布・カード等のツールチップ（Fabric の ItemTooltipCallback）
 ├─ ClientMarketCache.java         ✅ … 受信したスナップショット（最新1件。切断時に破棄）
 │  （共通側の menu/MarketLayout.java ✅ … 交易画面の大きさと枠の位置、v0.33）
@@ -1857,7 +1940,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（6件。建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）。計99件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（6件。建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）、`core/StaffMathTest`（7件。雇い人の片道の時間・事故の確率・失う数・値段の上限／下限、v0.48）、`staff/EmployeeCodecTest`（3件。雇い人の保存の往復・古い保存の既定値・ログの行数、v0.48）。計118件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -2173,3 +2256,4 @@ test {
 | v0.45 | 2026-11-07 | 工事中の作業の音を Mod の音 `ak_trade_expansion:facility.construction` にし、字幕を「工事の音」にした（バニラの音の字幕は「ブロックが採掘される」だったため）。`ModSounds`・`sounds.json` を追加 |
 | v0.46 | 2026-11-08 | ソロプレイ向けに O章「商会」（目に見えない商会が地域の相場を数日間動かす。掲示板のニュース）と P章「村の流行」（商品グループごとに人気・不人気、B に倍率）を追加。データパック `goods_group`（O-1）・`rival_guild`（O-2）、設定 `rivals.*`・`trend.*`（G章） |
 | v0.47 | 2026-11-08 | レシピ表示 Mod との連携（I章）：JEI・REI が入っている時、市場で扱う品に「市場の相場」のページ（プレイヤーから `board.radius` 以内の市場を近い順に5つ、評判込みの最新の買値・売値・在庫）。任意の連携で配布物に含めず、それぞれの Mod の entrypoint で読み込む。通信 `TradableItemsS2C`・`PriceLookupC2S`・`PriceLookupS2C`（F-2）、パッケージ（4-2）、ビルドの依存 |
+| v0.48 | 2026-11-08 | ソロプレイ向けに Q章「雇い人」を追加：運び屋（雇った市場で上限以下の値段で仕入れ、行き先で下限以上で売って戻る。荷を運ぶ片道ごとに事故、荷を失い休み、まれに辞める）と番頭（預けた品を下限以上の値段の時だけ少しずつ売る）。雇い人ごとの所持金・契約金と日ごとの給金・評判「常連」から・評判と発展度は上がらない。交易画面の「雇い人」タブ（タブの幅を文字に合わせる）、通信 `StaffRequestC2S`・`StaffS2C`（F-2）、保存 `employees`（F-1・Q-4）、結果コード3つ、設定 `staff.*`（G章、20項目）、コマンド `staff`・`staff hurry`、パッケージ `staff/`（4-2）、テスト10件 |

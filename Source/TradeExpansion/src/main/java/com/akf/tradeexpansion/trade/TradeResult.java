@@ -46,7 +46,13 @@ public enum TradeResult {
 	/** N-4: the building's structure file is missing from the data packs. */
 	NO_TEMPLATE,
 	/** N-2 (v0.42, development.requireMaterials): not all wanted materials are donated yet. */
-	MATERIALS_MISSING;
+	MATERIALS_MISSING,
+	/** Q (v0.48): staff.maxPerPlayer employees are already hired. */
+	STAFF_LIMIT,
+	/** Q: the carrier is on the way; it can be dismissed or have its goods taken back only at its home market. */
+	STAFF_AWAY,
+	/** Q: the action needs the employee's home market. */
+	STAFF_NOT_HOME;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

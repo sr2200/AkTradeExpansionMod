@@ -113,6 +113,25 @@ public final class ConfigValidator {
 		rv.nearRadius = clamp("rivals.nearRadius", rv.nearRadius, 0, 100_000);
 		rv.farRadius = clamp("rivals.farRadius", rv.farRadius, rv.nearRadius, 100_000);
 
+		TradeExpansionConfig.Staff st = c.staff;
+		st.maxPerPlayer = clamp("staff.maxPerPlayer", st.maxPerPlayer, 0, 50);
+		st.minReputationLevel = clamp("staff.minReputationLevel", st.minReputationLevel, 0, 5);
+		st.carrierHireFee = clamp("staff.carrierHireFee", st.carrierHireFee, 0, 100_000_000L);
+		st.clerkHireFee = clamp("staff.clerkHireFee", st.clerkHireFee, 0, 100_000_000L);
+		st.carrierWagePerDay = clamp("staff.carrierWagePerDay", st.carrierWagePerDay, 0, 100_000_000L);
+		st.clerkWagePerDay = clamp("staff.clerkWagePerDay", st.clerkWagePerDay, 0, 100_000_000L);
+		st.carrierCapacity = clamp("staff.carrierCapacity", st.carrierCapacity, 1, 2304);
+		st.clerkCapacity = clamp("staff.clerkCapacity", st.clerkCapacity, 1, 100_000);
+		st.carrierBlocksPerDay = clamp("staff.carrierBlocksPerDay", st.carrierBlocksPerDay, 10, 1_000_000);
+		st.carrierMaxDistance = clamp("staff.carrierMaxDistance", st.carrierMaxDistance, 0, 1_000_000);
+		st.carrierMaxWaitDays = clamp("staff.carrierMaxWaitDays", st.carrierMaxWaitDays, 0, 30);
+		st.accidentBase = clamp("staff.accidentBase", st.accidentBase, 0, 1);
+		st.accidentPerThousandBlocks = clamp("staff.accidentPerThousandBlocks", st.accidentPerThousandBlocks, 0, 1);
+		st.accidentMax = clamp("staff.accidentMax", st.accidentMax, 0, 1);
+		st.accidentLossMin = clamp("staff.accidentLossMin", st.accidentLossMin, 0, 1);
+		st.accidentLossMax = clamp("staff.accidentLossMax", st.accidentLossMax, st.accidentLossMin, 1);
+		st.accidentRestDays = clamp("staff.accidentRestDays", st.accidentRestDays, 0, 30);
+		st.quitChance = clamp("staff.quitChance", st.quitChance, 0, 1);
 		TradeExpansionConfig.Trend tr = c.trend;
 		tr.durationDays = clamp("trend.durationDays", tr.durationDays, 0.5, 60);
 		tr.popularCount = clamp("trend.popularCount", tr.popularCount, 0, 5);

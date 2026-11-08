@@ -5,6 +5,7 @@ import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.DistanceModel;
 import com.akf.tradeexpansion.currency.CoinType;
 import com.akf.tradeexpansion.rival.Campaign;
+import com.akf.tradeexpansion.staff.Employee;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -38,7 +39,10 @@ public final class MarketRegistry extends SavedData {
 			// O-6 (v0.46): rival guild campaigns
 			Codec.LONG.optionalFieldOf("rival_day", Long.MIN_VALUE).forGetter(r -> r.rivalDay),
 			Codec.INT.optionalFieldOf("next_campaign_id", 1).forGetter(r -> r.nextCampaignId),
-			Campaign.CODEC.listOf().optionalFieldOf("campaigns", List.of()).forGetter(r -> List.copyOf(r.campaigns))
+			Campaign.CODEC.listOf().optionalFieldOf("campaigns", List.of()).forGetter(r -> List.copyOf(r.campaigns)),
+			// Q (v0.48): hired staff
+			Codec.INT.optionalFieldOf("next_employee_id", 1).forGetter(r -> r.nextEmployeeId),
+			Employee.CODEC.listOf().optionalFieldOf("employees", List.of()).forGetter(r -> List.copyOf(r.employees))
 	).apply(i, MarketRegistry::new));
 
 	/** No vanilla data fixer applies to mod data; Fabric API skips fixing when the type is null. */
@@ -68,13 +72,18 @@ public final class MarketRegistry extends SavedData {
 	private long rivalDay = Long.MIN_VALUE;
 	private int nextCampaignId = 1;
 	private final List<Campaign> campaigns = new ArrayList<>();
+	/** Q: hired staff of every player, oldest first. */
+	private int nextEmployeeId = 1;
+	private final List<Employee> employees = new ArrayList<>();
 
 	private MarketRegistry() {
-		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of());
+		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of());
 	}
 
 	private MarketRegistry(int schemaVersion, List<Integer> currencyRatios, long nextId, List<Market> markets, long rivalDay,
-			int nextCampaignId, List<Campaign> campaigns) {
+			int nextCampaignId, List<Campaign> campaigns, int nextEmployeeId, List<Employee> employees) {
+		this.nextEmployeeId = nextEmployeeId;
+		this.employees.addAll(employees);
 		this.rivalDay = rivalDay;
 		this.nextCampaignId = nextCampaignId;
 		this.campaigns.addAll(campaigns);
@@ -110,6 +119,15 @@ public final class MarketRegistry extends SavedData {
 
 	public int takeCampaignId() {
 		return nextCampaignId++;
+	}
+
+	/** Q: hired staff, oldest first (mutable; callers mark the registry dirty). */
+	public List<Employee> employees() {
+		return employees;
+	}
+
+	public int takeEmployeeId() {
+		return nextEmployeeId++;
 	}
 
 	/** Coin ratios this world was created with (E-4). */

@@ -296,6 +296,31 @@ public final class ConfigScreen {
 				.option(intField("development.innVillagers", dd.innVillagers, () -> dev.innVillagers, v -> dev.innVillagers = v, 0, 10))
 				.option(doubleField("development.bankInterestMaxMultiplier", dd.bankInterestMaxMultiplier, () -> dev.bankInterestMaxMultiplier, v -> dev.bankInterestMaxMultiplier = v, 1, 100));
 
+		// Q (v0.48): hired staff.
+		TradeExpansionConfig.Staff st = edit.staff;
+		TradeExpansionConfig.Staff sd = d.staff;
+		ConfigCategory.Builder staff = category("staff")
+				.option(bool("staff.enabled", sd.enabled, () -> st.enabled, v -> st.enabled = v))
+				.option(intField("staff.maxPerPlayer", sd.maxPerPlayer, () -> st.maxPerPlayer, v -> st.maxPerPlayer = v, 0, 50))
+				.option(intField("staff.minReputationLevel", sd.minReputationLevel, () -> st.minReputationLevel, v -> st.minReputationLevel = v, 0, 5))
+				.option(longField("staff.carrierHireFee", sd.carrierHireFee, () -> st.carrierHireFee, v -> st.carrierHireFee = v, 0, 100_000_000L))
+				.option(longField("staff.clerkHireFee", sd.clerkHireFee, () -> st.clerkHireFee, v -> st.clerkHireFee = v, 0, 100_000_000L))
+				.option(longField("staff.carrierWagePerDay", sd.carrierWagePerDay, () -> st.carrierWagePerDay, v -> st.carrierWagePerDay = v, 0, 100_000_000L))
+				.option(longField("staff.clerkWagePerDay", sd.clerkWagePerDay, () -> st.clerkWagePerDay, v -> st.clerkWagePerDay = v, 0, 100_000_000L))
+				.option(intField("staff.carrierCapacity", sd.carrierCapacity, () -> st.carrierCapacity, v -> st.carrierCapacity = v, 1, 2304))
+				.option(intField("staff.clerkCapacity", sd.clerkCapacity, () -> st.clerkCapacity, v -> st.clerkCapacity = v, 1, 100_000))
+				.option(doubleField("staff.carrierBlocksPerDay", sd.carrierBlocksPerDay, () -> st.carrierBlocksPerDay, v -> st.carrierBlocksPerDay = v, 10, 1_000_000))
+				.option(doubleField("staff.carrierMaxDistance", sd.carrierMaxDistance, () -> st.carrierMaxDistance, v -> st.carrierMaxDistance = v, 0, 1_000_000))
+				.option(doubleField("staff.carrierMaxWaitDays", sd.carrierMaxWaitDays, () -> st.carrierMaxWaitDays, v -> st.carrierMaxWaitDays = v, 0, 30))
+				.option(doubleField("staff.accidentBase", sd.accidentBase, () -> st.accidentBase, v -> st.accidentBase = v, 0, 1))
+				.option(doubleField("staff.accidentPerThousandBlocks", sd.accidentPerThousandBlocks, () -> st.accidentPerThousandBlocks, v -> st.accidentPerThousandBlocks = v, 0, 1))
+				.option(doubleField("staff.accidentMax", sd.accidentMax, () -> st.accidentMax, v -> st.accidentMax = v, 0, 1))
+				.option(doubleField("staff.accidentLossMin", sd.accidentLossMin, () -> st.accidentLossMin, v -> st.accidentLossMin = v, 0, 1))
+				.option(doubleField("staff.accidentLossMax", sd.accidentLossMax, () -> st.accidentLossMax, v -> st.accidentLossMax = v, 0, 1))
+				.option(doubleField("staff.accidentRestDays", sd.accidentRestDays, () -> st.accidentRestDays, v -> st.accidentRestDays = v, 0, 30))
+				.option(doubleField("staff.quitChance", sd.quitChance, () -> st.quitChance, v -> st.quitChance = v, 0, 1))
+				.option(bool("staff.notifyChat", sd.notifyChat, () -> st.notifyChat, v -> st.notifyChat = v));
+
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")
 				.option(Option.<Boolean>createBuilder()
@@ -315,7 +340,8 @@ public final class ConfigScreen {
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.translatable(KEY + "title"))
 				.categories(List.of(currency.build(), priceCat.build(), goods.build(), recovery.build(), distance.build(), marketCat.build(),
-						wallet.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), development.build(), other.build(), client.build()))
+						wallet.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), development.build(), staff.build(), other.build(),
+						client.build()))
 				.save(this::save)
 				.build();
 	}

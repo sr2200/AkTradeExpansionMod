@@ -48,6 +48,8 @@ public final class TradeExpansionConfig {
 	public Rivals rivals = new Rivals();
 	/** P (v0.46): village trends. */
 	public Trend trend = new Trend();
+	/** Q (v0.48): hired staff (carriers and clerks). */
+	public Staff staff = new Staff();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -97,7 +99,8 @@ public final class TradeExpansionConfig {
 
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
-			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend) {
+			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend,
+			Staff staff) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -109,7 +112,8 @@ public final class TradeExpansionConfig {
 				section("reputation", Reputation.CODEC, new Reputation()).forGetter(Extra::reputation),
 				section("development", Development.CODEC, new Development()).forGetter(Extra::development),
 				section("rivals", Rivals.CODEC, new Rivals()).forGetter(Extra::rivals),
-				section("trend", Trend.CODEC, new Trend()).forGetter(Extra::trend)
+				section("trend", Trend.CODEC, new Trend()).forGetter(Extra::trend),
+				section("staff", Staff.CODEC, new Staff()).forGetter(Extra::staff)
 		).apply(i, Extra::new));
 	}
 
@@ -127,8 +131,10 @@ public final class TradeExpansionConfig {
 		c.development = e.development();
 		c.rivals = e.rivals();
 		c.trend = e.trend();
+		c.staff = e.staff();
 		return c;
-	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend))).codec();
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend,
+			c.staff))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -801,6 +807,107 @@ public final class TradeExpansionConfig {
 		});
 	}
 
+	/** Q (v0.48): carriers and clerks hired at a market, working while the player is away. */
+	public static final class Staff {
+		public boolean enabled = true;
+		/** Staff one player may hire at once. */
+		public int maxPerPlayer = 3;
+		/** Reputation level with the market needed to hire there (M; ignored while reputation is off). */
+		public int minReputationLevel = 2;
+		public long carrierHireFee = 500;
+		public long clerkHireFee = 300;
+		/** Paid from the employee's purse once a day while working (the first day is part of the hire fee). */
+		public long carrierWagePerDay = 60;
+		public long clerkWagePerDay = 30;
+		/** Trading units a carrier takes on one trip. */
+		public int carrierCapacity = 64;
+		/** Trading units a clerk keeps for sale. */
+		public int clerkCapacity = 640;
+		/** Travel speed of a carrier in blocks per in-game day. */
+		public double carrierBlocksPerDay = 2000;
+		/** Farthest destination of a carrier (Overworld blocks; Nether coordinates ×8, C-2). */
+		public double carrierMaxDistance = 2000;
+		/** Days a carrier waits at the destination for a good price before going back with what is left. */
+		public double carrierMaxWaitDays = 1.0;
+		/** Accident chance of one loaded trip: min(accidentMax, accidentBase + accidentPerThousandBlocks × distance ÷ 1000). */
+		public double accidentBase = 0.03;
+		public double accidentPerThousandBlocks = 0.04;
+		public double accidentMax = 0.20;
+		/** Part of the cargo lost in an accident (drawn between the two). */
+		public double accidentLossMin = 0.25;
+		public double accidentLossMax = 1.0;
+		/** Days a carrier rests after an accident. */
+		public double accidentRestDays = 0.5;
+		/** Chance that a carrier quits after an accident (the hire fee is not paid back). */
+		public double quitChance = 0.2;
+		/** Accidents, quitting, unpaid wages and sold-out clerks are told in the owner's chat. */
+		public boolean notifyChat = true;
+
+		public Staff() {
+		}
+
+		private Staff(boolean enabled, int maxPerPlayer, int minReputationLevel, long carrierHireFee, long clerkHireFee, long carrierWagePerDay,
+				long clerkWagePerDay, int carrierCapacity, int clerkCapacity, double carrierBlocksPerDay, double carrierMaxDistance,
+				double carrierMaxWaitDays, Accident accident) {
+			this.enabled = enabled;
+			this.maxPerPlayer = maxPerPlayer;
+			this.minReputationLevel = minReputationLevel;
+			this.carrierHireFee = carrierHireFee;
+			this.clerkHireFee = clerkHireFee;
+			this.carrierWagePerDay = carrierWagePerDay;
+			this.clerkWagePerDay = clerkWagePerDay;
+			this.carrierCapacity = carrierCapacity;
+			this.clerkCapacity = clerkCapacity;
+			this.carrierBlocksPerDay = carrierBlocksPerDay;
+			this.carrierMaxDistance = carrierMaxDistance;
+			this.carrierMaxWaitDays = carrierMaxWaitDays;
+			this.accidentBase = accident.base();
+			this.accidentPerThousandBlocks = accident.perThousandBlocks();
+			this.accidentMax = accident.max();
+			this.accidentLossMin = accident.lossMin();
+			this.accidentLossMax = accident.lossMax();
+			this.accidentRestDays = accident.restDays();
+			this.quitChance = accident.quitChance();
+			this.notifyChat = accident.notifyChat();
+		}
+
+		/** The accident fields (RecordCodecBuilder takes at most 16 fields), stored flat in the same JSON object. */
+		private record Accident(double base, double perThousandBlocks, double max, double lossMin, double lossMax, double restDays,
+				double quitChance, boolean notifyChat) {
+			static MapCodec<Accident> codec(Staff d) {
+				return RecordCodecBuilder.mapCodec(i -> i.group(
+						Codec.DOUBLE.fieldOf("accidentBase").orElse(d.accidentBase).forGetter(Accident::base),
+						Codec.DOUBLE.fieldOf("accidentPerThousandBlocks").orElse(d.accidentPerThousandBlocks).forGetter(Accident::perThousandBlocks),
+						Codec.DOUBLE.fieldOf("accidentMax").orElse(d.accidentMax).forGetter(Accident::max),
+						Codec.DOUBLE.fieldOf("accidentLossMin").orElse(d.accidentLossMin).forGetter(Accident::lossMin),
+						Codec.DOUBLE.fieldOf("accidentLossMax").orElse(d.accidentLossMax).forGetter(Accident::lossMax),
+						Codec.DOUBLE.fieldOf("accidentRestDays").orElse(d.accidentRestDays).forGetter(Accident::restDays),
+						Codec.DOUBLE.fieldOf("quitChance").orElse(d.quitChance).forGetter(Accident::quitChance),
+						Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(Accident::notifyChat)
+				).apply(i, Accident::new));
+			}
+		}
+
+		static final Codec<Staff> CODEC = RecordCodecBuilder.create(i -> {
+			Staff d = new Staff();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.INT.fieldOf("maxPerPlayer").orElse(d.maxPerPlayer).forGetter(c -> c.maxPerPlayer),
+					Codec.INT.fieldOf("minReputationLevel").orElse(d.minReputationLevel).forGetter(c -> c.minReputationLevel),
+					Codec.LONG.fieldOf("carrierHireFee").orElse(d.carrierHireFee).forGetter(c -> c.carrierHireFee),
+					Codec.LONG.fieldOf("clerkHireFee").orElse(d.clerkHireFee).forGetter(c -> c.clerkHireFee),
+					Codec.LONG.fieldOf("carrierWagePerDay").orElse(d.carrierWagePerDay).forGetter(c -> c.carrierWagePerDay),
+					Codec.LONG.fieldOf("clerkWagePerDay").orElse(d.clerkWagePerDay).forGetter(c -> c.clerkWagePerDay),
+					Codec.INT.fieldOf("carrierCapacity").orElse(d.carrierCapacity).forGetter(c -> c.carrierCapacity),
+					Codec.INT.fieldOf("clerkCapacity").orElse(d.clerkCapacity).forGetter(c -> c.clerkCapacity),
+					Codec.DOUBLE.fieldOf("carrierBlocksPerDay").orElse(d.carrierBlocksPerDay).forGetter(c -> c.carrierBlocksPerDay),
+					Codec.DOUBLE.fieldOf("carrierMaxDistance").orElse(d.carrierMaxDistance).forGetter(c -> c.carrierMaxDistance),
+					Codec.DOUBLE.fieldOf("carrierMaxWaitDays").orElse(d.carrierMaxWaitDays).forGetter(c -> c.carrierMaxWaitDays),
+					Accident.codec(d).forGetter(c -> new Accident(c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax, c.accidentLossMin,
+							c.accidentLossMax, c.accidentRestDays, c.quitChance, c.notifyChat))
+			).apply(i, Staff::new);
+		});
+	}
 	/** P (v0.46): popular / unpopular goods groups of each market. */
 	public static final class Trend {
 		public double durationDays = 5.0;

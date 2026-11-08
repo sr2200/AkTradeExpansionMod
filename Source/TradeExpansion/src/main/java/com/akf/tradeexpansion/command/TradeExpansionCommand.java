@@ -108,6 +108,9 @@ public final class TradeExpansionCommand {
 						.executes(TradeExpansionCommand::audit)
 						.then(Commands.literal("villagers").executes(c -> VillagerAudit.run(c.getSource()))))
 				.then(RivalCommand.build(admin(Commands.literal("rivals"))))
+				.then(admin(Commands.literal("staff"))
+						.executes(TradeExpansionCommand::staffList)
+						.then(Commands.literal("hurry").executes(TradeExpansionCommand::staffHurry)))
 				.then(admin(Commands.literal("market"))
 						.then(Commands.literal("setx")
 								.then(Commands.argument("goods", IdentifierArgument.id())
@@ -418,6 +421,21 @@ public final class TradeExpansionCommand {
 		TradeService.broadcast(player.level().getServer(), registry, Set.of(market.id()), now);
 		context.getSource().sendSuccess(() -> Component.literal(String.format("%s X=%.2f #%d", goodsId, state.pressure(), market.id())), true);
 		return 1;
+	}
+
+	/** Q: {@code /aktradeex staff} lists every hired employee of the world. */
+	private static int staffList(CommandContext<CommandSourceStack> context) {
+		List<Component> lines = com.akf.tradeexpansion.staff.StaffService.list(context.getSource().getServer());
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.staff.header", lines.size()), false);
+		for (Component line : lines) context.getSource().sendSuccess(() -> line, false);
+		return lines.size();
+	}
+
+	/** Q: {@code /aktradeex staff hurry} makes every employee take its next step now (test command). */
+	private static int staffHurry(CommandContext<CommandSourceStack> context) {
+		int n = com.akf.tradeexpansion.staff.StaffService.hurry(context.getSource().getServer());
+		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.staff.hurried", n), true);
+		return n;
 	}
 
 	/** Craft loops that profit inside the nearest market (B-6, 5-2). */

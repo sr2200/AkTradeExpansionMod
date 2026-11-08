@@ -102,7 +102,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final long[] DONATIONS = {100, 1_000, 10_000};
 
 	private enum Tab {
-		BUY("buy"), SELL("sell"), BANK("bank"), BOARD("board"), QUEST("quest"), EXCHANGE("exchange"), TOWN("town");
+		BUY("buy"), SELL("sell"), BANK("bank"), BOARD("board"), QUEST("quest"), EXCHANGE("exchange"), TOWN("town"), STAFF("staff");
 
 		final String key;
 
@@ -167,6 +167,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button buildButton;
 	private Button donateItemsButton;
 	private Button markerButton;
+	/** Q (v0.48): the staff tab (its own widgets and drawing). */
+	private final StaffTab staffTab = new StaffTab(this);
 
 	/** A-4 (v0.33): sizes from the layout the menu was made with (fits the window when the screen opened). */
 	private final MarketLayout layout;
@@ -209,11 +211,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		townWidgets.clear();
 
 		Tab[] tabs = Tab.values();
-		int tabW = Math.min(TAB_W, (listW + 1) / tabs.length - 1); // the tabs fit above the list
+		// The tabs fit above the list; each is as wide as its label needs (Q, v0.48: eight tabs).
+		int[] widths = tabWidths(tabs);
+		int tx = x + LIST_X;
 		for (int i = 0; i < tabs.length; i++) {
 			Tab t = tabs[i];
 			tabButtons.put(t, addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.tab." + t.key), b -> setTab(t))
-					.bounds(x + LIST_X + i * (tabW + 1), y + 18, tabW, 14).build()));
+					.bounds(tx, y + 18, widths[i], 14).build()));
+			tx += widths[i] + 1;
 		}
 		paymentButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
 			payByCard = !payByCard;
@@ -286,12 +291,74 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				.bounds(x + panelX, y + 104, PANEL_W, 14).build());
 		mapHereButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map.here"), b -> addHereToMap())
 				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
+		staffTab.init(b -> addRenderableWidget(b), x, y, panelX);
 		boardBackButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.back"), b -> {
 			boardMarket = -1;
 			scroll = 0;
 			updateButtons();
 		}).bounds(x + panelX, y + 122, PANEL_W, 16).build());
 		updateButtons();
+	}
+
+	/** Tab widths from their labels: shrunk evenly when they do not fit the list width, widened up to TAB_W when they do. */
+	private int[] tabWidths(Tab[] tabs) {
+		int room = listW + 1 - tabs.length; // 1px between the tabs
+		int[] widths = new int[tabs.length];
+		int total = 0;
+		for (int i = 0; i < tabs.length; i++) {
+			widths[i] = font.width(Component.translatable("screen.ak_trade_expansion.tab." + tabs[i].key)) + 8;
+			total += widths[i];
+		}
+		if (total > room) {
+			for (int i = 0; i < tabs.length; i++) widths[i] = Math.max(16, widths[i] * room / total);
+		} else {
+			int extra = (room - total) / tabs.length;
+			for (int i = 0; i < tabs.length; i++) widths[i] = Math.max(widths[i], Math.min(TAB_W, widths[i] + extra));
+		}
+		return widths;
+	}
+
+	// ---- access for the staff tab (Q) ----
+
+	long marketId() {
+		return menu.marketId();
+	}
+
+	MarketSnapshotS2C snapshot() {
+		return snapshot;
+	}
+
+	net.minecraft.client.gui.Font screenFont() {
+		return font;
+	}
+
+	net.minecraft.world.Container sellSlot() {
+		return menu.sellSlot();
+	}
+
+	void status(Component text, boolean success) {
+		setStatus(text, success);
+	}
+
+	void refreshButtons() {
+		updateButtons();
+	}
+
+	void resetScroll() {
+		scroll = 0;
+	}
+
+	boolean payingByCard() {
+		return useCard();
+	}
+
+	void fit(GuiGraphicsExtractor g, String text, int x, int y, int maxWidth, int color, boolean shadow) {
+		fitText(g, text, x, y, maxWidth, color, shadow);
+	}
+
+	/** Q: the staff tab's data. */
+	public void onStaff(com.akf.tradeexpansion.network.StaffS2C data) {
+		staffTab.onData(data);
 	}
 
 	// ---- packets ----
@@ -481,6 +548,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			boardMarket = -1;
 			ClientPlayNetworking.send(new BoardRequestC2S(menu.marketId()));
 		}
+		if (newTab == Tab.STAFF) staffTab.open();
 		updateButtons();
 	}
 
@@ -534,12 +602,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			case QUEST -> snapshot == null ? 0 : snapshot.requests().size();
 			// A market's goods list has a header line, so one row fewer fits: count it as one more row.
 			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() + 1 : board.news().size() + board.markets().size();
+			case STAFF -> staffTab.rowCount();
 			default -> 0;
 		};
 	}
 
 	/** State extrapolated to the client's clock (lazy recovery, B-3). */
-	private GoodState currentState(GoodView view) {
+	GoodState currentState(GoodView view) {
 		GoodState state = view.state();
 		if (minecraft != null && minecraft.level != null && snapshot != null) {
 			double days = (MarketClock.now(minecraft.level) - snapshot.gameTime()) / (double) PriceModel.TICKS_PER_DAY;
@@ -654,7 +723,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		tabButtons.forEach((t, b) -> b.active = t != tab);
 		tabButtons.get(Tab.BANK).visible = bankAvailable();
 		tabButtons.get(Tab.TOWN).visible = townAvailable();
-		paymentButton.visible = (tradeTab() || tab == Tab.QUEST || tab == Tab.TOWN) && account != null && account.validCard();
+		paymentButton.visible = (tradeTab() || tab == Tab.QUEST || tab == Tab.TOWN || tab == Tab.STAFF) && account != null && account.validCard();
 		paymentButton.setMessage(Component.translatable(payByCard ? "screen.ak_trade_expansion.pay.card" : "screen.ak_trade_expansion.pay.cash"));
 		for (Button b : tradeWidgets) b.visible = tradeTab();
 		for (Button b : bankWidgets) b.visible = tab == Tab.BANK;
@@ -725,6 +794,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			tabButtons.get(Tab.BANK).visible = bankAvailable();
 			tabButtons.get(Tab.TOWN).visible = townAvailable();
 		}
+		staffTab.updateButtons(tab == Tab.STAFF && !sellAllOpen);
 		sellAllConfirmButton.visible = sellAllOpen;
 		sellAllCancelButton.visible = sellAllOpen;
 		sellAllConfirmButton.active = sellAllOpen && !sellAllPending && sellAllTotal() > 0;
@@ -856,6 +926,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	protected void containerTick() {
 		super.containerTick();
 		autoSelectFromSellSlot();
+		staffTab.tick(tab == Tab.STAFF);
 		// Inventory, balance, recovery and the Shift key change over time.
 		updateButtons();
 	}
@@ -914,7 +985,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			}
 		}
 		if (mx >= LIST_X && mx < LIST_X + listW - SCROLLBAR_W && my >= LIST_Y && my < LIST_Y + rows * ROW_H
-				&& (tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD)) {
+				&& (tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD || tab == Tab.STAFF && staffTab.scrollable())) {
 			int index = scroll + (int) ((my - LIST_Y) / ROW_H);
 			switch (tab) {
 				case BUY, SELL -> {
@@ -927,6 +998,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				case QUEST -> {
 					if (snapshot != null && index < snapshot.requests().size()) selectedRequest = snapshot.requests().get(index).request().id();
 				}
+				case STAFF -> staffTab.clickRow(index);
 				case BOARD -> {
 					if (board != null && boardMarket < 0) {
 						// O-5: news rows come first; a news row opens its center market when it is listed.
@@ -1001,6 +1073,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				extractRequestPanel(g, x + panelX, y);
 			}
 			case BOARD -> extractBoard(g, lx, ly, mouseX, mouseY);
+			case STAFF -> staffTab.extract(g, lx, ly, listW, rows, scroll, x + panelX, y, mouseX, mouseY);
 			default -> {
 				if (snapshot == null) {
 					g.text(font, Component.translatable("screen.ak_trade_expansion.loading"), lx + 4, ly + 4, COLOR_WHITE);
@@ -1061,7 +1134,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	/** The goods / requests / board list, or {@code null} on tabs without a list. */
 	private Scrollbar listScrollbar() {
-		if (!(tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD) || sellAllOpen) return null;
+		if (!(tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD || tab == Tab.STAFF && staffTab.scrollable()) || sellAllOpen) return null;
 		return new Scrollbar(leftPos + LIST_X + listW - SCROLLBAR_W, topPos + LIST_Y, rows * ROW_H, rowCount(), rows);
 	}
 
