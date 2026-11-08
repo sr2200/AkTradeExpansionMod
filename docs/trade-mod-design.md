@@ -1,9 +1,9 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.48.4（段階0〜14の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
+- 版：v0.48.5（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-08（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
-- 実装状況：段階0〜14 実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
+- 実装状況：段階0〜14 と拡張機能（輸送依頼 J-2、評判 M、村の発展 N、商会 O、村の流行 P、雇い人 Q）を実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
 - Mod名：**AK Trade Expansion**（v0.25 で「Trade Expansion」から変更。Mod ID・アイテムID・コマンド・設定ファイル名・パッケージ名は変えていない）
 - 配布ファイル：jar は `ak_trade_expansion-<バージョン>.jar`、配布用 zip は `AKTradeExpansion-<バージョン>.zip`（v0.25）
 - ライセンス：GNU LGPL v2.1 のみ（`LGPL-2.1-only`。リポジトリ直下の [LICENSE](../LICENSE)）
@@ -32,7 +32,7 @@ NeoForge を選ぶべきなのは「Create 等の NeoForge 専用大型Modと同
 
 ## 1. 確認事項（質問リスト）
 
-v0.29 時点ですべて決定済み（Q44〜Q50 は実装時の決定を後から記録したもの）（Q38・Q39 の検討の経緯は L章に残す）。「今後変更予定」は当面の仕様として決定し、将来のバージョンで見直す項目。新たな未決事項が出た場合はこの表に追記し、決まるまでは **【既定案】** で進める。
+v0.48 時点で Q1〜Q58 はすべて決定済み（Q44〜Q50 は実装時の決定を後から記録したもの）（Q38・Q39 の検討の経緯は L章に残す）。「今後変更予定」は当面の仕様として決定し、将来のバージョンで見直す項目。新たな未決事項が出た場合はこの表に追記し、決まるまでは **【既定案】** で進める。
 
 | # | 質問 | 決定／既定案 | 反映先 |
 |---|---|---|---|
@@ -82,6 +82,7 @@ v0.29 時点ですべて決定済み（Q44〜Q50 は実装時の決定を後か�
 | Q44 | 【v0.14.1追加】食料・松明・原木など、市場で使われてなくなる品の在庫と買取数を早く戻すか？ | **決定**：「消耗品」とし、在庫過多は1日で目標在庫に戻し、相場の半減期を1日にする。対象はタグ `#ak_trade_expansion:consumables`。後から設定 `consumables.add/remove` と `/aktradeex consumable` で追加・削除できる（v0.14.2） | B-3、G章 |
 | Q45 | 【v0.14.3追加】交易画面の所持金をどこに出すか？（右上は他のModがボタンを足すことがある） | **決定**：既定はプレイヤーインベントリの右。クライアントの設定 `client.balancePosition` で「売却枠の下」「右上」にも変えられる | A-4、G章 |
 | Q46 | 【v0.15追加】市場に名前を付けられるようにするか？ | **決定**：名札・名前付きの交易所・管理コマンドで名付ける。変えられるのは名付け親と OP（名前の無い市場は誰でも、設定 `market.renamePermission`）。名札は1枚使う | C-4 |
+| Q47 | 【v0.17追加】商品に花を追加するか？ | **決定**：20種を追加し、すべて消耗品にする（価格は別紙 2-12）。花に限らず、商品の値は設定 `goods` と `/aktradeex goods` で後から変えられるようにする | D-2、G章、goods-design |
 | Q48 | 【v0.18追加】村でない場所に、クラフトした交易所で新しい市場を作れるようにするか？ | **決定**：設定 `market.newMarketRequires` で切り替える。1：村の構造物の中だけ／2：ベッドの数／3：村人の数／4：ベッドと村人の数（ベッド ≧ 村人）。既定は4。Q12 の「無い場所では新しい市場を作る」に条件を付けた | C-1、G章 |
 | Q49 | 【v0.20追加】村人交易のコイン化（段階14）の支払い方法・エメラルドの扱い・抜け道対策・進め方は？ | **決定**：①代金は財布・コインから自動で引き落とす（支払い欄にコインは置かない）②コイン化している間、代金のエメラルド分はエメラルドでは払えない ③抜け道対策（H-2 案A）を最初の段階（14a）から入れる ④14a→14b→14c と段階ごとに作り、ゲーム内で確認しながら進める | H章 |
 | Q50 | 【v0.24.1追加】村人ゾンビを治療した時などの値引きを、コインの代金にどう効かせるか？ | **決定**：今のまま。値引き後のエメラルドの数で代金を計算するので、エメラルドの交易と同じ割合で安くなる。ただし、①もともとエメラルド1個の取引はバニラと同じくそれ以上安くならず、②市場の商品と同じ品は抜け道対策の下限（H-3）が優先される。下限にも値引きを効かせる案・1エメラルド未満まで細かく値引きする案は採らない | H-3 |
@@ -90,10 +91,9 @@ v0.29 時点ですべて決定済み（Q44〜Q50 は実装時の決定を後か�
 | Q53 | 【v0.27追加】設定画面で、取り扱う商品と消耗品をアイコンで選んで追加・削除できるようにするか？ | **決定**：する。設定画面の「商品」タブから専用の画面を開き、アイテムのアイコン一覧（検索つき）から選んで「追加」、登録済みの一覧から選んで「削除」。追加した商品は基準価格だけを入れ、ほかの値は既定値。追加した商品はどの市場でも「本日の掘り出し物」（D-5）として並ぶことがある | D-2、D-5、G章 |
 | Q54 | 【v0.27追加】市場の規模に応じて、ふだん扱わない品を並べるか？ | **決定**：「本日の掘り出し物」として、その市場の品揃えに無い商品をゲーム内で1日ごとに選び直して並べる。数はレベル1〜2で1品、3以上で2品。価格は1.2倍、在庫は目標在庫の半分から（設定 `market.specialGoods`・`specialPriceMultiplier`・`specialStockRatio`）。商品として定義されていないアイテムは並べない（価格が決まらないため） | D-5 |
 | Q55 | 【v0.27追加】既定の商品に、ダイヤの剣以外の装備・道具と、オーバーワールドのすべての原木を加えるか？ | **決定**：加える。ダイヤの防具4種・道具4種（エンチャント付きは扱わない）と、シラカバ・ダークオーク・サクラ・ペールオーク・ポプラの原木。値段は別紙 goods-design v0.6 | D-3、別紙 2-3・2-7 |
-| Q56 | 【v0.36追加】依頼や寄付で村が発展し、建物が増える仕組み（TODO の拡張案）をどうするか？ | **決定（方針）**：発展度を依頼・コインと品物の寄付・取引で貯め、建物（倉庫・銀行・依頼所・宿屋、各1つ）を建てる時に使う。建物は自動で数日かけて建ち（場所は自動で探すか目印で指定）、完成した建物の数で市場レベルに最大 +2 のボーナス。壊すと効果が消える。銀行タブはレベル3以上または銀行の建物で出る。オーバーワールドの全市場が対象。数値と細部は N章の【既定案】（未実装） | N章、D-4、E-7 |
+| Q56 | 【v0.36追加】依頼や寄付で村が発展し、建物が増える仕組み（TODO の拡張案）をどうするか？ | **決定（方針）**：発展度を依頼・コインと品物の寄付・取引で貯め、建物（倉庫・銀行・依頼所・宿屋、各1つ）を建てる時に使う。建物は自動で数日かけて建ち（場所は自動で探すか目印で指定）、完成した建物の数で市場レベルに最大 +2 のボーナス。壊すと効果が消える。銀行タブはレベル3以上または銀行の建物で出る。オーバーワールドの全市場が対象。数値と細部は N章の【既定案】（v0.37〜v0.39 で実装） | N章、D-4、E-7 |
 | Q57 | 【v0.36.1追加】村の発展の細部（設定にするもの・寄付の上限・宿屋の村人・銀行の特典・杭の入手・雪の上・寄付した人の表示）は？ | **決定**：依頼所の枠・同時に建設できる数・発展度の減り方・建物を守るか・対象の次元を設定にする（既定は今までの案）。品物の寄付は建物ごとの必要数まで。宿屋の村人は最初の完成の時だけ。銀行はカード払いの手数料なしと、登録した口座の利息の上限が上がる（建物がある間）。杭は発展タブで無料でもらう。雪の上にも建てられる。寄付した人は上位5人と自分を出す | N章 |
 | Q58 | 【v0.42追加】資材の寄付が簡単すぎる。どう難しくするか？ | **決定**：資材を建てる条件にする（全部寄付してから建てられる。`development.requireMaterials`）。必要数は既定で4倍にし、倍率を設定 `development.materialCountMultiplier` で変えられるようにする | N-4 |
-| Q47 | 【v0.17追加】商品に花を追加するか？ | **決定**：20種を追加し、すべて消耗品にする（価格は別紙 2-12）。花に限らず、商品の値は設定 `goods` と `/aktradeex goods` で後から変えられるようにする | D-2、G章、goods-design |
 
 ---
 
@@ -883,6 +883,7 @@ MarketRegistry
 | `BankRequestC2S` | C→S | 市場ID, 操作（預け入れ／引き出し／カード発行）, 金額 | 銀行タブのボタン | 実装済 |
 | `AccountS2C` | S→C | 銀行残高, 有効なカードを持っているか, 直前の銀行操作の結果 | 画面を開いた時／取引・銀行操作の後に本人へ | 実装済 |
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
+| `VillagerPricesS2C` | S→C | 村人の取引画面のID, 取引ごとのコインの代金（コイン化しない取引は -1） | 村人・行商人の取引一覧を送る時（v0.20、段階14a、H-3） | 実装済 |
 | `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も。v0.29.1：預金の利率と上限も） | ログイン時／`/aktradeex reload` 時 | 実装済 |
 | `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・中心座標（v0.34、地図への登録用）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％）） | 掲示板タブを開いた時 | 実装済（段階13） |
 | `TradableItemsS2C`（v0.47） | S→C | 市場で扱う品の ID の一覧（どれかの商品定義が買う・売る品） | 参加した時・データパックの再読み込みの後・`/aktradeex reload` の後 | 実装済（I章） |
@@ -1040,7 +1041,7 @@ MarketRegistry
 | 評判 | `reputation.hardQuestLevel` | 3 | 0〜5 | 【v0.29】★★★の依頼を納めるのに必要なレベル（0 で誰でも）（M章） |
 | 評判 | `reputation.specialBonusLevel` | 4 | 0〜5 | 【v0.29】評判の掘り出し物が見えるレベル（M章） |
 | 評判 | `reputation.specialBonusCount` | 1 | 0〜5 | 【v0.29】評判の掘り出し物の数（M章） |
-| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 26 項目（一覧は N-7）。設定画面の「村の発展」タブ |
+| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 25 項目（一覧は N-7）。設定画面の「村の発展」タブ |
 | 需要 | `demand.maxShortages` | 2 | 0〜10 | 1市場の不足品の最大数（0 で不足なし、K章） |
 | 需要 | `demand.durationDays` | 3.0 | 0.5〜30 | 不足品を選び直す間隔（ゲーム内日） |
 | 需要 | `demand.minMultiplier` / `demand.maxMultiplier` | 1.5 / 2.0 | 1〜5 | 不足品の基準価格に掛ける倍率の範囲 |
@@ -1470,7 +1471,7 @@ MarketRegistry
 - パケット（F-2）：`DevelopmentRequestC2S`（コインの寄付・品物の寄付・建てる・杭をもらう）・`DevelopmentResultS2C`。スナップショット（`MarketSnapshotS2C`）の `DevelopmentView` に発展度・寄付した人の上位・自分の値・家と村人のレベル・ボーナス・銀行の建物があるか・建物を選べるか・あと何棟建設できるか・建物の一覧（`FacilityView`：状態・今の必要な発展度・完成する時刻・ほしい品 `WantedView`）。【v0.38】`AccountS2C` に利息が付く上限と登録した銀行の市場名。受け取った処理では、画面の市場 ID・屋台までの距離・金額と個数の範囲・評判・対象の次元を必ず確かめる。
 - 設定（G章）：下の表。
 
-| 設定 | 既定 | 範囲（案） | 内容 |
+| 設定 | 既定 | 範囲 | 内容 |
 |---|---|---|---|
 | `development.enabled` | true | bool | 村の発展を使う |
 | `development.dimensions` | `["minecraft:overworld"]` | 次元IDの一覧 | 対象の次元 |
@@ -1501,7 +1502,7 @@ MarketRegistry
 - `levelBonusThresholds` の数がボーナスの上限になる（既定は2つなので最大 +2）。合計のレベルは 5 で頭打ち。
 - 管理コマンド：`/aktradeex development info`（最寄りの市場の発展度と建物）、`development add <発展度>`、`development complete`（建設中の建物をすぐ完成させる、テスト用）。
 
-#### N-8. 作る順（案）
+#### N-8. 作る順
 
 1. **段階 a**（v0.37 で実装）：発展度・コインの寄付・「発展」タブ（建物の選択は無し）。依頼・取引で貯まる。管理コマンド `/aktradeex development`・`development add`。品物の寄付は「ほしい品」を持つ建物の定義と一緒に段階 b で作る。
 2. **段階 b**（v0.38 で実装）：建物の定義・場所探し・建設中・完成・効果・レベルのボーナス・杭・資材の寄付・保護。見た目は平原の1種類（ほかの村も平原の見た目を使う）。
@@ -1828,6 +1829,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ QuestMath.java             ✅ … 依頼の難易度・報酬・期間、不足品の倍率（J章・K章）
 │   ├─ DevelopmentMath.java       ✅ … 発展度の減衰・レベルのボーナス・資材の受け付ける数・建て直しの発展度（N章、v0.37）
 │   ├─ StaffMath.java             ✅ … 雇い人の片道の時間・事故の確率・失う数・値段の上限／下限で売買できる数（Q章、v0.48）
+│   ├─ RivalMath.java             ✅ … 商会の動きの1日ごとの押し上げ・減衰・遅延計算（O-3・O-4、v0.46）
+│   ├─ TrendMath.java             ✅ … 村の流行の期間（市場ごとにずらす）と倍率の範囲（P章、v0.46）
 │   └─ GoodsSelector.java         ✅ … 商品の抽選（always・プール・追加抽選・レベルアップ時の追加、D-1・D-4）
 ├─ registry/
 │   ├─ ModItems.java              ✅ … コイン5種、エメラルド貨、財布、カード
@@ -1836,7 +1839,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ModMenus.java              ✅
 │   ├─ ModEntities.java           ✅ … TraderEntity・商人のスポーンエッグ・属性（段階10）
 │   ├─ ModCreativeTab.java        ✅
-│   └─ ModDataComponents.java     ✅ … `wallet_balance`・`card_owner`・`cargo`（荷箱の中身と届け先、v0.35）
+│   ├─ ModDataComponents.java     ✅ … `wallet_balance`・`card_owner`・`cargo`（荷箱の中身と届け先、v0.35）
+│   └─ ModSounds.java             ✅ … Mod の音（工事の音 `facility.construction`、v0.45、N-10）
 ├─ crafting/
 │   ├─ MintingRecipe.java         ✅ … 鋳造レシピ `ak_trade_expansion:minting`（銅換算額→枚数、読み込み条件 `minting_enabled`、E-2）
 │   └─ EmeraldCoinRecipe.java     ✅ … 石切台でエメラルド貨の枚数を設定値にする派生レシピと読み込み条件（E-5）
@@ -1876,6 +1880,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ condition/MarketCondition.java ✅ … 条件（dimension, biome, structure, villager_type, origin, distance_from_spawn, all_of / any_of / not）
 │   ├─ GoodsGroups.java           ✅ … 商品グループ（O-1）
 │   ├─ RivalGuilds.java           ✅ … 商会の定義（O-2）
+│   ├─ FacilityDefinition.java / FacilityCatalog.java ✅ … 村の建物の定義（`facility/*.json`）と読み込んだ一覧（N-4、v0.38）
 │   └─ DataReloadListener.java    ✅ … データパック読込（Fabric の ResourceLoader、`/reload` 対応）
 ├─ quest/                          … 段階13
 │   ├─ Request.java               ✅ … 依頼（品・数量・報酬・期限・難易度、J章。輸送依頼は届け先と保証金つき、v0.35）
@@ -1907,6 +1912,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   └─ InventoryUtil.java         ✅ … 商品の一致判定（`Match`：付加情報・減額買取）・数え上げ・取り除き・空き枠計算・付与（サーバーとクライアントで共用、売却スロットも対象）
 ├─ block/
 │   ├─ MarketStallBlock.java      ✅ … 屋台の形・名札での名付け・名前付き交易所の設置（C-4）
+│   ├─ FacilitySignBlock.java     ✅ … 建物の看板（建設中／完成。右クリックで建物のタブを開く、N-4・N-5）
+│   ├─ ConstructionMarkerBlock.java ✅ … 建設予定地の杭（N-5）
 │   └─ MarketStallBlockEntity.java ✅ … market_id・origin、ExtendedMenuProvider、画面タイトル（市場名とレベル名、C-4）、紐付いた商人の UUID・商人を出す処理（A-5）
 ├─ menu/
 │   └─ MarketMenu.java            ✅ … プレイヤーインベントリと売却スロット（閉じたら返却）、stillValid で距離・存在チェック
@@ -1938,6 +1945,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ mixin/
 │   ├─ ItemEntityMixin.java       ✅ … 拾ったコインを財布へ（E-6）
 │   ├─ StructureTemplatePoolAccessor.java ✅ … 村のプールに屋台の建物を追加（段階9）
+│   ├─ ServerExplosionMixin.java  ✅ … 爆発で完成した建物を壊さない（`development.protectFacilities`、N-4）
 │   └─ AbstractVillagerMixin（v0.29：村人との取引で評判）/ MerchantContainerMixin / MerchantResultSlotMixin / MerchantMenuMixin / MerchantMenuAccessor / ServerPlayerMixin ✅ … 村人交易のコイン化（14a、H-3）
 ├─ entity/                         … 段階10
 │   └─ TraderEntity.java          ✅ … 商人NPC（市場ID・紐付いた交易所、無敵・デスポーンしない、押されない、右クリックで交易画面、A-5）
@@ -1946,6 +1954,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
     ├─ AuditCommand.java          ✅ … クラフト・鋳造の裏技検出（B-6・E-2）
     ├─ VillagerAudit.java         ✅ … 村人から買って市場で売ると儲かる取引の検出（`audit villagers`、14c）
     ├─ ConsumableCommand.java     ✅ … 消耗品の追加・削除・一覧（B-3）
+    ├─ DevelopmentCommand.java    ✅ … `development [info|add|complete]`（N-7）
+    ├─ RivalCommand.java          ✅ … `rivals [start|clear]`（O-6）
     └─ GoodsCommand.java          ✅ … 商品の値を設定ファイルで上書き・表示・戻す（D-2）
                                        【v0.4.1】market reset [id]：市場は残し、全商品の X=0・S=T に戻す（priceFactor と商品構成は保持。id 省略時は最寄り市場）
                                                  market delete <id>：市場を削除（誤操作防止のため id 必須）。屋台は次の右クリックで割り当て直し（A-3）
@@ -1974,7 +1984,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 └─ （widget/ への分離は見送り。v0.29 時点も MarketScreen の中で描画する）
 ```
 
-テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（6件。建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）、`core/StaffMathTest`（11件。雇い人の片道の時間・事故の確率・失う数・値段の上限／下限、v0.48。問屋値・自動の仕入れ・下限での売り・見込みと歩合、v0.48.1）、`staff/EmployeeCodecTest`（4件。雇い人の保存の往復・古い保存の既定値・ログの行数、v0.48。おまかせの荷、v0.48.1）。計123件 ✅
+テスト（`src/test/java/com/akf/tradeexpansion/`）：`core/` の `PriceModelTest`（19件。まとめ買い割引・買取再開までの日数を含む）、`DistanceModelTest`（4件）、`CoinMathTest`（6件）、`MarketLevelTest`（5件。ベッドと村人の低い方を含む）、`GoodsSelectorTest`（6件）、`WalletMathTest`（8件。財布での支払い・受け取り、支払い前後の総価値の差 = 価格）、`QuestMathTest`（5件。輸送依頼の報酬倍率を含む、v0.35）、`DevelopmentMathTest`（7件。資材の数の倍率（v0.42）、発展度の減衰・レベルのボーナス・資材の数・建て直し・場所探しの順、v0.37〜）、`ReputationMathTest`（4件。評判の減衰・レベル・値段の有利さとその上限、v0.29）、`InterestMathTest`（3件。預金の利息と上限、v0.29.1）、`MintingCountTest`（4件。鋳造の枚数：比率10で64枚・20で32枚・上限64枚・切り捨てと最低1枚、v0.31）、`TradeUnitTest`（4件。取引単位：端数の扱い・単位ごとの価格と X・在庫上限・最大数量とまとめ買い割引、v0.31）、`config/ConfigTest`（11件。村の発展の設定、v0.37）、`data/BundledDataTest`（7件。商品グループと商会（v0.46）、建物の地面のタグ（v0.43）、村の建物の定義と構造物（v0.38）、全見た目の構造物のブロックと看板（v0.39）、エメラルド貨の値段固定・上限なしを含む。同梱の goods・market_profile の JSON を実際のコーデックで全件読み込む）、`market/MarketNamesTest`（3件）、`menu/MarketLayoutTest`（4件。画面の大きさの決め方、v0.33）、`core/RivalMathTest`（5件。商会の動きの強さ・減衰・遅延計算、v0.46）、`core/TrendMathTest`（3件。流行の期間のずれ・倍率の範囲、v0.46）、`core/StaffMathTest`（11件。雇い人の片道の時間・事故の確率・失う数・値段の上限／下限、v0.48。問屋値・自動の仕入れ・下限での売り・見込みと歩合、v0.48.1）、`staff/EmployeeCodecTest`（4件。雇い人の保存の往復・古い保存の既定値・ログの行数、v0.48。おまかせの荷、v0.48.1）。計123件 ✅
 
 - パケットの**型定義（Payload レコード）とその登録**は共通側（`network/`）に置き、**S2Cの受信処理だけ**をクライアント側に置く。
 
@@ -2030,23 +2040,25 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 - **配布物（v0.23、v0.25.2 で変更）**：配布用 zip `build/distributions/AKTradeExpansion-<version>.zip`（jar・導入方法 `README.txt`・`LICENSE`）は `releaseZip` タスクで作る。普段の `gradlew build` では作らず、`release.bat`（`gradlew build releaseZip` を実行）か `gradlew releaseZip` の時だけ作る。導入方法の元は `src/dist/README.txt` で、`@VERSION@` をバージョンに置き換える。`release.bat`・`build.bat` は `gradle.properties` の `version` と README のバージョン表記を上げてからビルドする（`nobump` で上げずにビルド、残りの引数は Gradle に渡す）。【v0.27.2 で変更】バージョンの上げ方：普段のビルド `build.bat` は末尾を上げる（0.0.11 → 0.0.12）、配布用の `release.bat` は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）。上げる処理は両方とも `tools/version/bump.ps1`（`-Part patch` / `-Part minor`）。
 - `authors` は `akf`。ライセンスは **GNU LGPL v2.1 のみ**（v2.1 以降ではない）。`fabric.mod.json` の `license` は `LGPL-2.1-only`。本文はリポジトリ直下の `LICENSE` だけで、v0.23 から `build.gradle` がこれを jar（`LICENSE_trade_expansion`）と配布用 zip に入れる。
 
-リソース（v0.29 時点。✅ は作成済み）：
+リソース（v0.48 時点。✅ は作成済み）：
 ```
 src/main/resources/
 ├─ fabric.mod.json                                         ✅
-├─ ak_trade_expansion.mixins.json                             ✅（ItemEntityMixin、StructureTemplatePoolAccessor、AbstractVillagerMixin（v0.29、評判）、村人交易の Merchant*Mixin・MerchantMenuAccessor・ServerPlayerMixin）
+├─ ak_trade_expansion.mixins.json                             ✅（ItemEntityMixin、StructureTemplatePoolAccessor、AbstractVillagerMixin（v0.29、評判）、村人交易の Merchant*Mixin・MerchantMenuAccessor・ServerPlayerMixin、ServerExplosionMixin（v0.38、建物の保護））
 ├─ （src/client/resources/）ak_trade_expansion.client.mixins.json ✅（MerchantScreenMixin、v0.20）
 ├─ assets/ak_trade_expansion/
 │   ├─ icon.png                                            ✅（v0.23：屋台と金貨のドット絵 128×128。`tools/icon/genicon.js` で生成）
 │   ├─ lang/ja_jp.json, en_us.json                         ✅（設定画面の項目名・説明を含む）
 │   ├─ items/*.json, models/item/*.json                    ✅（コイン5種・エメラルド貨・財布・カード・荷箱（v0.35。テクスチャは `tools/icon/gencrate.js` で作る）・交易所・商人のスポーンエッグ（行商人のモデルを流用））
 │   ├─ models/block/market_stall.json, blockstates/market_stall.json ✅（屋台風のモデル、facing 4方向）
+│   ├─ sounds.json                                         ✅（工事の音。バニラの音のファイルを使う、v0.45）
 │   └─ textures/item/*.png, textures/block/market_stall_{front,side,top}.png ✅（仮テクスチャ）
 └─ data/
     ├─ ak_trade_expansion/recipe/market_stall.json, wallet.json, emerald_coin.json, copper_coin_minting.json, iron_coin_minting.json ✅（エメラルド貨は石切台、鋳造は独自形式。どちらも読み込み条件つき）
     ├─ ak_trade_expansion/structure/village/<5種類>/market_stall.nbt ✅（村の屋台の建物、段階9。`tools/structures/genstall.js` で生成）
     ├─ ak_trade_expansion/structure/facility/<見た目>/<建物>.nbt ✅（村の発展の建物、v0.38。`tools/structures/genfacility.js` で生成）
-    ├─ ak_trade_expansion/ak_trade_expansion/facility/*.json ✅（村の発展の建物の定義、v0.38）
+    ├─ ak_trade_expansion/ak_trade_expansion/facility/*.json ✅（村の発展の建物の定義、4件、v0.38）
+    ├─ ak_trade_expansion/ak_trade_expansion/goods_group/*.json（11件）, rival_guild/*.json（4件） ✅（商品グループ O-1、商会 O-2、v0.46）
     ├─ ak_trade_expansion/tags/item/consumables.json, tags/entity_type/drops_coins.json ✅（消耗品 B-3、コインを落とすモブ E-2）
     ├─ ak_trade_expansion/loot_table/blocks/market_stall.json ✅
     ├─ minecraft/tags/block/mineable/axe.json              ✅
@@ -2295,3 +2307,4 @@ test {
 | v0.48.2 | 2026-11-08 | 雇い人（Q-4）：`staff.enabled` が OFF の時は「雇い人」タブを出さない（まだ雇い人がいる人には、引き取りのために出す）。`MarketSnapshotS2C` に `staffTab` |
 | v0.48.3 | 2026-11-08 | E-2 敵モブのドロップ：ネザーで倒した時は 0.5% で金貨1枚を足す |
 | v0.48.4 | 2026-11-08 | 雇い人（Q-1・Q-2・Q-3）：運び屋・番頭とも、雇った後に品と行き先を選び直せる「変更」（雇う時と同じ手順、持っている品は手元に戻る、契約金なし）。操作 `CHANGE`、ログ「変えた」。「休ませる」を「休止／再開」にして「変更」と並べた |
+| v0.48.5 | 2026-11-08 | 文書とソースの照合：先頭の実装状況（拡張機能 J-2・M〜Q章）、1章の説明（Q1〜Q58 すべて決定）と Q47 の並び、Q56 の「未実装」、G章の村の発展の設定の数（25 項目）、N-7・N-8 の「（案）」、F-2 に `VillagerPricesS2C` を追加、4-2 のパッケージ構成に抜けていたクラス（`RivalMath`・`TrendMath`・`ModSounds`・`FacilityDefinition`／`FacilityCatalog`・`FacilitySignBlock`・`ConstructionMarkerBlock`・`ServerExplosionMixin`・`DevelopmentCommand`・`RivalCommand`）、テストの内訳（`RivalMathTest`・`TrendMathTest`、`BundledDataTest` は7件）、リソースの一覧（`goods_group`・`rival_guild`・`sounds.json`）。仕様は変更なし |

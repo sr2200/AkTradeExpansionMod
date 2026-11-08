@@ -41,7 +41,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 
 ## 文書と運用ルール
 
-- 仕様の正本は `docs/trade-mod-design.md`（章 A〜M、`v0.xx` の版表記は設計書の版で、Mod のバージョンとは別）と `docs/goods-design.md`。仕様を変えたら設計書も更新する（先頭の版と、付録B の改版履歴も）。README は遊ぶ人向けの説明で、ソースと一致させる。
+- 仕様の正本は `docs/trade-mod-design.md`（章 A〜Q、`v0.xx` の版表記は設計書の版で、Mod のバージョンとは別）と `docs/goods-design.md`。仕様を変えたら設計書も更新する（先頭の版と、付録B の改版履歴も）。README は遊ぶ人向けの説明で、ソースと一致させる。
 - TODO は `docs/TODO`（Todo+ 書式：`☐` と `✔ ... @done(yy-mm-dd HH:MM)`）。README や設計書には書かない。
 - 0.1.0 より後に入れた、遊ぶ人に見える変更は `docs/release/CHANGES.md` の「未リリース」に、遊ぶ人向けの言葉で書く（追加、変更、修正。設定を足したら設定名も書く）。`release.bat` を実行したら、「未リリース」の見出しをそのバージョンと日付に変え、新しい「未リリース」を上に作る。
 - ゲーム内で確認が必要な項目は `docs/release/ingame-checklist.md` に足す。

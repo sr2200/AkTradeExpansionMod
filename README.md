@@ -15,7 +15,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 対応 | Minecraft 26.3 / Fabric Loader 0.20.1 以上 / Fabric API / Java 25 |
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
-| 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
+| 状態 | 開発中（段階0〜14 と拡張機能を実装済み。下の「実装状況」を参照） |
 | バージョン | 0.1.20（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
@@ -48,7 +48,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | | 内容 |
 |---|---|
 | **財布** | コインを金額としてしまうアイテム（革×5＋糸×2、容量 20,000c）。拾ったコインは自動で財布に入り、お釣りや売却代金も財布に入る。コインを財布の上に重ねて（右クリック）入れることもできる。右クリックで取り出し画面。死ぬと財布ごと落とす |
-| **銀行** | 市場レベル3（大きな村）以上の交易画面に「銀行」タブが出る。預け入れ・引き出しができ、死んでも失わない。利息は無し。預金には**利息**が付きます（ゲーム内1日 0.03%、10日で約 0.3%、毎日複利。利息が付くのは 100,000c まで） |
+| **銀行** | 市場レベル3（大きな村）以上の交易画面に「銀行」タブが出る（村の発展で「銀行」を建てた市場でも出る）。預け入れ・引き出しができ、死んでも失わない。預金には**利息**が付く（ゲーム内1日 0.03%、10日で約 0.3%、毎日複利。利息が付くのは 100,000c まで） |
 | **クレジットカード** | 銀行タブで発行（手数料 100c、口座から）。持っていれば、どの市場でも交易画面の「支払い：カード」で銀行残高から払える（売却代金も口座へ）。持ち主専用で、再発行すると古いカードは使えなくなる。残高以上は使えない |
 
 ### 交易所（屋台）と商人
@@ -70,7 +70,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | タブ | 内容 |
 |---|---|
 | 購入・売却 | 商品と数量を選んで取引する |
-| 銀行 | 市場レベル3以上の市場だけ。預け入れ・引き出し・カード発行 |
+| 銀行 | 市場レベル3以上の市場と、村の「銀行」が建っている市場だけ。預け入れ・引き出し・カード発行 |
 | 掲示板・依頼 | 下の「掲示板・依頼・品不足」 |
 | 両替 | コインを1段下に崩す・1段下からまとめる |
 | 発展 | 村の発展度・発展度を多く入れた人・コインの寄付（「村の発展」を参照。オーバーワールドの市場だけ） |
@@ -204,7 +204,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 ### 雇い人（運び屋・番頭）
 
-交易画面の「**雇い人**」タブで、村人を雇って留守の間も商売をさせられます。雇えるのは、その村での評判が「**常連**」以上の時です（1人3人まで）。
+交易画面の「**雇い人**」タブで、村人を雇って留守の間も商売をさせられます。雇えるのは、その村での評判が「**常連**」以上の時です（1人で3人まで）。
 
 | 雇い人 | すること | 契約金 | 給金 |
 |---|---|---|---|
@@ -419,7 +419,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 ## コマンド
 
-`/aktradeex`（別名 `/ak_trade_expansion`）。`balance`・`bank balance`・`where` 以外は OP 権限（既定はレベル2。設定 `command.permissionLevel` で変更可）が必要です。
+`/aktradeex`（別名 `/ak_trade_expansion`）。`balance`・`bank balance`・`where`・`reputation`・`development`（表示だけ）以外は OP 権限（既定はレベル2。設定 `command.permissionLevel` で変更可）が必要です。
 
 | コマンド | 内容 |
 |---|---|
@@ -827,7 +827,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 | 場所 | 内容 |
 |---|---|
-| `src/main/java/.../core/` | Minecraft に依存しない計算（価格・距離・コイン・市場レベル・商品の抽選）。JUnit でテスト |
+| `src/main/java/.../core/` | Minecraft に依存しない計算（価格・距離・コイン・市場レベル・商品の抽選・評判・利息・依頼・発展度・商会・流行・雇い人）。JUnit でテスト |
 | `src/main/java/.../market/` | 市場・保存データ・新規市場の作成・相場の波及 |
 | `src/main/java/.../data/` | データパック（商品定義・市場プロファイル・条件）の読み込み |
 | `src/main/java/.../trade/` | 購入・売却の処理 |
@@ -835,7 +835,10 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `src/main/java/.../config/` | 設定ファイルの読み書き・同期 |
 | `src/main/java/.../quest/`・`board/` | 依頼・品不足・村の流行・掲示板 |
 | `src/main/java/.../rival/` | 商会の動き（キャンペーンの抽選と、市場への効かせ方） |
-| `src/main/java/.../worldgen/`・`mixin/` | 村への屋台の建物の追加・財布の自動収納 |
+| `src/main/java/.../development/` | 村の発展（発展度・建物の建設と効果） |
+| `src/main/java/.../staff/` | 雇い人（運び屋・番頭の動き） |
+| `src/main/java/.../villager/` | 村人交易のコイン化 |
+| `src/main/java/.../worldgen/`・`mixin/` | 村への屋台の建物の追加・財布の自動収納・村人交易のコイン化・建物の保護 |
 | `src/main/java/.../entity/` | 商人NPC |
 | `src/main/java/.../command/` | 管理コマンド（`/aktradeex`） |
 | `src/main/resources/data/ak_trade_expansion/structure/` | 村の屋台の建物（構造物NBT。`tools/structures/genstall.js` で生成）と村の発展の建物（`facility/<見た目>/`、`tools/structures/genfacility.js` で生成） |
@@ -843,7 +846,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `tools/structures/genstall.js`・`tools/structures/genfacility.js`・`tools/docs/goodslist.js`・`tools/icon/genicon.js` | 村の屋台の建物の生成、村の発展の建物の生成（`node tools/structures/genfacility.js src/main/resources/data/ak_trade_expansion/structure/facility`）、この README の「商品一覧」の生成（リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .`）、Mod のアイコンの生成 |
 | `build.bat`・`release.bat`・`tools/version/bump.ps1` | 普段のビルド（末尾を上げる）・配布用のビルド（真ん中を上げる）と、バージョンを上げる処理（下の「よく使うコマンド」） |
 | `src/dist/README.txt` | 配布用 zip に入れる導入方法（`@VERSION@` がバージョンに置き換わる） |
-| `src/test/java/...` | 単体テスト（価格・まとめ買い割引・取引単位・距離・コイン・鋳造の枚数・財布・市場レベル・商品の抽選・依頼の計算・評判・預金の利息・市場名・交易画面の大きさ・設定ファイル・同梱データの読み込み）。87件 |
+| `src/test/java/...` | 単体テスト（価格・まとめ買い割引・取引単位・距離・コイン・鋳造の枚数・財布・市場レベル・商品の抽選・依頼の計算・評判・預金の利息・発展度・商会・流行・雇い人とその保存・市場名・交易画面の大きさ・設定ファイル・同梱データの読み込み）。123件 |
 
 ---
 
