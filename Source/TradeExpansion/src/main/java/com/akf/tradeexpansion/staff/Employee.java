@@ -147,9 +147,9 @@ public final class Employee {
 	String ownerName;
 	final Role role;
 	final long home;
-	final Identifier goods;
+	Identifier goods;
 	/** Carrier: the market it sells at; clerk: -1. */
-	final long destination;
+	long destination;
 	/** Carrier: trading units taken on one trip. */
 	int quantity;
 	/** Carrier: highest unit price it pays at home. */

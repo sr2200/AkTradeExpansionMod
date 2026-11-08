@@ -24,7 +24,9 @@ public record StaffRequestC2S(long marketId, Action action, int employee, Identi
 		DESTINATIONS,
 		/** v0.48.1: the recommendations for every good a carrier or clerk could be hired for here. */
 		GOODS,
-		HIRE_CARRIER, HIRE_CLERK, CONFIGURE, PAUSE, DEPOSIT_MONEY, WITHDRAW_MONEY, DEPOSIT_ITEMS, WITHDRAW_ITEMS, DISMISS
+		HIRE_CARRIER, HIRE_CLERK, CONFIGURE, PAUSE, DEPOSIT_MONEY, WITHDRAW_MONEY, DEPOSIT_ITEMS, WITHDRAW_ITEMS, DISMISS,
+		/** v0.48.3: another good (and destination) for the employee; its goods come back to the player. */
+		CHANGE
 	}
 
 	public static final Type<StaffRequestC2S> TYPE = new Type<>(TradeExpansion.id("staff_request"));

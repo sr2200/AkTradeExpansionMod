@@ -1003,5 +1003,11 @@
   "screen.ak_trade_expansion.staff.hint.auto.trip": "About %s a trip now (%s kinds), about +%s (after commission and accidents)",
   "screen.ak_trade_expansion.staff.summary.auto": "Carrier (any goods): buys here whatever sells for more at %s, several kinds",
   "screen.ak_trade_expansion.staff.summary.auto.how": "Up to %s in all a trip. Every trip it picks the goods that should sell above cost there, the most profitable first, and sells only above cost (no buying while leftovers are carried)",
-  "screen.ak_trade_expansion.staff.tooltip.route.auto": "To: %s (%sm), up to %s a trip, any goods (%s kinds carried)"
+  "screen.ak_trade_expansion.staff.tooltip.route.auto": "To: %s (%sm), up to %s a trip, any goods (%s kinds carried)",
+  "staff.ak_trade_expansion.log.changed": "Now carries %s to %s",
+  "staff.ak_trade_expansion.log.changed.clerk": "Now sells %s",
+  "screen.ak_trade_expansion.staff.change": "Change",
+  "screen.ak_trade_expansion.staff.change.tooltip": "Choose the goods (and destination) again. The goods it holds come back to you. No fee",
+  "screen.ak_trade_expansion.staff.done.change": "Changed (%s items came back)",
+  "screen.ak_trade_expansion.staff.summary.change": "The %s items it holds come back to you. No fee"
 }

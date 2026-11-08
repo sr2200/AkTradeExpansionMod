@@ -691,6 +691,7 @@ public final class StaffService {
 			case "returned" -> Component.translatable(key, v.get(0), coins(v.get(1)), coins(v.get(2)));
 			case "unpaid" -> Component.translatable(key, coins(v.get(0)));
 			case "hired" -> Component.translatable(key, coins(v.get(0)));
+			case "changed" -> entry.market() >= 0 ? Component.translatable(key, item, market) : Component.translatable(key + ".clerk", item);
 			case "bought_mix" -> Component.translatable(key, v.get(0), v.get(1), coins(v.get(2)), market);
 			case "sold_mix" -> Component.translatable(key, market, v.get(0), v.get(1), coins(v.get(2)), coins(v.get(2) - v.get(3)));
 			case "accident_mix" -> Component.translatable(key, v.get(0), coins(v.get(1)));
@@ -1014,6 +1015,9 @@ public final class StaffService {
 		InventoryUtil.Match match = new InventoryUtil.Match(item, GoodsCatalog.patch(e.goods), false);
 		int unit = def == null ? 1 : Math.max(1, def.unit());
 		switch (action) {
+			case CHANGE -> {
+				return change(player, registry, market, menu, e, request, match, unit, now);
+			}
 			case CONFIGURE -> {
 				if (e.quit()) return new Outcome(TradeResult.NOT_AVAILABLE);
 				if (e.role == Employee.Role.CARRIER) {
@@ -1069,6 +1073,69 @@ public final class StaffService {
 				return new Outcome(TradeResult.INVALID_REQUEST);
 			}
 		}
+	}
+
+	/**
+	 * v0.48.3: another good (a carrier: also another destination, or おまかせ) for an employee, at its home market. A carrier
+	 * must be at home. The goods it holds come back to the player first; a clerk takes {@code request.quantity()} units of
+	 * the new good (0: none yet). No fee.
+	 *
+	 * @param match the employee's present good (to give it back)
+	 */
+	private static Outcome change(ServerPlayer player, MarketRegistry registry, Market market, MarketMenu menu, Employee e, StaffRequestC2S request,
+			InventoryUtil.Match match, int unit, long now) {
+		if (e.quit()) return new Outcome(TradeResult.NOT_AVAILABLE);
+		boolean carrier = e.role == Employee.Role.CARRIER;
+		if (carrier && e.phase != Employee.Phase.HOME) return new Outcome(TradeResult.STAFF_AWAY);
+		TradeExpansionConfig.Staff c = config();
+		Identifier goodsId = request.goods();
+		boolean auto = carrier && Employee.AUTO.equals(goodsId);
+		GoodsDefinition def = GoodsCatalog.get(goodsId);
+		if (!auto && (def == null || !regular(market, goodsId) || !Reputation.canSee(market, player.getUUID(), goodsId, now)
+				|| (carrier ? !def.buy() || !def.sell() : !def.sell()))) {
+			return new Outcome(TradeResult.NOT_AVAILABLE);
+		}
+		long destinationId = -1;
+		if (carrier) {
+			Market destination = registry.get(request.destination());
+			if (destination == null || destination.id() == market.id() || !linked(market, destination)
+					|| MarketRegistry.linkedDistance(market, destination) > c.carrierMaxDistance || !auto && !regular(destination, goodsId)) {
+				return new Outcome(TradeResult.NOT_AVAILABLE);
+			}
+			destinationId = destination.id();
+		}
+		InventoryUtil.Match newMatch = auto ? null : new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(def.item()), GoodsCatalog.patch(goodsId), false);
+		int newUnit = auto ? 1 : Math.max(1, def.unit());
+		int units = 0;
+		if (!carrier) {
+			units = Math.clamp(request.quantity(), 0, c.clerkCapacity);
+			int held = InventoryUtil.count(player, newMatch, menu.sellSlot());
+			if (goodsId.equals(e.goods)) held += e.stock * unit; // the old goods come back first
+			if (held < units * newUnit) return new Outcome(TradeResult.INSUFFICIENT_ITEMS);
+		}
+		long returned = e.stock > 0 ? giveCargo(player, e, match, unit) : 0; // what does not fit is dropped
+		e.goods = goodsId;
+		e.destination = destinationId;
+		if (carrier) {
+			e.quantity = Math.clamp(request.quantity(), 1, c.carrierCapacity);
+			e.buyLimit = Math.max(1, request.buyLimit());
+		}
+		e.sellLimit = Math.max(1, request.sellLimit());
+		if (units > 0) {
+			InventoryUtil.remove(player, newMatch, menu.sellSlot(), units * newUnit);
+			e.stock = units;
+		}
+		e.tripCost = 0;
+		e.tripRevenue = 0;
+		e.phaseStart = now;
+		e.nextTime = now;
+		e.status = Employee.Status.WORKING;
+		log(e, now, "changed", null, destinationId);
+		if (TradeExpansionConfig.get().log.trades) {
+			TradeExpansion.LOGGER.info("{} CHANGE {} #{} -> {}{}", player.getPlainTextName(), e.role.name().toLowerCase(java.util.Locale.ROOT), e.id, goodsId,
+					carrier ? " -> market#" + destinationId : " x" + units * newUnit);
+		}
+		return new Outcome(TradeResult.SUCCESS, returned, e.id);
 	}
 
 	/** Gives the employee's goods to the player (an automatic carrier's goods by kind) and empties them. @return items given */

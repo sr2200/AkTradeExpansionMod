@@ -879,8 +879,8 @@
   "screen.ak_trade_expansion.staff.withdraw_items": "引取",
   "screen.ak_trade_expansion.staff.withdraw_items.tooltip": "持っている品を全部受け取る",
   "screen.ak_trade_expansion.staff.deposit.tooltip": "所持金に入れる（Shiftで10倍）。仕入れと給金に使う",
-  "screen.ak_trade_expansion.staff.pause": "休ませる",
-  "screen.ak_trade_expansion.staff.resume": "働かせる",
+  "screen.ak_trade_expansion.staff.pause": "休止",
+  "screen.ak_trade_expansion.staff.resume": "再開",
   "screen.ak_trade_expansion.staff.pause.carrier.tooltip": "休ませると、今の往復を終えて戻った所で待つ（その間の給金はかからない）",
   "screen.ak_trade_expansion.staff.pause.clerk.tooltip": "休ませると売るのをやめる（その間の給金はかからない）",
   "screen.ak_trade_expansion.staff.dismiss": "解雇する",
@@ -1003,5 +1003,11 @@
   "screen.ak_trade_expansion.staff.hint.auto.trip": "今なら1往復 約%s個（%s種類）・見込み +%s（歩合と事故の分を引いた額）",
   "screen.ak_trade_expansion.staff.summary.auto": "運び屋（おまかせ）：「%s」で高く売れる品を、ここで何種類も仕入れて売る",
   "screen.ak_trade_expansion.staff.summary.auto.how": "1回に合わせて %s個まで。往復ごとに、行き先で仕入れ値より高く売れる品を利益の大きい順に選び、仕入れ値より高い時だけ売る（売れ残りがある間は買い足さない）",
-  "screen.ak_trade_expansion.staff.tooltip.route.auto": "行き先：%s（%sm）・1回 合わせて%s個まで・品はおまかせ（今の荷 %s種類）"
+  "screen.ak_trade_expansion.staff.tooltip.route.auto": "行き先：%s（%sm）・1回 合わせて%s個まで・品はおまかせ（今の荷 %s種類）",
+  "staff.ak_trade_expansion.log.changed": "「%2$s」へ%1$sを運ぶよう変えた",
+  "staff.ak_trade_expansion.log.changed.clerk": "扱う品を%sに変えた",
+  "screen.ak_trade_expansion.staff.change": "変更",
+  "screen.ak_trade_expansion.staff.change.tooltip": "扱う品と行き先を選び直す。今持っている荷（預かり）は手元に戻る。契約金はかからない",
+  "screen.ak_trade_expansion.staff.done.change": "変えました（手元に戻った品 %s個）",
+  "screen.ak_trade_expansion.staff.summary.change": "今持っている荷（預かり）×%s個は手元に戻ります。契約金はかかりません"
 }

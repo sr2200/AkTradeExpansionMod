@@ -76,6 +76,8 @@ final class StaffTab {
 	private Identifier goods;
 	private StaffS2C.Destination destination;
 	private int editing = -1;
+	/** v0.48.3: the employee whose good / destination is being chosen again, or -1 (a new hire). */
+	private int changing = -1;
 	/** Destinations of {@link #destinationGoods} from the server ({@code null} while asked for). */
 	private List<StaffS2C.Destination> destinations;
 	private Identifier destinationGoods;
@@ -99,6 +101,7 @@ final class StaffTab {
 	private Button depositItemsButton;
 	private Button withdrawItemsButton;
 	private Button pauseButton;
+	private Button changeButton;
 	private Button dismissButton;
 	private Button backButton;
 	private Button confirmButton;
@@ -128,7 +131,9 @@ final class StaffTab {
 				b -> send(StaffRequestC2S.Action.DEPOSIT_ITEMS, 0)).bounds(px, y + 110, 38, 14).build());
 		withdrawItemsButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.withdraw_items"),
 				b -> send(StaffRequestC2S.Action.WITHDRAW_ITEMS, 0)).bounds(px + 40, y + 110, 38, 14).build());
-		pauseButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0)).bounds(px, y + 125, PANEL_W, 14).build());
+		pauseButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0)).bounds(px, y + 125, 38, 14).build());
+		changeButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.change"), b -> startChange())
+				.bounds(px + 40, y + 125, 38, 14).build());
 		dismissButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.DISMISS, 0)).bounds(px, y + 140, PANEL_W, 14).build());
 		backButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.back"), b -> back())
 				.bounds(px, y + 137, PANEL_W, 14).build());
@@ -139,7 +144,7 @@ final class StaffTab {
 			spinners[row][1] = add.apply(Button.builder(Component.literal("+"), b -> spin(r, 1)).bounds(px + 64, y + 45 + row * 26, 14, 14).build());
 		}
 		listButtons.addAll(List.of(depositSmallButton, depositLargeButton, withdrawButton, configureButton, depositItemsButton, withdrawItemsButton,
-				pauseButton, dismissButton));
+				pauseButton, changeButton, dismissButton));
 	}
 
 	void updateButtons(boolean shown) {
@@ -171,6 +176,10 @@ final class StaffTab {
 			depositItemsButton.visible = home && !quit && !carrier;
 			withdrawItemsButton.visible = home && (!carrier || view.stock() > 0);
 			pauseButton.visible = !quit;
+			changeButton.visible = home && !quit;
+			changeButton.active = !pending && carrierHome;
+			changeButton.setTooltip(Tooltip.create(Component.translatable(carrierHome ? "screen.ak_trade_expansion.staff.change.tooltip"
+					: "trade.ak_trade_expansion.result.staff_away")));
 			dismissButton.visible = home;
 			withdrawButton.active = !pending && view.purse() > 0;
 			withdrawItemsButton.active = !pending && view.stock() > 0 && carrierHome;
@@ -205,10 +214,11 @@ final class StaffTab {
 			spinners[row][1].visible = visible;
 		}
 		if (setup && data != null) {
-			confirmButton.setMessage(editing >= 0 ? Component.translatable("screen.ak_trade_expansion.staff.apply")
+			confirmButton.setMessage(editing >= 0 || changing >= 0 ? Component.translatable("screen.ak_trade_expansion.staff.apply")
 					: Component.translatable("screen.ak_trade_expansion.staff.confirm",
 					CoinItem.formatCopper(hiringCarrier ? data.info().carrierFee() : data.info().clerkFee())));
-			confirmButton.active = !pending && (hiringCarrier || editing >= 0 || quantity <= heldUnits(goods) && quantity > 0);
+			confirmButton.active = !pending && (hiringCarrier || editing >= 0
+					|| (changing >= 0 ? quantity <= availableUnits(goods) : quantity <= heldUnits(goods) && quantity > 0));
 		}
 	}
 
@@ -231,6 +241,7 @@ final class StaffTab {
 		mode = Mode.LIST;
 		selected = -1;
 		editing = -1;
+		changing = -1;
 		refresh = 0;
 		requestList();
 	}
@@ -272,11 +283,14 @@ final class StaffTab {
 					case WITHDRAW_ITEMS -> Component.translatable("screen.ak_trade_expansion.staff.done.withdraw_items", newData.amount());
 					case DISMISS -> Component.translatable("screen.ak_trade_expansion.staff.done.dismiss", amount);
 					case CONFIGURE -> Component.translatable("screen.ak_trade_expansion.staff.done.configure");
+					case CHANGE -> Component.translatable("screen.ak_trade_expansion.staff.done.change", newData.amount());
 					default -> Component.translatable("screen.ak_trade_expansion.staff.done.other");
 				}, true);
-				if (action == StaffRequestC2S.Action.HIRE_CARRIER || action == StaffRequestC2S.Action.HIRE_CLERK || action == StaffRequestC2S.Action.CONFIGURE) {
+				if (action == StaffRequestC2S.Action.HIRE_CARRIER || action == StaffRequestC2S.Action.HIRE_CLERK || action == StaffRequestC2S.Action.CONFIGURE
+						|| action == StaffRequestC2S.Action.CHANGE) {
 					mode = Mode.LIST;
 					editing = -1;
+					changing = -1;
 					selected = newData.subject();
 				}
 				if (action == StaffRequestC2S.Action.DISMISS) selected = -1;
@@ -304,6 +318,7 @@ final class StaffTab {
 	private void startHire(boolean carrier) {
 		hiringCarrier = carrier;
 		editing = -1;
+		changing = -1;
 		goods = null;
 		destination = null;
 		mode = Mode.PICK_GOODS;
@@ -360,6 +375,35 @@ final class StaffTab {
 		return null;
 	}
 
+	/** v0.48.3: chooses the selected employee's good (and destination) again, like hiring. */
+	private void startChange() {
+		StaffS2C.View view = selectedView();
+		if (view == null) return;
+		changing = view.id();
+		editing = -1;
+		hiringCarrier = view.role() == CARRIER;
+		goods = null;
+		destination = null;
+		mode = Mode.PICK_GOODS;
+		requestHints();
+		screen.resetScroll();
+		screen.refreshButtons();
+	}
+
+	private StaffS2C.View changedView() {
+		if (changing < 0 || data == null) return null;
+		for (StaffS2C.View v : data.staff()) if (v.id() == changing) return v;
+		return null;
+	}
+
+	/** Units of the new good a clerk could be given: what the player carries, plus its present goods when they are the same. */
+	private int availableUnits(Identifier goodsId) {
+		int held = heldUnits(goodsId);
+		StaffS2C.View old = changedView();
+		if (old != null && goodsId != null && goodsId.equals(old.goods())) held += old.stock();
+		return held;
+	}
+
 	private void startEdit() {
 		StaffS2C.View view = selectedView();
 		if (view == null) return;
@@ -383,7 +427,10 @@ final class StaffTab {
 			case PICK_DESTINATION -> Mode.PICK_GOODS;
 			default -> Mode.LIST;
 		};
-		if (mode == Mode.LIST) editing = -1;
+		if (mode == Mode.LIST) {
+			editing = -1;
+			changing = -1;
+		}
 		screen.resetScroll();
 		screen.refreshButtons();
 	}
@@ -391,7 +438,11 @@ final class StaffTab {
 	private void confirm() {
 		if (pending || data == null) return;
 		StaffRequestC2S request;
-		if (editing >= 0) {
+		if (changing >= 0) {
+			if (goods == null || hiringCarrier && destination == null) return;
+			request = new StaffRequestC2S(screen.marketId(), StaffRequestC2S.Action.CHANGE, changing, goods, hiringCarrier ? destination.id() : -1, quantity,
+					buyLimit, sellLimit, 0, screen.payingByCard());
+		} else if (editing >= 0) {
 			StaffS2C.View view = data.staff().stream().filter(v -> v.id() == editing).findFirst().orElse(null);
 			if (view == null) return;
 			request = new StaffRequestC2S(screen.marketId(), StaffRequestC2S.Action.CONFIGURE, editing, view.goods(), view.destination(), quantity,
@@ -430,9 +481,11 @@ final class StaffTab {
 		boolean large = shift();
 		switch (row) {
 			case 0 -> {
-				int max = hiringCarrier ? data.info().carrierCapacity() : Math.min(data.info().clerkCapacity(), Math.max(1, heldUnits(goods)));
+				int min = !hiringCarrier && changing >= 0 ? 0 : 1;
+				int held = changing >= 0 ? availableUnits(goods) : heldUnits(goods);
+				int max = hiringCarrier ? data.info().carrierCapacity() : Math.min(data.info().clerkCapacity(), Math.max(min, held));
 				int step = large ? 10 : 1;
-				quantity = Math.clamp(quantity + direction * step, 1, Math.max(1, max));
+				quantity = Math.clamp(quantity + direction * step, min, Math.max(min, max));
 			}
 			case 1 -> buyLimit = Math.max(1, buyLimit + direction * StaffMath.priceStep(buyLimit, large));
 			default -> sellLimit = Math.max(1, sellLimit + direction * StaffMath.priceStep(sellLimit, large));
@@ -486,7 +539,8 @@ final class StaffTab {
 					mode = Mode.PICK_DESTINATION;
 					requestDestinations(goods);
 				} else {
-					quantity = Math.max(1, Math.min(data.info().clerkCapacity(), heldUnits(goods)));
+					int available = changing >= 0 ? availableUnits(goods) : heldUnits(goods);
+					quantity = Math.max(changing >= 0 ? 0 : 1, Math.min(data.info().clerkCapacity(), available));
 					// v0.48.1: the recommended lowest price (85% of the sell price now)
 					StaffS2C.ClerkHint hint = clerkHint(goods);
 					sellLimit = hint != null ? hint.limit() : Math.max(1, (long) Math.floor(sellPriceHere(view) * 0.85));
@@ -975,7 +1029,11 @@ final class StaffTab {
 			}
 			if (editing < 0) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk.held", heldUnits(goods) * unit(view)));
 		}
-		if (editing < 0) {
+		StaffS2C.View old = changedView();
+		if (old != null && old.stock() > 0) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.change", old.stock() * (old.auto() ? 1 : old.unit())).withColor(COLOR_GOLD));
+		}
+		if (editing < 0 && changing < 0) {
 			lines.add(hiringCarrier
 					? Component.translatable("screen.ak_trade_expansion.staff.summary.cost.carrier", CoinItem.formatCopper(info.carrierFee()), percent(info.commission()))
 					: Component.translatable("screen.ak_trade_expansion.staff.summary.cost", CoinItem.formatCopper(info.clerkFee()), CoinItem.formatCopper(info.clerkWage())));
