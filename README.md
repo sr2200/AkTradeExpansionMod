@@ -16,7 +16,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 動作環境 | シングルプレイ・マルチプレイ（専用サーバー）の両方 |
 | 配布 | [Crafters Colony（マイクラコミュニティ）の投稿ページ](https://minecraft-mcworld.com/272453/)（0.1.0 から公開） |
 | 状態 | 開発中（段階0〜14 実装済み。下の「実装状況」を参照） |
-| バージョン | 0.1.10（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
+| バージョン | 0.1.11（`Source/TradeExpansion/gradle.properties` の `version`。`build.bat` でビルドするたびに末尾を上げ（0.0.1 → 0.0.2）、`release.bat` で配布用に作る時は真ん中を上げて末尾を0に戻す（0.0.12 → 0.1.0）） |
 
 ソースコード（Gradle プロジェクト）は [Source/TradeExpansion](Source/TradeExpansion) にあります。仕様の詳細は設計書を参照してください。
 
@@ -127,6 +127,25 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | **輸送依頼** | 市場が「この品をほかの市場へ運んでほしい」と依頼を出す（1市場に1件、届け先は 300〜2000 ブロック先）。「荷箱を受け取る」で保証金（品の値段）を払って荷箱をもらい、届け先の市場の依頼タブで「荷箱を届ける」を押すと、報酬と保証金を受け取れます。遠いほど報酬が多く（1000 ブロックで品の値段と同じくらい、最大2倍）、依頼元と届け先の両方で評判が上がります。期限を過ぎると届けられず、保証金は戻りません |
 
 - 市場ではゲーム内3日ごとに最大2種類の商品が「品不足」になり、基準価格が1.5〜2.0倍になります（一覧や掲示板でオレンジ色）。
+
+### 商会の動き
+
+目に見えない **商会**（NPC の商人の集まり）が、何日かおきに近くの市場で品を **買い集め**（値上がり）たり **売りさばい**（値下がり）たりします。ソロプレイでも、自分が何もしなくても地域の相場が動きます。
+
+- 1日に1回、半々の確率で新しい動きが始まります（同時に最大3件）。1件は2〜4日続き、最終日には中心の市場の値段が 15〜35% ずれます。
+- 中心の市場から 128 ブロック以内は同じだけ、遠いほど少なく、640 ブロックより遠い市場には効きません。期間が終わると、ふだんどおり時間で元に戻ります。在庫は減りません（売り切れにはなりません）。
+- **掲示板** の市場一覧の上に **ニュース** として出ます（例：「【鉄槌商会】鉄インゴットを買い集め中　北東 340m　あと2日」）。行をクリックすると、その市場の商品を開きます。
+- 購入・売却の一覧で、動いている商品の行にマウスを乗せると「鉄槌商会が買い集め中：値上がりしています（あと2日）」と出ます。
+- 遊び方の例：買い集めている地域へ品を運んで高く売る、売りさばいている地域で安く仕入れて、ほかの村で売る。
+
+| 商会 | 扱う品 |
+|---|---|
+| 鉄槌商会 | 鉱物・建材・武器・防具・道具 |
+| 豊穣商会 | 食料・植物と特産・花 |
+| 大樹商会 | 木材・モブの素材・日用品 |
+| 黄昏商会 | ネザーの品・エンドの品 |
+
+- 数値は設定の「掲示板・依頼・需要」タブ（`rivals.*`）で変えられます。`rivals.enabled` を OFF にすると商会は動きません。
 
 ### 評判
 
@@ -376,6 +395,9 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | `/aktradeex where show` / `hide` | 範囲を30秒間パーティクルで表示する／表示を止める。OP 権限不要 |
 | `/aktradeex give <金額>` | 自分にコインを渡す（テスト用） |
 | `/aktradeex pay <金額>` | 自分の所持金から支払う（支払い処理のテスト用） |
+| `/aktradeex rivals` | 進んでいる商会の動きの一覧（商会・商品・中心の市場・強さ・期間） |
+| `/aktradeex rivals start` | 最寄りの市場を中心に、商会の動きを今すぐ1件始める（テスト用） |
+| `/aktradeex rivals clear` | 商会の動きを全部消す（ずれた値段は時間で戻る） |
 | `/aktradeex market info` | 最寄りの市場の情報（プロファイル・レベル・ベッドと村人の数・今測った場合のレベル・全商品の価格と在庫） |
 | `/aktradeex market advance <日数>` | 最寄りの市場の相場を、指定した日数分だけ回復させる（テスト用） |
 | `/aktradeex market reset [ID]` | 市場の相場と在庫を初期値に戻す（商品構成・レベルはそのまま。ID 省略で最寄り） |
@@ -628,6 +650,13 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `demand.durationDays` | `3.0` | 0.5〜30 | 品不足の商品を選び直す間隔（ゲーム内日） | `"durationDays": 7.0` |
 | `demand.minMultiplier` | `1.5` | 1〜5 | 品不足の商品の基準価格に掛ける倍率の下限 | `"minMultiplier": 1.2` |
 | `demand.maxMultiplier` | `2.0` | minMultiplier〜5 | 品不足の商品の基準価格に掛ける倍率の上限 | `"maxMultiplier": 1.5` |
+| `rivals.enabled` | `true` | true / false | 商会の動きを使う。OFF にすると新しく始まらず、進んでいる動きも効かない | `"enabled": false` |
+| `rivals.chancePerDay` | `0.5` | 0〜1 | ゲーム内1日ごとに新しい動きが始まる確率 | `"chancePerDay": 0.8` |
+| `rivals.maxActive` | `3` | 0〜20 | 同時に進む動きの最大数（ワールド全体） | `"maxActive": 5` |
+| `rivals.minDays` / `rivals.maxDays` | `2` / `4` | 1〜30 | 1件の動きが続く日数の範囲 | `"maxDays": 7` |
+| `rivals.minImpact` / `rivals.maxImpact` | `0.15` / `0.35` | 0〜2 | 最終日に中心の市場の値段がずれる大きさ（0.25 なら 1.25 倍、または 1.25 分の1） | `"maxImpact": 0.5` |
+| `rivals.nearRadius` | `128` | 0〜100000 | 中心の市場からこの距離（ブロック）までは、中心と同じだけ効く | `"nearRadius": 256` |
+| `rivals.farRadius` | `640` | nearRadius〜100000 | 中心の市場からこの距離（ブロック）より遠い市場には効かない | `"farRadius": 1000` |
 
 #### 村人（villager）
 
@@ -670,6 +699,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | 商品定義 | `data/<namespace>/ak_trade_expansion/goods/<名前>.json` |
 | 市場プロファイル | `data/<namespace>/ak_trade_expansion/market_profile/<名前>.json` |
 | 村の建物 | `data/<namespace>/ak_trade_expansion/facility/<名前>.json`（建物の形は `data/<namespace>/structure/facility/<見た目>/<structure>.nbt`） |
+| 商品グループ | `data/<namespace>/ak_trade_expansion/goods_group/<名前>.json`（`{"goods": [商品ID, …]}`。表示名は言語ファイルの `goods_group.<namespace>.<名前>`） |
+| 商会 | `data/<namespace>/ak_trade_expansion/rival_guild/<名前>.json`（`{"groups": [商品グループID, …], "weight": 1}`。表示名は `rival_guild.<namespace>.<名前>`） |
 
 商品定義の例：
 
@@ -689,6 +720,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 主な項目：`base_price`（基準価格）、`elasticity`（大きいほど値崩れしにくい）、`target_stock`（目標在庫）、`max_stock`（在庫上限。これ以上は買い取らない）、`unit`（取引単位）、`auto_add`（条件に合う市場に自動で追加）、`link`（近くの市場への相場の伝わりやすさ、既定 1.0）、`consume_per_day`（在庫が目標より多い時に1日に減る数）、`half_life_days`（相場の半減期）、`components`（エンチャントなど付加情報付きの品。例：`{"minecraft:enchantments": {"minecraft:sharpness": 1}}`）。
 
 村の建物の定義では、種類（`kind`：`quest_hall`／`warehouse`／`inn`／`bank`。種類ごとに1つ）、並び順（`order`）、タブのアイコン（`icon`）、必要な発展度（`cost`）、建物の形の名前（`structure`）、ほしい資材（`wanted`：`item` か `tag`、`count`、商品でない品の値段 `value`）を指定します。建物の形は北向き（`z = 0` の面が正面、扉は幅の真ん中）で、中に「施設の看板」を1つ置きます。見た目は村の種類（`plains` など）ごとのフォルダから選び、無ければ `plains` を使います。
+
+商品グループは、商会が扱う品の分類です（同梱は食料・植物と特産・木材・建材・鉱物・モブの素材・日用品・武器防具道具・ネザー・エンド・花の11種）。1つの商品がいくつかのグループに入ってもかまいません。商会は扱うグループの中から動かす商品を選びます（`weight` は選ばれやすさ、0 で使わない）。
 
 市場プロファイルでは、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。同梱データ（商品95種（花20種を含む）＋エメラルド貨、プロファイル12種）は `Source/TradeExpansion/src/main/resources/data/ak_trade_expansion/ak_trade_expansion/` にあります。
 
@@ -732,6 +765,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `src/main/java/.../bank/`・`currency/` | 銀行口座・財布・支払い |
 | `src/main/java/.../config/` | 設定ファイルの読み書き・同期 |
 | `src/main/java/.../quest/`・`board/` | 依頼・品不足・掲示板 |
+| `src/main/java/.../rival/` | 商会の動き（キャンペーンの抽選と、市場への効かせ方） |
 | `src/main/java/.../worldgen/`・`mixin/` | 村への屋台の建物の追加・財布の自動収納 |
 | `src/main/java/.../entity/` | 商人NPC |
 | `src/main/java/.../command/` | 管理コマンド（`/aktradeex`） |
@@ -759,6 +793,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | 12 | 財布・銀行・クレジットカード | ✅（ゲーム内の確認は進行中） |
 | 13 | 掲示板・依頼・品不足 | ✅（ゲーム内の確認は進行中） |
 | 14 | 村人交易のコイン化（14a 村人・14b 行商人と特殊な取引・14c 抜け道対策） | ✅（ゲーム内の確認は進行中） |
+| 拡張 | 評判・村の発展・輸送依頼・まとめて売る・地図への登録・商会の動き（v0.46）など（設計書 J-2・M〜O章） | ✅（ゲーム内の確認は進行中） |
 
 ---
 

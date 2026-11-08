@@ -1,0 +1,8 @@
+{
+  "groups": [
+    "ak_trade_expansion:food",
+    "ak_trade_expansion:plants",
+    "ak_trade_expansion:flowers"
+  ],
+  "weight": 1
+}

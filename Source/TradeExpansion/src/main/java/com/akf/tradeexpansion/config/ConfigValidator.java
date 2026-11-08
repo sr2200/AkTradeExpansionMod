@@ -103,6 +103,26 @@ public final class ConfigValidator {
 		dm.minMultiplier = clamp("demand.minMultiplier", dm.minMultiplier, 1, 5);
 		dm.maxMultiplier = clamp("demand.maxMultiplier", dm.maxMultiplier, dm.minMultiplier, 5);
 
+		TradeExpansionConfig.Rivals rv = c.rivals;
+		rv.chancePerDay = clamp("rivals.chancePerDay", rv.chancePerDay, 0, 1);
+		rv.maxActive = clamp("rivals.maxActive", rv.maxActive, 0, 20);
+		rv.minDays = clamp("rivals.minDays", rv.minDays, 1, 30);
+		rv.maxDays = clamp("rivals.maxDays", rv.maxDays, rv.minDays, 30);
+		rv.minImpact = clamp("rivals.minImpact", rv.minImpact, 0, 2);
+		rv.maxImpact = clamp("rivals.maxImpact", rv.maxImpact, rv.minImpact, 2);
+		rv.nearRadius = clamp("rivals.nearRadius", rv.nearRadius, 0, 100_000);
+		rv.farRadius = clamp("rivals.farRadius", rv.farRadius, rv.nearRadius, 100_000);
+
+		TradeExpansionConfig.Trend tr = c.trend;
+		tr.durationDays = clamp("trend.durationDays", tr.durationDays, 0.5, 60);
+		tr.popularCount = clamp("trend.popularCount", tr.popularCount, 0, 5);
+		tr.unpopularCount = clamp("trend.unpopularCount", tr.unpopularCount, 0, 5);
+		tr.popularMin = clamp("trend.popularMin", tr.popularMin, 1, 5);
+		tr.popularMax = clamp("trend.popularMax", tr.popularMax, tr.popularMin, 5);
+		tr.unpopularMin = clamp("trend.unpopularMin", tr.unpopularMin, 0.1, 1);
+		tr.unpopularMax = clamp("trend.unpopularMax", tr.unpopularMax, tr.unpopularMin, 1);
+		tr.minGoods = clamp("trend.minGoods", tr.minGoods, 1, 20);
+
 		c.market.newMarketMinBeds = clamp("market.newMarketMinBeds", c.market.newMarketMinBeds, 0, 1000);
 		c.market.newMarketMinVillagers = clamp("market.newMarketMinVillagers", c.market.newMarketMinVillagers, 0, 1000);
 		c.market.newMarketEnoughBeds = clamp("market.newMarketEnoughBeds", c.market.newMarketEnoughBeds, 0, 1000);

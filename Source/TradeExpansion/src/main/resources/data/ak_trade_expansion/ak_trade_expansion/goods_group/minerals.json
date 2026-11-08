@@ -1,0 +1,12 @@
+{
+  "goods": [
+    "ak_trade_expansion:coal",
+    "ak_trade_expansion:copper_ingot",
+    "ak_trade_expansion:iron_ingot",
+    "ak_trade_expansion:gold_ingot",
+    "ak_trade_expansion:lapis_lazuli",
+    "ak_trade_expansion:redstone",
+    "ak_trade_expansion:diamond",
+    "ak_trade_expansion:obsidian"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "groups": [
+    "ak_trade_expansion:wood",
+    "ak_trade_expansion:mob_drops",
+    "ak_trade_expansion:daily_goods"
+  ],
+  "weight": 1
+}

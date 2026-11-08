@@ -26,6 +26,8 @@ import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.market.Market;
 import net.minecraft.core.BlockPos;
 import com.akf.tradeexpansion.quest.Request;
+import com.akf.tradeexpansion.rival.Campaign;
+import com.akf.tradeexpansion.rival.RivalService;
 import com.akf.tradeexpansion.trade.InventoryUtil;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -52,7 +54,8 @@ import java.util.List;
  * @param development  N (v0.36): development points and facilities of the market
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
-		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation, DevelopmentView development) implements CustomPacketPayload {
+		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation, DevelopmentView development,
+		List<TrendView> trends) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -65,9 +68,13 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param patch         components a stack must have (D-2), empty for plain goods
 	 * @param acceptDamaged damaged items are bought at reduced prices (A-4)
 	 * @param history       X of the last days, oldest first, for the price graph (A-4)
+	 * @param shortageMultiplier K: multiplier of B while short (1 = not short)
+	 * @param trends        P (v0.46): the market's trends that apply to this good
+	 * @param rival         O-5 (v0.46): the rival campaign felt most on this good here
 	 */
 	public record GoodView(Identifier goods, Identifier item, int unit, GoodParams params, double pressure, double stock, boolean buy, boolean sell,
-			boolean shortage, boolean special, DataComponentPatch patch, boolean acceptDamaged, List<Double> history) {
+			boolean shortage, boolean special, DataComponentPatch patch, boolean acceptDamaged, List<Double> history,
+			double shortageMultiplier, List<TrendView> trends, Optional<RivalView> rival) {
 		/** Which stacks count as this good (client-side counting and preview). */
 		public InventoryUtil.Match match() {
 			return new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(item), patch, acceptDamaged);
@@ -104,6 +111,9 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			DataComponentPatch.STREAM_CODEC.encode(buf, patch);
 			buf.writeBoolean(acceptDamaged);
 			ByteBufCodecs.DOUBLE.apply(ByteBufCodecs.list()).encode(buf, history);
+			buf.writeDouble(shortageMultiplier);
+			TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
+			ByteBufCodecs.optional(RivalView.CODEC).encode(buf, rival);
 		}
 
 		private static GoodView read(RegistryFriendlyByteBuf buf) {
@@ -121,7 +131,54 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			DataComponentPatch patch = DataComponentPatch.STREAM_CODEC.decode(buf);
 			boolean acceptDamaged = buf.readBoolean();
 			List<Double> history = ByteBufCodecs.DOUBLE.apply(ByteBufCodecs.list()).decode(buf);
-			return new GoodView(goods, item, unit, params, pressure, stock, buy, sell, shortage, special, patch, acceptDamaged, history);
+			double shortageMultiplier = buf.readDouble();
+			List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
+			Optional<RivalView> rival = ByteBufCodecs.optional(RivalView.CODEC).decode(buf);
+			return new GoodView(goods, item, unit, params, pressure, stock, buy, sell, shortage, special, patch, acceptDamaged, history,
+					shortageMultiplier, trends, rival);
+		}
+	}
+
+	/**
+	 * O-5: a rival campaign as shown on a goods row.
+	 *
+	 * @param buying   the guild buys up (prices rise); otherwise it sells off
+	 * @param daysLeft days after today (0 = ends today)
+	 */
+	public record RivalView(Identifier guild, boolean buying, int daysLeft) {
+		public static final StreamCodec<RegistryFriendlyByteBuf, RivalView> CODEC = StreamCodec.composite(
+				Identifier.STREAM_CODEC, RivalView::guild,
+				ByteBufCodecs.BOOL, RivalView::buying,
+				ByteBufCodecs.VAR_INT, RivalView::daysLeft,
+				RivalView::new);
+	}
+
+	/** P: one goods group in or out of fashion at a market. */
+	public record TrendView(Identifier group, double multiplier) {
+		public static final StreamCodec<RegistryFriendlyByteBuf, TrendView> CODEC = StreamCodec.composite(
+				Identifier.STREAM_CODEC, TrendView::group,
+				ByteBufCodecs.DOUBLE, TrendView::multiplier,
+				TrendView::new);
+
+		/** In fashion first, then out of fashion, each by multiplier. */
+		public static List<TrendView> of(Market market) {
+			List<TrendView> list = new ArrayList<>();
+			market.trends().forEach((group, m) -> list.add(new TrendView(group, m)));
+			list.sort(java.util.Comparator.comparingDouble(TrendView::multiplier).reversed());
+			return list;
+		}
+
+		/** The trends that apply to one good of the market (none for specials and auto_add goods, see Market#trendMultiplier). */
+		public static List<TrendView> of(Market market, Identifier goodsId) {
+			if (market.trends().isEmpty() || market.isSpecial(goodsId)) return List.of();
+			GoodsDefinition def = GoodsCatalog.get(goodsId);
+			if (def == null || def.autoAdd().isPresent()) return List.of();
+			List<TrendView> list = new ArrayList<>();
+			for (Identifier group : com.akf.tradeexpansion.data.GoodsGroups.groupsOf(goodsId)) {
+				Double m = market.trends().get(group);
+				if (m != null) list.add(new TrendView(group, m));
+			}
+			return list;
 		}
 	}
 
@@ -288,18 +345,21 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	/** Builds the snapshot {@code player} sees; the caller must have refreshed the market to {@code gameTime}. */
 	public static MarketSnapshotS2C of(Market market, ServerPlayer player, long gameTime) {
 		UUID uuid = player.getUUID();
+		MarketRegistry registry = MarketRegistry.get(player.level().getServer());
 		List<GoodView> views = new ArrayList<>();
 		market.goods().forEach((goodsId, state) -> {
 			if (!Reputation.canSee(market, uuid, goodsId, gameTime)) return; // M: bonus specials
 			GoodParams params = Reputation.params(market, uuid, goodsId, gameTime);
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
 			if (params == null || def == null) return;
+			Campaign campaign = RivalService.strongest(registry, market, goodsId, gameTime);
+			Optional<RivalView> rival = campaign == null ? Optional.empty()
+					: Optional.of(new RivalView(campaign.guild(), campaign.buying(), campaign.daysLeft(RivalService.day(gameTime))));
 			views.add(new GoodView(goodsId, def.item(), def.unit(), params, state.pressure(), state.stock(), def.buy(), def.sell(),
 					market.shortages().containsKey(goodsId), market.isSpecial(goodsId), GoodsCatalog.patch(goodsId), def.acceptsDamaged() && def.unit() == 1,
-					List.copyOf(state.history())));
+					List.copyOf(state.history()), market.shortages().getOrDefault(goodsId, 1.0), TrendView.of(market, goodsId), rival));
 		});
 		List<RequestView> requests = new ArrayList<>();
-		MarketRegistry registry = MarketRegistry.get(player.level().getServer());
 		for (Request r : market.requests()) {
 			GoodsDefinition def = GoodsCatalog.get(r.goods());
 			if (def == null) continue;
@@ -312,7 +372,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				ReputationMath.nextThreshold(level, rc.levelThresholdArray()), Reputation.priceBonus(level), Reputation.rewardBonus(level),
 				rc.hardQuestLevel, rc.specialBonusLevel);
 		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
-				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime));
+				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime), TrendView.of(market));
 	}
 
 	/** N: points, contributors (top 5 and the player) of a market that develops. */
@@ -365,6 +425,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		}
 		ReputationView.CODEC.encode(buf, reputation);
 		DevelopmentView.CODEC.encode(buf, development);
+		TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -381,7 +442,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		for (int i = 0; i < tierCount; i++) tiers.add(new BulkDiscount.Tier(buf.readVarInt(), buf.readDouble()));
 		ReputationView reputation = ReputationView.CODEC.decode(buf);
 		DevelopmentView development = DevelopmentView.CODEC.decode(buf);
-		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development);
+		List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
+		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development, trends);
 	}
 
 	@Override

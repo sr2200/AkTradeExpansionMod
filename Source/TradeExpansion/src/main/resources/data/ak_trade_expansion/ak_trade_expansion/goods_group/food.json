@@ -1,0 +1,16 @@
+{
+  "goods": [
+    "ak_trade_expansion:wheat",
+    "ak_trade_expansion:bread",
+    "ak_trade_expansion:carrot",
+    "ak_trade_expansion:potato",
+    "ak_trade_expansion:apple",
+    "ak_trade_expansion:beef",
+    "ak_trade_expansion:porkchop",
+    "ak_trade_expansion:chicken",
+    "ak_trade_expansion:cod",
+    "ak_trade_expansion:salmon",
+    "ak_trade_expansion:golden_carrot",
+    "ak_trade_expansion:golden_apple"
+  ]
+}

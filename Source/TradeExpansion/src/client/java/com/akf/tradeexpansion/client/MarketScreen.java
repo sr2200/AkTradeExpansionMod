@@ -533,7 +533,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			case BUY, SELL -> visibleGoods().size();
 			case QUEST -> snapshot == null ? 0 : snapshot.requests().size();
 			// A market's goods list has a header line, so one row fewer fits: count it as one more row.
-			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() + 1 : board.markets().size();
+			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() + 1 : board.news().size() + board.markets().size();
 			default -> 0;
 		};
 	}
@@ -928,9 +928,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 					if (snapshot != null && index < snapshot.requests().size()) selectedRequest = snapshot.requests().get(index).request().id();
 				}
 				case BOARD -> {
-					if (board != null && boardMarket < 0 && index < board.markets().size()) {
-						boardMarket = board.markets().get(index).id();
-						scroll = 0;
+					if (board != null && boardMarket < 0) {
+						// O-5: news rows come first; a news row opens its center market when it is listed.
+						long id = -1;
+						if (index < board.news().size()) id = board.news().get(index).marketId();
+						else if (index - board.news().size() < board.markets().size()) id = board.markets().get(index - board.news().size()).id();
+						long chosen = id;
+						if (id >= 0 && board.markets().stream().anyMatch(e -> e.id() == chosen)) {
+							boardMarket = id;
+							scroll = 0;
+						}
 					}
 				}
 				default -> {
@@ -1162,12 +1169,47 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 		if (hovered && mouseX < rx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		else if (hovered && !available) g.setTooltipForNextFrame(font, unavailableReason(view, buy), Optional.empty(), mouseX, mouseY);
-		else if (hovered && (view.special() || TradeExpansionConfig.get().client.showDebugTooltip)) {
-			List<Component> lines = new ArrayList<>();
-			if (view.special()) lines.add(Component.translatable("screen.ak_trade_expansion.special.tooltip"));
-			if (TradeExpansionConfig.get().client.showDebugTooltip) lines.addAll(debugLines(view));
-			g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+		else if (hovered) {
+			List<Component> lines = rowTooltip(view);
+			if (!lines.isEmpty()) g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 		}
+	}
+
+	/** Tooltip of a goods row: special (D-5), shortage (K), trends (P), rival guild (O-5), debug values (A-4). */
+	private List<Component> rowTooltip(GoodView view) {
+		List<Component> lines = new ArrayList<>();
+		if (view.special()) lines.add(Component.translatable("screen.ak_trade_expansion.special.tooltip"));
+		if (view.shortage()) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.shortage.tooltip", multiplier(view.shortageMultiplier())).withColor(COLOR_ORANGE));
+		}
+		for (MarketSnapshotS2C.TrendView t : view.trends()) lines.add(trendLine(t, true));
+		view.rival().ifPresent(r -> lines.add(rivalLine(r.guild(), r.buying(), r.daysLeft())));
+		if (TradeExpansionConfig.get().client.showDebugTooltip) lines.addAll(debugLines(view));
+		return lines;
+	}
+
+	/** "×1.22" */
+	private static String multiplier(double m) {
+		return String.format(Locale.ROOT, "×%.2f", m);
+	}
+
+	/** P: "食料が人気（基準価格 ×1.22）" (thisMarket: "この村では今…"). */
+	private static Component trendLine(MarketSnapshotS2C.TrendView t, boolean thisMarket) {
+		boolean popular = t.multiplier() >= 1;
+		String key = "screen.ak_trade_expansion.trend." + (popular ? "popular" : "unpopular") + (thisMarket ? ".here" : "");
+		return Component.translatable(key, com.akf.tradeexpansion.data.GoodsGroups.name(t.group()), multiplier(t.multiplier()))
+				.withColor(popular ? COLOR_RED : COLOR_GREEN);
+	}
+
+	/** O-5: "鉄槌商会が買い集め中：値上がりしています（あと2日）". */
+	private static Component rivalLine(Identifier guild, boolean buying, int daysLeft) {
+		return Component.translatable(buying ? "screen.ak_trade_expansion.rival.buying" : "screen.ak_trade_expansion.rival.selling",
+				com.akf.tradeexpansion.data.RivalGuilds.name(guild), daysLeftText(daysLeft)).withColor(buying ? COLOR_RED : COLOR_GREEN);
+	}
+
+	private static Component daysLeftText(int daysLeft) {
+		return daysLeft <= 0 ? Component.translatable("screen.ak_trade_expansion.rival.today")
+				: Component.translatable("screen.ak_trade_expansion.rival.days_left", daysLeft);
 	}
 
 	/**
@@ -1609,18 +1651,30 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		BoardS2C.Entry entry = boardEntry();
 		if (entry == null) {
-			if (board.markets().isEmpty()) {
+			if (board.markets().isEmpty() && board.news().isEmpty()) {
 				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.none", TradeExpansionConfig.get().board.radius),
 						bx + 4, by + 4, listW - 8, COLOR_WHITE, false);
 				return;
 			}
 			BoardS2C.Entry hovered = null;
-			for (int row = 0; row < rows && scroll + row < board.markets().size(); row++) {
-				BoardS2C.Entry e = board.markets().get(scroll + row);
+			int newsCount = board.news().size();
+			for (int row = 0; row < rows && scroll + row < newsCount + board.markets().size(); row++) {
 				int rowY = by + row * ROW_H;
-				if (mouseX >= bx && mouseX < bx + listW && mouseY >= rowY && mouseY < rowY + ROW_H) {
+				boolean over = mouseX >= bx && mouseX < bx + listW && mouseY >= rowY && mouseY < rowY + ROW_H;
+				if (scroll + row < newsCount) {
+					extractNews(g, board.news().get(scroll + row), bx, rowY, over, mouseX, mouseY);
+					continue;
+				}
+				BoardS2C.Entry e = board.markets().get(scroll + row - newsCount);
+				if (over) {
 					hovered = e;
 					g.fill(bx, rowY, bx + listW, rowY + ROW_H, 0xFF9B9B9B);
+					if (!e.trends().isEmpty() && mouseX < bx + listW - SCROLLBAR_W) {
+						List<Component> lines = new ArrayList<>();
+						lines.add(e.title());
+						for (MarketSnapshotS2C.TrendView t : e.trends()) lines.add(trendLine(t, false));
+						g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+					}
 				}
 				int y = rowY + 5;
 				String where = Component.translatable("screen.ak_trade_expansion.board.where", direction(e.dx(), e.dz()),
@@ -1684,6 +1738,35 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 	}
 
+	private static final int COLOR_NEWS_BG = 0xFF4A4A5A;
+
+	/** O-5: one news row of the board (a rival campaign). */
+	private void extractNews(GuiGraphicsExtractor g, BoardS2C.News n, int bx, int rowY, boolean over, int mouseX, int mouseY) {
+		g.fill(bx, rowY, bx + listW, rowY + ROW_H, over ? 0xFF6A6A7A : COLOR_NEWS_BG);
+		ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(n.item()));
+		g.item(stack, bx + 2, rowY + 1);
+		int y = rowY + 5;
+		String where = n.dx() == 0 && n.dz() == 0 ? Component.translatable("screen.ak_trade_expansion.board.news.here").getString()
+				: Component.translatable("screen.ak_trade_expansion.board.where", direction(n.dx(), n.dz()),
+						(int) Math.round(Math.sqrt((double) n.dx() * n.dx() + (double) n.dz() * n.dz()))).getString();
+		String right = where + " " + daysLeftText(n.daysLeft()).getString();
+		int rx = bx + listW - 8 - font.width(right);
+		g.text(font, right, rx, y, COLOR_GOLD);
+		Component text = Component.translatable(n.buying() ? "screen.ak_trade_expansion.board.news.buying" : "screen.ak_trade_expansion.board.news.selling",
+				com.akf.tradeexpansion.data.RivalGuilds.name(n.guild()), stack.getHoverName());
+		fitText(g, text.getString(), bx + 20, y, rx - bx - 24, n.buying() ? 0xFFFF8080 : 0xFF80FF80, true);
+		if (over && mouseX < bx + listW - SCROLLBAR_W) {
+			List<Component> lines = new ArrayList<>();
+			lines.add(Component.translatable(n.buying() ? "screen.ak_trade_expansion.board.news.tooltip.buying" : "screen.ak_trade_expansion.board.news.tooltip.selling",
+					com.akf.tradeexpansion.data.RivalGuilds.name(n.guild()), n.market(), stack.getHoverName(), daysLeftText(n.daysLeft())));
+			if (n.felt()) lines.add(Component.translatable("screen.ak_trade_expansion.board.news.felt").withColor(COLOR_GOLD));
+			if (board.markets().stream().anyMatch(e -> e.id() == n.marketId())) {
+				lines.add(Component.translatable("screen.ak_trade_expansion.board.news.open").withColor(COLOR_GRAY));
+			}
+			g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+		}
+	}
+
 	/** I (v0.24): the best deals (2 each) of the market under the mouse, in the right panel. */
 	private void extractDeals(GuiGraphicsExtractor g, BoardS2C.Entry entry) {
 		int px = leftPos + panelX;
@@ -1739,6 +1822,24 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			room = imageWidth - 16 - font.width(topRightBalance(viewer)) - 8;
 		}
 		String titleText = title.getString();
+		// P (v0.46): "│ 流行" at the right end of the title row, with the trends on hover.
+		if (snapshot != null && !snapshot.trends().isEmpty()) {
+			String trendLabel = Component.translatable("screen.ak_trade_expansion.trend.label").getString();
+			String separator = " │ ";
+			int tx = 8 + room - font.width(trendLabel);
+			g.text(font, separator, tx - font.width(separator), 6, COLOR_GRAY, false);
+			g.text(font, trendLabel, tx, 6, 0xFFB05010, false);
+			room -= font.width(separator + trendLabel);
+			int mx = mouseX - leftPos;
+			int my = mouseY - topPos;
+			if (mx >= tx && mx < tx + font.width(trendLabel) && my >= 4 && my < 16) {
+				List<Component> lines = new ArrayList<>();
+				lines.add(Component.translatable("screen.ak_trade_expansion.trend.title"));
+				for (MarketSnapshotS2C.TrendView t : snapshot.trends()) lines.add(trendLine(t, false));
+				lines.add(Component.translatable("screen.ak_trade_expansion.trend.hint").withColor(COLOR_GRAY));
+				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+			}
+		}
 		if (snapshot != null && snapshot.reputation().enabled()) {
 			String label = Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString();
 			String separator = " │ ";
@@ -1855,7 +1956,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int index = scroll + (mouseY - ry) / ROW_H;
 		List<GoodView> goods = visibleGoods();
 		if (index >= goods.size()) return;
-		boolean tooltipRight = TradeExpansionConfig.get().client.showDebugTooltip || goods.get(index).special();
+		boolean tooltipRight = !rowTooltip(goods.get(index)).isEmpty();
 		extractGraph(g, goods.get(index), tooltipRight ? mouseX - 10 - 124 : mouseX + 10, mouseY + 6);
 	}
 

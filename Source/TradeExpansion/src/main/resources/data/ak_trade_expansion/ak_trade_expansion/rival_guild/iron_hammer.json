@@ -1,0 +1,8 @@
+{
+  "groups": [
+    "ak_trade_expansion:minerals",
+    "ak_trade_expansion:building",
+    "ak_trade_expansion:equipment"
+  ],
+  "weight": 1
+}

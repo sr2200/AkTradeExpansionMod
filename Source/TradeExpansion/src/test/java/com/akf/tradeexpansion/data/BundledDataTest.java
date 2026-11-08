@@ -71,6 +71,40 @@ class BundledDataTest {
 		}
 	}
 
+	/**
+	 * O-1 / O-2 (v0.46): every goods group lists existing goods, every good except the emerald coin (auto_add) is in a
+	 * group, and every guild deals in existing groups; together the guilds cover every group.
+	 */
+	@Test
+	void goodsGroupsAndGuildsDecode() throws IOException {
+		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);
+		Map<String, GoodsGroups.Group> groups = decodeAll("goods_group", GoodsGroups.Group.CODEC);
+		Map<String, RivalGuilds.Guild> guilds = decodeAll("rival_guild", RivalGuilds.Guild.CODEC);
+		assertEquals(11, groups.size());
+		assertEquals(4, guilds.size());
+		java.util.Set<String> grouped = new java.util.HashSet<>();
+		for (Map.Entry<String, GoodsGroups.Group> e : groups.entrySet()) {
+			assertFalse(e.getValue().goods().isEmpty(), e.getKey());
+			for (net.minecraft.resources.Identifier id : e.getValue().goods()) {
+				assertEquals("ak_trade_expansion", id.getNamespace(), e.getKey() + ": " + id);
+				assertTrue(goods.containsKey(id.getPath()), e.getKey() + ": unknown goods " + id);
+				grouped.add(id.getPath());
+			}
+		}
+		for (Map.Entry<String, GoodsDefinition> e : goods.entrySet()) {
+			if (e.getValue().autoAdd().isEmpty()) assertTrue(grouped.contains(e.getKey()), "not in any group: " + e.getKey());
+		}
+		java.util.Set<String> covered = new java.util.HashSet<>();
+		for (Map.Entry<String, RivalGuilds.Guild> e : guilds.entrySet()) {
+			assertTrue(e.getValue().weight() > 0, e.getKey());
+			for (net.minecraft.resources.Identifier id : e.getValue().groups()) {
+				assertTrue(groups.containsKey(id.getPath()), e.getKey() + ": unknown group " + id);
+				covered.add(id.getPath());
+			}
+		}
+		assertEquals(groups.keySet(), covered);
+	}
+
 	/** N-4 (v0.38): the four facilities, one per kind, each with its structure in every style it falls back to. */
 	@Test
 	void facilitiesDecode() throws IOException {

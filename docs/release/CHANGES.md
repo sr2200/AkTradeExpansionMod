@@ -8,6 +8,11 @@
 ## 未リリース
 
 ### 追加
+- **商会の動き**：目に見えない商会（鉄槌商会・豊穣商会・大樹商会・黄昏商会）が、何日かおきに近くの市場で品を買い集めたり（値上がり）売りさばいたり（値下がり）するようになりました。自分が何もしなくても地域の相場が動きます。掲示板の市場一覧の上に「ニュース」として出て、購入・売却の一覧でも、動いている商品にマウスを乗せると分かります。値上がりしている地域へ運んで売る、値下がりしている地域で仕入れる、といった遊び方ができます
+  - 設定（`rivals`、設定画面の「掲示板・依頼・需要」タブ）：`enabled`（使うか）、`chancePerDay`（始まる確率）、`maxActive`（同時の数）、`minDays`・`maxDays`（期間）、`minImpact`・`maxImpact`（強さ）、`nearRadius`・`farRadius`（効く範囲）
+  - 管理コマンド：`/aktradeex rivals`（一覧）、`/aktradeex rivals start`（今すぐ始める、テスト用）、`/aktradeex rivals clear`（全部消す）
+  - データパック：商品グループ（`goods_group`）と商会（`rival_guild`）を足せます
+- 購入・売却の一覧で、品不足の商品にマウスを乗せると、基準価格の倍率が出るようにしました
 - **輸送依頼**：依頼タブに「○○村へ運ぶ」依頼が出るようになりました。保証金（品物の値段）を払って「荷箱」を受け取り、届け先の市場の依頼タブで「荷箱を届ける」を押すと、報酬と保証金が戻ります。遠い村ほど報酬が増え、依頼を出した村と届け先の村の両方で評判が上がります。期限を過ぎると届けられず、保証金は戻りません（受けた村の評判も下がります）
   - 設定（`quest`）：`transportPerMarket`（市場ごとの輸送依頼の数）、`transportMinDistance`・`transportMaxDistance`（届け先までの距離）、`transportBaseMultiplier`・`transportPerThousandBlocks`・`transportMaxMultiplier`（報酬の倍率）
 

@@ -13,6 +13,9 @@ import com.akf.tradeexpansion.market.Reputation;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.BoardRequestC2S;
 import com.akf.tradeexpansion.network.BoardS2C;
+import com.akf.tradeexpansion.network.MarketSnapshotS2C;
+import com.akf.tradeexpansion.rival.Campaign;
+import com.akf.tradeexpansion.rival.RivalService;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -55,9 +58,21 @@ public final class BoardService {
 				goods.add(good(here, uuid, now, goodsId, def, p, state, m.shortages().containsKey(goodsId), threshold));
 			});
 			entries.add(new BoardS2C.Entry(m.id(), com.akf.tradeexpansion.market.MarketNames.title(m), m.center().getX() - here.center().getX(),
-					m.center().getZ() - here.center().getZ(), m.center(), goods));
+					m.center().getZ() - here.center().getZ(), m.center(), goods, MarketSnapshotS2C.TrendView.of(m)));
 		}
-		ServerPlayNetworking.send(player, new BoardS2C(here.id(), entries));
+		// O-5: rival guild news
+		List<BoardS2C.News> news = new ArrayList<>();
+		long today = RivalService.day(now);
+		for (Campaign c : RivalService.news(registry, here, config.radius, now)) {
+			Market center = registry.get(c.market());
+			GoodsDefinition def = GoodsCatalog.get(c.goods());
+			if (center == null || def == null) continue;
+			boolean sameDimension = center.dimension().equals(here.dimension());
+			news.add(new BoardS2C.News(c.guild(), c.buying(), def.item(), com.akf.tradeexpansion.market.MarketNames.name(center), center.id(),
+					sameDimension ? center.center().getX() - here.center().getX() : 0, sameDimension ? center.center().getZ() - here.center().getZ() : 0,
+					c.daysLeft(today), here.good(c.goods()) != null && RivalService.weight(registry, here, c) > 0));
+		}
+		ServerPlayNetworking.send(player, new BoardS2C(here.id(), entries, news));
 	}
 
 	private static BoardS2C.Good good(Market here, java.util.UUID uuid, long now, net.minecraft.resources.Identifier goodsId, GoodsDefinition def, GoodParams p, GoodState state,

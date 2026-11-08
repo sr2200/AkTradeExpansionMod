@@ -7,6 +7,7 @@ import com.akf.tradeexpansion.core.MarketLevel;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.data.GoodsGroups;
 import com.akf.tradeexpansion.data.MarketProfile;
 import com.akf.tradeexpansion.data.MarketProfiles;
 import com.akf.tradeexpansion.development.Facility;
@@ -100,13 +101,23 @@ public final class Market {
 		).apply(i, Contributor::new));
 	}
 
+	/** P (v0.46): a goods group in fashion (multiplier &gt; 1) or out of fashion (&lt; 1) at this market. */
+	private record TrendEntry(Identifier group, double multiplier) {
+		static final Codec<TrendEntry> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Identifier.CODEC.fieldOf("group").forGetter(TrendEntry::group),
+				Codec.DOUBLE.fieldOf("multiplier").forGetter(TrendEntry::multiplier)
+		).apply(i, TrendEntry::new));
+	}
+
 	/**
 	 * Fields added after the 16-field limit of RecordCodecBuilder: shelved goods and today's specials (v0.27), reputation
-	 * and the specials shown only to players with a good reputation (v0.29), development (v0.36).
+	 * and the specials shown only to players with a good reputation (v0.29), development (v0.36), rival guilds and
+	 * trends (v0.46).
 	 */
 	private record Assortment(List<Shelved> shelved, List<Identifier> specials, long specialDay, List<Standing> reputation,
 			List<Identifier> bonusSpecials, double development, long developmentSince, List<Contributor> contributors,
-			List<Facility> facilities, Map<Identifier, Map<String, Integer>> donations, List<BlockPos> markers, int measuredLevel) {
+			List<Facility> facilities, Map<Identifier, Map<String, Integer>> donations, List<BlockPos> markers, int measuredLevel,
+			long rivalDay, List<TrendEntry> trends, long trendPeriod) {
 		static final MapCodec<Assortment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Shelved.CODEC.listOf().optionalFieldOf("shelved", List.of()).forGetter(Assortment::shelved),
 				Identifier.CODEC.listOf().optionalFieldOf("specials", List.of()).forGetter(Assortment::specials),
@@ -120,7 +131,10 @@ public final class Market {
 				Codec.unboundedMap(Identifier.CODEC, Codec.unboundedMap(Codec.STRING, Codec.INT))
 						.optionalFieldOf("facility_donations", Map.of()).forGetter(Assortment::donations),
 				BlockPos.CODEC.listOf().optionalFieldOf("markers", List.of()).forGetter(Assortment::markers),
-				Codec.INT.optionalFieldOf("measured_level", 0).forGetter(Assortment::measuredLevel)
+				Codec.INT.optionalFieldOf("measured_level", 0).forGetter(Assortment::measuredLevel),
+				Codec.LONG.optionalFieldOf("rival_day", Long.MIN_VALUE).forGetter(Assortment::rivalDay),
+				TrendEntry.CODEC.listOf().optionalFieldOf("trends", List.of()).forGetter(Assortment::trends),
+				Codec.LONG.optionalFieldOf("trend_period", Long.MIN_VALUE).forGetter(Assortment::trendPeriod)
 		).apply(i, Assortment::new));
 	}
 
@@ -159,11 +173,14 @@ public final class Market {
 		a.donations().forEach((id, counts) -> m.donations.put(id, new LinkedHashMap<>(counts)));
 		a.markers().forEach(p -> m.markers.add(p.immutable()));
 		m.measuredLevel = a.measuredLevel() > 0 ? a.measuredLevel() : m.level; // markets saved before v0.38: no bonus yet
+		m.rivalDay = a.rivalDay();
+		a.trends().forEach(t -> m.trends.put(t.group(), t.multiplier()));
+		m.trendPeriod = a.trendPeriod();
 		return m;
 	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
 			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
-			m.measuredLevel))).codec();
+			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -207,6 +224,11 @@ public final class Market {
 	private final List<BlockPos> markers = new ArrayList<>();
 	/** D-4 / N-3: the level measured from beds and villagers, before the facility bonus. */
 	private int measuredLevel = MarketLevel.MIN_LEVEL;
+	/** O-4 (v0.46): the last market-clock day whose rival pushes this market has received. */
+	private long rivalDay = Long.MIN_VALUE;
+	/** P (v0.46): goods groups in / out of fashion (group id → multiplier of B) and the period they belong to. */
+	private final Map<Identifier, Double> trends = new LinkedHashMap<>();
+	private long trendPeriod = Long.MIN_VALUE;
 
 	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
 			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods,
@@ -271,6 +293,44 @@ public final class Market {
 
 	public void setShortagePeriod(long period) {
 		this.shortagePeriod = period;
+	}
+
+	private List<TrendEntry> trendEntries() {
+		List<TrendEntry> list = new ArrayList<>();
+		trends.forEach((group, m) -> list.add(new TrendEntry(group, m)));
+		return list;
+	}
+
+	/** O-4: last day of rival pushes received. */
+	public long rivalDay() {
+		return rivalDay;
+	}
+
+	public void setRivalDay(long day) {
+		this.rivalDay = day;
+	}
+
+	/** P: trends (goods group id → multiplier of B), in fashion first (mutable). */
+	public Map<Identifier, Double> trends() {
+		return trends;
+	}
+
+	public long trendPeriod() {
+		return trendPeriod;
+	}
+
+	public void setTrendPeriod(long period) {
+		this.trendPeriod = period;
+	}
+
+	/** P: product of the trend multipliers of every group the good is in; 1 for specials and auto_add goods. */
+	public double trendMultiplier(Identifier goodsId) {
+		if (trends.isEmpty() || specials.contains(goodsId)) return 1.0;
+		GoodsDefinition def = GoodsCatalog.get(goodsId);
+		if (def == null || def.autoAdd().isPresent()) return 1.0;
+		double m = 1.0;
+		for (Identifier group : GoodsGroups.groupsOf(goodsId)) m *= trends.getOrDefault(group, 1.0);
+		return m;
 	}
 
 	private List<GoodEntry> goodEntries() {
@@ -509,6 +569,7 @@ public final class Market {
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		if (state == null || def == null) return null;
 		double multiplier = profileMultiplier(goodsId, def) * shortages.getOrDefault(goodsId, 1.0); // K: shortage raises B
+		multiplier *= trendMultiplier(goodsId); // P: trends
 		if (specials.contains(goodsId)) multiplier *= TradeExpansionConfig.get().market.specialPriceMultiplier; // D-5
 		GoodParams params = def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
 		return hasFacility(FacilityKind.WAREHOUSE) ? warehouse(params) : params;

@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.DistanceModel;
 import com.akf.tradeexpansion.currency.CoinType;
+import com.akf.tradeexpansion.rival.Campaign;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -33,7 +34,11 @@ public final class MarketRegistry extends SavedData {
 			Codec.INT.fieldOf("schema_version").forGetter(r -> SCHEMA_VERSION),
 			Codec.INT.listOf().fieldOf("currency_ratios").forGetter(r -> r.currencyRatios),
 			Codec.LONG.fieldOf("next_id").forGetter(r -> r.nextId),
-			Market.CODEC.listOf().fieldOf("markets").forGetter(r -> List.copyOf(r.markets.values()))
+			Market.CODEC.listOf().fieldOf("markets").forGetter(r -> List.copyOf(r.markets.values())),
+			// O-6 (v0.46): rival guild campaigns
+			Codec.LONG.optionalFieldOf("rival_day", Long.MIN_VALUE).forGetter(r -> r.rivalDay),
+			Codec.INT.optionalFieldOf("next_campaign_id", 1).forGetter(r -> r.nextCampaignId),
+			Campaign.CODEC.listOf().optionalFieldOf("campaigns", List.of()).forGetter(r -> List.copyOf(r.campaigns))
 	).apply(i, MarketRegistry::new));
 
 	/** No vanilla data fixer applies to mod data; Fabric API skips fixing when the type is null. */
@@ -59,12 +64,20 @@ public final class MarketRegistry extends SavedData {
 	private final List<Integer> currencyRatios;
 	private long nextId;
 	private final Map<Long, Market> markets = new LinkedHashMap<>();
+	/** O-4: the last market-clock day campaigns were rolled for, and the campaigns (oldest first). */
+	private long rivalDay = Long.MIN_VALUE;
+	private int nextCampaignId = 1;
+	private final List<Campaign> campaigns = new ArrayList<>();
 
 	private MarketRegistry() {
-		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of());
+		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of());
 	}
 
-	private MarketRegistry(int schemaVersion, List<Integer> currencyRatios, long nextId, List<Market> markets) {
+	private MarketRegistry(int schemaVersion, List<Integer> currencyRatios, long nextId, List<Market> markets, long rivalDay,
+			int nextCampaignId, List<Campaign> campaigns) {
+		this.rivalDay = rivalDay;
+		this.nextCampaignId = nextCampaignId;
+		this.campaigns.addAll(campaigns);
 		this.currencyRatios = new ArrayList<>(currencyRatios);
 		this.nextId = nextId;
 		markets.forEach(m -> this.markets.put(m.id(), m));
@@ -79,6 +92,24 @@ public final class MarketRegistry extends SavedData {
 		List<Integer> list = new ArrayList<>(values.length);
 		for (int v : values) list.add(v);
 		return list;
+	}
+
+	/** O-4: last day campaigns were rolled for. */
+	public long rivalDay() {
+		return rivalDay;
+	}
+
+	public void setRivalDay(long day) {
+		this.rivalDay = day;
+	}
+
+	/** O-3: campaigns, oldest first (mutable; callers mark the registry dirty). */
+	public List<Campaign> campaigns() {
+		return campaigns;
+	}
+
+	public int takeCampaignId() {
+		return nextCampaignId++;
 	}
 
 	/** Coin ratios this world was created with (E-4). */

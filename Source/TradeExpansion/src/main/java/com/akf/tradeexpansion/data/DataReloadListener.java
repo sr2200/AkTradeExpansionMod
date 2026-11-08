@@ -12,7 +12,9 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,6 +31,49 @@ public final class DataReloadListener {
 		loader.registerReloadListener(TradeExpansion.id("market_profiles"), new Profiles());
 		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("market_profiles"));
 		loader.registerReloadListener(TradeExpansion.id("facilities"), new Facilities());
+		// O-1 / O-2 (v0.46): goods groups need the goods (unknown ids are dropped), guilds need the groups.
+		loader.registerReloadListener(TradeExpansion.id("goods_groups"), new Groups());
+		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("goods_groups"));
+		loader.registerReloadListener(TradeExpansion.id("rival_guilds"), new Guilds());
+		loader.addListenerOrdering(TradeExpansion.id("goods_groups"), TradeExpansion.id("rival_guilds"));
+	}
+
+	/** O-1: goods groups. */
+	private static final class Groups extends SimpleJsonResourceReloadListener<GoodsGroups.Group> {
+		Groups() {
+			super(GoodsGroups.Group.CODEC, FileToIdConverter.json("ak_trade_expansion/goods_group"));
+		}
+
+		@Override
+		protected void apply(Map<Identifier, GoodsGroups.Group> loaded, ResourceManager manager, ProfilerFiller profiler) {
+			Map<Identifier, GoodsGroups.Group> valid = new LinkedHashMap<>();
+			loaded.forEach((id, group) -> {
+				List<Identifier> goods = new ArrayList<>();
+				for (Identifier g : group.goods()) {
+					if (GoodsCatalog.get(g) == null) TradeExpansion.LOGGER.warn("Goods group {}: unknown goods {}, skipped", id, g);
+					else if (!goods.contains(g)) goods.add(g);
+				}
+				valid.put(id, new GoodsGroups.Group(List.copyOf(goods)));
+			});
+			GoodsGroups.replace(valid);
+			TradeExpansion.LOGGER.info("Loaded {} goods groups", valid.size());
+		}
+	}
+
+	/** O-2: rival guilds. */
+	private static final class Guilds extends SimpleJsonResourceReloadListener<RivalGuilds.Guild> {
+		Guilds() {
+			super(RivalGuilds.Guild.CODEC, FileToIdConverter.json("ak_trade_expansion/rival_guild"));
+		}
+
+		@Override
+		protected void apply(Map<Identifier, RivalGuilds.Guild> loaded, ResourceManager manager, ProfilerFiller profiler) {
+			loaded.forEach((id, guild) -> guild.groups().forEach(g -> {
+				if (GoodsGroups.get(g) == null) TradeExpansion.LOGGER.warn("Rival guild {}: unknown goods group {}", id, g);
+			}));
+			RivalGuilds.replace(loaded);
+			TradeExpansion.LOGGER.info("Loaded {} rival guilds", loaded.size());
+		}
 	}
 
 	/** N-4: facilities of the village development. */

@@ -107,6 +107,7 @@ public final class TradeExpansionCommand {
 				.then(admin(Commands.literal("audit"))
 						.executes(TradeExpansionCommand::audit)
 						.then(Commands.literal("villagers").executes(c -> VillagerAudit.run(c.getSource()))))
+				.then(RivalCommand.build(admin(Commands.literal("rivals"))))
 				.then(admin(Commands.literal("market"))
 						.then(Commands.literal("setx")
 								.then(Commands.argument("goods", IdentifierArgument.id())

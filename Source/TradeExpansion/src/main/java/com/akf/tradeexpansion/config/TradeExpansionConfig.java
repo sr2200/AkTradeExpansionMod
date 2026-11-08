@@ -44,6 +44,10 @@ public final class TradeExpansionConfig {
 	public Reputation reputation = new Reputation();
 	/** N (v0.36): village development. */
 	public Development development = new Development();
+	/** O (v0.46): rival guilds. */
+	public Rivals rivals = new Rivals();
+	/** P (v0.46): village trends. */
+	public Trend trend = new Trend();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -93,7 +97,7 @@ public final class TradeExpansionConfig {
 
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
-			Map<String, GoodsOverride> goods, Reputation reputation, Development development) {
+			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -103,7 +107,9 @@ public final class TradeExpansionConfig {
 				section("consumables", Consumables.CODEC, new Consumables()).forGetter(Extra::consumables),
 				section("goods", Codec.unboundedMap(Codec.STRING, GoodsOverride.CODEC), Map.<String, GoodsOverride>of()).forGetter(Extra::goods),
 				section("reputation", Reputation.CODEC, new Reputation()).forGetter(Extra::reputation),
-				section("development", Development.CODEC, new Development()).forGetter(Extra::development)
+				section("development", Development.CODEC, new Development()).forGetter(Extra::development),
+				section("rivals", Rivals.CODEC, new Rivals()).forGetter(Extra::rivals),
+				section("trend", Trend.CODEC, new Trend()).forGetter(Extra::trend)
 		).apply(i, Extra::new));
 	}
 
@@ -119,8 +125,10 @@ public final class TradeExpansionConfig {
 		c.goods = new TreeMap<>(e.goods());
 		c.reputation = e.reputation();
 		c.development = e.development();
+		c.rivals = e.rivals();
+		c.trend = e.trend();
 		return c;
-	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development))).codec();
+	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -746,6 +754,91 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("minMultiplier").orElse(d.minMultiplier).forGetter(c -> c.minMultiplier),
 					Codec.DOUBLE.fieldOf("maxMultiplier").orElse(d.maxMultiplier).forGetter(c -> c.maxMultiplier)
 			).apply(i, Demand::new);
+		});
+	}
+
+	/** O (v0.46): rival guilds moving the prices of a region for a few days. */
+	public static final class Rivals {
+		public boolean enabled = true;
+		public double chancePerDay = 0.5;
+		public int maxActive = 3;
+		public int minDays = 2;
+		public int maxDays = 4;
+		public double minImpact = 0.15;
+		public double maxImpact = 0.35;
+		public double nearRadius = 128;
+		public double farRadius = 640;
+
+		public Rivals() {
+		}
+
+		Rivals(boolean enabled, double chancePerDay, int maxActive, int minDays, int maxDays, double minImpact, double maxImpact,
+				double nearRadius, double farRadius) {
+			this.enabled = enabled;
+			this.chancePerDay = chancePerDay;
+			this.maxActive = maxActive;
+			this.minDays = minDays;
+			this.maxDays = maxDays;
+			this.minImpact = minImpact;
+			this.maxImpact = maxImpact;
+			this.nearRadius = nearRadius;
+			this.farRadius = farRadius;
+		}
+
+		static final Codec<Rivals> CODEC = RecordCodecBuilder.create(i -> {
+			Rivals d = new Rivals();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.DOUBLE.fieldOf("chancePerDay").orElse(d.chancePerDay).forGetter(c -> c.chancePerDay),
+					Codec.INT.fieldOf("maxActive").orElse(d.maxActive).forGetter(c -> c.maxActive),
+					Codec.INT.fieldOf("minDays").orElse(d.minDays).forGetter(c -> c.minDays),
+					Codec.INT.fieldOf("maxDays").orElse(d.maxDays).forGetter(c -> c.maxDays),
+					Codec.DOUBLE.fieldOf("minImpact").orElse(d.minImpact).forGetter(c -> c.minImpact),
+					Codec.DOUBLE.fieldOf("maxImpact").orElse(d.maxImpact).forGetter(c -> c.maxImpact),
+					Codec.DOUBLE.fieldOf("nearRadius").orElse(d.nearRadius).forGetter(c -> c.nearRadius),
+					Codec.DOUBLE.fieldOf("farRadius").orElse(d.farRadius).forGetter(c -> c.farRadius)
+			).apply(i, Rivals::new);
+		});
+	}
+
+	/** P (v0.46): popular / unpopular goods groups of each market. */
+	public static final class Trend {
+		public double durationDays = 5.0;
+		public int popularCount = 1;
+		public int unpopularCount = 1;
+		public double popularMin = 1.15;
+		public double popularMax = 1.30;
+		public double unpopularMin = 0.80;
+		public double unpopularMax = 0.90;
+		public int minGoods = 2;
+
+		public Trend() {
+		}
+
+		Trend(double durationDays, int popularCount, int unpopularCount, double popularMin, double popularMax, double unpopularMin,
+				double unpopularMax, int minGoods) {
+			this.durationDays = durationDays;
+			this.popularCount = popularCount;
+			this.unpopularCount = unpopularCount;
+			this.popularMin = popularMin;
+			this.popularMax = popularMax;
+			this.unpopularMin = unpopularMin;
+			this.unpopularMax = unpopularMax;
+			this.minGoods = minGoods;
+		}
+
+		static final Codec<Trend> CODEC = RecordCodecBuilder.create(i -> {
+			Trend d = new Trend();
+			return i.group(
+					Codec.DOUBLE.fieldOf("durationDays").orElse(d.durationDays).forGetter(c -> c.durationDays),
+					Codec.INT.fieldOf("popularCount").orElse(d.popularCount).forGetter(c -> c.popularCount),
+					Codec.INT.fieldOf("unpopularCount").orElse(d.unpopularCount).forGetter(c -> c.unpopularCount),
+					Codec.DOUBLE.fieldOf("popularMin").orElse(d.popularMin).forGetter(c -> c.popularMin),
+					Codec.DOUBLE.fieldOf("popularMax").orElse(d.popularMax).forGetter(c -> c.popularMax),
+					Codec.DOUBLE.fieldOf("unpopularMin").orElse(d.unpopularMin).forGetter(c -> c.unpopularMin),
+					Codec.DOUBLE.fieldOf("unpopularMax").orElse(d.unpopularMax).forGetter(c -> c.unpopularMax),
+					Codec.INT.fieldOf("minGoods").orElse(d.minGoods).forGetter(c -> c.minGoods)
+			).apply(i, Trend::new);
 		});
 	}
 
