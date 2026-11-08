@@ -142,7 +142,18 @@ class BundledDataTest {
 					String id = entry.getStringOr("id", ""); // 26.x block state keys (Name / Properties are the legacy ones)
 					// The mod's own blocks are not registered by the bootstrap; the sign is the only one used.
 					if (id.startsWith("ak_trade_expansion:")) assertEquals("ak_trade_expansion:facility_sign", id, file.toString());
-					else assertTrue(net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(net.minecraft.resources.Identifier.parse(id)), file + ": " + id);
+					else {
+						net.minecraft.resources.Identifier blockId = net.minecraft.resources.Identifier.parse(id);
+						assertTrue(net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(blockId), file + ": " + id);
+						// Unknown properties and values are dropped silently when the template is read: check them here.
+						var definition = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(blockId).getStateDefinition();
+						net.minecraft.nbt.CompoundTag properties = entry.getCompoundOrEmpty("properties");
+						for (String key : properties.keySet()) {
+							var property = definition.getProperty(key);
+							assertNotNull(property, file + ": " + id + " has no property " + key);
+							assertTrue(property.getValue(properties.getStringOr(key, "")).isPresent(), file + ": " + id + " " + key);
+						}
+					}
 					if (id.equals("ak_trade_expansion:facility_sign")) {
 						signs++;
 						assertEquals(def.kind().getSerializedName(), entry.getCompoundOrEmpty("properties").getStringOr("kind", ""), file + ": sign kind");
