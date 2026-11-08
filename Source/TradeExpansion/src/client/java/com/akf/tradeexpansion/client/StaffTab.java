@@ -604,8 +604,40 @@ final class StaffTab {
 				COLOR_TEXT, false);
 		Component blocker = hireBlocker();
 		Component text = blocker != null ? blocker : Component.translatable("screen.ak_trade_expansion.staff.hire_hint");
-		List<FormattedCharSequence> lines = font.split(text, PANEL_W);
-		for (int i = 0; i < Math.min(5, lines.size()); i++) g.text(font, lines.get(i), px, y + 50 + i * 9, blocker != null ? COLOR_WARNING : COLOR_DARK, false);
+		// Up to the hire buttons (y + 104).
+		wrapped(g, font, text, px, y + 50, PANEL_W, 52, blocker != null ? COLOR_WARNING : COLOR_DARK);
+	}
+
+	/**
+	 * Draws {@code text} wrapped within {@code width} × {@code height}: shrunk (down to 60%) when the lines do not fit,
+	 * and only then cut with "…".
+	 */
+	private static void wrapped(GuiGraphicsExtractor g, Font font, Component text, int x, int y, int width, int height, int color) {
+		float scale = 1.0f;
+		List<FormattedCharSequence> lines = font.split(text, width);
+		while (lines.size() * font.lineHeight * scale > height && scale > 0.6f) {
+			scale -= 0.05f;
+			lines = font.split(text, (int) (width / scale));
+		}
+		int maxLines = Math.max(1, (int) (height / (font.lineHeight * scale)));
+		g.pose().pushMatrix();
+		g.pose().translate(x, y);
+		g.pose().scale(scale, scale);
+		for (int i = 0; i < Math.min(maxLines, lines.size()); i++) {
+			FormattedCharSequence line = lines.get(i);
+			if (i == maxLines - 1 && lines.size() > maxLines) {
+				StringBuilder sb = new StringBuilder();
+				line.accept((index, style, codePoint) -> {
+					sb.appendCodePoint(codePoint);
+					return true;
+				});
+				String cut = font.plainSubstrByWidth(sb.toString(), (int) (width / scale) - font.width("…")) + "…";
+				g.text(font, cut, 0, i * font.lineHeight, color, false);
+			} else {
+				g.text(font, line, 0, i * font.lineHeight, color, false);
+			}
+		}
+		g.pose().popMatrix();
 	}
 
 	private void extractEmployeePanel(GuiGraphicsExtractor g, Font font, StaffS2C.View v, int px, int y) {
@@ -621,15 +653,13 @@ final class StaffTab {
 		screen.fit(g, Component.translatable("screen.ak_trade_expansion.staff.purse", CoinItem.formatCopper(v.purse())).getString() + " " + stock,
 				px, y + 64, PANEL_W, COLOR_TEXT, false);
 		if (!v.atHome() && v.phase() != PHASE_QUIT) {
-			List<FormattedCharSequence> lines = font.split(Component.translatable("screen.ak_trade_expansion.staff.not_home", v.homeName()), PANEL_W);
-			for (int i = 0; i < Math.min(4, lines.size()); i++) g.text(font, lines.get(i), px, y + 78 + i * 9, COLOR_DARK, false);
+			// Up to the pause button (y + 121).
+			wrapped(g, font, Component.translatable("screen.ak_trade_expansion.staff.not_home", v.homeName()), px, y + 77, PANEL_W, 42, COLOR_DARK);
 		} else if (!v.atHome()) {
-			List<FormattedCharSequence> lines = font.split(Component.translatable("screen.ak_trade_expansion.staff.quit_not_home", v.homeName()), PANEL_W);
-			for (int i = 0; i < Math.min(5, lines.size()); i++) g.text(font, lines.get(i), px, y + 78 + i * 9, COLOR_WARNING, false);
-		} else if (v.phase() == PHASE_QUIT) {
-			List<FormattedCharSequence> lines = font.split(Component.translatable("screen.ak_trade_expansion.staff.quit_here"), PANEL_W);
-			for (int i = 0; i < Math.min(4, lines.size()); i++) g.text(font, lines.get(i), px, y + 78 + i * 9, COLOR_WARNING, false);
+			// No buttons below: room down to the bottom of the panel.
+			wrapped(g, font, Component.translatable("screen.ak_trade_expansion.staff.quit_not_home", v.homeName()), px, y + 77, PANEL_W, 74, COLOR_WARNING);
 		}
+		// Quit at home: the money buttons take the space; "Settle" explains itself in its tooltip.
 	}
 
 	private void extractGoodsHeader(GuiGraphicsExtractor g, Font font, int px, int y) {
