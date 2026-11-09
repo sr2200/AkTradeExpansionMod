@@ -164,7 +164,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		/** In fashion first, then out of fashion, each by multiplier. */
 		public static List<TrendView> of(Market market) {
 			List<TrendView> list = new ArrayList<>();
-			market.trends().forEach((group, m) -> list.add(new TrendView(group, m)));
+			boolean theater = market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.THEATER);
+			market.trends().forEach((group, m) -> list.add(new TrendView(group, Market.theater(m, theater)))); // v0.51 theater
 			list.sort(java.util.Comparator.comparingDouble(TrendView::multiplier).reversed());
 			return list;
 		}
@@ -177,7 +178,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			List<TrendView> list = new ArrayList<>();
 			for (Identifier group : com.akf.tradeexpansion.data.GoodsGroups.groupsOf(goodsId)) {
 				Double m = market.trends().get(group);
-				if (m != null) list.add(new TrendView(group, m));
+				if (m != null) list.add(new TrendView(group, Market.theater(m, market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.THEATER))));
 			}
 			return list;
 		}
@@ -271,8 +272,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param freeBuilds    constructions that may still start ({@code development.maxConcurrentBuilds} minus those under way)
 	 */
 	public record DevelopmentView(boolean enabled, double points, double mine, List<ContributorView> top, int measuredLevel, int bonus,
-			boolean bank, boolean canChoose, int buildLevel, int freeBuilds, List<FacilityView> facilities) {
-		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of(), 1, 0, false, false, 0, 0, List.of());
+			boolean bank, boolean canChoose, int buildLevel, int freeBuilds, List<FacilityView> facilities, int festivalIn) {
+		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of(), 1, 0, false, false, 0, 0, List.of(), -1);
 
 		static final StreamCodec<RegistryFriendlyByteBuf, DevelopmentView> CODEC = StreamCodec.ofMember(DevelopmentView::write, DevelopmentView::read);
 
@@ -288,12 +289,13 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeVarInt(buildLevel);
 			buf.writeVarInt(freeBuilds);
 			FacilityView.CODEC.apply(ByteBufCodecs.list()).encode(buf, facilities);
+			buf.writeVarInt(festivalIn + 1);
 		}
 
 		private static DevelopmentView read(RegistryFriendlyByteBuf buf) {
 			return new DevelopmentView(buf.readBoolean(), buf.readDouble(), buf.readDouble(), ContributorView.CODEC.apply(ByteBufCodecs.list()).decode(buf),
 					buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
-					FacilityView.CODEC.apply(ByteBufCodecs.list()).decode(buf));
+					FacilityView.CODEC.apply(ByteBufCodecs.list()).decode(buf), buf.readVarInt() - 1);
 		}
 	}
 
@@ -406,7 +408,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top, market.measuredLevel(),
 				com.akf.tradeexpansion.market.MarketFactory.levelBonus(market), market.hasFacility(FacilityKind.BANK),
 				Reputation.level(market, player.getUUID(), now) >= buildLevel, buildLevel,
-				(int) Math.max(0, c.maxConcurrentBuilds - FacilityBuilder.constructing(market)), facilities);
+				(int) Math.max(0, c.maxConcurrentBuilds - FacilityBuilder.constructing(market)), facilities,
+				com.akf.tradeexpansion.development.Festival.daysUntil(market, now));
 	}
 
 	/** N-6: contributors listed on the development tab. */

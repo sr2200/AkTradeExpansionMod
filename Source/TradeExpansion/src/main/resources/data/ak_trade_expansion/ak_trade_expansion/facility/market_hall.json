@@ -1,0 +1,24 @@
+{
+  "kind": "market_hall",
+  "order": 10,
+  "icon": "minecraft:emerald",
+  "cost": 4000,
+  "structure": "market_hall",
+  "wanted": [
+    {
+      "tag": "minecraft:logs",
+      "count": 48,
+      "value": 4
+    },
+    {
+      "tag": "minecraft:wool",
+      "count": 16,
+      "value": 6
+    },
+    {
+      "item": "minecraft:chest",
+      "count": 8,
+      "value": 10
+    }
+  ]
+}

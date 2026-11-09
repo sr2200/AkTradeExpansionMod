@@ -1,0 +1,25 @@
+{
+  "kind": "harbor",
+  "order": 11,
+  "icon": "minecraft:oak_boat",
+  "cost": 3500,
+  "structure": "harbor",
+  "waterside": 6,
+  "wanted": [
+    {
+      "tag": "minecraft:logs",
+      "count": 64,
+      "value": 4
+    },
+    {
+      "tag": "minecraft:boats",
+      "count": 2,
+      "value": 20
+    },
+    {
+      "item": "minecraft:string",
+      "count": 32,
+      "value": 1
+    }
+  ]
+}

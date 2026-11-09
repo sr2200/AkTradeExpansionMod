@@ -324,12 +324,21 @@ public final class Market {
 	}
 
 	/** P: product of the trend multipliers of every group the good is in; 1 for specials and auto_add goods. */
+	/**
+	 * v0.51 theater: a trend in fashion raises B by {@code theaterTrendMultiplier} times its bonus, one out of fashion
+	 * lowers it by only 1 / that of its loss.
+	 */
+	public static double theater(double m, boolean theater) {
+		return theater ? com.akf.tradeexpansion.core.TrendMath.theater(m, TradeExpansionConfig.get().development.theaterTrendMultiplier) : m;
+	}
+
 	public double trendMultiplier(Identifier goodsId) {
 		if (trends.isEmpty() || specials.contains(goodsId)) return 1.0;
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		if (def == null || def.autoAdd().isPresent()) return 1.0;
 		double m = 1.0;
-		for (Identifier group : GoodsGroups.groupsOf(goodsId)) m *= trends.getOrDefault(group, 1.0);
+		boolean theater = hasFacility(FacilityKind.THEATER);
+		for (Identifier group : GoodsGroups.groupsOf(goodsId)) m *= theater(trends.getOrDefault(group, 1.0), theater);
 		return m;
 	}
 
@@ -572,7 +581,16 @@ public final class Market {
 		multiplier *= trendMultiplier(goodsId); // P: trends
 		if (specials.contains(goodsId)) multiplier *= TradeExpansionConfig.get().market.specialPriceMultiplier; // D-5
 		GoodParams params = def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
-		return hasFacility(FacilityKind.WAREHOUSE) ? warehouse(params) : params;
+		if (hasFacility(FacilityKind.WAREHOUSE)) params = warehouse(params);
+		if (hasFacility(FacilityKind.CLOCK_TOWER)) params = clockTower(params);
+		return params;
+	}
+
+	/** v0.51: a clock tower shortens the recovery half-life H of every good. */
+	private static GoodParams clockTower(GoodParams p) {
+		double k = Math.clamp(TradeExpansionConfig.get().development.clockTowerRecoveryMultiplier, 0.1, 1.0);
+		return new GoodParams(p.basePrice(), p.elasticity(), p.spread(), p.targetStock(), p.maxStock(), p.restockPerDay(),
+				p.minMultiplier(), p.maxMultiplier(), p.consumePerDay(), p.halfLifeDays() * k);
 	}
 
 	/** N-4: a warehouse raises the stock cap Scap and the restock speed r (unlimited stock stays unlimited). */

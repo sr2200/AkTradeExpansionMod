@@ -116,6 +116,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Identifier selected;
 	private int quantity = 1;
 	private int scroll;
+	/** First facility row shown on the development tab (v0.51: more buildings than rows). */
+	private int townScroll;
 	private boolean pending;
 	private Component status = Component.empty();
 	private int statusColor = COLOR_TEXT;
@@ -548,6 +550,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		selected = null;
 		selectedRequest = -1;
 		selectedFacility = null;
+		townScroll = 0;
 		quantity = 1;
 		if (newTab == Tab.BOARD) {
 			boardMarket = -1;
@@ -983,8 +986,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		double my = event.y() - topPos;
 		if (tab == Tab.TOWN && snapshot != null && mx >= LIST_X && mx < LIST_X + listW && my >= LIST_Y + TOWN_HEADER_H) {
 			List<MarketSnapshotS2C.FacilityView> facilities = snapshot.development().facilities();
-			int index = (int) ((my - LIST_Y - TOWN_HEADER_H) / townRowH(facilities.size()));
-			if (index < facilities.size()) {
+			int row = (int) ((my - LIST_Y - TOWN_HEADER_H) / townRowH(facilities.size()));
+			int index = row + townScroll;
+			if (row < townVisible(facilities.size()) && index < facilities.size()) {
 				String id = facilities.get(index).id();
 				selectedFacility = id.equals(selectedFacility) ? null : id; // a second click goes back to the donations
 				updateButtons();
@@ -1034,6 +1038,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			int maxScroll = Math.max(0, sellAllLines.size() - sellAllRows);
 			sellAllScroll = Math.clamp(sellAllScroll - (int) Math.signum(scrollY), 0, maxScroll);
 			return true;
+		}
+		if (tab == Tab.TOWN && snapshot != null && mouseX - leftPos < panelX && mouseY - topPos < LIST_Y + rows * ROW_H) {
+			int count = snapshot.development().facilities().size();
+			int maxTown = Math.max(0, count - townVisible(count));
+			if (maxTown > 0) {
+				townScroll = Math.clamp(townScroll - (int) Math.signum(scrollY), 0, maxTown);
+				return true;
+			}
 		}
 		int maxScroll = Math.max(0, rowCount() - rows);
 		if (maxScroll > 0 && mouseX - leftPos < panelX && mouseY - topPos < LIST_Y + rows * ROW_H) {
@@ -1490,6 +1502,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		return count <= 0 ? ROW_H : Math.clamp(room / count, 12, ROW_H);
 	}
 
+	/** Facility rows that fit; the rest is reached with the mouse wheel. */
+	private int townVisible(int count) {
+		return Math.max(1, (rows * ROW_H - TOWN_HEADER_H - TOWN_FOOTER_H) / townRowH(count));
+	}
+
 	/**
 	 * N-6: header (points, level breakdown), one row per facility, the contributors; in the right panel the coin
 	 * donations and the stake, or the selected facility with its materials and buttons.
@@ -1511,10 +1528,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int rowH = townRowH(facilities.size());
 		float iconScale = Math.min(1f, (rowH - 2) / 16f);
 		int textDy = (rowH - 8) / 2;
-		for (int i = 0; i < facilities.size(); i++) {
+		int visible = townVisible(facilities.size());
+		townScroll = Math.clamp(townScroll, 0, Math.max(0, facilities.size() - visible));
+		if (facilities.size() > visible) { // scroll bar
+			int barH = visible * rowH;
+			int knobH = Math.max(6, barH * visible / facilities.size());
+			int knobY = ty + TOWN_HEADER_H + (barH - knobH) * townScroll / (facilities.size() - visible);
+			g.fill(tx + listW - 3, ty + TOWN_HEADER_H, tx + listW, ty + TOWN_HEADER_H + barH, COLOR_DARK);
+			g.fill(tx + listW - 3, knobY, tx + listW, knobY + knobH, COLOR_LIGHT);
+		}
+		for (int i = townScroll; i < facilities.size() && i < townScroll + visible; i++) {
 			MarketSnapshotS2C.FacilityView f = facilities.get(i);
-			int rowY = ty + TOWN_HEADER_H + i * rowH;
-			if (rowY + rowH > ty + rows * ROW_H - TOWN_FOOTER_H) break;
+			int rowY = ty + TOWN_HEADER_H + (i - townScroll) * rowH;
 			boolean over = mouseX >= tx && mouseX < tx + listW && mouseY >= rowY && mouseY < rowY + rowH;
 			if (f.id().equals(selectedFacility)) g.fill(tx, rowY, tx + listW, rowY + rowH, 0xFF6F6F9F);
 			else if (over) g.fill(tx, rowY, tx + listW, rowY + rowH, 0xFF9B9B9B);
@@ -1533,6 +1558,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				}
 				case MarketSnapshotS2C.FacilityView.COMPLETE -> {
 					status = Component.translatable("screen.ak_trade_expansion.town.state.complete").getString();
+					if (f.kind().equals("festival") && d.festivalIn() >= 0) { // v0.51
+						status = (d.festivalIn() == 0 ? Component.translatable("screen.ak_trade_expansion.town.state.festival_today")
+								: Component.translatable("screen.ak_trade_expansion.town.state.festival_in", d.festivalIn())).getString();
+					}
 					color = COLOR_GREEN;
 				}
 				case MarketSnapshotS2C.FacilityView.DESTROYED -> {

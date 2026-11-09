@@ -48,7 +48,7 @@ public final class Development {
 
 	/**
 	 * Adds points brought by {@code player} (also counted for the player in the contributors list), × {@code
-	 * development.parkPointsMultiplier} while the market has a park. Nothing happens in dimensions that do not develop.
+	 * development.parkPointsMultiplier} while the market has a park and × {@code festivalMultiplier} on a festival day. Nothing happens in dimensions that do not develop.
 	 * The caller marks the registry dirty.
 	 *
 	 * @return the points actually added
@@ -56,6 +56,7 @@ public final class Development {
 	public static double add(Market market, ServerPlayer player, double points, long now) {
 		if (points <= 0 || !enabled(market)) return 0;
 		if (market.hasFacility(FacilityKind.PARK)) points *= config().parkPointsMultiplier;
+		points *= Festival.multiplier(market, now); // v0.51 festival day
 		market.setDevelopment(points(market, now) + points, now);
 		UUID uuid = player.getUUID();
 		Market.Contributor old = market.contributors().get(uuid);

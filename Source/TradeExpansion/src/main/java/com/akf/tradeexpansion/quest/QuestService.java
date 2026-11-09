@@ -174,6 +174,7 @@ public final class QuestService {
 		long deposit = Math.max(1, (long) Math.ceil(value - 1e-9));
 		double multiplier = QuestMath.transportMultiplier(MarketRegistry.linkedDistance(market, destination), config.transportBaseMultiplier,
 				config.transportPerThousandBlocks, config.transportMaxMultiplier);
+		if (harbor(market) || harbor(destination)) multiplier *= Math.max(1.0, TradeExpansionConfig.get().development.harborRewardMultiplier); // v0.51
 		long reward = Math.max(1, (long) Math.ceil(value * multiplier - 1e-9));
 		int difficulty = QuestMath.difficulty(value, thresholds());
 		long deadline = now + Math.round(config.durationDays * PriceModel.TICKS_PER_DAY);
@@ -183,6 +184,10 @@ public final class QuestService {
 
 	private static int[] thresholds() {
 		return config().difficultyThresholds.stream().mapToInt(Integer::intValue).toArray();
+	}
+
+	private static boolean harbor(Market market) {
+		return market != null && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.HARBOR);
 	}
 
 	private static double[] multipliers() {

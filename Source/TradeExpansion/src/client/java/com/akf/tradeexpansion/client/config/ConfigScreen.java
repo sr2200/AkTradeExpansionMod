@@ -296,7 +296,19 @@ public final class ConfigScreen {
 				.option(intField("development.innVillagers", dd.innVillagers, () -> dev.innVillagers, v -> dev.innVillagers = v, 0, 10))
 				.option(doubleField("development.bankInterestMaxMultiplier", dd.bankInterestMaxMultiplier, () -> dev.bankInterestMaxMultiplier, v -> dev.bankInterestMaxMultiplier = v, 1, 100))
 				.option(doubleField("development.fountainReputationMultiplier", dd.fountainReputationMultiplier, () -> dev.fountainReputationMultiplier, v -> dev.fountainReputationMultiplier = v, 1, 10))
-				.option(doubleField("development.parkPointsMultiplier", dd.parkPointsMultiplier, () -> dev.parkPointsMultiplier, v -> dev.parkPointsMultiplier = v, 1, 10));
+				.option(doubleField("development.parkPointsMultiplier", dd.parkPointsMultiplier, () -> dev.parkPointsMultiplier, v -> dev.parkPointsMultiplier = v, 1, 10))
+				.option(doubleField("development.clockTowerRecoveryMultiplier", dd.clockTowerRecoveryMultiplier, () -> dev.clockTowerRecoveryMultiplier, v -> dev.clockTowerRecoveryMultiplier = v, 0.1, 1))
+				.option(doubleField("development.watchtowerAccidentMultiplier", dd.watchtowerAccidentMultiplier, () -> dev.watchtowerAccidentMultiplier, v -> dev.watchtowerAccidentMultiplier = v, 0, 1))
+				.option(doubleField("development.watchtowerRivalMultiplier", dd.watchtowerRivalMultiplier, () -> dev.watchtowerRivalMultiplier, v -> dev.watchtowerRivalMultiplier = v, 0, 1))
+				.option(doubleField("development.tavernBoardMultiplier", dd.tavernBoardMultiplier, () -> dev.tavernBoardMultiplier, v -> dev.tavernBoardMultiplier = v, 1, 10))
+				.option(intField("development.marketHallExtraGoods", dd.marketHallExtraGoods, () -> dev.marketHallExtraGoods, v -> dev.marketHallExtraGoods = v, 0, 10))
+				.option(doubleField("development.harborRewardMultiplier", dd.harborRewardMultiplier, () -> dev.harborRewardMultiplier, v -> dev.harborRewardMultiplier = v, 1, 10))
+				.option(doubleField("development.harborTravelMultiplier", dd.harborTravelMultiplier, () -> dev.harborTravelMultiplier, v -> dev.harborTravelMultiplier = v, 0.1, 1))
+				.option(doubleField("development.theaterTrendMultiplier", dd.theaterTrendMultiplier, () -> dev.theaterTrendMultiplier, v -> dev.theaterTrendMultiplier = v, 1, 5))
+				.option(doubleField("development.hotSpringRestMultiplier", dd.hotSpringRestMultiplier, () -> dev.hotSpringRestMultiplier, v -> dev.hotSpringRestMultiplier = v, 0, 1))
+				.option(doubleField("development.hotSpringQuitMultiplier", dd.hotSpringQuitMultiplier, () -> dev.hotSpringQuitMultiplier, v -> dev.hotSpringQuitMultiplier = v, 0, 1))
+				.option(intField("development.festivalIntervalDays", dd.festivalIntervalDays, () -> dev.festivalIntervalDays, v -> dev.festivalIntervalDays = v, 2, 100))
+				.option(doubleField("development.festivalMultiplier", dd.festivalMultiplier, () -> dev.festivalMultiplier, v -> dev.festivalMultiplier = v, 1, 10));
 
 		// Q (v0.48): hired staff.
 		TradeExpansionConfig.Staff st = edit.staff;

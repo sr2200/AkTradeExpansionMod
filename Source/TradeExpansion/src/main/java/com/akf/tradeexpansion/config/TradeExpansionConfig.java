@@ -1166,6 +1166,30 @@ public final class TradeExpansionConfig {
 		public double fountainReputationMultiplier = 1.25;
 		/** Park: multiplier of the development points the market gains. */
 		public double parkPointsMultiplier = 1.25;
+		/** v0.51 clock tower: multiplier of the recovery half-life H of every good (smaller = faster). */
+		public double clockTowerRecoveryMultiplier = 0.75;
+		/** v0.51 watchtower: multiplier of the carrier accident chance on trips from / to the market. */
+		public double watchtowerAccidentMultiplier = 0.5;
+		/** v0.51 watchtower: multiplier of the rival guild pushes the market gets. */
+		public double watchtowerRivalMultiplier = 0.5;
+		/** v0.51 tavern: multiplier of the board radius and of the number of markets it lists. */
+		public double tavernBoardMultiplier = 2.0;
+		/** v0.51 market hall: goods added to the market's count. */
+		public int marketHallExtraGoods = 2;
+		/** v0.51 harbor: multiplier of the reward of new transport requests from / to the market. */
+		public double harborRewardMultiplier = 1.25;
+		/** v0.51 harbor: multiplier of carrier travel times from / to the market. */
+		public double harborTravelMultiplier = 0.75;
+		/** v0.51 theater: trends in fashion raise B by this many times their bonus; out of fashion lower it by 1 / this. */
+		public double theaterTrendMultiplier = 1.5;
+		/** v0.51 hot spring: multiplier of the rest after an accident of carriers hired at the market. */
+		public double hotSpringRestMultiplier = 0.5;
+		/** v0.51 hot spring: multiplier of the chance that such a carrier quits after an accident. */
+		public double hotSpringQuitMultiplier = 0.5;
+		/** v0.51 festival plaza: a festival day every this many days. */
+		public int festivalIntervalDays = 5;
+		/** v0.51 festival plaza: multiplier of reputation and development points on a festival day. */
+		public double festivalMultiplier = 2.0;
 
 		public Development() {
 		}
@@ -1231,7 +1255,31 @@ public final class TradeExpansionConfig {
 			});
 		});
 
-		static final Codec<Development> CODEC = Codec.mapPair(POINTS_CODEC, Facilities.CODEC).xmap(pair -> {
+		/** Third part of the fields (v0.51 buildings). */
+		private record Buildings(double clockTowerRecoveryMultiplier, double watchtowerAccidentMultiplier, double watchtowerRivalMultiplier,
+				double tavernBoardMultiplier, int marketHallExtraGoods, double harborRewardMultiplier, double harborTravelMultiplier,
+				double theaterTrendMultiplier, double hotSpringRestMultiplier, double hotSpringQuitMultiplier, int festivalIntervalDays,
+				double festivalMultiplier) {
+			static final MapCodec<Buildings> CODEC = RecordCodecBuilder.mapCodec(i -> {
+				Development d = new Development();
+				return i.group(
+						Codec.DOUBLE.fieldOf("clockTowerRecoveryMultiplier").orElse(d.clockTowerRecoveryMultiplier).forGetter(Buildings::clockTowerRecoveryMultiplier),
+						Codec.DOUBLE.fieldOf("watchtowerAccidentMultiplier").orElse(d.watchtowerAccidentMultiplier).forGetter(Buildings::watchtowerAccidentMultiplier),
+						Codec.DOUBLE.fieldOf("watchtowerRivalMultiplier").orElse(d.watchtowerRivalMultiplier).forGetter(Buildings::watchtowerRivalMultiplier),
+						Codec.DOUBLE.fieldOf("tavernBoardMultiplier").orElse(d.tavernBoardMultiplier).forGetter(Buildings::tavernBoardMultiplier),
+						Codec.INT.fieldOf("marketHallExtraGoods").orElse(d.marketHallExtraGoods).forGetter(Buildings::marketHallExtraGoods),
+						Codec.DOUBLE.fieldOf("harborRewardMultiplier").orElse(d.harborRewardMultiplier).forGetter(Buildings::harborRewardMultiplier),
+						Codec.DOUBLE.fieldOf("harborTravelMultiplier").orElse(d.harborTravelMultiplier).forGetter(Buildings::harborTravelMultiplier),
+						Codec.DOUBLE.fieldOf("theaterTrendMultiplier").orElse(d.theaterTrendMultiplier).forGetter(Buildings::theaterTrendMultiplier),
+						Codec.DOUBLE.fieldOf("hotSpringRestMultiplier").orElse(d.hotSpringRestMultiplier).forGetter(Buildings::hotSpringRestMultiplier),
+						Codec.DOUBLE.fieldOf("hotSpringQuitMultiplier").orElse(d.hotSpringQuitMultiplier).forGetter(Buildings::hotSpringQuitMultiplier),
+						Codec.INT.fieldOf("festivalIntervalDays").orElse(d.festivalIntervalDays).forGetter(Buildings::festivalIntervalDays),
+						Codec.DOUBLE.fieldOf("festivalMultiplier").orElse(d.festivalMultiplier).forGetter(Buildings::festivalMultiplier)
+				).apply(i, Buildings::new);
+			});
+		}
+
+		private static final MapCodec<Development> FIRST_CODEC = Codec.mapPair(POINTS_CODEC, Facilities.CODEC).xmap(pair -> {
 			Development c = pair.getFirst();
 			Facilities f = pair.getSecond();
 			c.siteSearchLimit = f.siteSearchLimit();
@@ -1253,7 +1301,27 @@ public final class TradeExpansionConfig {
 		}, c -> Pair.of(c, new Facilities(c.siteSearchLimit, c.rebuildCostRatio, c.protectFacilities, c.warehouseStockMultiplier,
 				c.warehouseRestockMultiplier, c.questHallExtraQuests, c.questHallExtraTransport, c.innVillagers, c.bankInterestMaxMultiplier,
 				c.reputationPerPoint, c.requireMaterials, c.materialCountMultiplier, c.constructionEffects, c.fountainReputationMultiplier,
-				c.parkPointsMultiplier))).codec();
+				c.parkPointsMultiplier)));
+
+		static final Codec<Development> CODEC = Codec.mapPair(FIRST_CODEC, Buildings.CODEC).xmap(pair -> {
+			Development c = pair.getFirst();
+			Buildings b = pair.getSecond();
+			c.clockTowerRecoveryMultiplier = b.clockTowerRecoveryMultiplier();
+			c.watchtowerAccidentMultiplier = b.watchtowerAccidentMultiplier();
+			c.watchtowerRivalMultiplier = b.watchtowerRivalMultiplier();
+			c.tavernBoardMultiplier = b.tavernBoardMultiplier();
+			c.marketHallExtraGoods = b.marketHallExtraGoods();
+			c.harborRewardMultiplier = b.harborRewardMultiplier();
+			c.harborTravelMultiplier = b.harborTravelMultiplier();
+			c.theaterTrendMultiplier = b.theaterTrendMultiplier();
+			c.hotSpringRestMultiplier = b.hotSpringRestMultiplier();
+			c.hotSpringQuitMultiplier = b.hotSpringQuitMultiplier();
+			c.festivalIntervalDays = b.festivalIntervalDays();
+			c.festivalMultiplier = b.festivalMultiplier();
+			return c;
+		}, c -> Pair.of(c, new Buildings(c.clockTowerRecoveryMultiplier, c.watchtowerAccidentMultiplier, c.watchtowerRivalMultiplier,
+				c.tavernBoardMultiplier, c.marketHallExtraGoods, c.harborRewardMultiplier, c.harborTravelMultiplier, c.theaterTrendMultiplier,
+				c.hotSpringRestMultiplier, c.hotSpringQuitMultiplier, c.festivalIntervalDays, c.festivalMultiplier))).codec();
 
 		public int[] levelBonusThresholdArray() {
 			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();

@@ -64,4 +64,22 @@ class DevelopmentMathTest {
 		assertEquals(1250, DevelopmentMath.cost(2500, true, 0.5));
 		assertEquals(751, DevelopmentMath.cost(1501, true, 0.5)); // 750.5 rounds up
 	}
+
+	/** v0.51 festival: one day in every interval, counting down to it, shifted per market. */
+	@org.junit.jupiter.api.Test
+	void festivalIn() {
+		int interval = 5;
+		for (long id : new long[] {0, 1, 7, 123}) {
+			int festivals = 0;
+			for (long day = 0; day < 50; day++) {
+				int left = DevelopmentMath.festivalIn(id, day, interval);
+				org.junit.jupiter.api.Assertions.assertTrue(left >= 0 && left < interval);
+				if (left == 0) festivals++;
+				else org.junit.jupiter.api.Assertions.assertEquals(left - 1, DevelopmentMath.festivalIn(id, day + 1, interval));
+			}
+			org.junit.jupiter.api.Assertions.assertEquals(10, festivals);
+		}
+		org.junit.jupiter.api.Assertions.assertNotEquals(DevelopmentMath.festivalIn(1, 0, interval), DevelopmentMath.festivalIn(2, 0, interval));
+		org.junit.jupiter.api.Assertions.assertTrue(DevelopmentMath.festivalIn(5, -3, 1) < 2); // interval at least 2
+	}
 }

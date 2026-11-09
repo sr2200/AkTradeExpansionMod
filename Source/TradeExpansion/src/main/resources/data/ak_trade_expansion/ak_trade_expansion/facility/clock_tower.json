@@ -1,0 +1,24 @@
+{
+  "kind": "clock_tower",
+  "order": 7,
+  "icon": "minecraft:clock",
+  "cost": 3500,
+  "structure": "clock_tower",
+  "wanted": [
+    {
+      "item": "minecraft:stone_bricks",
+      "count": 96,
+      "value": 2
+    },
+    {
+      "item": "minecraft:copper_ingot",
+      "count": 16,
+      "value": 4
+    },
+    {
+      "item": "minecraft:clock",
+      "count": 2,
+      "value": 30
+    }
+  ]
+}

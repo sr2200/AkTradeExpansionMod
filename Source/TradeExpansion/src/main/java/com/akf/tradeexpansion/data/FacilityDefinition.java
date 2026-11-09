@@ -23,8 +23,15 @@ import java.util.Optional;
  * @param structure template name: {@code <ns>:facility/<style>/<structure>} (style from the market's place, falling back
  *                  to {@code plains})
  * @param wanted    materials the village wants for it (N-2)
+ * @param waterside v0.51 (harbor): rows from the front that stand on land; the rows behind stand over water
  */
-public record FacilityDefinition(FacilityKind kind, int order, Identifier icon, long cost, String structure, List<Wanted> wanted) {
+public record FacilityDefinition(FacilityKind kind, int order, Identifier icon, long cost, String structure, List<Wanted> wanted,
+		Optional<Integer> waterside) {
+	/** Rows on land of a waterside building, or -1 for a building on land. */
+	public int landRows() {
+		return waterside.orElse(-1);
+	}
+
 	/**
 	 * One wanted material: an item or an item tag, how many, and its value per item for the development points when it is
 	 * not a good the market prices (tags always use the value).
@@ -65,6 +72,7 @@ public record FacilityDefinition(FacilityKind kind, int order, Identifier icon, 
 			Identifier.CODEC.fieldOf("icon").forGetter(FacilityDefinition::icon),
 			Codec.LONG.fieldOf("cost").forGetter(FacilityDefinition::cost),
 			Codec.STRING.fieldOf("structure").forGetter(FacilityDefinition::structure),
-			Wanted.CODEC.listOf().optionalFieldOf("wanted", List.of()).forGetter(FacilityDefinition::wanted)
+			Wanted.CODEC.listOf().optionalFieldOf("wanted", List.of()).forGetter(FacilityDefinition::wanted),
+			Codec.intRange(1, 64).optionalFieldOf("waterside").forGetter(FacilityDefinition::waterside)
 	).apply(i, FacilityDefinition::new));
 }

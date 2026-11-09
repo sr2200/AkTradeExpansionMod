@@ -187,6 +187,15 @@ public final class RivalService {
 
 	/** O-3: share of the push a market gets: 1 at the center, falling off with distance, × the good's link factor. */
 	public static double weight(MarketRegistry registry, Market market, Campaign c) {
+		double w = baseWeight(registry, market, c);
+		// v0.51: a watchtower sees the guild coming; its market feels less of the push
+		if (w > 0 && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.WATCHTOWER)) {
+			w *= Math.clamp(TradeExpansionConfig.get().development.watchtowerRivalMultiplier, 0.0, 1.0);
+		}
+		return w;
+	}
+
+	private static double baseWeight(MarketRegistry registry, Market market, Campaign c) {
 		if (market.id() == c.market()) return 1.0;
 		Market center = registry.get(c.market());
 		if (center == null || !linked(market.dimension(), center.dimension())) return 0.0;

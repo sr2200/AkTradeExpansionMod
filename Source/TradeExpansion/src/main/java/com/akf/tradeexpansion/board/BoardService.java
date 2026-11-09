@@ -38,10 +38,14 @@ public final class BoardService {
 			return;
 		}
 		TradeExpansionConfig.Board config = TradeExpansionConfig.get().board;
+		// v0.51: a tavern hears from farther away (radius and number of markets)
+		double reach = here.hasFacility(com.akf.tradeexpansion.development.FacilityKind.TAVERN)
+				? Math.max(1.0, TradeExpansionConfig.get().development.tavernBoardMultiplier) : 1.0;
+		double radius = config.radius * reach;
 		List<Market> nearby = new ArrayList<>(registry.inDimension(here.dimension()).stream()
-				.filter(m -> m != here && m.horizontalDistanceTo(here.center()) <= config.radius)
+				.filter(m -> m != here && m.horizontalDistanceTo(here.center()) <= radius)
 				.sorted(Comparator.comparingDouble(m -> m.horizontalDistanceTo(here.center())))
-				.limit(config.maxMarkets)
+				.limit((long) Math.ceil(config.maxMarkets * reach))
 				.toList());
 		long now = MarketUpkeep.touch(player.level(), here);
 		java.util.UUID uuid = player.getUUID();
@@ -63,7 +67,7 @@ public final class BoardService {
 		// O-5: rival guild news
 		List<BoardS2C.News> news = new ArrayList<>();
 		long today = RivalService.day(now);
-		for (Campaign c : RivalService.news(registry, here, config.radius, now)) {
+		for (Campaign c : RivalService.news(registry, here, radius, now)) {
 			Market center = registry.get(c.market());
 			GoodsDefinition def = GoodsCatalog.get(c.goods());
 			if (center == null || def == null) continue;

@@ -87,7 +87,7 @@ public final class MarkerPreview {
 			if (existing != null && existing.state() != Facility.State.DESTROYED) continue; // built or under construction
 			StructureTemplate template = FacilityBuilder.template(level.getServer(), e.getValue(), style).orElse(null);
 			if (template == null) continue;
-			SiteFinder.Preview preview = SiteFinder.preview(level, market, template, pos, facing);
+			SiteFinder.Preview preview = SiteFinder.preview(level, market, template, pos, facing, e.getValue().landRows());
 			boolean ok = preview.reason() == null;
 			boxes.merge(preview.box(), ok, Boolean::logicalOr);
 			Component name = FacilityBuilder.name(e.getValue().kind());

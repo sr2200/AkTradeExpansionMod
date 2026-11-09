@@ -16,7 +16,23 @@ public enum FacilityKind implements StringRepresentable {
 	/** Leisure (v0.50): more reputation gained at the market (M). */
 	FOUNTAIN("fountain"),
 	/** Leisure (v0.50): more development points gained by the market (N-2). */
-	PARK("park");
+	PARK("park"),
+	/** v0.51: prices recover faster at the market (B-3). */
+	CLOCK_TOWER("clock_tower"),
+	/** v0.51: fewer carrier accidents on trips from / to the market (Q), weaker rival guild pushes (O). */
+	WATCHTOWER("watchtower"),
+	/** v0.51: the bulletin board reaches farther (I). */
+	TAVERN("tavern"),
+	/** v0.51: the market deals in more goods (D-4). */
+	MARKET_HALL("market_hall"),
+	/** v0.51: higher transport request rewards (J-2) and faster carriers (Q) to / from the market; built at the water. */
+	HARBOR("harbor"),
+	/** v0.51: trends in fashion raise prices more, trends out of fashion lower them less (P). */
+	THEATER("theater"),
+	/** v0.51: carriers hired here rest less after an accident and quit less often (Q). */
+	HOT_SPRING("hot_spring"),
+	/** v0.51: every few days a festival day with more reputation and development points. */
+	FESTIVAL("festival");
 
 	public static final Codec<FacilityKind> CODEC = StringRepresentable.fromEnum(FacilityKind::values);
 

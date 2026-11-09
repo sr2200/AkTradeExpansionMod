@@ -1,0 +1,24 @@
+{
+  "kind": "festival",
+  "order": 14,
+  "icon": "minecraft:cake",
+  "cost": 3500,
+  "structure": "festival",
+  "wanted": [
+    {
+      "tag": "minecraft:wool",
+      "count": 32,
+      "value": 6
+    },
+    {
+      "item": "minecraft:lantern",
+      "count": 16,
+      "value": 10
+    },
+    {
+      "tag": "minecraft:banners",
+      "count": 4,
+      "value": 20
+    }
+  ]
+}

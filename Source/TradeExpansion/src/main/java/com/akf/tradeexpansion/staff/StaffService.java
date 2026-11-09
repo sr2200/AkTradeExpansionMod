@@ -5,6 +5,7 @@ import com.akf.tradeexpansion.advancement.TradeAdvancements;
 import com.akf.tradeexpansion.bank.BankAccounts;
 import com.akf.tradeexpansion.bank.BankService;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.development.FacilityKind;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.core.PriceModel;
@@ -225,7 +226,7 @@ public final class StaffService {
 					else log(e, now, "bought", e.goods, destination.id(), deal.items(), deal.total());
 				}
 				if (e.stock > 0) {
-					depart(e, Employee.Phase.OUTBOUND, MarketRegistry.linkedDistance(home, destination), now);
+					depart(e, Employee.Phase.OUTBOUND, home, destination, now);
 					setStatus(server, e, Employee.Status.WORKING, now, changes);
 				} else {
 					setStatus(server, e, deal.reason(), now, changes);
@@ -248,7 +249,7 @@ public final class StaffService {
 				}
 				if (destination == null) {
 					log(e, now, "destination_gone", e.goods, -1);
-					depart(e, Employee.Phase.RETURNING, 0, now);
+					depart(e, Employee.Phase.RETURNING, home, null, now);
 					return;
 				}
 				Deal deal = e.auto() ? autoSell(server, registry, destination, e, now, changes) : carrierSell(server, registry, destination, e, now, changes);
@@ -266,12 +267,12 @@ public final class StaffService {
 				}
 				double distance = MarketRegistry.linkedDistance(home, destination);
 				if (e.stock <= 0) {
-					depart(e, Employee.Phase.RETURNING, distance, now);
+					depart(e, Employee.Phase.RETURNING, home, destination, now);
 					setStatus(server, e, Employee.Status.WORKING, now, changes);
 				} else if (now - e.phaseStart >= Math.round(config().carrierMaxWaitDays * PriceModel.TICKS_PER_DAY)) {
 					if (e.auto()) log(e, now, "leftover_mix", null, destination.id(), cargoItems(e));
 					else log(e, now, "leftover", e.goods, destination.id(), (long) e.stock * unit(e));
-					depart(e, Employee.Phase.RETURNING, distance, now);
+					depart(e, Employee.Phase.RETURNING, home, destination, now);
 					setStatus(server, e, Employee.Status.WORKING, now, changes);
 				} else {
 					setStatus(server, e, deal.units() > 0 ? Employee.Status.WAIT_SELL : deal.reason(), now, changes);
@@ -304,10 +305,19 @@ public final class StaffService {
 		}
 	}
 
-	private static void depart(Employee e, Employee.Phase phase, double distance, long now) {
+	private static void depart(Employee e, Employee.Phase phase, Market home, Market destination, long now) {
+		double distance = home == null || destination == null ? 0 : MarketRegistry.linkedDistance(home, destination);
 		e.phase = phase;
 		e.phaseStart = now;
-		e.nextTime = now + StaffMath.travelTicks(distance, config().carrierBlocksPerDay);
+		long ticks = StaffMath.travelTicks(distance, config().carrierBlocksPerDay);
+		if (has(home, FacilityKind.HARBOR) || has(destination, FacilityKind.HARBOR)) { // v0.51: by water
+			ticks = Math.max(StaffMath.MIN_TRAVEL_TICKS, Math.round(ticks * Math.clamp(TradeExpansionConfig.get().development.harborTravelMultiplier, 0.1, 1.0)));
+		}
+		e.nextTime = now + ticks;
+	}
+
+	private static boolean has(Market market, FacilityKind kind) {
+		return market != null && market.hasFacility(kind);
 	}
 
 	/**
@@ -320,7 +330,9 @@ public final class StaffService {
 		if (e.stock <= 0) return false;
 		TradeExpansionConfig.Staff c = config();
 		Random random = new Random(e.id * 0x9E3779B97F4A7C15L ^ e.nextTime ^ e.trips);
-		double chance = StaffMath.accidentChance(distance, c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax);
+		Market home = registry.get(e.home);
+		Market destination = e.destination < 0 ? null : registry.get(e.destination);
+		double chance = StaffMath.accidentChance(distance, c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax) * watchtower(home, destination);
 		if (random.nextDouble() >= chance) return false;
 		double fraction = c.accidentLossMin + (c.accidentLossMax - c.accidentLossMin) * random.nextDouble();
 		if (e.auto()) {
@@ -352,7 +364,9 @@ public final class StaffService {
 			log(e, now, "accident", e.goods, -1, (long) lost * unit(e), cost);
 		}
 		Component line = describe(registry, e, e.log.getLast());
-		if (random.nextDouble() < c.quitChance) {
+		boolean spring = has(home, FacilityKind.HOT_SPRING); // v0.51: a hot spring at home
+		TradeExpansionConfig.Development dev = TradeExpansionConfig.get().development;
+		if (random.nextDouble() < c.quitChance * (spring ? Math.clamp(dev.hotSpringQuitMultiplier, 0.0, 1.0) : 1.0)) {
 			e.lost += e.cargoCost; // what is left of the cargo goes with the carrier
 			e.stock = 0;
 			e.cargoCost = 0;
@@ -365,7 +379,7 @@ public final class StaffService {
 			return true;
 		}
 		notify(server, e, line);
-		e.nextTime = now + Math.round(c.accidentRestDays * PriceModel.TICKS_PER_DAY);
+		e.nextTime = now + Math.round(c.accidentRestDays * (spring ? Math.clamp(dev.hotSpringRestMultiplier, 0.0, 1.0) : 1.0) * PriceModel.TICKS_PER_DAY);
 		setStatus(server, e, Employee.Status.RESTING, now, changes);
 		return false;
 	}
@@ -410,9 +424,16 @@ public final class StaffService {
 		return p == null ? null : StaffMath.withSpread(p, config().carrierSpreadMultiplier);
 	}
 
-	private static double accidentChance(double distance) {
+	private static double accidentChance(Market home, Market destination) {
 		TradeExpansionConfig.Staff c = config();
-		return StaffMath.accidentChance(distance, c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax);
+		double distance = MarketRegistry.linkedDistance(home, destination);
+		return StaffMath.accidentChance(distance, c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax) * watchtower(home, destination);
+	}
+
+	/** v0.51: a watchtower at either end makes accidents rarer. */
+	private static double watchtower(Market home, Market destination) {
+		return has(home, FacilityKind.WATCHTOWER) || has(destination, FacilityKind.WATCHTOWER)
+				? Math.clamp(TradeExpansionConfig.get().development.watchtowerAccidentMultiplier, 0.0, 1.0) : 1.0;
 	}
 
 	/** Mean share of the cargo lost in an accident. */
@@ -442,7 +463,7 @@ public final class StaffService {
 		GoodState b = destination.good(goodsId);
 		int max = Math.min(maxUnits, (int) Math.floor(a.stock()));
 		if (max <= 0) return StaffMath.BuyPlan.NONE;
-		double keep = 1 - accidentChance(MarketRegistry.linkedDistance(home, destination)) * lostShare();
+		double keep = 1 - accidentChance(home, destination) * lostShare();
 		return StaffMath.planBuy(carrierParams(home, goodsId), a.pressure(), carrierParams(destination, goodsId), b.pressure(), max, maxPrice, funds,
 				config().carrierPriceImpact, keep);
 	}
@@ -767,7 +788,7 @@ public final class StaffService {
 
 	/** Expected profit of the trip {@code plan} to {@code destination} (commission and accident risk counted). */
 	private static long expectedProfit(Market here, Market destination, StaffMath.BuyPlan plan) {
-		return StaffMath.expectedProfit(plan, accidentChance(MarketRegistry.linkedDistance(here, destination)), lostShare(), config().carrierCommission);
+		return StaffMath.expectedProfit(plan, accidentChance(here, destination), lostShare(), config().carrierCommission);
 	}
 
 	/** What a carrier would buy now for a trip to {@code destination}, with enough money and no price limit. */

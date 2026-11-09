@@ -1,0 +1,24 @@
+{
+  "kind": "theater",
+  "order": 12,
+  "icon": "minecraft:note_block",
+  "cost": 3000,
+  "structure": "theater",
+  "wanted": [
+    {
+      "tag": "minecraft:wool",
+      "count": 32,
+      "value": 6
+    },
+    {
+      "item": "minecraft:note_block",
+      "count": 4,
+      "value": 12
+    },
+    {
+      "tag": "minecraft:planks",
+      "count": 64,
+      "value": 1
+    }
+  ]
+}

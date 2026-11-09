@@ -11,6 +11,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
@@ -51,6 +52,11 @@ public final class SiteFinder {
 	}
 
 	public static Result find(ServerLevel level, Market market, StructureTemplate template) {
+		return find(level, market, template, -1);
+	}
+
+	/** {@code landRows}: v0.51 waterside building (harbor) with this many rows on land and the rest over water; -1 = land. */
+	public static Result find(ServerLevel level, Market market, StructureTemplate template, int landRows) {
 		// 1. Building site stakes, oldest first; stale entries (the stake is gone) are dropped.
 		List<BlockPos> markers = market.markers();
 		for (BlockPos marker : List.copyOf(markers)) {
@@ -61,7 +67,7 @@ public final class SiteFinder {
 				continue;
 			}
 			Direction facing = state.getValue(ConstructionMarkerBlock.FACING);
-			Check check = check(level, market, template, marker.getX(), marker.getZ(), rotation(facing), marker);
+			Check check = check(level, market, template, marker.getX(), marker.getZ(), rotation(facing), marker, landRows);
 			if (check.site() != null) return new Result(check.site(), null, true);
 			return new Result(null, Component.translatable("message.ak_trade_expansion.facility.marker_blocked", check.reason()), true);
 		}
@@ -72,7 +78,7 @@ public final class SiteFinder {
 			int x = center.getX() + offset[0];
 			int z = center.getZ() + offset[1];
 			for (Direction facing : facingsToward(offset[0], offset[1])) {
-				Check check = check(level, market, template, x, z, rotation(facing), null);
+				Check check = check(level, market, template, x, z, rotation(facing), null, landRows);
 				if (check.site() != null) return new Result(check.site(), null, false);
 			}
 		}
@@ -87,9 +93,9 @@ public final class SiteFinder {
 	 * N-5 (v0.41): the box {@code template} would fill at the stake {@code marker} facing {@code facing}, and whether it
 	 * could be built there now (the same checks as {@link #find}).
 	 */
-	public static Preview preview(ServerLevel level, Market market, StructureTemplate template, BlockPos marker, Direction facing) {
+	public static Preview preview(ServerLevel level, Market market, StructureTemplate template, BlockPos marker, Direction facing, int landRows) {
 		Rotation rotation = rotation(facing);
-		Check check = check(level, market, template, marker.getX(), marker.getZ(), rotation, marker);
+		Check check = check(level, market, template, marker.getX(), marker.getZ(), rotation, marker, landRows);
 		if (check.site() != null) return new Preview(check.site().box(), null);
 		BlockPos frontLocal = StructureTemplate.transform(new BlockPos(template.getSize().getX() / 2, 0, 0), Mirror.NONE, rotation, BlockPos.ZERO);
 		BlockPos origin = new BlockPos(marker.getX() - frontLocal.getX(), marker.getY(), marker.getZ() - frontLocal.getZ());
@@ -125,7 +131,8 @@ public final class SiteFinder {
 	}
 
 	/** Can the template stand with its front center at ({@code fx}, {@code fz}), turned by {@code rotation}? */
-	private static Check check(ServerLevel level, Market market, StructureTemplate template, int fx, int fz, Rotation rotation, BlockPos marker) {
+	private static Check check(ServerLevel level, Market market, StructureTemplate template, int fx, int fz, Rotation rotation, BlockPos marker,
+			int landRows) {
 		int w = template.getSize().getX();
 		int h = template.getSize().getY();
 		int d = template.getSize().getZ();
@@ -137,6 +144,7 @@ public final class SiteFinder {
 		int floorY = Integer.MIN_VALUE;
 		int lowest = Integer.MAX_VALUE;
 		List<int[]> columns = new ArrayList<>();
+		List<int[]> waterColumns = new ArrayList<>(); // v0.51: the part of a harbor over the water
 		for (int lx = -1; lx <= w; lx++) {
 			for (int lz = -1; lz <= d; lz++) {
 				BlockPos p = StructureTemplate.transform(new BlockPos(lx, 0, lz), Mirror.NONE, rotation, BlockPos.ZERO);
@@ -145,6 +153,10 @@ public final class SiteFinder {
 				if (!level.hasChunk(x >> 4, z >> 4)) return Check.fail("unloaded");
 				boolean inside = lx >= 0 && lx < w && lz >= 0 && lz < d;
 				int y = surface(level, x, z, marker);
+				if (landRows >= 0 && lz >= landRows) {
+					if (inside) waterColumns.add(new int[] {x, y, z});
+					continue; // the water side has no ground to match
+				}
 				if (inside) {
 					BlockState ground = level.getBlockState(new BlockPos(x, y - 1, z));
 					if (!ground.is(GROUND) || !ground.getFluidState().isEmpty()) return Check.fail("ground");
@@ -155,6 +167,16 @@ public final class SiteFinder {
 			}
 		}
 		if (floorY - lowest > 1) return Check.fail("uneven");
+		if (!waterColumns.isEmpty()) {
+			int water = 0;
+			for (int[] col : waterColumns) {
+				if (col[1] > floorY) return Check.fail("space");
+				if (level.getFluidState(new BlockPos(col[0], col[1] - 1, col[2])).is(FluidTags.WATER)) water++;
+				else if (col[1] < floorY - 4) return Check.fail("water"); // a hole, not a shore
+				columns.add(col);
+			}
+			if (water * 2 < waterColumns.size()) return Check.fail("water");
+		}
 		if (floorY + h > level.getMaxY()) return Check.fail("space");
 
 		// Only air and replaceable blocks from the ground to the roof.
@@ -188,6 +210,21 @@ public final class SiteFinder {
 			pos.setY(y - 1);
 		}
 		return y;
+	}
+
+	/** v0.51: water, or air with water at most four blocks below (under the deck of a pier). */
+	public static boolean overWater(ServerLevel level, BlockPos pos) {
+		BlockPos.MutableBlockPos p = pos.mutable();
+		for (int i = 0; i < 5; i++, p.move(0, -1, 0)) {
+			BlockState state = level.getBlockState(p);
+			if (state.getFluidState().is(FluidTags.WATER)) return true;
+			if (!replaceable(state, false)) return false;
+		}
+		return false;
+	}
+
+	public static boolean waterOrReplaceable(BlockState state) {
+		return state.getFluidState().is(FluidTags.WATER) || replaceable(state, false);
 	}
 
 	/** Air, grass, flowers, snow layers and the like (no fluids); the site's own stake too. */

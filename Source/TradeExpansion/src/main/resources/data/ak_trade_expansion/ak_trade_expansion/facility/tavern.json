@@ -1,0 +1,24 @@
+{
+  "kind": "tavern",
+  "order": 9,
+  "icon": "minecraft:honey_bottle",
+  "cost": 2500,
+  "structure": "tavern",
+  "wanted": [
+    {
+      "tag": "minecraft:planks",
+      "count": 64,
+      "value": 1
+    },
+    {
+      "item": "minecraft:barrel",
+      "count": 8,
+      "value": 6
+    },
+    {
+      "item": "minecraft:wheat",
+      "count": 32,
+      "value": 1
+    }
+  ]
+}

@@ -49,6 +49,7 @@ public final class Reputation {
 		if (delta > 0 && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.FOUNTAIN)) { // N-4 (v0.50): gains only
 			delta *= TradeExpansionConfig.get().development.fountainReputationMultiplier;
 		}
+		if (delta > 0) delta *= com.akf.tradeexpansion.development.Festival.multiplier(market, now); // v0.51 festival day
 		double points = Math.max(0, points(market, player, now) + delta);
 		market.setStanding(new Market.Standing(player, points, now));
 	}

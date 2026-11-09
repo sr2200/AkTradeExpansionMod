@@ -70,4 +70,14 @@ public final class DevelopmentMath {
 		if (!rebuild) return baseCost;
 		return (long) Math.ceil(baseCost * rebuildRatio - 1e-9);
 	}
+
+	/**
+	 * v0.51 festival plaza: days from {@code day} to the next festival day (0 = today) of the market {@code marketId},
+	 * one every {@code interval} days (at least 2), shifted per market.
+	 */
+	public static int festivalIn(long marketId, long day, int interval) {
+		interval = Math.max(2, interval);
+		long offset = Math.floorMod(marketId * 7L + 3, interval);
+		return (int) Math.floorMod(offset - day, interval);
+	}
 }

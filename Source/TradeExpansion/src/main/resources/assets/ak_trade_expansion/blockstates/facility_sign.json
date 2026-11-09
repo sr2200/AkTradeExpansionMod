@@ -36,6 +36,54 @@
     "built=true,facing=north,kind=park": {
       "model": "ak_trade_expansion:block/facility_sign_park"
     },
+    "built=false,facing=north,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_clock_tower"
+    },
+    "built=false,facing=north,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_watchtower"
+    },
+    "built=false,facing=north,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_tavern"
+    },
+    "built=false,facing=north,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_market_hall"
+    },
+    "built=false,facing=north,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_harbor"
+    },
+    "built=false,facing=north,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_theater"
+    },
+    "built=false,facing=north,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_hot_spring"
+    },
+    "built=false,facing=north,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_festival"
+    },
     "built=false,facing=east,kind=quest_hall": {
       "model": "ak_trade_expansion:block/facility_sign_construction",
       "y": 90
@@ -82,6 +130,70 @@
     },
     "built=true,facing=east,kind=park": {
       "model": "ak_trade_expansion:block/facility_sign_park",
+      "y": 90
+    },
+    "built=false,facing=east,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_clock_tower",
+      "y": 90
+    },
+    "built=false,facing=east,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_watchtower",
+      "y": 90
+    },
+    "built=false,facing=east,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_tavern",
+      "y": 90
+    },
+    "built=false,facing=east,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_market_hall",
+      "y": 90
+    },
+    "built=false,facing=east,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_harbor",
+      "y": 90
+    },
+    "built=false,facing=east,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_theater",
+      "y": 90
+    },
+    "built=false,facing=east,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_hot_spring",
+      "y": 90
+    },
+    "built=false,facing=east,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_festival",
       "y": 90
     },
     "built=false,facing=south,kind=quest_hall": {
@@ -132,6 +244,70 @@
       "model": "ak_trade_expansion:block/facility_sign_park",
       "y": 180
     },
+    "built=false,facing=south,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_clock_tower",
+      "y": 180
+    },
+    "built=false,facing=south,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_watchtower",
+      "y": 180
+    },
+    "built=false,facing=south,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_tavern",
+      "y": 180
+    },
+    "built=false,facing=south,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_market_hall",
+      "y": 180
+    },
+    "built=false,facing=south,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_harbor",
+      "y": 180
+    },
+    "built=false,facing=south,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_theater",
+      "y": 180
+    },
+    "built=false,facing=south,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_hot_spring",
+      "y": 180
+    },
+    "built=false,facing=south,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_festival",
+      "y": 180
+    },
     "built=false,facing=west,kind=quest_hall": {
       "model": "ak_trade_expansion:block/facility_sign_construction",
       "y": 270
@@ -178,6 +354,70 @@
     },
     "built=true,facing=west,kind=park": {
       "model": "ak_trade_expansion:block/facility_sign_park",
+      "y": 270
+    },
+    "built=false,facing=west,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=clock_tower": {
+      "model": "ak_trade_expansion:block/facility_sign_clock_tower",
+      "y": 270
+    },
+    "built=false,facing=west,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=watchtower": {
+      "model": "ak_trade_expansion:block/facility_sign_watchtower",
+      "y": 270
+    },
+    "built=false,facing=west,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=tavern": {
+      "model": "ak_trade_expansion:block/facility_sign_tavern",
+      "y": 270
+    },
+    "built=false,facing=west,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=market_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_market_hall",
+      "y": 270
+    },
+    "built=false,facing=west,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=harbor": {
+      "model": "ak_trade_expansion:block/facility_sign_harbor",
+      "y": 270
+    },
+    "built=false,facing=west,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=theater": {
+      "model": "ak_trade_expansion:block/facility_sign_theater",
+      "y": 270
+    },
+    "built=false,facing=west,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=hot_spring": {
+      "model": "ak_trade_expansion:block/facility_sign_hot_spring",
+      "y": 270
+    },
+    "built=false,facing=west,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=festival": {
+      "model": "ak_trade_expansion:block/facility_sign_festival",
       "y": 270
     }
   }

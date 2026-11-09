@@ -26,4 +26,14 @@ public final class TrendMath {
 	public static double multiplier(double fraction, double min, double max) {
 		return min + (max - min) * fraction;
 	}
+
+	/**
+	 * v0.51 theater: a trend multiplier m with the theater's strength k (at least 1): in fashion (m &gt; 1) the bonus
+	 * is k times as large, out of fashion (m &lt; 1) the loss is 1 / k as large.
+	 */
+	public static double theater(double m, double k) {
+		k = Math.max(1.0, k);
+		if (m == 1.0) return m;
+		return m > 1 ? 1 + (m - 1) * k : 1 - (1 - m) / k;
+	}
 }

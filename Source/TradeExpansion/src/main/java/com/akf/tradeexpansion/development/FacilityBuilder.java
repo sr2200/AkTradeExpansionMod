@@ -145,7 +145,7 @@ public final class FacilityBuilder {
 		StructureTemplate template = template(level.getServer(), def, style).orElse(null);
 		if (template == null) return Outcome.fail(TradeResult.NO_TEMPLATE);
 
-		SiteFinder.Result found = SiteFinder.find(level, market, template);
+		SiteFinder.Result found = SiteFinder.find(level, market, template, def.landRows());
 		if (found.site() == null) {
 			return new Outcome(found.markerUsed() ? TradeResult.MARKER_BLOCKED : TradeResult.NO_SITE, 0, found.reason());
 		}
@@ -264,7 +264,7 @@ public final class FacilityBuilder {
 		}
 		StructurePlaceSettings settings = new StructurePlaceSettings().setRotation(facility.rotation());
 		template.placeInWorld(level, facility.origin(), facility.origin(), settings, RandomSource.create(market.id() ^ facility.started()), Block.UPDATE_ALL);
-		foundation(level, box);
+		foundation(level, box, def.landRows() >= 0);
 		BlockPos core = template.filterBlocks(facility.origin(), settings, ModBlocks.FACILITY_SIGN).stream()
 				.map(StructureTemplate.StructureBlockInfo::pos).findFirst().orElse(null);
 		facility.complete(core);
@@ -284,12 +284,22 @@ public final class FacilityBuilder {
 	 * Columns of the box lower than the floor get one block of the floor's own block below them; dirt under a pond (water
 	 * or lava, which would run out) and under a dirt path (which turns to dirt under a block anyway).
 	 */
-	private static void foundation(ServerLevel level, BoundingBox box) {
+	private static void foundation(ServerLevel level, BoundingBox box, boolean waterside) {
 		int floorY = box.minY();
 		for (int x = box.minX(); x <= box.maxX(); x++) {
 			for (int z = box.minZ(); z <= box.maxZ(); z++) {
 				BlockPos below = new BlockPos(x, floorY - 1, z);
 				BlockState floor = level.getBlockState(new BlockPos(x, floorY, z));
+				if (waterside && !floor.isAir() && SiteFinder.overWater(level, below)) {
+					// v0.51 harbor: posts (logs) of the pier go down to the bottom; the deck stays above the water
+					if (floor.is(net.minecraft.tags.BlockTags.LOGS)) {
+						BlockPos.MutableBlockPos p = below.mutable();
+						for (int i = 0; i < 24 && p.getY() > level.getMinY() && SiteFinder.waterOrReplaceable(level.getBlockState(p)); i++, p.move(0, -1, 0)) {
+							level.setBlockAndUpdate(p, floor);
+						}
+					}
+					continue;
+				}
 				if (floor.isAir() || !SiteFinder.replaceable(level.getBlockState(below), false)) continue;
 				boolean dirt = !floor.getFluidState().isEmpty() || floor.is(Blocks.DIRT_PATH);
 				level.setBlockAndUpdate(below, dirt ? Blocks.DIRT.defaultBlockState() : floor);

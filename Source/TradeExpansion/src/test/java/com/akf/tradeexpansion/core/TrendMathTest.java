@@ -28,4 +28,13 @@ class TrendMathTest {
 		assertEquals(1.15, TrendMath.multiplier(0.0, 1.15, 1.30), 1e-12);
 		assertEquals(1.225, TrendMath.multiplier(0.5, 1.15, 1.30), 1e-12);
 	}
+
+	/** v0.51 theater: bonuses grow k times, losses shrink to 1 / k; neutral and k below 1 change nothing. */
+	@org.junit.jupiter.api.Test
+	void theater() {
+		org.junit.jupiter.api.Assertions.assertEquals(1.3, TrendMath.theater(1.2, 1.5), 1e-9);
+		org.junit.jupiter.api.Assertions.assertEquals(0.9, TrendMath.theater(0.85, 1.5), 1e-9);
+		org.junit.jupiter.api.Assertions.assertEquals(1.0, TrendMath.theater(1.0, 3.0), 1e-9);
+		org.junit.jupiter.api.Assertions.assertEquals(1.2, TrendMath.theater(1.2, 0.5), 1e-9);
+	}
 }

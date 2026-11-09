@@ -1,0 +1,23 @@
+{
+  "kind": "watchtower",
+  "order": 8,
+  "icon": "minecraft:spyglass",
+  "cost": 2500,
+  "structure": "watchtower",
+  "wanted": [
+    {
+      "item": "minecraft:cobblestone",
+      "count": 96
+    },
+    {
+      "tag": "minecraft:logs",
+      "count": 32,
+      "value": 4
+    },
+    {
+      "item": "minecraft:spyglass",
+      "count": 1,
+      "value": 30
+    }
+  ]
+}

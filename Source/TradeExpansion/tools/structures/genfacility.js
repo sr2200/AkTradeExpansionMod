@@ -11,6 +11,8 @@
 // - bank: a stone house with a portico of columns at the front, a cornice, barred windows, a teller counter, a ceiling
 //   and a hipped roof of stairs.
 // - fountain (11x11) and park (13x13), the leisure facilities: open plazas without walls; see fountain() and park().
+// - v0.51: clock_tower, watchtower, market_hall, harbor (front rows on land, the rest over water), theater, hot_spring
+//   and festival have their own functions; the tavern is a house with its own interior.
 //   The sign stands in the front opening (fountain) or inside the gate (park).
 // Styles share the shapes and only change the materials: one per village type (plains, desert, savanna, snowy, taiga)
 // and one each for the Nether and the End (used when development.dimensions includes them). Beds explode there, so the
@@ -181,6 +183,18 @@ const leisure = {
 };
 for (const [style, m] of Object.entries(styles)) Object.assign(m, leisure[style]);
 
+// v0.51 buildings: the fence of the hot spring and the rocks around its bath.
+const extra = {
+	plains: { springFence: 'minecraft:bamboo_fence', rocks: ['minecraft:cobblestone', 'minecraft:mossy_cobblestone', 'minecraft:andesite', 'minecraft:stone'] },
+	desert: { springFence: 'minecraft:bamboo_fence', rocks: ['minecraft:sandstone', 'minecraft:smooth_sandstone', 'minecraft:terracotta', 'minecraft:andesite'] },
+	savanna: { springFence: 'minecraft:bamboo_fence', rocks: ['minecraft:terracotta', 'minecraft:red_sandstone', 'minecraft:andesite', 'minecraft:cobblestone'] },
+	snowy: { springFence: 'minecraft:spruce_fence', rocks: ['minecraft:cobblestone', 'minecraft:stone', 'minecraft:andesite', 'minecraft:diorite'] },
+	taiga: { springFence: 'minecraft:spruce_fence', rocks: ['minecraft:mossy_cobblestone', 'minecraft:cobblestone', 'minecraft:mossy_stone_bricks', 'minecraft:andesite'] },
+	nether: { springFence: 'minecraft:crimson_fence', rocks: ['minecraft:blackstone', 'minecraft:basalt', 'minecraft:polished_blackstone', 'minecraft:gilded_blackstone'] },
+	end: { springFence: 'minecraft:end_stone_brick_wall', rocks: ['minecraft:end_stone', 'minecraft:end_stone_bricks', 'minecraft:purpur_block', 'minecraft:obsidian'] },
+};
+for (const [style, m] of Object.entries(styles)) Object.assign(m, extra[style]);
+
 /** Blocks with an axis property (logs, stems, pillars). */
 const AXIS = /(_log|_stem|_pillar|basalt|hay_block)$/;
 
@@ -197,6 +211,14 @@ const facilities = {
 	inn: { w: 9, d: 9, wall: 4 },
 	fountain: { w: 11, d: 11 },
 	park: { w: 13, d: 13 },
+	clock_tower: { w: 7, d: 7 },
+	watchtower: { w: 5, d: 5 },
+	tavern: { w: 9, d: 9, wall: 4 },
+	market_hall: { w: 11, d: 9 },
+	harbor: { w: 9, d: 13 }, // rows z 0..5 on land, 6..12 over the water (data: "waterside": 6)
+	theater: { w: 11, d: 11 },
+	hot_spring: { w: 9, d: 9 },
+	festival: { w: 11, d: 11 },
 };
 
 /** Stairs and slabs from the stem of their block ids: minecraft:spruce -> minecraft:spruce_stairs. */
@@ -623,6 +645,34 @@ function build(style, m, kind, spec) {
 					if (m.pot) set(x, 1, 0, block(m.pot));
 				}
 				break;
+			case 'tavern': {
+				// v0.51: a hanging sign and a table with stools on the porch; inside the bar (a counter in front of
+				// stacked casks), two tables with candles and stools, and a fireplace with a chimney.
+				const wood = m.bench;
+				set(mid - 2, wall - 1, 0, state((wood === 'minecraft:purpur' ? 'minecraft:warped' : wood) + '_hanging_sign', { rotation: '0', attached: 'false' }));
+				set(mid + 2, wall - 1, 0, lantern(true));
+				set(1, 1, 0, state('minecraft:barrel', { facing: 'up' }));
+				set(W - 2, 1, 0, block(m.fence));
+				set(W - 2, 2, 0, state('minecraft:candle', { candles: '2', lit: 'true' }));
+				set(W - 3, 1, 0, stair(m.bench, 'west')); // back away from the table
+				for (let x = 1; x < W - 1; x++) {
+					if (x === mid) continue; // the sign stands in the gap
+					set(x, 1, D - 3, stair(m.bench, 'south', 'top')); // counter
+					set(x, 1, D - 2, state('minecraft:barrel', { facing: 'north' })); // casks behind it
+					if (x !== mid - 1 && x !== mid + 1) set(x, 2, D - 2, state('minecraft:barrel', { facing: 'north' }));
+				}
+				set(2, 2, D - 3, state('minecraft:brewing_stand', {}));
+				set(W - 3, 2, D - 3, state('minecraft:candle', { candles: '3', lit: 'true' }));
+				for (const tx of [2, W - 3]) {
+					set(tx, 1, 3, block(m.fence));
+					set(tx, 2, 3, state('minecraft:candle', { candles: '1', lit: 'true' }));
+					set(tx - 1, 1, 3, stair(m.bench, 'west'));
+					set(tx + 1, 1, 3, stair(m.bench, 'east'));
+				}
+				for (let z = 2; z < D - 3; z++) set(mid, 1, z, block(m.carpet));
+				chimney(W - 2, 2);
+				break;
+			}
 		}
 	}
 
@@ -724,10 +774,366 @@ function build(style, m, kind, spec) {
 		sign();
 	}
 
-	if (kind === 'bank') bank();
-	else if (kind === 'fountain') fountain();
-	else if (kind === 'park') park();
-	else house();
+	// ---- v0.51 buildings ----
+
+	/** Rings of stairs facing inward from the rectangle x0..x1 / z0..z1 at height y up; the last line or cell gets top. */
+	function hipRoof(x0, z0, x1, z1, y, stem, top) {
+		for (let k = 0; x0 + k <= x1 - k && z0 + k <= z1 - k; k++) {
+			const a0 = x0 + k, a1 = x1 - k, b0 = z0 + k, b1 = z1 - k;
+			const line = a0 === a1 || b0 === b1;
+			for (let x = a0; x <= a1; x++) for (let z = b0; z <= b1; z++) {
+				if (x !== a0 && x !== a1 && z !== b0 && z !== b1) continue;
+				if (line) { set(x, y + k, z, block(top)); continue; }
+				const facing = z === b0 ? 'south' : z === b1 ? 'north' : x === a0 ? 'east' : 'west';
+				set(x, y + k, z, stair(stem, facing));
+			}
+		}
+	}
+
+	/**
+	 * Clock tower (7x7): a stone tower on a small paved square with lamps, a clock face with gold hub and hands on each
+	 * side, an open belfry with a bell, and a hipped roof with a lightning rod on the spire.
+	 */
+	function clockTower() {
+		const t0 = 1, t1 = W - 2, c = mid;
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const ring = x === 0 || z === 0 || x === W - 1 || z === D - 1;
+			set(x, 0, z, block(ring ? m.pave : m.floor));
+		}
+		for (const x of [0, W - 1]) for (const z of [0, D - 1]) {
+			set(x, 1, z, block(m.postBase));
+			set(x, 2, z, lantern(false));
+		}
+		const onWall = (x, z) => x === t0 || x === t1 || z === t0 || z === t1;
+		const corner = (x, z) => (x === t0 || x === t1) && (z === t0 || z === t1);
+		for (let y = 1; y <= 16; y++) for (let x = t0; x <= t1; x++) for (let z = t0; z <= t1; z++) {
+			if (!onWall(x, z)) continue;
+			const sideMid = x === c || z === c;
+			if (y === 6 || y === 12 || y === 16) { set(x, y, z, block(m.cornice)); continue; }
+			if (corner(x, z)) { set(x, y, z, up(m.column)); continue; }
+			if (y >= 13) continue; // open belfry
+			if (y === 1) { set(x, y, z, block(m.stoneBase)); continue; }
+			if (sideMid && (y === 4 || y === 5 || y === 8)) { set(x, y, z, block(m.window)); continue; }
+			set(x, y, z, block(m.stone));
+		}
+		door(c, t0);
+		// Clock faces (3x3) at y 9..11 with a gold hub and two hands (buttons) on the outside.
+		const faces = [
+			{ cell: (a, y) => [c + a, y, t0], hand: (a, y) => [c + a, y, t0 - 1], facing: 'north' },
+			{ cell: (a, y) => [c + a, y, t1], hand: (a, y) => [c + a, y, t1 + 1], facing: 'south' },
+			{ cell: (a, y) => [t0, y, c + a], hand: (a, y) => [t0 - 1, y, c + a], facing: 'west' },
+			{ cell: (a, y) => [t1, y, c + a], hand: (a, y) => [t1 + 1, y, c + a], facing: 'east' },
+		];
+		for (const f of faces) {
+			for (let a = -1; a <= 1; a++) for (let y = 9; y <= 11; y++) {
+				const [x, yy, z] = f.cell(a, y);
+				set(x, yy, z, block(a === 0 && y === 10 ? 'minecraft:gold_block' : 'minecraft:smooth_quartz'));
+			}
+			for (const [a, y] of [[0, 11], [1, 10]]) {
+				const [x, yy, z] = f.hand(a, y);
+				set(x, yy, z, state('minecraft:polished_blackstone_button', { face: 'wall', facing: f.facing }));
+			}
+		}
+		// Floors inside (for the lanterns), the belfry with arches and the bell.
+		for (const y of [6, 12]) for (let x = t0 + 1; x < t1; x++) for (let z = t0 + 1; z < t1; z++) set(x, y, z, block(m.floor));
+		set(c, 5, c, lantern(true));
+		set(c, 11, c, lantern(true));
+		for (let x = t0 + 1; x < t1; x++) for (let z = t0 + 1; z < t1; z++) set(x, 16, z, block(m.cornice));
+		for (const [x, z, a, b] of [[t0 + 1, t0, 'east', 'west'], [t0 + 1, t1, 'east', 'west']]) {
+			set(x, 15, z, stair(m.bowl, a, 'top'));
+			set(t1 - 1, 15, z, stair(m.bowl, b, 'top'));
+		}
+		for (const x of [t0, t1]) {
+			set(x, 15, t0 + 1, stair(m.bowl, 'south', 'top'));
+			set(x, 15, t1 - 1, stair(m.bowl, 'north', 'top'));
+		}
+		set(c, 15, c, state('minecraft:bell', { attachment: 'ceiling', facing: 'north' }));
+		hipRoof(0, 0, W - 1, D - 1, 17, m.bankRoof, m.cornice);
+		set(c, 21, c, state('minecraft:lightning_rod', { facing: 'up' }));
+		coreSign(c, t1 - 1, 'north');
+	}
+
+	/**
+	 * Watchtower (5x5): a stone base and a timber shaft with arrow slits and a ladder inside, a lookout platform with a
+	 * railing, a roof on four posts with a lantern, a signal fire on top and a banner over the door.
+	 */
+	function watchtower() {
+		const c = mid;
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) set(x, 0, z, block(m.found));
+		for (let y = 1; y <= 12; y++) for (let x = 1; x <= 3; x++) for (let z = 1; z <= 3; z++) {
+			if (x === c && z === c) continue;
+			const corner = x !== c && z !== c;
+			if (y <= 3) set(x, y, z, block(corner ? m.stoneBase : m.found));
+			else if (corner) set(x, y, z, up(m.pillar));
+			else if (y === 6 || y === 9) set(x, y, z, block('minecraft:iron_bars'));
+			else set(x, y, z, block(m.wall));
+		}
+		door(c, 1);
+		for (let y = 1; y <= 13; y++) set(c, y, c, state('minecraft:ladder', { facing: 'north' }));
+		// A skirt of stairs around the base.
+		for (const [x, z, f] of [[0, 1, 'east'], [0, 2, 'east'], [0, 3, 'east'], [4, 1, 'west'], [4, 2, 'west'], [4, 3, 'west'], [1, 4, 'north'], [2, 4, 'north'], [3, 4, 'north'], [3, 0, 'south']]) {
+			set(x, 1, z, stair(m.gzRoof, f));
+		}
+		// Platform, railing, posts, roof, lanterns, fire.
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) if (!(x === c && z === c)) set(x, 13, z, block(m.floor));
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const edge = x === 0 || z === 0 || x === W - 1 || z === D - 1;
+			const corner = (x === 0 || x === W - 1) && (z === 0 || z === D - 1);
+			if (corner) for (let y = 14; y <= 16; y++) set(x, y, z, up(m.pillar));
+			else if (edge) set(x, 14, z, block(m.fence));
+		}
+		hipRoof(0, 0, W - 1, D - 1, 17, m.gzRoof, m.gzTop);
+		set(c, 18, c, lantern(true));
+		set(c, 20, c, state(m.chimneyTop.endsWith('campfire') ? m.chimneyTop : 'minecraft:campfire', { lit: 'true', signal_fire: 'false' }));
+		set(c, 11, 0, state('minecraft:red_wall_banner', { facing: 'north' }));
+		set(1, 3, 0, state('minecraft:wall_torch', { facing: 'north' }));
+		set(3, 3, 0, state('minecraft:wall_torch', { facing: 'north' }));
+		coreSign(1, 0, 'north');
+	}
+
+	/**
+	 * Market hall (11x9): a great gabled roof on posts and beams over a paved aisle, with stalls on both sides
+	 * (counters with goods, casks and chests behind) and lanterns hanging from the beams.
+	 */
+	function marketHall() {
+		const c = mid;
+		const postsX = [0, 3, W - 4, W - 1], postsZ = [0, 4, D - 1];
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const aisle = x >= 3 && x <= W - 4;
+			set(x, 0, z, block(!aisle ? m.floor : x === c ? m.paveAxis : (x + z) % 2 ? m.pave : m.paveRing));
+		}
+		for (const x of postsX) for (const z of postsZ) for (let y = 1; y <= 3; y++) set(x, y, z, up(m.pillar));
+		for (const z of postsZ) for (let x = 0; x < W; x++) set(x, 4, z, lying(m.beam, 'x'));
+		for (const x of [0, W - 1]) for (let z = 0; z < D; z++) if (!postsZ.includes(z)) set(x, 4, z, lying(m.beam, 'z'));
+		for (const z of postsZ) for (const x of [c - 3, c, c + 3]) set(x, 3, z, lantern(true));
+		// Gable roof with its ridge from front to back; gable ends filled, with a round window.
+		for (let k = 0; k < c; k++) {
+			const y = 5 + k;
+			for (let z = 0; z < D; z++) {
+				set(k, y, z, stair(m.gzRoof, 'east'));
+				set(W - 1 - k, y, z, stair(m.gzRoof, 'west'));
+			}
+			for (let x = k + 1; x < W - 1 - k; x++) for (const z of [0, D - 1]) set(x, y, z, block(m.wall));
+		}
+		for (let z = 0; z < D; z++) set(c, 5 + c, z, state(slab(m.gzRoof), { type: 'bottom' }));
+		for (const z of [0, D - 1]) for (const y of [7, 8]) set(c, y, z, block(m.window));
+		// Stalls: counter facing the aisle, goods on it, casks and chests behind; two per side.
+		const goods = ['minecraft:melon', 'minecraft:pumpkin', 'minecraft:hay_block', 'minecraft:cake', 'minecraft:decorated_pot', 'minecraft:bee_nest',
+			'minecraft:dried_kelp_block', 'minecraft:honey_block'];
+		let g = 0;
+		for (const side of [{ counter: 2, back: 1, facing: 'west' }, { counter: W - 3, back: W - 2, facing: 'east' }]) {
+			for (const [z0, z1] of [[1, 3], [5, D - 2]]) {
+				for (let z = z0; z <= z1; z++) {
+					set(side.counter, 1, z, stair(m.bench, side.facing, 'top'));
+					const item = goods[g++ % goods.length];
+					set(side.counter, 2, z, item === 'minecraft:bee_nest' ? state(item, { facing: side.facing === 'west' ? 'east' : 'west', honey_level: '0' }) : block(item));
+					set(side.back, 1, z, state('minecraft:barrel', { facing: 'up' }));
+					if (z === z0) set(side.back, 2, z, state('minecraft:chest', { facing: side.facing === 'west' ? 'east' : 'west' }));
+				}
+			}
+		}
+		coreSign(c - 1, 0, 'north');
+		set(c + 1, 1, 0, block(m.pot || 'minecraft:barrel'));
+	}
+
+	/**
+	 * Harbor (9x13): on land (z 0..5) the harbor office, crates and a crane; over the water a quay across the whole width
+	 * and a pier with log posts (they reach down to the bottom when it is built), mooring posts and lamps at its end.
+	 */
+	function harbor() {
+		const land = 6, c = mid;
+		for (let x = 0; x < W; x++) for (let z = 0; z < land; z++) set(x, 0, z, block(z === land - 1 ? m.found : m.pave));
+		for (let x = 0; x < W; x++) set(x, 0, land, [0, W - 1, c - 1, c + 1].includes(x) ? up(m.pillar) : block(m.deck));
+		for (let z = land + 1; z < D; z++) for (let x = c - 1; x <= c + 1; x++) {
+			const post = x !== c && (z - land) % 3 === 0;
+			set(x, 0, z, post ? up(m.pillar) : block(m.deck));
+		}
+		for (let z = land + 1; z < D; z++) for (const x of [c - 1, c + 1]) if ((z - land) % 3 === 0) set(x, 1, z, block(m.fence));
+		for (const x of [c - 1, c + 1]) {
+			set(x, 1, D - 1, block(m.fence));
+			set(x, 2, D - 1, block(m.fence));
+			set(x, 3, D - 1, lantern(false));
+		}
+		// Office: 4x4 with a door to the front, windows and a small hipped roof.
+		const o0 = 0, o1 = 3, oz0 = 1, oz1 = 4;
+		for (let y = 1; y <= 3; y++) for (let x = o0; x <= o1; x++) for (let z = oz0; z <= oz1; z++) {
+			if (x !== o0 && x !== o1 && z !== oz0 && z !== oz1) continue;
+			const corner = (x === o0 || x === o1) && (z === oz0 || z === oz1);
+			if (corner) set(x, y, z, up(m.pillar));
+			else if (y === 2 && (x === o0 || z === oz1)) set(x, y, z, block(m.window));
+			else set(x, y, z, block(y === 1 ? m.found : m.wall));
+		}
+		set(2, 1, oz0, state(m.door, { facing: 'north', half: 'lower', hinge: 'left' }));
+		set(2, 2, oz0, state(m.door, { facing: 'north', half: 'upper', hinge: 'left' }));
+		hipRoof(o0, oz0, o1, oz1, 4, m.gzRoof, m.gzTop);
+		set(1, 1, 3, state('minecraft:cartography_table', {}));
+		set(1, 1, 2, lantern(false));
+		// Crates, a crane with a cask on a chain over the water, lamps at the edge of the quay.
+		for (const [x, z, y] of [[5, 1, 1], [6, 1, 1], [5, 1, 2], [7, 2, 1], [6, 3, 1]]) set(x, y, z, state('minecraft:barrel', { facing: 'up' }));
+		set(7, 1, 1, state('minecraft:chest', { facing: 'west' }));
+		set(5, 1, 3, lying('minecraft:hay_block', 'x'));
+		for (let y = 1; y <= 6; y++) set(W - 2, y, land - 2, up(m.pillar));
+		for (let z = land - 2; z <= land + 2; z++) set(W - 2, 7, z, lying(m.beam, 'z'));
+		for (const y of [6, 5]) set(W - 2, y, land + 2, state('minecraft:iron_chain', { axis: 'y' }));
+		set(W - 2, 4, land + 2, state('minecraft:barrel', { facing: 'up' }));
+		for (const x of [1, W - 3]) lampPost(x, land - 1, 1);
+		coreSign(c, 0, 'north');
+	}
+
+	/**
+	 * Open-air theater (11x11): tiers of seats facing a raised stage at the back; the stage has a red curtain, side
+	 * drapes, banners, a stepped roof, note blocks and lanterns. Walkways at both sides lead past the tiers.
+	 */
+	function theater() {
+		const c = mid;
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) set(x, 0, z, block(z === 5 || z === 6 ? m.paveRing : m.pave));
+		// Tiers z 1..4 (the back row is the highest).
+		for (let z = 1; z <= 4; z++) {
+			const tier = 4 - z;
+			const x0 = z === 4 ? 2 : 1, x1 = z === 4 ? W - 3 : W - 2;
+			for (let x = x0; x <= x1; x++) {
+				for (let y = 1; y <= tier; y++) set(x, y, z, block(m.stone));
+				set(x, tier + 1, z, stair(m.bench, 'north'));
+			}
+		}
+		for (const x of [1, W - 2]) {
+			for (let y = 1; y <= 4; y++) set(x, y, 1, block(m.stone));
+			set(x, 5, 1, lantern(false));
+		}
+		for (const x of [1, W - 2]) lampPost(x, 5, 1);
+		// Stage: platform, steps, frame, curtain, drapes, valance, roof.
+		const s0 = 7, s1 = D - 2;
+		for (let x = 1; x < W - 1; x++) for (let z = s0; z <= s1; z++) set(x, 1, z, block(m.deck));
+		set(c, 1, s0 - 1, stair(m.bench, 'south')); // a step up to the stage
+		for (const x of [0, W - 1]) for (let z = s0; z < D; z++) for (let y = 1; y <= 6; y++) set(x, y, z, z === s0 || z === D - 1 ? up(m.pillar) : block(m.wall));
+		for (let x = 1; x < W - 1; x++) for (let y = 1; y <= 6; y++) set(x, y, D - 1, block('minecraft:red_wool'));
+		for (let x = 0; x < W; x++) set(x, 7, s0, lying(m.beam, 'x'));
+		for (let x = 0; x < W; x++) set(x, 7, D - 1, lying(m.beam, 'x'));
+		for (const x of [0, W - 1]) for (let z = s0 + 1; z < D - 1; z++) set(x, 7, z, lying(m.beam, 'z'));
+		for (const x of [1, W - 2]) for (let y = 3; y <= 6; y++) set(x, y, s0, block('minecraft:red_wool'));
+		for (let x = 2; x < W - 2; x++) set(x, 6, s0, block(x % 2 ? 'minecraft:yellow_wool' : 'minecraft:red_wool'));
+		for (let x = 0; x < W; x++) {
+			set(x, 8, s0, stair(m.gzRoof, 'south'));
+			set(x, 8, s0 + 1, block(m.gzTop));
+			set(x, 9, s0 + 1, stair(m.gzRoof, 'south'));
+			set(x, 8, s1, block(m.gzTop));
+			set(x, 9, s1, block(m.gzTop));
+			set(x, 10, s1, stair(m.gzRoof, 'south'));
+			set(x, 8, D - 1, block(m.gzTop));
+			set(x, 9, D - 1, block(m.gzTop));
+			set(x, 10, D - 1, state(slab(m.gzRoof), { type: 'bottom' }));
+		}
+		for (const x of [3, W - 4]) set(x, 7, s0 + 1, lantern(true));
+		for (const x of [3, W - 4]) set(x, 5, D - 2, state('minecraft:yellow_wall_banner', { facing: 'north' }));
+		set(2, 2, s1, state('minecraft:note_block', {}));
+		set(W - 3, 2, s1, state('minecraft:note_block', {}));
+		set(c, 2, s1, state('minecraft:jukebox', {}));
+		coreSign(c, 0, 'north');
+	}
+
+	/**
+	 * Hot spring (9x9): a fence with a gate and stone lanterns at the corners, a bath of water with rough rocks around
+	 * it, soul sand under part of it (bubbles rise), lights under the water, a bench and potted plants.
+	 */
+	function hotSpring() {
+		const c = mid;
+		const cx = c, cz = 5;
+		const inBath = (x, z) => ((x - cx) / 2.6) ** 2 + ((z - cz) / 2.1) ** 2 <= 1;
+		const nearBath = (x, z) => !inBath(x, z) && [-1, 0, 1].some((a) => [-1, 0, 1].some((b) => inBath(x + a, z + b)));
+		const rock = (x, z) => m.rocks[(x * 5 + z * 3 + (x * z) % 7) % m.rocks.length];
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			if (inBath(x, z)) {
+				const d = (x - cx) + (z - cz);
+				set(x, 0, z, block(Math.abs(x - cx) <= 1 && Math.abs(z - cz) <= 0 ? 'minecraft:soul_sand' : d % 2 === 0 ? m.glow : 'minecraft:smooth_stone'));
+				set(x, 1, z, state('minecraft:water', { level: '0' }));
+			} else if (nearBath(x, z)) {
+				set(x, 0, z, block(rock(x, z)));
+				set(x, 1, z, block(rock(z, x)));
+			} else {
+				const path = x === c && z <= 1;
+				set(x, 0, z, block(path ? m.pave : m.ground));
+			}
+		}
+		// A few taller rocks and lanterns on the rim.
+		const rim = [];
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) if (nearBath(x, z)) rim.push([x, z]);
+		rim.forEach(([x, z], i) => {
+			if (i % 5 === 0) set(x, 2, z, block(rock(x + 1, z)));
+			else if (i % 7 === 3) set(x, 2, z, lantern(false));
+		});
+		// Fence with a gate, stone lanterns at the corners.
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const edge = x === 0 || z === 0 || x === W - 1 || z === D - 1;
+			if (!edge || get(x, 1, z) !== undefined) continue;
+			if (z === 0 && x === c) continue;
+			set(x, 1, z, block(m.springFence));
+		}
+		for (const x of [0, W - 1]) for (const z of [0, D - 1]) lampPost(x, z, 1);
+		set(1, 1, 1, stair(m.bench, 'west'));
+		set(1, 1, 2, stair(m.bench, 'west'));
+		set(W - 2, 1, 1, block(m.pot || 'minecraft:potted_bamboo'));
+		set(W - 2, 1, 2, block('minecraft:potted_bamboo'));
+		coreSign(c - 1, 0, 'north');
+	}
+
+	/**
+	 * Festival plaza (11x11): a two-storey yagura (posts, red and white skirt, railing, a small roof, a bell and a note
+	 * block) in a dance ring, ropes of lanterns between poles around the square, four stalls with striped awnings and
+	 * goods, and coloured banners.
+	 */
+	function festival() {
+		const c = mid;
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const r = Math.max(Math.abs(x - c), Math.abs(z - c));
+			set(x, 0, z, block(r === 3 ? m.paveAxis : r === 2 ? m.paveRing : m.pave));
+		}
+		// Yagura.
+		for (const x of [c - 1, c + 1]) for (const z of [c - 1, c + 1]) for (let y = 1; y <= 6; y++) set(x, y, z, up(m.pillar));
+		for (const [x, z] of [[c, c - 1], [c - 1, c], [c + 1, c], [c, c + 1]]) {
+			set(x, 3, z, block('minecraft:red_wool'));
+			set(x, 2, z, block('minecraft:white_wool'));
+			set(x, 5, z, block(m.fence));
+		}
+		for (let x = c - 1; x <= c + 1; x++) for (let z = c - 1; z <= c + 1; z++) if (x === c || z === c) set(x, 4, z, block(m.deck));
+		set(c, 5, c, state('minecraft:note_block', {}));
+		hipRoof(c - 1, c - 1, c + 1, c + 1, 7, m.gzRoof, m.gzTop);
+		set(c, 6, c, state('minecraft:bell', { attachment: 'ceiling', facing: 'north' }));
+		set(c, 7, c, block(m.gzTop));
+		set(c, 8, c, lantern(false));
+		for (const x of [c - 2, c + 2]) for (const z of [c - 2, c + 2]) set(x, 1, z, state('minecraft:red_candle_cake', { lit: 'true' }));
+		// Poles and ropes of lanterns around the square.
+		for (const x of [0, W - 1]) for (const z of [0, D - 1]) for (let y = 1; y <= 5; y++) set(x, y, z, up(m.pillar));
+		for (let i = 1; i < W - 1; i++) {
+			for (const [x, z] of [[i, 0], [i, D - 1], [0, i], [W - 1, i]]) {
+				set(x, 5, z, block(m.fence));
+				if (i % 2 === 0) set(x, 4, z, lantern(true));
+			}
+		}
+		// Stalls in the corners: counter facing the square, goods, a cask, striped awning.
+		const stalls = [
+			{ x0: 1, z0: 1, dx: 1, dz: 1, colors: ['red', 'white'], goods: ['minecraft:cake', 'minecraft:melon', 'minecraft:pumpkin'] },
+			{ x0: W - 2, z0: 1, dx: -1, dz: 1, colors: ['blue', 'white'], goods: ['minecraft:honey_block', 'minecraft:decorated_pot', 'minecraft:cake'] },
+			{ x0: 1, z0: D - 2, dx: 1, dz: -1, colors: ['yellow', 'white'], goods: ['minecraft:hay_block', 'minecraft:cake', 'minecraft:melon'] },
+			{ x0: W - 2, z0: D - 2, dx: -1, dz: -1, colors: ['lime', 'white'], goods: ['minecraft:pumpkin', 'minecraft:decorated_pot', 'minecraft:honey_block'] },
+		];
+		for (const s of stalls) {
+			const facing = s.dz > 0 ? 'north' : 'south'; // counter: the low part toward the vendor
+			for (let i = 0; i < 3; i++) {
+				const x = s.x0 + i * s.dx;
+				set(x, 1, s.z0, i === 1 ? state('minecraft:barrel', { facing: 'up' }) : block(m.fence));
+				set(x, 2, s.z0, i === 1 ? block(m.fence) : block(m.fence));
+				set(x, 1, s.z0 + s.dz, stair(m.bench, facing, 'top'));
+				set(x, 2, s.z0 + s.dz, block(s.goods[i]));
+				for (const z of [s.z0, s.z0 + s.dz]) set(x, 3, z, block(`minecraft:${s.colors[i % 2]}_wool`));
+			}
+		}
+		const banners = ['minecraft:red_banner', 'minecraft:yellow_banner', 'minecraft:blue_banner', 'minecraft:lime_banner'];
+		[[c - 3, c], [c + 3, c], [c, c + 3]].forEach(([x, z], i) => set(x, 1, z, state(banners[i], { rotation: String((i * 4) % 16) })));
+		coreSign(c, 0, 'north');
+	}
+
+	const shapes = { bank, fountain, park, clock_tower: clockTower, watchtower, market_hall: marketHall, harbor, theater, hot_spring: hotSpring, festival };
+	(shapes[kind] || house)();
 
 	// Air everywhere else in the box (the site is checked to be free up to the top).
 	let H = 0;

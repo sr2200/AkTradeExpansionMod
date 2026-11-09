@@ -84,7 +84,7 @@ public final class MarketFactory {
 		market.setProfileId(MarketProfiles.choose(context, random));
 
 		TradeExpansionConfig config = TradeExpansionConfig.get();
-		int target = MarketLevel.goodsCount(market.level(), config.market.minGoods, config.market.maxGoods);
+		int target = goodsTarget(market, market.level());
 		MarketProfile profile = MarketProfiles.get(market.profileId());
 		List<String> selected;
 		if (profile != null) {
@@ -161,19 +161,32 @@ public final class MarketFactory {
 		int measuredLevel = measureLevel(level, market.center());
 		market.setMeasuredLevel(measuredLevel);
 		int measured = DevelopmentMath.effectiveLevel(measuredLevel, levelBonus(market)); // N-3: with the facility bonus
-		if (measured == market.level() || measured < market.level() && !config.market.shrinkOnLevelDown) return 0;
-		boolean grew = measured > market.level();
+		if (measured < market.level() && !config.market.shrinkOnLevelDown) measured = market.level();
+		int before = market.regularGoods().size();
+		int target = goodsTarget(market, measured);
+		// v0.51: the market hall changes the count without a level change
+		if (measured == market.level() && (before == target || before > target && !config.market.shrinkOnLevelDown)) return 0;
+		boolean grew = measured > market.level() || measured == market.level() && before < target;
 		market.refresh(now); // shelved / restored goods carry their state as of now
+		int oldLevel = market.level();
 		market.setLevel(measured);
-		int target = MarketLevel.goodsCount(measured, config.market.minGoods, config.market.maxGoods);
 		if (grew) {
 			grow(level, market, neighbors, target, now);
 		} else {
 			List<Identifier> regular = market.regularGoods();
 			for (int i = regular.size() - 1; i >= target; i--) market.shelve(regular.get(i));
 		}
-		TradeExpansion.LOGGER.info("Market #{} {} to level {}", market.id(), grew ? "grew" : "shrank", measured);
+		if (measured == oldLevel && market.regularGoods().size() == before) return 0; // nothing more to list (profile exhausted)
+		TradeExpansion.LOGGER.info("Market #{} {} to level {} ({} goods)", market.id(), grew ? "grew" : "shrank", measured, market.regularGoods().size());
 		return grew ? 1 : -1;
+	}
+
+	/** Regular goods a market of {@code level} lists: D-4, plus the market hall's extra goods (v0.51). */
+	public static int goodsTarget(Market market, int level) {
+		TradeExpansionConfig config = TradeExpansionConfig.get();
+		int target = MarketLevel.goodsCount(level, config.market.minGoods, config.market.maxGoods);
+		if (market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.MARKET_HALL)) target += Math.max(0, config.development.marketHallExtraGoods);
+		return target;
 	}
 
 	private static void grow(ServerLevel level, Market market, List<Market> neighbors, int target, long now) {

@@ -190,6 +190,18 @@ public final class ConfigValidator {
 		dv.bankInterestMaxMultiplier = clamp("development.bankInterestMaxMultiplier", dv.bankInterestMaxMultiplier, 1, 100);
 		dv.fountainReputationMultiplier = clamp("development.fountainReputationMultiplier", dv.fountainReputationMultiplier, 1, 10);
 		dv.parkPointsMultiplier = clamp("development.parkPointsMultiplier", dv.parkPointsMultiplier, 1, 10);
+		dv.clockTowerRecoveryMultiplier = clamp("development.clockTowerRecoveryMultiplier", dv.clockTowerRecoveryMultiplier, 0.1, 1);
+		dv.watchtowerAccidentMultiplier = clamp("development.watchtowerAccidentMultiplier", dv.watchtowerAccidentMultiplier, 0, 1);
+		dv.watchtowerRivalMultiplier = clamp("development.watchtowerRivalMultiplier", dv.watchtowerRivalMultiplier, 0, 1);
+		dv.tavernBoardMultiplier = clamp("development.tavernBoardMultiplier", dv.tavernBoardMultiplier, 1, 10);
+		dv.marketHallExtraGoods = clamp("development.marketHallExtraGoods", dv.marketHallExtraGoods, 0, 10);
+		dv.harborRewardMultiplier = clamp("development.harborRewardMultiplier", dv.harborRewardMultiplier, 1, 10);
+		dv.harborTravelMultiplier = clamp("development.harborTravelMultiplier", dv.harborTravelMultiplier, 0.1, 1);
+		dv.theaterTrendMultiplier = clamp("development.theaterTrendMultiplier", dv.theaterTrendMultiplier, 1, 5);
+		dv.hotSpringRestMultiplier = clamp("development.hotSpringRestMultiplier", dv.hotSpringRestMultiplier, 0, 1);
+		dv.hotSpringQuitMultiplier = clamp("development.hotSpringQuitMultiplier", dv.hotSpringQuitMultiplier, 0, 1);
+		dv.festivalIntervalDays = clamp("development.festivalIntervalDays", dv.festivalIntervalDays, 2, 100);
+		dv.festivalMultiplier = clamp("development.festivalMultiplier", dv.festivalMultiplier, 1, 10);
 		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
 		dv.materialCountMultiplier = clamp("development.materialCountMultiplier", dv.materialCountMultiplier, 0.1, 100);
 
