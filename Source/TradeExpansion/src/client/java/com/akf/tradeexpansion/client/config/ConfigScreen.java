@@ -294,7 +294,9 @@ public final class ConfigScreen {
 				.option(intField("development.questHallExtraQuests", dd.questHallExtraQuests, () -> dev.questHallExtraQuests, v -> dev.questHallExtraQuests = v, 0, 10))
 				.option(intField("development.questHallExtraTransport", dd.questHallExtraTransport, () -> dev.questHallExtraTransport, v -> dev.questHallExtraTransport = v, 0, 5))
 				.option(intField("development.innVillagers", dd.innVillagers, () -> dev.innVillagers, v -> dev.innVillagers = v, 0, 10))
-				.option(doubleField("development.bankInterestMaxMultiplier", dd.bankInterestMaxMultiplier, () -> dev.bankInterestMaxMultiplier, v -> dev.bankInterestMaxMultiplier = v, 1, 100));
+				.option(doubleField("development.bankInterestMaxMultiplier", dd.bankInterestMaxMultiplier, () -> dev.bankInterestMaxMultiplier, v -> dev.bankInterestMaxMultiplier = v, 1, 100))
+				.option(doubleField("development.fountainReputationMultiplier", dd.fountainReputationMultiplier, () -> dev.fountainReputationMultiplier, v -> dev.fountainReputationMultiplier = v, 1, 10))
+				.option(doubleField("development.parkPointsMultiplier", dd.parkPointsMultiplier, () -> dev.parkPointsMultiplier, v -> dev.parkPointsMultiplier = v, 1, 10));
 
 		// Q (v0.48): hired staff.
 		TradeExpansionConfig.Staff st = edit.staff;

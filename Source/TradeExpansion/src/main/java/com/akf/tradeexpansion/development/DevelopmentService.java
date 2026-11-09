@@ -104,13 +104,13 @@ public final class DevelopmentService {
 			points += DevelopmentMath.materialPoints(value(market, wanted), taken, Development.config().materialMultiplier);
 		}
 		if (items == 0) return fail(TradeResult.NOTHING_TO_DONATE, request);
-		Development.add(market, player, points, now);
+		double added = Development.add(market, player, points, now); // with the park bonus
 		Reputation.add(market, player.getUUID(), points * Development.config().reputationPerPoint, now);
 		if (TradeExpansionConfig.get().log.trades) {
 			TradeExpansion.LOGGER.info("{} DONATE {} items for {} @market#{} (+{} development)", player.getPlainTextName(), items, id, market.id(),
-					(long) Math.floor(points));
+					(long) Math.floor(added));
 		}
-		return new DevelopmentResultS2C(TradeResult.SUCCESS, request.action(), items, (long) Math.floor(points));
+		return new DevelopmentResultS2C(TradeResult.SUCCESS, request.action(), items, (long) Math.floor(added));
 	}
 
 	/** Base price of a wanted item: the market's B when it is a plain good, otherwise the entry's value (tags too). */
@@ -179,12 +179,12 @@ public final class DevelopmentService {
 			return fail(TradeResult.INSUFFICIENT_FUNDS, request);
 		}
 		double points = amount * Development.config().pointsPerCoin;
-		Development.add(market, player, points, now);
+		double added = Development.add(market, player, points, now); // with the park bonus
 		Reputation.add(market, player.getUUID(), points * Development.config().reputationPerPoint, now);
 		if (TradeExpansionConfig.get().log.trades) {
 			TradeExpansion.LOGGER.info("{} DONATE {} @market#{}{}", player.getPlainTextName(), CoinItem.formatCopper(amount), market.id(),
 					card ? " (card)" : "");
 		}
-		return new DevelopmentResultS2C(TradeResult.SUCCESS, request.action(), amount, (long) Math.floor(points));
+		return new DevelopmentResultS2C(TradeResult.SUCCESS, request.action(), amount, (long) Math.floor(added));
 	}
 }

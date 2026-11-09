@@ -1,0 +1,24 @@
+{
+  "kind": "fountain",
+  "order": 5,
+  "icon": "minecraft:water_bucket",
+  "cost": 3000,
+  "structure": "fountain",
+  "wanted": [
+    {
+      "item": "minecraft:stone_bricks",
+      "count": 64,
+      "value": 2
+    },
+    {
+      "item": "minecraft:lapis_lazuli",
+      "count": 16,
+      "value": 4
+    },
+    {
+      "item": "minecraft:lantern",
+      "count": 8,
+      "value": 10
+    }
+  ]
+}

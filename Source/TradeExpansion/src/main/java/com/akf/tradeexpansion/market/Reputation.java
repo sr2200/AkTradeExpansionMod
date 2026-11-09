@@ -46,6 +46,9 @@ public final class Reputation {
 	/** Adds (or with a negative {@code delta} removes) points; never below 0. The caller marks the registry dirty. */
 	public static void add(Market market, UUID player, double delta, long now) {
 		if (!config().enabled || delta == 0) return;
+		if (delta > 0 && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.FOUNTAIN)) { // N-4 (v0.50): gains only
+			delta *= TradeExpansionConfig.get().development.fountainReputationMultiplier;
+		}
 		double points = Math.max(0, points(market, player, now) + delta);
 		market.setStanding(new Market.Standing(player, points, now));
 	}

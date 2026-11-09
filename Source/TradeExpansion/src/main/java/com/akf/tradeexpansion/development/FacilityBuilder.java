@@ -280,14 +280,19 @@ public final class FacilityBuilder {
 		TradeAdvancements.onFacilityCompleted(level.getServer(), market, MarketClock.now(level)); // R
 	}
 
-	/** Columns of the box lower than the floor get one block of the floor's own block below them. */
+	/**
+	 * Columns of the box lower than the floor get one block of the floor's own block below them; dirt under a pond (water
+	 * or lava, which would run out) and under a dirt path (which turns to dirt under a block anyway).
+	 */
 	private static void foundation(ServerLevel level, BoundingBox box) {
 		int floorY = box.minY();
 		for (int x = box.minX(); x <= box.maxX(); x++) {
 			for (int z = box.minZ(); z <= box.maxZ(); z++) {
 				BlockPos below = new BlockPos(x, floorY - 1, z);
 				BlockState floor = level.getBlockState(new BlockPos(x, floorY, z));
-				if (!floor.isAir() && SiteFinder.replaceable(level.getBlockState(below), false)) level.setBlockAndUpdate(below, floor);
+				if (floor.isAir() || !SiteFinder.replaceable(level.getBlockState(below), false)) continue;
+				boolean dirt = !floor.getFluidState().isEmpty() || floor.is(Blocks.DIRT_PATH);
+				level.setBlockAndUpdate(below, dirt ? Blocks.DIRT.defaultBlockState() : floor);
 			}
 		}
 	}

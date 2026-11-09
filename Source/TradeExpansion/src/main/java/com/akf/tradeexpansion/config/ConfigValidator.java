@@ -188,6 +188,8 @@ public final class ConfigValidator {
 		dv.questHallExtraTransport = clamp("development.questHallExtraTransport", dv.questHallExtraTransport, 0, 5);
 		dv.innVillagers = clamp("development.innVillagers", dv.innVillagers, 0, 10);
 		dv.bankInterestMaxMultiplier = clamp("development.bankInterestMaxMultiplier", dv.bankInterestMaxMultiplier, 1, 100);
+		dv.fountainReputationMultiplier = clamp("development.fountainReputationMultiplier", dv.fountainReputationMultiplier, 1, 10);
+		dv.parkPointsMultiplier = clamp("development.parkPointsMultiplier", dv.parkPointsMultiplier, 1, 10);
 		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
 		dv.materialCountMultiplier = clamp("development.materialCountMultiplier", dv.materialCountMultiplier, 0.1, 100);
 

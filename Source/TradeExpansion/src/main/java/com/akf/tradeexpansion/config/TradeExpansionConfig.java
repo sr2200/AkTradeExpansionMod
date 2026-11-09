@@ -1162,6 +1162,10 @@ public final class TradeExpansionConfig {
 		public double materialCountMultiplier = 4.0;
 		/** v0.44: sites under construction show an outline, wood chips and a quiet hammering sound. */
 		public boolean constructionEffects = true;
+		/** Fountain: multiplier of the reputation gained at the market. */
+		public double fountainReputationMultiplier = 1.25;
+		/** Park: multiplier of the development points the market gains. */
+		public double parkPointsMultiplier = 1.25;
 
 		public Development() {
 		}
@@ -1170,7 +1174,7 @@ public final class TradeExpansionConfig {
 		private record Facilities(int siteSearchLimit, double rebuildCostRatio, boolean protectFacilities, double warehouseStockMultiplier,
 				double warehouseRestockMultiplier, int questHallExtraQuests, int questHallExtraTransport, int innVillagers,
 				double bankInterestMaxMultiplier, double reputationPerPoint, boolean requireMaterials, double materialCountMultiplier,
-				boolean constructionEffects) {
+				boolean constructionEffects, double fountainReputationMultiplier, double parkPointsMultiplier) {
 			static final MapCodec<Facilities> CODEC = RecordCodecBuilder.mapCodec(i -> {
 				Development d = new Development();
 				return i.group(
@@ -1186,7 +1190,9 @@ public final class TradeExpansionConfig {
 						Codec.DOUBLE.fieldOf("reputationPerPoint").orElse(d.reputationPerPoint).forGetter(Facilities::reputationPerPoint),
 						Codec.BOOL.fieldOf("requireMaterials").orElse(d.requireMaterials).forGetter(Facilities::requireMaterials),
 						Codec.DOUBLE.fieldOf("materialCountMultiplier").orElse(d.materialCountMultiplier).forGetter(Facilities::materialCountMultiplier),
-						Codec.BOOL.fieldOf("constructionEffects").orElse(d.constructionEffects).forGetter(Facilities::constructionEffects)
+						Codec.BOOL.fieldOf("constructionEffects").orElse(d.constructionEffects).forGetter(Facilities::constructionEffects),
+						Codec.DOUBLE.fieldOf("fountainReputationMultiplier").orElse(d.fountainReputationMultiplier).forGetter(Facilities::fountainReputationMultiplier),
+						Codec.DOUBLE.fieldOf("parkPointsMultiplier").orElse(d.parkPointsMultiplier).forGetter(Facilities::parkPointsMultiplier)
 				).apply(i, Facilities::new);
 			});
 		}
@@ -1241,10 +1247,13 @@ public final class TradeExpansionConfig {
 			c.requireMaterials = f.requireMaterials();
 			c.materialCountMultiplier = f.materialCountMultiplier();
 			c.constructionEffects = f.constructionEffects();
+			c.fountainReputationMultiplier = f.fountainReputationMultiplier();
+			c.parkPointsMultiplier = f.parkPointsMultiplier();
 			return c;
 		}, c -> Pair.of(c, new Facilities(c.siteSearchLimit, c.rebuildCostRatio, c.protectFacilities, c.warehouseStockMultiplier,
 				c.warehouseRestockMultiplier, c.questHallExtraQuests, c.questHallExtraTransport, c.innVillagers, c.bankInterestMaxMultiplier,
-				c.reputationPerPoint, c.requireMaterials, c.materialCountMultiplier, c.constructionEffects))).codec();
+				c.reputationPerPoint, c.requireMaterials, c.materialCountMultiplier, c.constructionEffects, c.fountainReputationMultiplier,
+				c.parkPointsMultiplier))).codec();
 
 		public int[] levelBonusThresholdArray() {
 			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();

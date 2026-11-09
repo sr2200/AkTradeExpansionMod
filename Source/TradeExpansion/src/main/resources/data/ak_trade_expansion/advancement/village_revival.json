@@ -5,7 +5,7 @@
       "trigger": "ak_trade_expansion:trade_event",
       "conditions": {
         "event": "facility_kinds",
-        "min": 4
+        "min": 6
       }
     }
   },

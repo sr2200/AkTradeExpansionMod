@@ -24,6 +24,18 @@
     "built=true,facing=north,kind=bank": {
       "model": "ak_trade_expansion:block/facility_sign_bank"
     },
+    "built=false,facing=north,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_fountain"
+    },
+    "built=false,facing=north,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_park"
+    },
     "built=false,facing=east,kind=quest_hall": {
       "model": "ak_trade_expansion:block/facility_sign_construction",
       "y": 90
@@ -54,6 +66,22 @@
     },
     "built=true,facing=east,kind=bank": {
       "model": "ak_trade_expansion:block/facility_sign_bank",
+      "y": 90
+    },
+    "built=false,facing=east,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_fountain",
+      "y": 90
+    },
+    "built=false,facing=east,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_park",
       "y": 90
     },
     "built=false,facing=south,kind=quest_hall": {
@@ -88,6 +116,22 @@
       "model": "ak_trade_expansion:block/facility_sign_bank",
       "y": 180
     },
+    "built=false,facing=south,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_fountain",
+      "y": 180
+    },
+    "built=false,facing=south,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_park",
+      "y": 180
+    },
     "built=false,facing=west,kind=quest_hall": {
       "model": "ak_trade_expansion:block/facility_sign_construction",
       "y": 270
@@ -118,6 +162,22 @@
     },
     "built=true,facing=west,kind=bank": {
       "model": "ak_trade_expansion:block/facility_sign_bank",
+      "y": 270
+    },
+    "built=false,facing=west,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=fountain": {
+      "model": "ak_trade_expansion:block/facility_sign_fountain",
+      "y": 270
+    },
+    "built=false,facing=west,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=park": {
+      "model": "ak_trade_expansion:block/facility_sign_park",
       "y": 270
     }
   }

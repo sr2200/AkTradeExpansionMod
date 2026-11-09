@@ -982,8 +982,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		double mx = event.x() - leftPos;
 		double my = event.y() - topPos;
 		if (tab == Tab.TOWN && snapshot != null && mx >= LIST_X && mx < LIST_X + listW && my >= LIST_Y + TOWN_HEADER_H) {
-			int index = (int) ((my - LIST_Y - TOWN_HEADER_H) / ROW_H);
 			List<MarketSnapshotS2C.FacilityView> facilities = snapshot.development().facilities();
+			int index = (int) ((my - LIST_Y - TOWN_HEADER_H) / townRowH(facilities.size()));
 			if (index < facilities.size()) {
 				String id = facilities.get(index).id();
 				selectedFacility = id.equals(selectedFacility) ? null : id; // a second click goes back to the donations
@@ -1481,6 +1481,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	/** Height of the development tab's header line (points and level). */
 	private static final int TOWN_HEADER_H = 10;
+	/** Height kept under the facility list for the contributors line. */
+	private static final int TOWN_FOOTER_H = 14;
+
+	/** Height of a facility row: smaller than the goods rows when they would not all fit (six buildings at the base size). */
+	private int townRowH(int count) {
+		int room = rows * ROW_H - TOWN_HEADER_H - TOWN_FOOTER_H;
+		return count <= 0 ? ROW_H : Math.clamp(room / count, 12, ROW_H);
+	}
 
 	/**
 	 * N-6: header (points, level breakdown), one row per facility, the contributors; in the right panel the coin
@@ -1500,15 +1508,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.town.no_facilities"), tx + 4, ty + TOWN_HEADER_H + 4, listW - 8, COLOR_WHITE, false);
 		}
 		MarketSnapshotS2C.FacilityView hovered = null;
+		int rowH = townRowH(facilities.size());
+		float iconScale = Math.min(1f, (rowH - 2) / 16f);
+		int textDy = (rowH - 8) / 2;
 		for (int i = 0; i < facilities.size(); i++) {
 			MarketSnapshotS2C.FacilityView f = facilities.get(i);
-			int rowY = ty + TOWN_HEADER_H + i * ROW_H;
-			if (rowY + ROW_H > ty + rows * ROW_H - 20) break;
-			boolean over = mouseX >= tx && mouseX < tx + listW && mouseY >= rowY && mouseY < rowY + ROW_H;
-			if (f.id().equals(selectedFacility)) g.fill(tx, rowY, tx + listW, rowY + ROW_H, 0xFF6F6F9F);
-			else if (over) g.fill(tx, rowY, tx + listW, rowY + ROW_H, 0xFF9B9B9B);
+			int rowY = ty + TOWN_HEADER_H + i * rowH;
+			if (rowY + rowH > ty + rows * ROW_H - TOWN_FOOTER_H) break;
+			boolean over = mouseX >= tx && mouseX < tx + listW && mouseY >= rowY && mouseY < rowY + rowH;
+			if (f.id().equals(selectedFacility)) g.fill(tx, rowY, tx + listW, rowY + rowH, 0xFF6F6F9F);
+			else if (over) g.fill(tx, rowY, tx + listW, rowY + rowH, 0xFF9B9B9B);
 			if (over) hovered = f;
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(f.icon())), tx + 2, rowY + 1);
+			g.pose().pushMatrix();
+			g.pose().translate(tx + 2 + (16 - 16 * iconScale) / 2, rowY + (rowH - 16 * iconScale) / 2);
+			g.pose().scale(iconScale, iconScale);
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(f.icon())), 0, 0);
+			g.pose().popMatrix();
 			String status;
 			int color;
 			switch (f.state()) {
@@ -1529,8 +1544,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 					color = d.points() + 1e-9 >= f.cost() ? COLOR_GOLD : COLOR_GRAY;
 				}
 			}
-			g.text(font, status, tx + listW - 6 - font.width(status), rowY + 5, color);
-			fitText(g, facilityName(f).getString(), tx + 20, rowY + 5, listW - 32 - font.width(status), COLOR_WHITE, true);
+			g.text(font, status, tx + listW - 6 - font.width(status), rowY + textDy, color);
+			fitText(g, facilityName(f).getString(), tx + 20, rowY + textDy, listW - 32 - font.width(status), COLOR_WHITE, true);
 		}
 		// Contributors: the first one and the player; the top five on hover.
 		int bottom = ty + rows * ROW_H;

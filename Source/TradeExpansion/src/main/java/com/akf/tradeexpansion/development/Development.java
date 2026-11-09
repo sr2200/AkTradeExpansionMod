@@ -47,16 +47,21 @@ public final class Development {
 	}
 
 	/**
-	 * Adds points brought by {@code player} (also counted for the player in the contributors list). Nothing happens in
-	 * dimensions that do not develop. The caller marks the registry dirty.
+	 * Adds points brought by {@code player} (also counted for the player in the contributors list), × {@code
+	 * development.parkPointsMultiplier} while the market has a park. Nothing happens in dimensions that do not develop.
+	 * The caller marks the registry dirty.
+	 *
+	 * @return the points actually added
 	 */
-	public static void add(Market market, ServerPlayer player, double points, long now) {
-		if (points <= 0 || !enabled(market)) return;
+	public static double add(Market market, ServerPlayer player, double points, long now) {
+		if (points <= 0 || !enabled(market)) return 0;
+		if (market.hasFacility(FacilityKind.PARK)) points *= config().parkPointsMultiplier;
 		market.setDevelopment(points(market, now) + points, now);
 		UUID uuid = player.getUUID();
 		Market.Contributor old = market.contributors().get(uuid);
 		double total = (old == null ? 0 : old.points()) + points;
 		market.contributors().put(uuid, new Market.Contributor(uuid, player.getPlainTextName(), total));
+		return points;
 	}
 
 	/** Spends points (building a facility). @return {@code false} if there are not enough */

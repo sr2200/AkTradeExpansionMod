@@ -3,7 +3,7 @@ package com.akf.tradeexpansion.development;
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
 
-/** The four facilities of design N-4. Each market can have one of each; the effects are fixed per kind. */
+/** The facilities of design N-4. Each market can have one of each; the effects are fixed per kind. */
 public enum FacilityKind implements StringRepresentable {
 	/** More request slots (J / J-2). */
 	QUEST_HALL("quest_hall"),
@@ -12,7 +12,11 @@ public enum FacilityKind implements StringRepresentable {
 	/** Beds counted by D-4; villagers arrive when first completed. */
 	INN("inn"),
 	/** Bank tab regardless of the level, no card fee, higher interest cap (E-7 / E-8). */
-	BANK("bank");
+	BANK("bank"),
+	/** Leisure (v0.50): more reputation gained at the market (M). */
+	FOUNTAIN("fountain"),
+	/** Leisure (v0.50): more development points gained by the market (N-2). */
+	PARK("park");
 
 	public static final Codec<FacilityKind> CODEC = StringRepresentable.fromEnum(FacilityKind::values);
 
