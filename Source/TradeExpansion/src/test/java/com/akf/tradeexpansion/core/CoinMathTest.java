@@ -45,6 +45,27 @@ class CoinMathTest {
 	}
 
 	@Test
+	void negativeAmountsAreRejected() {
+		assertThrows(IllegalArgumentException.class, () -> CoinMath.decompose(-1, DEFAULT));
+		assertThrows(IllegalArgumentException.class, () -> CoinMath.change(new long[5], -1, DEFAULT));
+	}
+
+	/** Totals that do not fit in a long fail loudly instead of wrapping around to a small or negative amount. */
+	@Test
+	void overflowIsDetected() {
+		long[] huge = CoinMath.values(new int[] {100, 100, 100, 100});
+		assertThrows(ArithmeticException.class, () -> CoinMath.total(new long[] {0, 0, 0, 0, Long.MAX_VALUE / 2}, huge));
+		assertThrows(ArithmeticException.class, () -> CoinMath.total(new long[] {Long.MAX_VALUE, 0, 0, 0, 1}, DEFAULT));
+	}
+
+	/** Paying exactly what is held leaves no change; a price of 0 gives everything back as the fewest coins. */
+	@Test
+	void exactAndFreePayments() {
+		assertArrayEquals(new long[5], CoinMath.change(new long[] {7, 1, 5, 5, 0}, 5517, DEFAULT));
+		assertArrayEquals(new long[] {0, 0, 0, 0, 1}, CoinMath.change(new long[] {0, 0, 0, 10, 0}, 0, DEFAULT));
+	}
+
+	@Test
 	void randomPaymentsConserveValue() {
 		Random random = new Random(12345);
 		int[][] ratioSets = {{10, 10, 10, 10}, {2, 2, 2, 2}, {100, 100, 100, 100}, {8, 8, 10, 2}, {64, 3, 50, 7}};

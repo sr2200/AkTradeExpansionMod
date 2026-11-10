@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DistanceModelTest {
 	private static double w(double d) {
@@ -36,6 +37,30 @@ class DistanceModelTest {
 		assertEquals(444, PriceModel.sellPrice(sword, 10 * w(300)));
 		assertEquals(513, PriceModel.sellPrice(sword, 10 * w(500)));
 		assertEquals(657, PriceModel.sellPrice(sword, 10 * w(1000)));
+	}
+
+	/** C-1: the distance between markets ignores height. */
+	@Test
+	void horizontalDistance() {
+		assertEquals(5.0, DistanceModel.horizontalDistance(0, 0, 3, 4), 1e-12);
+		assertEquals(5.0, DistanceModel.horizontalDistance(3, 4, 0, 0), 1e-12);
+		assertEquals(0.0, DistanceModel.horizontalDistance(-7, 9, -7, 9), 1e-12);
+		assertEquals(Math.sqrt(2) * 1000, DistanceModel.horizontalDistance(-500, -500, 500, 500), 1e-9);
+	}
+
+	/** Exponent 0 gives full weight up to Rfar; a larger exponent falls off faster. */
+	@Test
+	void exponentShapesTheFalloff() {
+		assertEquals(1.0, DistanceModel.weight(1000, 128, 1536, 0), 1e-12);
+		assertTrue(DistanceModel.weight(500, 128, 1536, 3) < DistanceModel.weight(500, 128, 1536, 1));
+	}
+
+	/** One market within Rnear is enough to ignore every farther one. */
+	@Test
+	void nearestMarketWins() {
+		assertEquals(-4.0, DistanceModel.initialPressure(List.of(
+				new DistanceModel.Neighbor(128, -4),
+				new DistanceModel.Neighbor(129, 50)), 128, 1536, 2), 1e-12);
 	}
 
 	@Test

@@ -2,7 +2,9 @@ package com.akf.tradeexpansion.core;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class DevelopmentMathTest {
 	@Test
@@ -40,15 +42,15 @@ class DevelopmentMathTest {
 
 	@Test
 	void siteOffsetsNearestFirstWithinTheRadius() {
-		java.util.List<int[]> offsets = DevelopmentMath.siteOffsets(4, 2, 1000);
+		List<int[]> offsets = DevelopmentMath.siteOffsets(4, 2, 1000);
 		assertEquals(12, offsets.size()); // (±2,0) (0,±2) (±2,±2) (±4,0) (0,±4); (±4,±2) is outside
 		assertEquals(2, Math.abs(offsets.get(0)[0]) + Math.abs(offsets.get(0)[1]));
 		for (int i = 1; i < offsets.size(); i++) {
 			int[] a = offsets.get(i - 1), b = offsets.get(i);
-			org.junit.jupiter.api.Assertions.assertTrue(a[0] * a[0] + a[1] * a[1] <= b[0] * b[0] + b[1] * b[1]);
+			assertTrue(a[0] * a[0] + a[1] * a[1] <= b[0] * b[0] + b[1] * b[1]);
 		}
 		assertEquals(3, DevelopmentMath.siteOffsets(32, 2, 3).size());
-		org.junit.jupiter.api.Assertions.assertTrue(offsets.stream().noneMatch(o -> o[0] == 0 && o[1] == 0));
+		assertTrue(offsets.stream().noneMatch(o -> o[0] == 0 && o[1] == 0));
 	}
 
 	@Test
@@ -66,20 +68,20 @@ class DevelopmentMathTest {
 	}
 
 	/** v0.51 festival: one day in every interval, counting down to it, shifted per market. */
-	@org.junit.jupiter.api.Test
+	@Test
 	void festivalIn() {
 		int interval = 5;
 		for (long id : new long[] {0, 1, 7, 123}) {
 			int festivals = 0;
 			for (long day = 0; day < 50; day++) {
 				int left = DevelopmentMath.festivalIn(id, day, interval);
-				org.junit.jupiter.api.Assertions.assertTrue(left >= 0 && left < interval);
+				assertTrue(left >= 0 && left < interval);
 				if (left == 0) festivals++;
-				else org.junit.jupiter.api.Assertions.assertEquals(left - 1, DevelopmentMath.festivalIn(id, day + 1, interval));
+				else assertEquals(left - 1, DevelopmentMath.festivalIn(id, day + 1, interval));
 			}
-			org.junit.jupiter.api.Assertions.assertEquals(10, festivals);
+			assertEquals(10, festivals);
 		}
-		org.junit.jupiter.api.Assertions.assertNotEquals(DevelopmentMath.festivalIn(1, 0, interval), DevelopmentMath.festivalIn(2, 0, interval));
-		org.junit.jupiter.api.Assertions.assertTrue(DevelopmentMath.festivalIn(5, -3, 1) < 2); // interval at least 2
+		assertNotEquals(DevelopmentMath.festivalIn(1, 0, interval), DevelopmentMath.festivalIn(2, 0, interval));
+		assertTrue(DevelopmentMath.festivalIn(5, -3, 1) < 2); // interval at least 2
 	}
 }

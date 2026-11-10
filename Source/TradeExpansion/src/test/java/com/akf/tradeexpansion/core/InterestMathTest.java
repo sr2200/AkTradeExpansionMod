@@ -25,6 +25,28 @@ class InterestMathTest {
 		assertEquals(100_000 + 30 * (days - daysToCap), InterestMath.accrue(start, days, RATE, 100_000), 1e-6);
 	}
 
+	/** cap 0 or less: no cap, the whole balance compounds. */
+	@Test
+	void noCapCompoundsEverything() {
+		assertEquals(200_000 * Math.pow(1 + RATE, 30), InterestMath.accrue(200_000, 30, RATE, 0), 1e-6);
+		assertEquals(200_000 * Math.pow(1 + RATE, 30), InterestMath.accrue(200_000, 30, RATE, -1), 1e-6);
+	}
+
+	/** Exactly at the cap: the interest of the cap per day, without compounding. */
+	@Test
+	void exactlyAtTheCap() {
+		assertEquals(100_000 + 30 * 10, InterestMath.accrue(100_000, 10, RATE, 100_000), 1e-6);
+	}
+
+	/** Fractions of a day and negative inputs. */
+	@Test
+	void fractionsAndNegatives() {
+		assertEquals(10_000 * Math.pow(1 + RATE, 0.5), InterestMath.accrue(10_000, 0.5, RATE, 100_000), 1e-6);
+		assertEquals(500, InterestMath.accrue(500, -3, RATE, 100_000));
+		assertEquals(500, InterestMath.accrue(500, 10, -RATE, 100_000));
+		assertEquals(-20, InterestMath.accrue(-20, 10, RATE, 100_000));
+	}
+
 	@Test
 	void nothingWithoutRateTimeOrMoney() {
 		assertEquals(500, InterestMath.accrue(500, 10, 0, 100_000));

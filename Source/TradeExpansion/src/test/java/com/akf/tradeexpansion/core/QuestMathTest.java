@@ -26,6 +26,27 @@ class QuestMathTest {
 		assertEquals(25, QuestMath.reward(20.4, 1, MULTIPLIERS)); // 24.48 rounds up
 	}
 
+	/** A difficulty outside 1..3 uses the nearest multiplier instead of failing. */
+	@Test
+	void rewardClampsTheDifficulty() {
+		assertEquals(120, QuestMath.reward(100, 0, MULTIPLIERS));
+		assertEquals(200, QuestMath.reward(100, 4, MULTIPLIERS));
+		assertEquals(0, QuestMath.reward(0, 2, MULTIPLIERS));
+		assertEquals(24, QuestMath.reward(20, 1, MULTIPLIERS)); // 20 × 1.2 = 24.000000000000004 stays 24
+	}
+
+	@Test
+	void difficultyWithoutThresholds() {
+		assertEquals(1, QuestMath.difficulty(1e9, new int[0]));
+		assertEquals(3, QuestMath.difficulty(1e9, new int[] {1, 2, 3, 4})); // never above ★3
+	}
+
+	@Test
+	void periodLastsAtLeastOneTick() {
+		assertEquals(500, QuestMath.period(500, 0));
+		assertEquals(1, QuestMath.period(24_000, 1));
+	}
+
 	@Test
 	void transportMultiplierGrowsWithDistanceUpToTheCap() {
 		assertEquals(0.2, QuestMath.transportMultiplier(0, 0.2, 0.8, 2.0), 1e-12);

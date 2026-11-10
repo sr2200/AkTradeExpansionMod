@@ -169,6 +169,64 @@ class BundledDataTest {
 		}
 	}
 
+	/**
+	 * B-6 / D-2: every bundled good gives valid params with the default settings at both ends of the price jitter; the
+	 * round trip "sell, then buy straight back" never profits; a full market drains back to where it buys again.
+	 */
+	@Test
+	void everyGoodHasSafeParams() throws IOException {
+		com.akf.tradeexpansion.config.TradeExpansionConfig config = com.akf.tradeexpansion.config.TradeExpansionConfig.defaults();
+		for (Map.Entry<String, GoodsDefinition> e : decodeAll("goods", GoodsDefinition.CODEC).entrySet()) {
+			for (double factor : new double[] {0.85, 1.0, 1.15}) {
+				com.akf.tradeexpansion.core.GoodParams p = assertDoesNotThrow(() -> e.getValue().params(factor, 1.0, config), e.getKey());
+				assertTrue(com.akf.tradeexpansion.core.PriceModel.isExploitSafe(p), e.getKey());
+				assertTrue(p.targetStock() <= p.maxStock() - 1, e.getKey() + ": T leaves no room below Scap");
+				for (int n : new int[] {1, 8, 64}) {
+					long earned = com.akf.tradeexpansion.core.PriceModel.sumSell(p, 0, n);
+					long spent = com.akf.tradeexpansion.core.PriceModel.sumBuy(p, p.clampPressure(n), n);
+					assertTrue(spent >= earned, e.getKey() + ": round trip of " + n + " profits");
+				}
+			}
+		}
+	}
+
+	/** B-3: a consumable drains T × consumableMultiplier a day and recovers with its own half-life; others r / 2 and H. */
+	@Test
+	void consumablesUseTheirOwnRecovery() throws IOException {
+		GoodsDefinition bread = decodeAll("goods", GoodsDefinition.CODEC).get("bread");
+		com.akf.tradeexpansion.config.TradeExpansionConfig config = com.akf.tradeexpansion.config.TradeExpansionConfig.defaults();
+		config.consumables.add.add(bread.item().toString()); // the item tag is not loaded in unit tests
+		com.akf.tradeexpansion.core.GoodParams food = bread.params(1.0, 1.0, config);
+		assertEquals(food.targetStock() * config.recovery.consumableMultiplier, food.consumePerDay(), 1e-9);
+		assertEquals(config.recovery.consumableHalfLifeDays, food.halfLifeDays(), 1e-9);
+
+		config.consumables.add.clear();
+		config.consumables.remove.add(bread.item().toString());
+		com.akf.tradeexpansion.core.GoodParams plain = bread.params(1.0, 1.0, config);
+		assertEquals(plain.restockPerDay() / 2, plain.consumePerDay(), 1e-9);
+		assertEquals(config.recovery.halfLifeDays, plain.halfLifeDays(), 1e-9);
+	}
+
+	/**
+	 * Both language files have the same keys. A few descriptions are left empty on purpose (the later entries of a list
+	 * setting share the first one's text); a text empty in only one of the files is a missing translation.
+	 */
+	@Test
+	void languageFilesHaveTheSameKeys() throws IOException {
+		Path lang = Path.of("src/main/resources/assets/ak_trade_expansion/lang");
+		com.google.gson.JsonObject ja = JsonParser.parseString(Files.readString(lang.resolve("ja_jp.json"))).getAsJsonObject();
+		com.google.gson.JsonObject en = JsonParser.parseString(Files.readString(lang.resolve("en_us.json"))).getAsJsonObject();
+		Set<String> onlyJa = new java.util.TreeSet<>(ja.keySet());
+		onlyJa.removeAll(en.keySet());
+		Set<String> onlyEn = new java.util.TreeSet<>(en.keySet());
+		onlyEn.removeAll(ja.keySet());
+		assertEquals(Set.of(), onlyJa, "only in ja_jp.json");
+		assertEquals(Set.of(), onlyEn, "only in en_us.json");
+		for (String key : ja.keySet()) {
+			assertEquals(ja.get(key).getAsString().isBlank(), en.get(key).getAsString().isBlank(), "empty in only one file: " + key);
+		}
+	}
+
 	@Test
 	void goodsDecode() throws IOException {
 		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);

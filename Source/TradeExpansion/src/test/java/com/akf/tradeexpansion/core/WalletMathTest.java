@@ -65,6 +65,42 @@ class WalletMathTest {
 		assertEquals(0, WalletMath.coinsThatFit(99, 100, 10));
 	}
 
+	/** A free payment changes nothing and does not collect any coin. */
+	@Test
+	void freePayment() {
+		WalletMath.Payment p = WalletMath.pay(new long[] {0}, new long[] {0, 0, 1, 0, 0}, 0, VALUES);
+		assertArrayEquals(new long[] {0}, p.wallets());
+		assertFalse(p.collectCoins());
+		assertEquals(0, p.change());
+		assertThrows(IllegalArgumentException.class, () -> WalletMath.pay(new long[0], NO_COINS, -1, VALUES));
+	}
+
+	/** The wallets passed in are not changed (the result holds the new balances). */
+	@Test
+	void inputsAreNotChanged() {
+		long[] wallets = {100, 300};
+		WalletMath.pay(wallets, NO_COINS, 250, VALUES);
+		WalletMath.deposit(wallets, 50, 1000);
+		assertArrayEquals(new long[] {100, 300}, wallets);
+	}
+
+	/** A wallet already above the capacity (capacity lowered in the settings) takes nothing, but keeps its balance. */
+	@Test
+	void walletAboveCapacityTakesNothing() {
+		WalletMath.Deposit d = WalletMath.deposit(new long[] {30_000, 0}, 500, 20_000);
+		assertArrayEquals(new long[] {30_000, 500}, d.wallets());
+		assertEquals(0, d.leftover());
+		assertThrows(IllegalArgumentException.class, () -> WalletMath.deposit(new long[1], -1, 20_000));
+	}
+
+	@Test
+	void coinsThatFitWithoutRoom() {
+		assertEquals(0, WalletMath.coinsThatFit(0, 100, 10));
+		assertEquals(0, WalletMath.coinsThatFit(-50, 100, 10));
+		assertEquals(0, WalletMath.coinsThatFit(500, 0, 10));
+		assertEquals(0, WalletMath.coinsThatFit(500, 100, 0));
+	}
+
 	@Test
 	void randomPaymentsConserveValue() {
 		Random random = new Random(7);

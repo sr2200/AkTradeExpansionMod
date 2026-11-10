@@ -231,4 +231,112 @@ class PriceModelTest {
 			}
 		}
 	}
+
+	/** Without restocking (r = 0) an empty good never comes back; with stock there is nothing to wait for. */
+	@Test
+	void daysUntilRestockWithoutRestocking() {
+		GoodParams none = new GoodParams(20, 32, 0.4, 16, 32, 0, 0.25, 3.0);
+		assertEquals(Double.POSITIVE_INFINITY, PriceModel.daysUntilRestock(none, new GoodState(1, 0, 0, 0), 1.0));
+		assertEquals(Double.POSITIVE_INFINITY, PriceModel.daysUntilRestock(BREAD, new GoodState(1, 0, 0, 0), 0.0));
+		assertEquals(0.0, PriceModel.daysUntilRestock(BREAD, new GoodState(1, 0, 1, 0), 1.0));
+		// The global multiplier speeds it up: r = 8 × 2 = 16 a day.
+		assertEquals(0.0625, PriceModel.daysUntilRestock(BREAD, new GoodState(1, 0, 0, 0), 2.0), 1e-12);
+	}
+
+	/** A-4: buying never resumes on its own when nothing is consumed (c = 0) or T leaves no room below Scap. */
+	@Test
+	void daysUntilBuyingNeverResumes() {
+		GoodState full = new GoodState(1, 0, 24, 0);
+		GoodParams noConsumption = new GoodParams(900, 16, 0.4, 8, 24, 4, 0.25, 3.0, 0, 2.0);
+		assertEquals(Double.POSITIVE_INFINITY, PriceModel.daysUntilBuying(noConsumption, full, 1.0));
+		GoodParams targetAtCap = new GoodParams(900, 16, 0.4, 24, 24, 4, 0.25, 3.0);
+		assertEquals(Double.POSITIVE_INFINITY, PriceModel.daysUntilBuying(targetAtCap, full, 1.0));
+		assertEquals(0.25, PriceModel.daysUntilBuying(SWORD, full, 2.0), 1e-9); // c = 2 × 2 = 4 a day
+	}
+
+	/** recovery.restockMultiplier scales restocking and consumption, but not the recovery of X. */
+	@Test
+	void restockMultiplierScalesStockOnly() {
+		GoodState empty = new GoodState(1, 10, 0, 0);
+		PriceModel.recover(BREAD, empty, 0.5, HALF_LIFE, 2.0);
+		assertEquals(8, empty.stock(), 1e-12); // 8 × 2 × 0.5
+		assertEquals(10 * Math.pow(2, -0.25), empty.pressure(), 1e-12);
+		GoodState excess = new GoodState(1, 0, 32, 0);
+		PriceModel.recover(BREAD, excess, 1, HALF_LIFE, 0.5);
+		assertEquals(30, excess.stock(), 1e-12); // 4 × 0.5
+		GoodState frozen = new GoodState(1, 0, 0, 0);
+		PriceModel.recover(BREAD, frozen, 10, HALF_LIFE, 0.0);
+		assertEquals(0, frozen.stock());
+	}
+
+	@Test
+	void canBuyAndSellAtTheStockLimits() {
+		assertFalse(PriceModel.canBuy(new GoodState(1, 0, 0.99, 0)));
+		assertTrue(PriceModel.canBuy(new GoodState(1, 0, 1, 0)));
+		assertTrue(PriceModel.canSell(SWORD, new GoodState(1, 0, 23.5, 0)));
+		assertFalse(PriceModel.canSell(SWORD, new GoodState(1, 0, 24, 0)));
+		assertEquals(0, PriceModel.sellCapacity(SWORD, new GoodState(1, 0, 23.5, 0))); // half an item of room is none
+		assertEquals(0, PriceModel.sellCapacity(SWORD, new GoodState(1, 0, 30, 0)));   // above Scap: never negative
+	}
+
+	@Test
+	void maxAffordableEdgeCases() {
+		assertEquals(0, PriceModel.maxAffordable(BREAD, 0, 1_000_000, 0));
+		assertEquals(0, PriceModel.maxAffordable(BREAD, 0, 1_000_000, 0, 1, BULK));
+		assertEquals(0, PriceModel.maxAffordable(BREAD, 0, 0, 64, 1, BulkDiscount.NONE));
+		// Without a discount both versions agree.
+		for (long funds = 0; funds <= 2_000; funds += 37) {
+			assertEquals(PriceModel.maxAffordable(BREAD, 0, funds, 64), PriceModel.maxAffordable(BREAD, 0, funds, 64, 1, BulkDiscount.NONE));
+		}
+	}
+
+	/** At Vmin the sell price no longer falls, so the damaged-item ratios keep applying to the same full price. */
+	@Test
+	void damagedItemsAtTheClampedPressure() {
+		double x = SWORD.maxPressure();
+		long full = PriceModel.sellPrice(SWORD, x);
+		assertEquals(full + (long) Math.floor(full * 0.5), PriceModel.sumSell(SWORD, x, new double[] {1, 0.5}));
+		assertEquals(0, PriceModel.sumSell(SWORD, 0, new double[0]));
+	}
+
+	@Test
+	void invalidParamsAreRejected() {
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(0, 16, 0.4, 8, 24, 4, 0.25, 3.0));
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(900, 0, 0.4, 8, 24, 4, 0.25, 3.0));
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(900, 16, -0.1, 8, 24, 4, 0.25, 3.0));
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(900, 16, 2.0, 8, 24, 4, 0.25, 3.0));
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(900, 16, 0.4, 8, 24, 4, 0, 3.0));
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(900, 16, 0.4, 8, 24, 4, 2.0, 1.0));
+		assertThrows(IllegalArgumentException.class, () -> new GoodParams(900, 16, 0.4, 8, 24, 4, 0.25, 3.0, 2, 0));
+		assertDoesNotThrow(() -> new GoodParams(900, 16, 0, 8, 24, 4, 1.0, 1.0)); // fixed price (E-5)
+	}
+
+	/** Vmin = Vmax = 1 (the fixed emerald coin price): X can only be 0 and the price never moves. */
+	@Test
+	void fixedPriceNeverMoves() {
+		GoodParams fixed = new GoodParams(5, 128, 0.4, 0, 64, 64, 1.0, 1.0);
+		assertEquals(0, fixed.minPressure(), 1e-12);
+		assertEquals(0, fixed.maxPressure(), 1e-12);
+		assertEquals(0, fixed.clampPressure(50), 1e-12);
+		assertEquals(4 * 10, PriceModel.sumSell(fixed, 0, 10));
+	}
+
+	/** B-6 needs a spread: without one no tau is safe. */
+	@Test
+	void noSpreadIsNeverExploitSafe() {
+		assertEquals(Double.POSITIVE_INFINITY, PriceModel.minSafeElasticity(0));
+		assertFalse(PriceModel.isExploitSafe(new GoodParams(100, 1e6, 0, 8, 16, 4, 0.25, 3.0)));
+		GoodParams safe = PriceModel.ensureExploitSafe(SWORD);
+		assertSame(SWORD, safe); // already safe: unchanged
+	}
+
+	/** A small tau with a thin spread leaves no room for any bulk discount. */
+	@Test
+	void bulkDiscountVanishesWhenUnsafe() {
+		GoodParams steep = new GoodParams(20, 2, 0.05, 16, 32, 8, 0.25, 3.0);
+		assertEquals(0.0, BulkDiscount.safeRate(steep));
+		assertEquals(0.0, BULK.rate(steep, 64, 1));
+		assertEquals(PriceModel.sumBuy(steep, 0, 64), PriceModel.sumBuy(steep, 0, 64, 1, BULK));
+		assertEquals(0.0, BulkDiscount.NONE.rate(1000));
+	}
 }

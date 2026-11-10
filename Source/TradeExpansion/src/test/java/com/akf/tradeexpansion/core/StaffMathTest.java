@@ -88,6 +88,20 @@ class StaffMathTest {
 		assertTrue(StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 1.0, 1.0).units() < plan.units());
 	}
 
+	/** Expected losses on the road (keep &lt; 1) make the carrier stop earlier; nothing worth carrying when nothing arrives. */
+	@Test
+	void expectedLossesBuyLess() {
+		GoodParams home = StaffMath.withSpread(P, 0.5);
+		GoodParams rich = StaffMath.withSpread(new GoodParams(200, 16, 0.4, 16, 32, 4, 0.25, 4.0), 0.5);
+		int safe = StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 0.25, 1.0).units();
+		int risky = StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 0.25, 0.8).units();
+		assertTrue(risky > 0 && risky < safe, "safe " + safe + ", risky " + risky);
+		assertEquals(0, StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 0.25, 0.0).units());
+		// The first unit: buy 110, sell 180 at the destination; 180 × 0.61 = 109.8 is not more than 110.
+		assertEquals(0, StaffMath.planBuy(home, 0, rich, 0, 64, 1000, 1_000_000, 0.25, 0.61).units());
+		assertEquals(StaffMath.BuyPlan.NONE, StaffMath.planBuy(home, 0, rich, 0, 0, 1000, 1_000_000, 0.25, 1.0));
+	}
+
 	@Test
 	void sellPlanStopsAtTheLimit() {
 		StaffMath.SellPlan all = StaffMath.planSell(P, 0, 10, 1, 1.0);
