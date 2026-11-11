@@ -53,6 +53,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -573,12 +574,20 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		ClientPlayNetworking.send(new ExchangeRequestC2S(menu.marketId(), up ? tier - 1 : tier, up, count));
 	}
 
+	/**
+	 * A-4: goods lists cheapest first by the base price B (ties by id). B does not move with trades,
+	 * so a row stays in place while the player buys or sells it.
+	 */
+	private static final Comparator<GoodView> BY_PRICE = Comparator.<GoodView>comparingDouble(v -> v.params().basePrice())
+			.thenComparing(v -> v.goods().toString());
+
 	private List<GoodView> visibleGoods() {
 		List<GoodView> list = new ArrayList<>();
 		if (snapshot == null) return list;
 		for (GoodView view : snapshot.goods()) {
 			if (tab == Tab.BUY ? view.buy() : view.sell()) list.add(view);
 		}
+		list.sort(BY_PRICE);
 		return list;
 	}
 
@@ -835,7 +844,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		Player player = player();
 		if (player == null || snapshot == null) return;
 		TradeExpansionConfig.Client client = TradeExpansionConfig.get().client;
-		for (GoodView view : snapshot.goods()) {
+		List<GoodView> goods = new ArrayList<>(snapshot.goods());
+		goods.sort(BY_PRICE);
+		for (GoodView view : goods) {
 			if (!view.sell()) continue;
 			InventoryUtil.Match match = view.match();
 			int heldUnits = PriceModel.units(InventoryUtil.count(player, match, menu.sellSlot(), true), view.unit());

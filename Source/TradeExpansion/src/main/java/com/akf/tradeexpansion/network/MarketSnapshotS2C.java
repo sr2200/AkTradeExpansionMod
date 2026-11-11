@@ -404,6 +404,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			facilities.add(new FacilityView(e.getKey().toString(), def.kind().getSerializedName(), def.icon(), state,
 					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted, FacilityBuilder.materialsReady(market, e.getKey())));
 		}
+		// N-6: cheapest first (ties by id), the order the town can grow in.
+		facilities.sort(java.util.Comparator.comparingLong(FacilityView::cost).thenComparing(FacilityView::id));
 		int buildLevel = c.buildReputationLevel;
 		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top, market.measuredLevel(),
 				com.akf.tradeexpansion.market.MarketFactory.levelBonus(market), market.hasFacility(FacilityKind.BANK),
