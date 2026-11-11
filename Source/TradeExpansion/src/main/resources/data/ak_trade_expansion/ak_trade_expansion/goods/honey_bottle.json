@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:honey_bottle",
+  "base_price": 30,
+  "elasticity": 32,
+  "target_stock": 16
+}

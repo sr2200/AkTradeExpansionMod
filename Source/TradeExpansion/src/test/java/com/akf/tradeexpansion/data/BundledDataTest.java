@@ -230,7 +230,7 @@ class BundledDataTest {
 	@Test
 	void goodsDecode() throws IOException {
 		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);
-		assertEquals(96, goods.size());
+		assertEquals(146, goods.size());
 		GoodsDefinition emerald = goods.get("emerald_coin");
 		assertEquals(10, emerald.unit());
 		assertFalse(emerald.buy());
@@ -262,7 +262,7 @@ class BundledDataTest {
 	void profilesDecodeAndReferenceKnownGoods() throws IOException {
 		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);
 		Map<String, MarketProfile> profiles = decodeAll("market_profile", MarketProfile.CODEC);
-		assertEquals(12, profiles.size());
+		assertEquals(13, profiles.size());
 		profiles.forEach((name, p) -> {
 			Stream.concat(p.always().stream(), p.pools().stream().flatMap(pool -> pool.entries().stream()).map(MarketProfile.Entry::goods))
 					.forEach(id -> assertTrue(goods.containsKey(id.getPath()), name + ": unknown goods " + id));

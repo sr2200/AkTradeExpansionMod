@@ -67,6 +67,22 @@
         {
           "goods": "ak_trade_expansion:salmon",
           "weight": 5
+        },
+        {
+          "goods": "ak_trade_expansion:pumpkin",
+          "weight": 6
+        },
+        {
+          "goods": "ak_trade_expansion:pumpkin_pie",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:rabbit",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:rabbit_hide",
+          "weight": 3
         }
       ]
     },
@@ -160,6 +176,36 @@
         {
           "goods": "ak_trade_expansion:salmon",
           "weight": 2
+        },
+        {
+          "goods": "ak_trade_expansion:mutton",
+          "weight": 4
+        },
+        {
+          "goods": "ak_trade_expansion:egg",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:sugar_cane",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:arrow",
+          "weight": 4
+        },
+        {
+          "goods": "ak_trade_expansion:feather",
+          "weight": 2
+        },
+        {
+          "goods": "ak_trade_expansion:bucket",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:shears",
+          "weight": 2,
+          "min_level": 2
         }
       ]
     },
@@ -298,6 +344,71 @@
           "goods": "ak_trade_expansion:diamond_shovel",
           "weight": 1,
           "min_level": 4
+        },
+        {
+          "goods": "ak_trade_expansion:iron_pickaxe",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:iron_axe",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:iron_shovel",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:iron_helmet",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:iron_chestplate",
+          "weight": 1,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:iron_leggings",
+          "weight": 1,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:iron_boots",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:phantom_membrane",
+          "weight": 2,
+          "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:breeze_rod",
+          "weight": 2,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:nautilus_shell",
+          "weight": 1,
+          "min_level": 3
+        },
+        {
+          "goods": "ak_trade_expansion:heart_of_the_sea",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "ak_trade_expansion:trident",
+          "weight": 1,
+          "min_level": 5
+        },
+        {
+          "goods": "ak_trade_expansion:totem_of_undying",
+          "weight": 1,
+          "min_level": 5
         }
       ]
     }

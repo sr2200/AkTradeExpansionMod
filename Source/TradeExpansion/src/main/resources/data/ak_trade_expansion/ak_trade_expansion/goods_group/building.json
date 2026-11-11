@@ -3,6 +3,9 @@
     "ak_trade_expansion:cobblestone",
     "ak_trade_expansion:sand",
     "ak_trade_expansion:sandstone",
-    "ak_trade_expansion:glass"
+    "ak_trade_expansion:glass",
+    "ak_trade_expansion:prismarine_shard",
+    "ak_trade_expansion:clay_ball",
+    "ak_trade_expansion:gravel"
   ]
 }

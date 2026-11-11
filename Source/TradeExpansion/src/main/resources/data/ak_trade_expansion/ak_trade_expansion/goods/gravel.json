@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:gravel",
+  "base_price": 3,
+  "elasticity": 256,
+  "target_stock": 128
+}

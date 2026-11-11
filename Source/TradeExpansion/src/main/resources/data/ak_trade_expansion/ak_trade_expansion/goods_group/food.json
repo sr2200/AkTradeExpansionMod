@@ -11,6 +11,15 @@
     "ak_trade_expansion:cod",
     "ak_trade_expansion:salmon",
     "ak_trade_expansion:golden_carrot",
-    "ak_trade_expansion:golden_apple"
+    "ak_trade_expansion:golden_apple",
+    "ak_trade_expansion:mutton",
+    "ak_trade_expansion:rabbit",
+    "ak_trade_expansion:pumpkin",
+    "ak_trade_expansion:melon_slice",
+    "ak_trade_expansion:beetroot",
+    "ak_trade_expansion:egg",
+    "ak_trade_expansion:sugar",
+    "ak_trade_expansion:pumpkin_pie",
+    "ak_trade_expansion:honey_bottle"
   ]
 }

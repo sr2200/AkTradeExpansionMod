@@ -11,6 +11,16 @@
     "ak_trade_expansion:diamond_pickaxe",
     "ak_trade_expansion:diamond_axe",
     "ak_trade_expansion:diamond_hoe",
-    "ak_trade_expansion:diamond_shovel"
+    "ak_trade_expansion:diamond_shovel",
+    "ak_trade_expansion:iron_pickaxe",
+    "ak_trade_expansion:iron_axe",
+    "ak_trade_expansion:iron_shovel",
+    "ak_trade_expansion:iron_helmet",
+    "ak_trade_expansion:iron_chestplate",
+    "ak_trade_expansion:iron_leggings",
+    "ak_trade_expansion:iron_boots",
+    "ak_trade_expansion:trident",
+    "ak_trade_expansion:arrow",
+    "ak_trade_expansion:totem_of_undying"
   ]
 }

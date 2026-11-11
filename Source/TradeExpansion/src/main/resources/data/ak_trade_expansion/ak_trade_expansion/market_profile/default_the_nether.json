@@ -102,6 +102,39 @@
           "goods": "ak_trade_expansion:wither_rose",
           "weight": 3,
           "min_level": 2
+        },
+        {
+          "goods": "ak_trade_expansion:crimson_stem",
+          "weight": 6
+        },
+        {
+          "goods": "ak_trade_expansion:warped_stem",
+          "weight": 6
+        },
+        {
+          "goods": "ak_trade_expansion:soul_sand",
+          "weight": 5
+        },
+        {
+          "goods": "ak_trade_expansion:blackstone",
+          "weight": 5
+        },
+        {
+          "goods": "ak_trade_expansion:basalt",
+          "weight": 4
+        },
+        {
+          "goods": "ak_trade_expansion:magma_block",
+          "weight": 4
+        },
+        {
+          "goods": "ak_trade_expansion:arrow",
+          "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:shroomlight",
+          "weight": 3,
+          "min_level": 2
         }
       ]
     }

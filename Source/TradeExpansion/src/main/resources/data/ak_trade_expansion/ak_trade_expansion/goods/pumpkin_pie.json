@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:pumpkin_pie",
+  "base_price": 20,
+  "elasticity": 32,
+  "target_stock": 16
+}

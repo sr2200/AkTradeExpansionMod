@@ -27,11 +27,11 @@ for (const f of fs.readdirSync(D + 'ak_trade_expansion/goods')) goods[f.replace(
 
 // consumables
 const tag = JSON.parse(fs.readFileSync(D + 'tags/item/consumables.json', 'utf8')).values;
-const isConsumable = item => tag.includes(item) || (tag.includes('#minecraft:logs') && /_log$/.test(item)) || (tag.includes('#minecraft:planks') && /_planks$/.test(item));
+const isConsumable = item => tag.includes(item) || (tag.includes('#minecraft:logs') && /_(log|stem)$/.test(item)) || (tag.includes('#minecraft:planks') && /_planks$/.test(item));
 
 // markets
-const shortName = { plains_village: '平原', desert_village: '砂漠', savanna_village: 'サバンナ', snowy_village: '雪原', taiga_village: 'タイガ', jungle: 'ジャングル', swamp: '沼地', crafted_stall: '開拓地', default_overworld: '既定', default_the_nether: 'ネザー', default_the_end: 'エンド', default: '他の次元' };
-const overworld = ['plains_village', 'desert_village', 'savanna_village', 'snowy_village', 'taiga_village', 'jungle', 'swamp', 'crafted_stall', 'default_overworld'];
+const shortName = { plains_village: '平原', desert_village: '砂漠', savanna_village: 'サバンナ', snowy_village: '雪原', taiga_village: 'タイガ', jungle: 'ジャングル', swamp: '沼地', coast: '海辺', crafted_stall: '開拓地', default_overworld: '既定', default_the_nether: 'ネザー', default_the_end: 'エンド', default: '他の次元' };
+const overworld = ['plains_village', 'desert_village', 'savanna_village', 'snowy_village', 'taiga_village', 'jungle', 'swamp', 'coast', 'crafted_stall', 'default_overworld'];
 const where = {}; // goods -> {profile: minLevel}
 for (const f of fs.readdirSync(D + 'ak_trade_expansion/market_profile')) {
   const id = f.replace('.json', '');
@@ -90,11 +90,14 @@ if (missing.length) throw new Error('not categorized: ' + missing.join(', '));
 out += '---\n\n';
 
 for (const file of [root + '/README.md']) {
-  let s = fs.readFileSync(file, 'utf8');
+  // The working copy may use CRLF (core.autocrlf); work on LF and write the file back with its own line endings.
+  const raw = fs.readFileSync(file, 'utf8');
+  const crlf = raw.includes('\r\n');
+  let s = raw.replace(/\r\n/g, '\n');
   const old = s.indexOf('## 商品一覧\n');
   if (old >= 0) s = s.slice(0, old) + s.slice(s.indexOf('## コマンド', old));
   const at = s.indexOf('## コマンド');
   s = s.slice(0, at) + out + s.slice(at);
-  fs.writeFileSync(file, s);
+  fs.writeFileSync(file, crlf ? s.replace(/\n/g, '\r\n') : s);
 }
 console.log('ok', seen.size, 'goods');

@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:clay_ball",
+  "base_price": 5,
+  "elasticity": 128,
+  "target_stock": 64
+}

@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:iron_leggings",
+  "base_price": 450,
+  "elasticity": 16,
+  "target_stock": 4
+}
