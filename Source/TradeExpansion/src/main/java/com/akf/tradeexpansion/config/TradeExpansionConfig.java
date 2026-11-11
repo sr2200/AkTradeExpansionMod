@@ -848,6 +848,11 @@ public final class TradeExpansionConfig {
 		public double quitChance = 0.0;
 		/** Accidents, quitting, unpaid wages and sold-out clerks are told in the owner's chat. */
 		public boolean notifyChat = true;
+		/**
+		 * v0.54: a carrier also brings goods back: at the destination it buys what should sell for more at its home market
+		 * (chosen like an automatic carrier's goods) and sells them on its return.
+		 */
+		public boolean carrierBackhaul = true;
 
 		public Staff() {
 		}
@@ -878,11 +883,15 @@ public final class TradeExpansionConfig {
 			this.accidentRestDays = accident.restDays();
 			this.quitChance = accident.quitChance();
 			this.notifyChat = accident.notifyChat();
+			this.carrierBackhaul = accident.backhaul();
 		}
 
-		/** The accident fields (RecordCodecBuilder takes at most 16 fields), stored flat in the same JSON object. */
+		/**
+		 * The accident fields and those added later (RecordCodecBuilder takes at most 16 fields), stored flat in the same
+		 * JSON object.
+		 */
 		private record Accident(double base, double perThousandBlocks, double max, double lossMin, double lossMax, double restDays,
-				double quitChance, boolean notifyChat) {
+				double quitChance, boolean notifyChat, boolean backhaul) {
 			static MapCodec<Accident> codec(Staff d) {
 				return RecordCodecBuilder.mapCodec(i -> i.group(
 						Codec.DOUBLE.fieldOf("accidentBase").orElse(d.accidentBase).forGetter(Accident::base),
@@ -892,7 +901,8 @@ public final class TradeExpansionConfig {
 						Codec.DOUBLE.fieldOf("accidentLossMax").orElse(d.accidentLossMax).forGetter(Accident::lossMax),
 						Codec.DOUBLE.fieldOf("accidentRestDays").orElse(d.accidentRestDays).forGetter(Accident::restDays),
 						Codec.DOUBLE.fieldOf("quitChance").orElse(d.quitChance).forGetter(Accident::quitChance),
-						Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(Accident::notifyChat)
+						Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(Accident::notifyChat),
+						Codec.BOOL.fieldOf("carrierBackhaul").orElse(d.carrierBackhaul).forGetter(Accident::backhaul)
 				).apply(i, Accident::new));
 			}
 		}
@@ -916,7 +926,7 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("carrierSpreadMultiplier").orElse(d.carrierSpreadMultiplier).forGetter(c -> c.carrierSpreadMultiplier),
 					Codec.DOUBLE.fieldOf("carrierPriceImpact").orElse(d.carrierPriceImpact).forGetter(c -> c.carrierPriceImpact),
 					Accident.codec(d).forGetter(c -> new Accident(c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax, c.accidentLossMin,
-							c.accidentLossMax, c.accidentRestDays, c.quitChance, c.notifyChat))
+							c.accidentLossMax, c.accidentRestDays, c.quitChance, c.notifyChat, c.carrierBackhaul))
 			).apply(i, Staff::new);
 		});
 	}

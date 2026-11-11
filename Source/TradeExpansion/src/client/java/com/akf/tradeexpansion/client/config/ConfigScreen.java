@@ -336,7 +336,8 @@ public final class ConfigScreen {
 				.option(doubleField("staff.accidentLossMax", sd.accidentLossMax, () -> st.accidentLossMax, v -> st.accidentLossMax = v, 0, 1))
 				.option(doubleField("staff.accidentRestDays", sd.accidentRestDays, () -> st.accidentRestDays, v -> st.accidentRestDays = v, 0, 30))
 				.option(doubleField("staff.quitChance", sd.quitChance, () -> st.quitChance, v -> st.quitChance = v, 0, 1))
-				.option(bool("staff.notifyChat", sd.notifyChat, () -> st.notifyChat, v -> st.notifyChat = v));
+				.option(bool("staff.notifyChat", sd.notifyChat, () -> st.notifyChat, v -> st.notifyChat = v))
+				.option(bool("staff.carrierBackhaul", sd.carrierBackhaul, () -> st.carrierBackhaul, v -> st.carrierBackhaul = v));
 
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")

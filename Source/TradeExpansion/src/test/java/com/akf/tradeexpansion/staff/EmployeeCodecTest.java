@@ -86,6 +86,30 @@ class EmployeeCodecTest {
 	}
 
 	@Test
+	void returnCargoIsKeptApartFromTheCargo() {
+		// v0.54: a carrier with one good also carries return cargo (several goods) in its own list
+		Employee e = Employee.hire(5, OWNER, "Alex", Employee.Role.CARRIER, 1, Identifier.parse("ak_trade_expansion:bread"), 2, 16, 30, 20, 0, 24_000);
+		assertTrue(!e.loaded());
+		e.returnCargo.add(new Employee.CargoLine(Identifier.parse("ak_trade_expansion:iron_ingot"), 4, 200));
+		e.returnCargo.add(new Employee.CargoLine(Identifier.parse("ak_trade_expansion:wheat"), 6, 60));
+		assertEquals(10, e.returnUnits());
+		assertTrue(e.loaded());
+		JsonElement json = Employee.CODEC.encodeStart(JsonOps.INSTANCE, e).getOrThrow();
+		assertTrue(json.getAsJsonObject().has("return_cargo")); // snake_case (F-1)
+		Employee back = Employee.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+		assertEquals(0, back.stock());
+		assertTrue(back.cargo.isEmpty());
+		assertEquals(2, back.returnCargo.size());
+		assertEquals(200, back.returnCargo.getFirst().cost);
+		assertEquals(10, back.returnUnits());
+		// saves from before v0.54 have none
+		JsonElement old = JsonParser.parseString("""
+				{"id": 1, "owner": [0, 0, 0, 1], "settings": {"role": "carrier", "home": 4, "goods": "ak_trade_expansion:bread"}, "state": {}}
+				""");
+		assertTrue(Employee.CODEC.parse(JsonOps.INSTANCE, old).getOrThrow().returnCargo.isEmpty());
+	}
+
+	@Test
 	void logKeepsTheNewestLines() {
 		Employee e = Employee.hire(1, OWNER, "Alex", Employee.Role.CLERK, 1, Identifier.parse("ak_trade_expansion:bread"), -1, 0, 0, 10, 0, 24_000);
 		for (int i = 0; i < Employee.LOG_SIZE + 5; i++) e.addLog(new Employee.LogEntry(i, "clerk_sold", Optional.empty(), -1, List.of((long) i, 1L)));

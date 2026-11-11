@@ -174,7 +174,7 @@ final class StaffTab {
 			withdrawButton.visible = home;
 			configureButton.visible = home && !quit;
 			depositItemsButton.visible = home && !quit && !carrier;
-			withdrawItemsButton.visible = home && (!carrier || view.stock() > 0);
+			withdrawItemsButton.visible = home && (!carrier || view.stock() > 0 || view.returnItems() > 0);
 			pauseButton.visible = !quit;
 			changeButton.visible = home && !quit;
 			changeButton.active = !pending && carrierHome;
@@ -182,7 +182,7 @@ final class StaffTab {
 					: "trade.ak_trade_expansion.result.staff_away")));
 			dismissButton.visible = home;
 			withdrawButton.active = !pending && view.purse() > 0;
-			withdrawItemsButton.active = !pending && view.stock() > 0 && carrierHome;
+			withdrawItemsButton.active = !pending && (view.stock() > 0 || view.returnItems() > 0) && carrierHome;
 			depositItemsButton.active = !pending && heldUnits(view.goods()) > 0;
 			depositSmallButton.active = depositLargeButton.active = configureButton.active = pauseButton.active = !pending;
 			dismissButton.active = !pending && carrierHome;
@@ -356,8 +356,13 @@ final class StaffTab {
 	private List<StaffS2C.Destination> sortedDestinations() {
 		if (destinations == null || !goodsMatch()) return List.of();
 		List<StaffS2C.Destination> list = new ArrayList<>(destinations);
-		list.sort(java.util.Comparator.comparingLong((StaffS2C.Destination d) -> -d.profit()).thenComparingInt(StaffS2C.Destination::distance));
+		list.sort(java.util.Comparator.comparingLong((StaffS2C.Destination d) -> -totalProfit(d)).thenComparingInt(StaffS2C.Destination::distance));
 		return list;
+	}
+
+	/** v0.54: what a round trip there should bring: the goods taken there and the return cargo. */
+	private static long totalProfit(StaffS2C.Destination d) {
+		return (d.units() > 0 ? Math.max(0, d.profit()) : 0) + (d.returnItems() > 0 ? Math.max(0, d.returnProfit()) : 0);
 	}
 
 	/** The destination entry of the carrier being set up (a new hire's choice, or the edited carrier's destination). */
@@ -807,7 +812,9 @@ final class StaffTab {
 		StatusText status = statusText(v);
 		screen.fit(g, status.text(), px, y + 53, PANEL_W, status.color() == COLOR_RED ? COLOR_WARNING : status.color() == COLOR_GREEN ? COLOR_OK
 				: status.color() == COLOR_GRAY ? COLOR_DARK : 0xFF906010, false);
-		String stock = Component.translatable(v.role() == CARRIER ? "screen.ak_trade_expansion.staff.cargo" : "screen.ak_trade_expansion.staff.stock",
+		String stock = v.role() == CARRIER && v.returnItems() > 0 // v0.54: with return cargo
+				? Component.translatable("screen.ak_trade_expansion.staff.cargo.return", v.stock() * v.unit(), v.returnItems()).getString()
+				: Component.translatable(v.role() == CARRIER ? "screen.ak_trade_expansion.staff.cargo" : "screen.ak_trade_expansion.staff.stock",
 				v.stock() * v.unit()).getString();
 		// The purse and the goods on lines of their own (one line was too narrow for both).
 		screen.fit(g, Component.translatable("screen.ak_trade_expansion.staff.purse", CoinItem.formatCopper(v.purse())).getString(), px, y + 62, PANEL_W,
@@ -947,8 +954,8 @@ final class StaffTab {
 			if (d.sellPrice() < 0) {
 				price = Component.translatable("screen.ak_trade_expansion.not_buying").getString();
 				color = COLOR_RED;
-			} else if (d.units() > 0 && d.profit() > 0) {
-				price = Component.translatable("screen.ak_trade_expansion.staff.hint.profit", CoinItem.formatCopper(d.profit())).getString();
+			} else if (totalProfit(d) > 0) {
+				price = Component.translatable("screen.ak_trade_expansion.staff.hint.profit", CoinItem.formatCopper(totalProfit(d))).getString();
 				color = COLOR_GREEN;
 			} else {
 				price = Component.translatable("screen.ak_trade_expansion.staff.hint.none").getString();
@@ -971,6 +978,8 @@ final class StaffTab {
 							.withStyle(ChatFormatting.GRAY));
 					lines.add(recommendLine(d, unit));
 				}
+				Component back = returnLine(d);
+				if (back != null) lines.add(back);
 				lines.add(travelLine(d.distance()).withStyle(ChatFormatting.GRAY));
 				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
@@ -1013,6 +1022,11 @@ final class StaffTab {
 					CoinItem.formatCopper(sellLimit)));
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.auto"));
 			}
+			if (info.backhaul()) { // v0.54: return cargo
+				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.return"));
+				Component back = d == null ? null : returnLine(d);
+				if (back != null) lines.add(back);
+			}
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.wait", minutes(Math.round(info.maxWaitDays() * PriceModel.TICKS_PER_DAY))));
 			lines.add(info.quitChance() > 0 ? Component.translatable("screen.ak_trade_expansion.staff.summary.accident.quit", percent(info.quitChance()))
 					: Component.translatable("screen.ak_trade_expansion.staff.summary.accident"));
@@ -1030,8 +1044,9 @@ final class StaffTab {
 			if (editing < 0) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk.held", heldUnits(goods) * unit(view)));
 		}
 		StaffS2C.View old = changedView();
-		if (old != null && old.stock() > 0) {
-			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.change", old.stock() * (old.auto() ? 1 : old.unit())).withColor(COLOR_GOLD));
+		if (old != null && (old.stock() > 0 || old.returnItems() > 0)) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.change", old.stock() * (old.auto() ? 1 : old.unit()) + old.returnItems())
+					.withColor(COLOR_GOLD));
 		}
 		if (editing < 0 && changing < 0) {
 			lines.add(hiringCarrier
@@ -1058,6 +1073,13 @@ final class StaffTab {
 	private static Component autoLine(StaffS2C.Destination d) {
 		if (d.units() <= 0 || d.profit() <= 0) return Component.translatable("screen.ak_trade_expansion.staff.hint.carrier.none").withColor(COLOR_GRAY);
 		return Component.translatable("screen.ak_trade_expansion.staff.hint.auto.trip", d.units(), d.kinds(), CoinItem.formatCopper(d.profit())).withColor(COLOR_GREEN);
+	}
+
+	/** v0.54: "帰り荷：今なら 約30個（4種類）・見込み +25c", or null when there is none now. */
+	private static Component returnLine(StaffS2C.Destination d) {
+		if (d.returnItems() <= 0 || d.returnProfit() <= 0) return null;
+		return Component.translatable("screen.ak_trade_expansion.staff.hint.return", d.returnItems(), d.returnKinds(), CoinItem.formatCopper(d.returnProfit()))
+				.withColor(COLOR_GREEN);
 	}
 
 	/** v0.48.1: "おすすめ：上限 66c・下限 70c、今なら1往復 約12個・見込み +45c". */

@@ -139,7 +139,8 @@ public final class Employee {
 			Stats.CODEC.optionalFieldOf("stats", new Stats(0, 0, 0, 0, 0, 0, 0)).forGetter(e -> new Stats(e.earned, e.spent, e.wages, e.lost,
 					e.trips, e.sold, e.hired)),
 			LogEntry.CODEC.listOf().optionalFieldOf("log", List.of()).forGetter(e -> List.copyOf(e.log)),
-			CargoLine.CODEC.listOf().optionalFieldOf("cargo", List.of()).forGetter(e -> List.copyOf(e.cargo))
+			CargoLine.CODEC.listOf().optionalFieldOf("cargo", List.of()).forGetter(e -> List.copyOf(e.cargo)),
+			CargoLine.CODEC.listOf().optionalFieldOf("return_cargo", List.of()).forGetter(e -> List.copyOf(e.returnCargo))
 	).apply(i, Employee::new));
 
 	final int id;
@@ -184,9 +185,16 @@ public final class Employee {
 	final List<LogEntry> log = new ArrayList<>();
 	/** v0.48.1: an automatic carrier's cargo by good ({@link #stock} / {@link #cargoCost} are the totals). */
 	final List<CargoLine> cargo = new ArrayList<>();
+	/**
+	 * v0.54: a carrier's return cargo, bought at the destination for its home market ({@code staff.carrierBackhaul}) and
+	 * chosen like an automatic carrier's goods. Not counted in {@link #stock} / {@link #cargoCost}.
+	 */
+	final List<CargoLine> returnCargo = new ArrayList<>();
 
-	private Employee(int id, UUID owner, String ownerName, Settings settings, State state, Stats stats, List<LogEntry> log, List<CargoLine> cargo) {
+	private Employee(int id, UUID owner, String ownerName, Settings settings, State state, Stats stats, List<LogEntry> log, List<CargoLine> cargo,
+			List<CargoLine> returnCargo) {
 		this.cargo.addAll(cargo);
+		this.returnCargo.addAll(returnCargo);
 		this.id = id;
 		this.owner = owner;
 		this.ownerName = ownerName;
@@ -222,7 +230,7 @@ public final class Employee {
 	static Employee hire(int id, UUID owner, String ownerName, Role role, long home, Identifier goods, long destination, int quantity,
 			long buyLimit, long sellLimit, long now, long day) {
 		Employee e = new Employee(id, owner, ownerName, new Settings(role, home, goods, destination, quantity, buyLimit, sellLimit),
-				new State(0, 0, 0, 0, 0, Phase.HOME, false, Status.WORKING, now, now, now + day), new Stats(0, 0, 0, 0, 0, 0, now), List.of(), List.of());
+				new State(0, 0, 0, 0, 0, Phase.HOME, false, Status.WORKING, now, now, now + day), new Stats(0, 0, 0, 0, 0, 0, now), List.of(), List.of(), List.of());
 		return e;
 	}
 
@@ -273,6 +281,18 @@ public final class Employee {
 	/** v0.48.1: a carrier choosing its goods itself. */
 	public boolean auto() {
 		return AUTO.equals(goods);
+	}
+
+	/** v0.54: trading units of the return cargo. */
+	int returnUnits() {
+		int units = 0;
+		for (CargoLine line : returnCargo) units += line.units;
+		return units;
+	}
+
+	/** v0.54: carrying anything (goods for the destination or return cargo). */
+	boolean loaded() {
+		return stock > 0 || returnUnits() > 0;
 	}
 
 	public boolean quit() {
