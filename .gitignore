@@ -12,6 +12,7 @@
 
 # Package Files #
 *.jar
+!Source/TradeExpansion/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
