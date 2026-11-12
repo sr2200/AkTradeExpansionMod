@@ -728,6 +728,8 @@
   "screen.ak_trade_expansion.town.wanted.count": "寄付 %s／%s",
   "screen.ak_trade_expansion.town.wanted.line": "ほしい品：%s（%s／%s）",
   "screen.ak_trade_expansion.town.select_hint": "クリックで選ぶ",
+  "screen.ak_trade_expansion.town.size": "大きさ：横 %s × 奥行き %s × 高さ %s ブロック",
+  "screen.ak_trade_expansion.town.size.short": "%s×%s×%s",
   "screen.ak_trade_expansion.town.contributors.title": "寄付した人（上位5人）",
   "screen.ak_trade_expansion.bank.interest.registered": "利息：1日 %s%%（%s まで・%sの銀行に登録）",
   "message.ak_trade_expansion.facility.protected": "村の建物は壊せません",

@@ -1613,7 +1613,17 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	/** N-6: the selected facility: name, effect, cost, wanted materials (still wanted / required). */
 	private void extractFacilityPanel(GuiGraphicsExtractor g, MarketSnapshotS2C.FacilityView f, int px, int y, int mouseX, int mouseY) {
 		g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(f.icon())), px, y + 36);
-		fitText(g, facilityName(f).getString(), px + 18, y + 40, PANEL_W - 18, COLOR_TEXT, false);
+		// v0.58: the size (width x depth x height) at the right of the name; the full wording on hover
+		String size = f.size().getX() > 0 ? Component.translatable("screen.ak_trade_expansion.town.size.short", f.size().getX(), f.size().getZ(), f.size().getY()).getString() : "";
+		int sizeW = size.isEmpty() ? 0 : font.width(size);
+		fitText(g, facilityName(f).getString(), px + 18, y + 40, PANEL_W - 18 - (sizeW > 0 ? sizeW + 4 : 0), COLOR_TEXT, false);
+		if (sizeW > 0) {
+			int sx = px + PANEL_W - sizeW;
+			g.text(font, size, sx, y + 40, COLOR_DARK, false);
+			if (mouseX >= sx && mouseX < sx + sizeW && mouseY >= y + 38 && mouseY < y + 50) {
+				g.setTooltipForNextFrame(font, List.of(sizeLine(f)), Optional.empty(), mouseX, mouseY);
+			}
+		}
 		List<FormattedCharSequence> effect = font.split(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect"), PANEL_W);
 		for (int i = 0; i < Math.min(3, effect.size()); i++) g.text(font, effect.get(i), px, y + 54 + i * 9, COLOR_DARK, false);
 		if (f.state() == MarketSnapshotS2C.FacilityView.CONSTRUCTING || f.state() == MarketSnapshotS2C.FacilityView.COMPLETE) return;
@@ -1636,6 +1646,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 	}
 
+	/** v0.58: "Size: W wide × D deep × H high". */
+	private static Component sizeLine(MarketSnapshotS2C.FacilityView f) {
+		return Component.translatable("screen.ak_trade_expansion.town.size", f.size().getX(), f.size().getZ(), f.size().getY());
+	}
+
 	private static Component facilityName(MarketSnapshotS2C.FacilityView f) {
 		return Component.translatable("facility.ak_trade_expansion." + f.kind());
 	}
@@ -1649,6 +1664,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		List<Component> lines = new ArrayList<>();
 		lines.add(facilityName(f));
 		lines.add(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect").withStyle(net.minecraft.ChatFormatting.GRAY));
+		if (f.size().getX() > 0) lines.add(sizeLine(f).copy().withStyle(net.minecraft.ChatFormatting.GRAY));
 		for (MarketSnapshotS2C.WantedView w : f.wanted()) {
 			Component name = new ItemStack(BuiltInRegistries.ITEM.getValue(w.item())).getHoverName();
 			if (!w.tag().isEmpty()) name = Component.translatable("screen.ak_trade_expansion.town.wanted.tag", name);

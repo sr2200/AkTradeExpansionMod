@@ -306,9 +306,10 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param cost  development points building it costs now (half for a rebuild)
 	 * @param due   market-clock time the construction ends (state 1)
 	 * @param materialsReady every wanted material is donated, or materials are not required (v0.42, development.requireMaterials)
+	 * @param size          N-6 (v0.58): size of the building in this market's look (x = width, y = height, z = depth); 0 when unknown
 	 */
 	public record FacilityView(String id, String kind, Identifier icon, int state, long cost, long due, List<WantedView> wanted,
-			boolean materialsReady) {
+			boolean materialsReady, BlockPos size) {
 		public static final int NONE = 0, CONSTRUCTING = 1, COMPLETE = 2, DESTROYED = 3;
 
 		static final StreamCodec<RegistryFriendlyByteBuf, FacilityView> CODEC = StreamCodec.composite(
@@ -320,6 +321,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				ByteBufCodecs.VAR_LONG, FacilityView::due,
 				WantedView.CODEC.apply(ByteBufCodecs.list()), FacilityView::wanted,
 				ByteBufCodecs.BOOL, FacilityView::materialsReady,
+				BlockPos.STREAM_CODEC, FacilityView::size,
 				FacilityView::new);
 	}
 
@@ -387,9 +389,15 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		Market.Contributor mine = market.contributors().get(player.getUUID());
 		TradeExpansionConfig.Development c = Development.config();
 		List<FacilityView> facilities = new ArrayList<>();
+		net.minecraft.server.MinecraftServer server = player.level().getServer();
+		net.minecraft.server.level.ServerLevel marketLevel = server.getLevel(market.dimension());
+		String placeStyle = marketLevel == null ? "plains" : FacilityBuilder.style(marketLevel, market.center());
 		for (java.util.Map.Entry<Identifier, FacilityDefinition> e : FacilityCatalog.all().entrySet()) {
 			FacilityDefinition def = e.getValue();
 			Facility f = market.facilities().get(e.getKey());
+			// v0.58: the size of the look it has (under construction or built) or would get here (also a rebuild)
+			String style = f != null && f.state() != Facility.State.DESTROYED ? f.style() : placeStyle;
+			BlockPos size = FacilityBuilder.template(server, def, style).map(t -> new BlockPos(t.getSize().getX(), t.getSize().getY(), t.getSize().getZ())).orElse(BlockPos.ZERO);
 			int state = f == null ? FacilityView.NONE : switch (f.state()) {
 				case CONSTRUCTING -> FacilityView.CONSTRUCTING;
 				case COMPLETE -> FacilityView.COMPLETE;
@@ -402,7 +410,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 						donated.getOrDefault(w.key(), 0)));
 			}
 			facilities.add(new FacilityView(e.getKey().toString(), def.kind().getSerializedName(), def.icon(), state,
-					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted, FacilityBuilder.materialsReady(market, e.getKey())));
+					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted, FacilityBuilder.materialsReady(market, e.getKey()), size));
 		}
 		// N-6: cheapest first (ties by id), the order the town can grow in.
 		facilities.sort(java.util.Comparator.comparingLong(FacilityView::cost).thenComparing(FacilityView::id));

@@ -728,6 +728,8 @@
   "screen.ak_trade_expansion.town.wanted.count": "Donated %s / %s",
   "screen.ak_trade_expansion.town.wanted.line": "Wants: %s (%s / %s)",
   "screen.ak_trade_expansion.town.select_hint": "Click to select",
+  "screen.ak_trade_expansion.town.size": "Size: %s wide × %s deep × %s high",
+  "screen.ak_trade_expansion.town.size.short": "%s×%s×%s",
   "screen.ak_trade_expansion.town.contributors.title": "Top contributors",
   "screen.ak_trade_expansion.bank.interest.registered": "Interest: %s%%/day (up to %s, registered at %s)",
   "message.ak_trade_expansion.facility.protected": "Village buildings cannot be broken",
