@@ -19,7 +19,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.1.30（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.1.31（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YetAnotherConfigLib（YACL）：ゲーム内の設定画面 ／ JourneyMap：市場を地図に登録 ／ JEI か REI：アイテムの画面で近くの相場を見る |
@@ -150,7 +150,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 市場の中心から半径64ブロック以内の**ベッドの数と村人の数**を数え、低い方のレベルになります（例：ベッド8個＝レベル2、村人13人＝レベル4 → レベル2）。ネザー・エンドではベッドが使えないので、連れて来た村人の数だけで測ります。村に建物を建てると、さらに上がります（「[村の発展](#村の発展)」）。
 - 画面を開いた時にレベルを測り直し（ゲーム内1日に1回まで）、上がっていれば商品が増えます。村人が家の中や畑に出ていて範囲の外にいると数えられないので、日によって上下することがあります。
 - レベルが下がると、最後に並んだ商品から外れます。外れた商品の値段と在庫は覚えていて、レベルが戻ると同じ商品が戻ります。
-- **本日の掘り出し物**：毎日、その市場がふだん扱わない商品が並びます（レベル1〜2で1品、3以上で2品）。値段は2割高く、在庫は少なめで、次の日には入れ替わります。
+- **本日の掘り出し物**：毎日、その市場がふだん扱わない商品が並びます（レベル1〜2で1品、3以上で2品）。値段は2割高く、在庫は少なめで、次の日には入れ替わります。市場の規模に見合う品だけが選ばれ（ダイヤの防具はレベル5の市場から、など）、高い品ほどまれにしか出ません。
 - 設定画面の「商品」タブ →「追加の商品と消耗品」で、アイコンからアイテムを選び、基準価格を入れて**商品を追加**できます。追加した商品は掘り出し物として並ぶことがあります。
 
 ### 掲示板・依頼・品不足
@@ -706,6 +706,8 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `market.specialGoods` | `[1, 1, 2, 2, 2]` | 0〜10 の整数5つ | レベル1〜5の市場に毎日並ぶ「本日の掘り出し物」の数。0 で並ばない | `"specialGoods": [0, 1, 1, 2, 3]` |
 | `market.specialPriceMultiplier` | `1.2` | 0.5〜5 | 掘り出し物の基準価格に掛ける倍率 | `"specialPriceMultiplier": 1.5` |
 | `market.specialStockRatio` | `0.5` | 0.01〜1 | 掘り出し物の最初の在庫（目標在庫に対する割合、最低1個） | `"specialStockRatio": 0.25` |
+| `market.specialUseGrade` | `true` | true / false | 掘り出し物を市場の規模に見合う商品（ふだん並び始めるレベルが、その市場のレベル以下の品）から選ぶ | `"specialUseGrade": false` |
+| `market.specialPriceExponent` | `0.3` | 0〜2 | 高い品の掘り出し物への出にくさ。大きいほど出にくい（0.5 なら値段が4倍の品は半分の確率）。0 でどの品も同じ確率 | `"specialPriceExponent": 0.5` |
 | `market.newMarketRequires` | `"BEDS_AND_VILLAGERS"` | `"VILLAGE"` / `"BEDS"` / `"VILLAGERS"` / `"BEDS_AND_VILLAGERS"` | クラフトした交易所で新しい市場を作れる場所。1 VILLAGE＝村の構造物の中だけ、2 BEDS＝ベッドが一定数以上、3 VILLAGERS＝村人が一定数以上、4 BEDS_AND_VILLAGERS＝村人が一定数以上かつベッドが一定数以上で、ベッド≧村人（ベッドが `newMarketEnoughBeds` 個以上ならベッド＜村人でもよい）。既存の市場に加わる時と村の屋台には関係しない。ネザー・エンドではベッドの条件を外す | `"newMarketRequires": "VILLAGE"` |
 | `market.newMarketMinBeds` | `3` | 0〜1000 | 新しい市場に必要なベッドの数（規模を測る半径の中） | `"newMarketMinBeds": 5` |
 | `market.newMarketMinVillagers` | `3` | 0〜1000 | 新しい市場に必要な村人の数（規模を測る半径の中） | `"newMarketMinVillagers": 1` |
@@ -991,7 +993,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 }
 ```
 
-主な項目：`base_price`（基準価格）、`elasticity`（大きいほど値崩れしにくい）、`target_stock`（目標在庫）、`max_stock`（在庫上限。これ以上は買い取らない）、`restock_per_day`（補充速度）、`unit`（取引単位）、`buy`・`sell`（取引の向き）、`auto_add`（条件に合う市場に自動で追加）、`link`（近くの市場への相場の伝わりやすさ、既定 1.0）、`consume_per_day`（在庫が目標より多い時に1日に減る数）、`half_life_days`（相場の半減期）、`components`（エンチャントなど付加情報付きの品。例：`{"minecraft:enchantments": {"minecraft:sharpness": 1}}`）。
+主な項目：`base_price`（基準価格）、`elasticity`（大きいほど値崩れしにくい）、`target_stock`（目標在庫）、`max_stock`（在庫上限。これ以上は買い取らない）、`restock_per_day`（補充速度）、`unit`（取引単位）、`buy`・`sell`（取引の向き）、`auto_add`（条件に合う市場に自動で追加）、`link`（近くの市場への相場の伝わりやすさ、既定 1.0）、`consume_per_day`（在庫が目標より多い時に1日に減る数）、`half_life_days`（相場の半減期）、`grade`（掘り出し物になれる最低の市場レベル 1〜5、既定 1）、`components`（エンチャントなど付加情報付きの品。例：`{"minecraft:enchantments": {"minecraft:sharpness": 1}}`）。
 
 **市場プロファイル**では、条件（`dimension` / `biome` / `structure` / `villager_type` / `origin` / `distance_from_spawn` / `all_of` / `any_of` / `not`）、抽選プール（重み・`min_level`）、必ず扱う商品（`always`）、価格倍率（`price_modifiers`）を指定します。書式の詳細は設計書 D-2 を参照してください。
 

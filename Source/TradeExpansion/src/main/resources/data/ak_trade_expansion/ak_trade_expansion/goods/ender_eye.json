@@ -2,5 +2,6 @@
   "item": "minecraft:ender_eye",
   "base_price": 80,
   "elasticity": 32,
-  "target_stock": 8
+  "target_stock": 8,
+  "grade": 2
 }

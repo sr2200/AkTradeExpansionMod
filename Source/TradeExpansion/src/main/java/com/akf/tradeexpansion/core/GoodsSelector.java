@@ -95,6 +95,52 @@ public final class GoodsSelector {
 		return null;
 	}
 
+	/**
+	 * D-5: a candidate for today's specials.
+	 *
+	 * @param basePrice the good's base price B (data, before market multipliers)
+	 * @param grade     the market level the good is meant for (1..5)
+	 */
+	public record SpecialCandidate(String goods, double basePrice, int grade) {
+	}
+
+	/**
+	 * D-5 (v0.57): picks today's specials. With {@code useGrade} only goods whose grade is at most the market level
+	 * are candidates; each candidate's chance is proportional to {@code (B / 20)^-priceExponent} (0 = equal chance).
+	 *
+	 * @param candidates in a stable order (the result depends on it)
+	 * @return up to {@code count} distinct goods in pick order
+	 */
+	public static List<String> pickSpecials(List<SpecialCandidate> candidates, int level, int count, boolean useGrade,
+			double priceExponent, Random random) {
+		List<SpecialCandidate> pool = new ArrayList<>();
+		for (SpecialCandidate c : candidates) {
+			if (!useGrade || c.grade() <= level) pool.add(c);
+		}
+		List<String> picks = new ArrayList<>();
+		while (picks.size() < count && !pool.isEmpty()) {
+			double total = 0;
+			double[] weights = new double[pool.size()];
+			for (int i = 0; i < weights.length; i++) total += weights[i] = specialWeight(pool.get(i).basePrice(), priceExponent);
+			double r = random.nextDouble() * total;
+			int index = weights.length - 1;
+			for (int i = 0; i < weights.length; i++) {
+				r -= weights[i];
+				if (r < 0) {
+					index = i;
+					break;
+				}
+			}
+			picks.add(pool.remove(index).goods());
+		}
+		return picks;
+	}
+
+	/** D-5 (v0.57): relative chance of a special with base price {@code basePrice}; bread (20c) is 1. */
+	public static double specialWeight(double basePrice, double priceExponent) {
+		return Math.pow(Math.max(basePrice, 0.01) / 20.0, -priceExponent);
+	}
+
 	/** Weighted pick of one element by index (profile choice among equal priorities). */
 	public static int pickIndex(int[] weights, Random random) {
 		int total = 0;

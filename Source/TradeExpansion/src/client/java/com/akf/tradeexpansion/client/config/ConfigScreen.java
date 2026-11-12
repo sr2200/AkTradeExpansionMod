@@ -142,7 +142,9 @@ public final class ConfigScreen {
 			marketCat.option(intField("market.specialGoods." + i, d.market.specialGoods.get(i), () -> market.specialGoods.get(index), v -> market.specialGoods.set(index, v), 0, 10));
 		}
 		marketCat.option(doubleField("market.specialPriceMultiplier", d.market.specialPriceMultiplier, () -> market.specialPriceMultiplier, v -> market.specialPriceMultiplier = v, 0.5, 5))
-				.option(doubleField("market.specialStockRatio", d.market.specialStockRatio, () -> market.specialStockRatio, v -> market.specialStockRatio = v, 0.01, 1));
+				.option(doubleField("market.specialStockRatio", d.market.specialStockRatio, () -> market.specialStockRatio, v -> market.specialStockRatio = v, 0.01, 1))
+				.option(bool("market.specialUseGrade", d.market.specialUseGrade, () -> market.specialUseGrade, v -> market.specialUseGrade = v))
+				.option(doubleField("market.specialPriceExponent", d.market.specialPriceExponent, () -> market.specialPriceExponent, v -> market.specialPriceExponent = v, 0, 2));
 
 		ConfigCategory.Builder wallet = category("wallet")
 				.option(longField("wallet.capacity", d.wallet.capacity, () -> edit.wallet.capacity, v -> edit.wallet.capacity = v, 1000, 1_000_000_000L))

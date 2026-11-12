@@ -247,7 +247,9 @@ public final class MarketFactory {
 
 	/**
 	 * D-5: once per in-game day, replaces today's specials: goods outside the market's list, a few per level, with a
-	 * higher price and a small stock. They are not counted in N, not shortages and gone the next day.
+	 * higher price and a small stock. They are not counted in N, not shortages and gone the next day. Since v0.57 only
+	 * goods whose grade fits the market level are picked, and expensive goods less often (market.specialUseGrade /
+	 * specialPriceExponent).
 	 *
 	 * @return {@code true} if they changed
 	 */
@@ -262,19 +264,21 @@ public final class MarketFactory {
 		// M: the last specialBonusCount specials are shown only to players with a good reputation.
 		int bonus = config.reputation.enabled ? config.reputation.specialBonusCount : 0;
 		int count = regular + bonus;
-		List<Identifier> candidates = new ArrayList<>();
+		List<GoodsSelector.SpecialCandidate> candidates = new ArrayList<>();
 		Set<Identifier> shelved = new HashSet<>(market.shelvedGoods());
 		for (Map.Entry<Identifier, GoodsDefinition> e : GoodsCatalog.all().entrySet()) {
 			GoodsDefinition def = e.getValue();
 			// Buyable plain goods only; tokens such as the emerald coin (auto_add / unit > 1) are excluded.
 			if (!def.buy() || def.unit() != 1 || def.autoAdd().isPresent()) continue;
 			if (market.good(e.getKey()) != null || shelved.contains(e.getKey())) continue;
-			candidates.add(e.getKey());
+			candidates.add(new GoodsSelector.SpecialCandidate(e.getKey().toString(), def.basePrice(), def.grade()));
 		}
-		candidates.sort(null); // stable order for the seeded choice
+		candidates.sort(java.util.Comparator.comparing(GoodsSelector.SpecialCandidate::goods)); // stable order for the seeded choice
 		Random random = new Random(seed(level, market.center()) ^ (day * 0x2545F4914F6CDD1DL));
-		for (int i = 0; i < count && !candidates.isEmpty(); i++) {
-			Identifier pick = candidates.remove(random.nextInt(candidates.size()));
+		List<String> picks = GoodsSelector.pickSpecials(candidates, market.level(), count, config.market.specialUseGrade,
+				config.market.specialPriceExponent, random);
+		for (int i = 0; i < picks.size(); i++) {
+			Identifier pick = Identifier.parse(picks.get(i));
 			double priceFactor = 1 + (random.nextDouble() * 2 - 1) * config.price.jitter;
 			market.addGood(pick, new GoodState(priceFactor, 0, 0, now));
 			market.specials().add(pick);

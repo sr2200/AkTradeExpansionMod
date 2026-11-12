@@ -350,6 +350,10 @@ public final class TradeExpansionConfig {
 		public double specialPriceMultiplier = 1.2;
 		/** D-5: a special starts with this share of its target stock (at least 1). */
 		public double specialStockRatio = 0.5;
+		/** D-5 (v0.57): a special's grade must be at most the market level. */
+		public boolean specialUseGrade = true;
+		/** D-5 (v0.57): a special's chance is proportional to (B / 20)^-specialPriceExponent (0 = equal chance). */
+		public double specialPriceExponent = 0.3;
 
 		public Market() {
 		}
@@ -376,7 +380,7 @@ public final class TradeExpansionConfig {
 			this.specialStockRatio = specialStockRatio;
 		}
 
-		static final Codec<Market> CODEC = RecordCodecBuilder.create(i -> {
+		private static final MapCodec<Market> FIRST_CODEC = RecordCodecBuilder.mapCodec(i -> {
 			Market d = new Market();
 			return i.group(
 					Codec.INT.fieldOf("minGoods").orElse(d.minGoods).forGetter(c -> c.minGoods),
@@ -397,6 +401,24 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("specialStockRatio").orElse(d.specialStockRatio).forGetter(c -> c.specialStockRatio)
 			).apply(i, Market::new);
 		});
+
+		/** Fields after the 16-field limit of RecordCodecBuilder (v0.57). */
+		private record Specials(boolean specialUseGrade, double specialPriceExponent) {
+			static final MapCodec<Specials> CODEC = RecordCodecBuilder.mapCodec(i -> {
+				Market d = new Market();
+				return i.group(
+						Codec.BOOL.fieldOf("specialUseGrade").orElse(d.specialUseGrade).forGetter(Specials::specialUseGrade),
+						Codec.DOUBLE.fieldOf("specialPriceExponent").orElse(d.specialPriceExponent).forGetter(Specials::specialPriceExponent)
+				).apply(i, Specials::new);
+			});
+		}
+
+		static final Codec<Market> CODEC = Codec.mapPair(FIRST_CODEC, Specials.CODEC).xmap(pair -> {
+			Market c = pair.getFirst();
+			c.specialUseGrade = pair.getSecond().specialUseGrade();
+			c.specialPriceExponent = pair.getSecond().specialPriceExponent();
+			return c;
+		}, c -> Pair.of(c, new Specials(c.specialUseGrade, c.specialPriceExponent))).codec();
 
 		public int[] levelThresholdArray() {
 			return levelThresholds.stream().mapToInt(Integer::intValue).toArray();

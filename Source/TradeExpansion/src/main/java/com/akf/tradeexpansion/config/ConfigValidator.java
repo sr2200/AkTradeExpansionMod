@@ -51,6 +51,7 @@ public final class ConfigValidator {
 		m.specialGoods = intList("market.specialGoods", m.specialGoods, 5, 0, 10, false, List.of(1, 1, 2, 2, 2));
 		m.specialPriceMultiplier = clamp("market.specialPriceMultiplier", m.specialPriceMultiplier, 0.5, 5);
 		m.specialStockRatio = clamp("market.specialStockRatio", m.specialStockRatio, 0.01, 1);
+		m.specialPriceExponent = clamp("market.specialPriceExponent", m.specialPriceExponent, 0, 2);
 
 		TradeExpansionConfig.Wallet w = c.wallet;
 		w.capacity = clamp("wallet.capacity", w.capacity, 1000, 1_000_000_000L);

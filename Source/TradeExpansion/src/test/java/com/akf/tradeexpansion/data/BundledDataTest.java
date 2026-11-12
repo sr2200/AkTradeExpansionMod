@@ -238,6 +238,14 @@ class BundledDataTest {
 		assertTrue(emerald.autoAdd().orElseThrow().isEmpty()); // v0.30: every market
 		assertEquals(24, goods.get("diamond_sword").maxStock().orElseThrow());
 		assertFalse(goods.get("rotten_flesh").buy());
+		// D-5 (v0.57): grade, 1 when omitted
+		assertEquals(1, goods.get("bread").grade());
+		assertEquals(5, goods.get("diamond_sword").grade());
+		assertEquals(5, goods.get("elytra").grade());
+		assertEquals(4, goods.get("diamond").grade());
+		for (Map.Entry<String, GoodsDefinition> e : goods.entrySet()) {
+			if (e.getValue().basePrice() >= 500) assertTrue(e.getValue().grade() >= 3, "grade of " + e.getKey());
+		}
 	}
 
 	/** E-5 (v0.30): with the default settings the emerald coin always sells at 4c per 10 and the market never stops buying. */

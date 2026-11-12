@@ -2,5 +2,6 @@
   "item": "minecraft:rose_bush",
   "base_price": 6,
   "elasticity": 64,
-  "target_stock": 32
+  "target_stock": 32,
+  "grade": 2
 }

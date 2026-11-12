@@ -4,5 +4,6 @@
   "elasticity": 16,
   "target_stock": 8,
   "max_stock": 24,
-  "restock_per_day": 4
+  "restock_per_day": 4,
+  "grade": 4
 }

@@ -2,5 +2,6 @@
   "item": "minecraft:chorus_flower",
   "base_price": 30,
   "elasticity": 32,
-  "target_stock": 8
+  "target_stock": 8,
+  "grade": 2
 }

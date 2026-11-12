@@ -2,5 +2,6 @@
   "item": "minecraft:iron_axe",
   "base_price": 195,
   "elasticity": 16,
-  "target_stock": 4
+  "target_stock": 4,
+  "grade": 2
 }

@@ -2,5 +2,6 @@
   "item": "minecraft:phantom_membrane",
   "base_price": 40,
   "elasticity": 32,
-  "target_stock": 16
+  "target_stock": 16,
+  "grade": 2
 }

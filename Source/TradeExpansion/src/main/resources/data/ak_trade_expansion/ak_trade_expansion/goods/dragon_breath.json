@@ -2,5 +2,6 @@
   "item": "minecraft:dragon_breath",
   "base_price": 150,
   "elasticity": 16,
-  "target_stock": 4
+  "target_stock": 4,
+  "grade": 4
 }

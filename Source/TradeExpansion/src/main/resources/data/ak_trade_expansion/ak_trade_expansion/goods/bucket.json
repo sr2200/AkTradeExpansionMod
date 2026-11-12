@@ -2,5 +2,6 @@
   "item": "minecraft:bucket",
   "base_price": 192,
   "elasticity": 32,
-  "target_stock": 8
+  "target_stock": 8,
+  "grade": 2
 }

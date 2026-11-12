@@ -133,4 +133,49 @@ class GoodsSelectorTest {
 		assertEquals(List.of(), GoodsSelector.grow(existing, POOLS, 5, 3, new Random(1)));
 		assertEquals(List.of(), GoodsSelector.grow(existing, POOLS, 5, 1, new Random(1)));
 	}
+
+	private static final List<GoodsSelector.SpecialCandidate> SPECIALS = List.of(
+			new GoodsSelector.SpecialCandidate("bread", 20, 1), new GoodsSelector.SpecialCandidate("egg", 5, 1),
+			new GoodsSelector.SpecialCandidate("iron", 60, 2), new GoodsSelector.SpecialCandidate("diamond", 420, 4),
+			new GoodsSelector.SpecialCandidate("elytra", 4800, 5));
+
+	@Test
+	void specialsRespectGrade() {
+		for (long seed = 0; seed < 200; seed++) {
+			List<String> picks = GoodsSelector.pickSpecials(SPECIALS, 2, 3, true, 0.5, new Random(seed));
+			assertEquals(3, picks.size());
+			assertEquals(3, new HashSet<>(picks).size());
+			assertFalse(picks.contains("diamond") || picks.contains("elytra"), "seed " + seed);
+		}
+		// fewer candidates than requested: all of them, no more
+		assertEquals(Set.of("bread", "egg"), new HashSet<>(GoodsSelector.pickSpecials(SPECIALS, 1, 5, true, 0.5, new Random(1))));
+		// without the grade every good can appear
+		assertEquals(5, GoodsSelector.pickSpecials(SPECIALS, 1, 5, false, 0.5, new Random(1)).size());
+	}
+
+	@Test
+	void expensiveSpecialsAreRarer() {
+		assertEquals(1.0, GoodsSelector.specialWeight(20, 0.5), 1e-9);
+		assertEquals(0.5, GoodsSelector.specialWeight(80, 0.5), 1e-9);
+		assertEquals(1.0, GoodsSelector.specialWeight(4800, 0), 1e-9);
+		// one generator: the first values of Randoms with consecutive seeds are correlated
+		Random random = new Random(42);
+		int cheap = 0, dear = 0;
+		for (int n = 0; n < 4000; n++) {
+			String pick = GoodsSelector.pickSpecials(SPECIALS, 5, 1, true, 0.5, random).getFirst();
+			if (pick.equals("egg")) cheap++;
+			if (pick.equals("elytra")) dear++;
+		}
+		// weights: egg 2, elytra 1/sqrt(240) ≈ 0.065 → about 31 times as often
+		assertTrue(cheap > dear * 15, cheap + " vs " + dear);
+		// exponent 0: equal chance
+		int[] counts = new int[2];
+		for (int n = 0; n < 4000; n++) {
+			String pick = GoodsSelector.pickSpecials(SPECIALS, 5, 1, true, 0, random).getFirst();
+			if (pick.equals("egg")) counts[0]++;
+			if (pick.equals("elytra")) counts[1]++;
+		}
+		assertEquals(800, counts[0], 120);
+		assertEquals(800, counts[1], 120);
+	}
 }

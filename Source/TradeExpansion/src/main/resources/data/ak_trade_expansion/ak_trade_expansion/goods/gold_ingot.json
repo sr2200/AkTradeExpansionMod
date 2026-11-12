@@ -2,5 +2,6 @@
   "item": "minecraft:gold_ingot",
   "base_price": 80,
   "elasticity": 32,
-  "target_stock": 16
+  "target_stock": 16,
+  "grade": 2
 }

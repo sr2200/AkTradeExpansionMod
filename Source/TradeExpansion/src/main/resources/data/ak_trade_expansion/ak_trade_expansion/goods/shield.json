@@ -2,5 +2,6 @@
   "item": "minecraft:shield",
   "base_price": 78,
   "elasticity": 32,
-  "target_stock": 8
+  "target_stock": 8,
+  "grade": 2
 }

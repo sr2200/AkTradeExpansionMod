@@ -4,8 +4,10 @@ import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.GoodParams;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.data.condition.MarketCondition;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -32,6 +34,7 @@ import java.util.Optional;
  *                      for items in {@link #CONSUMABLES} (B-3)
  * @param halfLifeDays  half-life of X; default {@code recovery.halfLifeDays}, or {@code recovery.consumableHalfLifeDays}
  *                      for consumables (B-3)
+ * @param grade         D-5 (v0.57): the lowest market level that gets it as one of today's specials (default 1)
  */
 public record GoodsDefinition(
 		Identifier item,
@@ -49,7 +52,8 @@ public record GoodsDefinition(
 		double link,
 		Optional<Dynamic<?>> components,
 		Optional<Double> consumePerDay,
-		Optional<Double> halfLifeDays
+		Optional<Double> halfLifeDays,
+		int grade
 ) {
 	private static final Identifier EMERALD_COIN = Identifier.fromNamespaceAndPath("ak_trade_expansion", "emerald_coin");
 	/** Stock cap that is never reached (no "not buying"). */
@@ -58,7 +62,7 @@ public record GoodsDefinition(
 	/** Consumables the market uses up (food, torches, fuel, logs and planks): stock and buying capacity recover quickly (B-3). */
 	public static final TagKey<Item> CONSUMABLES = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("ak_trade_expansion", "consumables"));
 
-	public static final Codec<GoodsDefinition> CODEC = RecordCodecBuilder.create(i -> i.group(
+	private static final MapCodec<GoodsDefinition> MAIN_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 			Identifier.CODEC.fieldOf("item").forGetter(GoodsDefinition::item),
 			Codec.doubleRange(0.01, 1e9).fieldOf("base_price").forGetter(GoodsDefinition::basePrice),
 			Codec.doubleRange(0.01, 1e6).optionalFieldOf("elasticity").forGetter(GoodsDefinition::elasticity),
@@ -75,7 +79,19 @@ public record GoodsDefinition(
 			Codec.PASSTHROUGH.optionalFieldOf("components").forGetter(GoodsDefinition::components),
 			Codec.doubleRange(0, 1e6).optionalFieldOf("consume_per_day").forGetter(GoodsDefinition::consumePerDay),
 			Codec.doubleRange(0.05, 100).optionalFieldOf("half_life_days").forGetter(GoodsDefinition::halfLifeDays)
-	).apply(i, GoodsDefinition::new));
+	).apply(i, (item, basePrice, elasticity, targetStock, maxStock, restockPerDay, spread, buy, sell, acceptDamaged, unit, autoAdd,
+			link, components, consumePerDay, halfLifeDays) -> new GoodsDefinition(item, basePrice, elasticity, targetStock, maxStock,
+			restockPerDay, spread, buy, sell, acceptDamaged, unit, autoAdd, link, components, consumePerDay, halfLifeDays, 1)));
+
+	/** Fields after the 16-field limit of RecordCodecBuilder: the grade (v0.57). */
+	public static final Codec<GoodsDefinition> CODEC = Codec.mapPair(MAIN_CODEC, Codec.intRange(1, 5).optionalFieldOf("grade", 1))
+			.xmap(pair -> pair.getFirst().withGrade(pair.getSecond()), def -> Pair.of(def, def.grade())).codec();
+
+	/** This definition with another grade. */
+	public GoodsDefinition withGrade(int grade) {
+		return new GoodsDefinition(item, basePrice, elasticity, targetStock, maxStock, restockPerDay, spread, buy, sell, acceptDamaged, unit,
+				autoAdd, link, components, consumePerDay, halfLifeDays, grade);
+	}
 
 	/** A-4: reduced-price buying of damaged items, falling back to {@code trade.acceptDamaged}. */
 	public boolean acceptsDamaged() {
@@ -87,13 +103,13 @@ public record GoodsDefinition(
 		return new GoodsDefinition(item, o.basePrice().orElse(basePrice), o.elasticity().or(() -> elasticity), o.targetStock().orElse(targetStock),
 				o.maxStock().or(() -> maxStock), o.restockPerDay().or(() -> restockPerDay), o.spread().or(() -> spread),
 				o.buy().orElse(buy), o.sell().orElse(sell), acceptDamaged, unit, autoAdd, link, components,
-				o.consumePerDay().or(() -> consumePerDay), o.halfLifeDays().or(() -> halfLifeDays));
+				o.consumePerDay().or(() -> consumePerDay), o.halfLifeDays().or(() -> halfLifeDays), grade);
 	}
 
 	/** v0.27: a good added by the config file ({@code goods.<id>.item} and {@code base_price}); other values are the defaults. */
 	public static GoodsDefinition fromConfig(Identifier item, com.akf.tradeexpansion.config.GoodsOverride o) {
 		return new GoodsDefinition(item, o.basePrice().orElse(1.0), Optional.empty(), 16.0, Optional.empty(), Optional.empty(), Optional.empty(),
-				true, true, Optional.empty(), 1, Optional.empty(), 1.0, Optional.empty(), Optional.empty(), Optional.empty()).with(o);
+				true, true, Optional.empty(), 1, Optional.empty(), 1.0, Optional.empty(), Optional.empty(), Optional.empty(), 1).with(o);
 	}
 
 	/** B-3: whether this good is a consumable (see {@link #isConsumable}). */
