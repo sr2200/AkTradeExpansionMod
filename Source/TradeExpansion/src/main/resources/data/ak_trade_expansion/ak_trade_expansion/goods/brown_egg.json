@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:brown_egg",
+  "base_price": 5,
+  "elasticity": 128,
+  "target_stock": 64
+}

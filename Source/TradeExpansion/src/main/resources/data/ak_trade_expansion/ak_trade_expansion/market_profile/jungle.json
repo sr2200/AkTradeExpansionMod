@@ -55,6 +55,10 @@
         {
           "goods": "ak_trade_expansion:feather",
           "weight": 4
+        },
+        {
+          "goods": "ak_trade_expansion:brown_egg",
+          "weight": 3
         }
       ]
     },

@@ -83,6 +83,10 @@
         {
           "goods": "ak_trade_expansion:rabbit_hide",
           "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:blue_egg",
+          "weight": 3
         }
       ]
     },

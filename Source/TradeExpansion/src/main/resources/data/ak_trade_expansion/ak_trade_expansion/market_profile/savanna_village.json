@@ -80,6 +80,10 @@
         {
           "goods": "ak_trade_expansion:melon_slice",
           "weight": 3
+        },
+        {
+          "goods": "ak_trade_expansion:brown_egg",
+          "weight": 3
         }
       ]
     },
