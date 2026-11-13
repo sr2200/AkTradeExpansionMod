@@ -23,7 +23,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 - Git Bash（Bash ツール）から .bat を実行するときは、フルパスで `cmd` に渡す（`build.bat` とだけ書くと中の `gradlew.bat` が見つからず失敗する）。例：`Source/TradeExpansion` で `cmd //c "$(cygpath -w "$PWD/build.bat") --offline -q"`。`gradlew` を直接使うときも同じ形（`cmd //c "$(cygpath -w "$PWD/gradlew.bat") test --offline -q"`）。
 - バージョンの上げ方は `tools/version/bump.ps1`。手で書き換えない。
 - OneDrive の同期フォルダで `Failed to clean up stale outputs` が出たら `build` フォルダを消して再実行する。
-- README の「商品一覧」は生成物。商品データを変えたら、リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .` を実行して作り直す。村の屋台の構造物 NBT は `tools/structures/genstall.js`、進捗の JSON と言語ファイルの訳は `tools/advancements/genadv.js`（表を直して `Source/TradeExpansion` で実行）、Mod のアイコンは `tools/icon/genicon.js`、荷箱のテクスチャは `tools/icon/gencrate.js`、公開ページ用のサムネイルは `tools/thumbnail/genthumb.ps1` で生成する。
+- README の「商品一覧」は生成物。商品データを変えたら、リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .` を実行して作り直す。村の屋台の構造物 NBT は `tools/structures/genstall.js`、進捗の JSON と言語ファイルの訳は `tools/advancements/genadv.js`（表を直して `Source/TradeExpansion` で実行）、Mod のアイコンは `tools/icon/genicon.js`、荷箱のテクスチャは `tools/icon/gencrate.js`、公開ページ用のサムネイルは `tools/thumbnail/genthumb.ps1` で生成する（pwsh で実行する。Windows PowerShell 5 では日本語が化ける。`release.bat` も最後に作り直す）。
 - .bat ファイルは CRLF で保存する。バックスラッシュを含むスクリプトをシェルのヒアドキュメントで書くと崩れることがあるので、ファイルに書いてから実行する。
 
 ## アーキテクチャ
