@@ -2,6 +2,7 @@ package com.akf.tradeexpansion.entity;
 
 import com.akf.tradeexpansion.block.MarketStallBlockEntity;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.core.TraderPalette;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketAccess;
 import com.akf.tradeexpansion.market.MarketNames;
@@ -11,6 +12,9 @@ import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -38,6 +42,8 @@ import org.jspecify.annotations.Nullable;
  */
 public class TraderEntity extends PathfinderMob {
 	private static final int STALL_CHECK_INTERVAL = 100;
+	/** Robe colour (A-5, v0.60): picked at random when the trader first appears, saved, and synced for rendering. */
+	private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(TraderEntity.class, EntityDataSerializers.INT);
 
 	private long marketId = MarketStallBlockEntity.UNASSIGNED;
 	/** Linked stall; {@code null} for a free trader. */
@@ -49,6 +55,22 @@ public class TraderEntity extends PathfinderMob {
 		super(type, level);
 		setPersistenceRequired();
 		setPermanentlyInvulnerable(true);
+		// Loading a saved trader overwrites this; traders from old saves and structure NBT without a variant keep the random one.
+		if (!level.isClientSide()) setVariant(random.nextInt(TraderPalette.VARIANT_COUNT));
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(DATA_VARIANT, 0);
+	}
+
+	public int variant() {
+		return TraderPalette.clamp(entityData.get(DATA_VARIANT));
+	}
+
+	public void setVariant(int variant) {
+		entityData.set(DATA_VARIANT, TraderPalette.clamp(variant));
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
@@ -180,6 +202,7 @@ public class TraderEntity extends PathfinderMob {
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
 		output.putLong("market_id", marketId);
+		output.putInt("variant", variant());
 		if (stallPos != null) output.store("stall", BlockPos.CODEC, stallPos);
 		if (linkNearbyStall) output.putBoolean("link_nearby_stall", true);
 	}
@@ -190,5 +213,6 @@ public class TraderEntity extends PathfinderMob {
 		marketId = input.getLongOr("market_id", MarketStallBlockEntity.UNASSIGNED);
 		stallPos = input.read("stall", BlockPos.CODEC).orElse(null);
 		linkNearbyStall = input.getBooleanOr("link_nearby_stall", false);
+		input.getInt("variant").ifPresent(this::setVariant);
 	}
 }
