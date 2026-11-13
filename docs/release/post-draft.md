@@ -6,7 +6,7 @@
 > - 【バージョン】：配布する zip の番号（`release.bat` で作ったもの）
 > - 【スクリーンショット：…】：撮影した画像に置き換える（`docs/release/Screenshot/` に撮ったものを置く）
 > - 【ソースコードのURL】：GitHub のリポジトリを公開するなら `https://github.com/sr2200/AkTradeExpansionMod`。非公開のままなら、その行を消して「ソースコードはご連絡ください」などにする
-> - 「更新履歴」には、`docs/release/CHANGES.md` の「未リリース」を短くまとめて足す
+> - 「更新履歴」には、`docs/release/CHANGES-short.md`（`CHANGES.md` の短い版）の「未リリース」を足す
 > - 機能を足した時は、この下書きの「できること」も合わせて直す
 
 **タイトル案**：【Java版26.3/Fabric】AK Trade Expansion ― 相場が動く市場で、運んで・売って・村を育てる経済 MOD
