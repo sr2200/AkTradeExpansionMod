@@ -18,6 +18,14 @@ class StaffMathTest {
 	}
 
 	@Test
+	void harborMultiplierShortensTheTripButNotBelowTheMinimum() {
+		assertEquals(18000, StaffMath.travelTicks(1000, 1000, 0.75)); // 24000 × 0.75
+		assertEquals(24000, StaffMath.travelTicks(1000, 1000, 1.0));
+		assertEquals(24000, StaffMath.travelTicks(1000, 1000, 1.5)); // never slower
+		assertEquals(StaffMath.MIN_TRAVEL_TICKS, StaffMath.travelTicks(60, 1000, 0.1));
+	}
+
+	@Test
 	void accidentChanceGrowsWithDistanceUpToTheCap() {
 		assertEquals(0.03, StaffMath.accidentChance(0, 0.03, 0.04, 0.2), 1e-12);
 		assertEquals(0.07, StaffMath.accidentChance(1000, 0.03, 0.04, 0.2), 1e-12);

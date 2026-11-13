@@ -76,7 +76,7 @@ public final class BoardService {
 					sameDimension ? center.center().getX() - here.center().getX() : 0, sameDimension ? center.center().getZ() - here.center().getZ() : 0,
 					c.daysLeft(today), here.good(c.goods()) != null && RivalService.weight(registry, here, c) > 0));
 		}
-		ServerPlayNetworking.send(player, new BoardS2C(here.id(), entries, news));
+		ServerPlayNetworking.send(player, new BoardS2C(here.id(), (int) Math.round(radius), entries, news));
 	}
 
 	private static BoardS2C.Good good(Market here, java.util.UUID uuid, long now, net.minecraft.resources.Identifier goodsId, GoodsDefinition def, GoodParams p, GoodState state,

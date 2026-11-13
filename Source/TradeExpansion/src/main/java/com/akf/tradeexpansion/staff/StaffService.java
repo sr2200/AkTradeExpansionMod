@@ -318,11 +318,7 @@ public final class StaffService {
 		double distance = home == null || destination == null ? 0 : MarketRegistry.linkedDistance(home, destination);
 		e.phase = phase;
 		e.phaseStart = now;
-		long ticks = StaffMath.travelTicks(distance, config().carrierBlocksPerDay);
-		if (has(home, FacilityKind.HARBOR) || has(destination, FacilityKind.HARBOR)) { // v0.51: by water
-			ticks = Math.max(StaffMath.MIN_TRAVEL_TICKS, Math.round(ticks * Math.clamp(TradeExpansionConfig.get().development.harborTravelMultiplier, 0.1, 1.0)));
-		}
-		e.nextTime = now + ticks;
+		e.nextTime = now + StaffMath.travelTicks(distance, config().carrierBlocksPerDay, harbor(home, destination)); // v0.51: by water
 	}
 
 	private static boolean has(Market market, FacilityKind kind) {
@@ -463,6 +459,12 @@ public final class StaffService {
 		TradeExpansionConfig.Staff c = config();
 		double distance = MarketRegistry.linkedDistance(home, destination);
 		return StaffMath.accidentChance(distance, c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax) * watchtower(home, destination);
+	}
+
+	/** v0.51: a harbor at either end makes trips faster (by water): the multiplier of the travel time. */
+	private static double harbor(Market home, Market destination) {
+		return has(home, FacilityKind.HARBOR) || has(destination, FacilityKind.HARBOR)
+				? Math.clamp(TradeExpansionConfig.get().development.harborTravelMultiplier, 0.1, 1.0) : 1.0;
 	}
 
 	/** v0.51: a watchtower at either end makes accidents rarer. */
@@ -916,7 +918,7 @@ public final class StaffService {
 			AutoPlan back = returns.getOrDefault(m.id(), AutoPlan.NONE);
 			list.add(new StaffS2C.Destination(m.id(), MarketNames.name(m), dx, dz, (int) Math.round(MarketRegistry.linkedDistance(here, m)), buyPrice,
 					price, units, profit, units > 0 ? plan.highestPrice() : Math.max(1, buyPrice), sellLimit, 1, (int) back.items(), back.kinds(),
-					back.profit()));
+					back.profit(), harbor(here, m), watchtower(here, m)));
 		}
 		return list;
 	}
@@ -934,7 +936,8 @@ public final class StaffService {
 			int dx = (int) Math.round(m.center().getX() * sm - here.center().getX() * sh);
 			int dz = (int) Math.round(m.center().getZ() * sm - here.center().getZ() * sh);
 			list.add(new StaffS2C.Destination(m.id(), MarketNames.name(m), dx, dz, (int) Math.round(MarketRegistry.linkedDistance(here, m)), -1, 0,
-					(int) plan.items(), plan.profit(), 0, 0, plan.kinds(), (int) back.items(), back.kinds(), back.profit()));
+					(int) plan.items(), plan.profit(), 0, 0, plan.kinds(), (int) back.items(), back.kinds(), back.profit(), harbor(here, m),
+					watchtower(here, m)));
 		}
 		return list;
 	}
@@ -1049,7 +1052,7 @@ public final class StaffService {
 					destination == null ? (e.destination < 0 ? Component.empty() : marketName(registry, e.destination)) : MarketNames.name(destination),
 					distance, e.quantity, e.buyLimit, e.sellLimit, e.purse, e.auto() ? (int) cargoItems(e) : e.stock, e.phase.ordinal(), e.paused,
 					e.status.ordinal(), e.phaseStart, e.nextTime, wage(e), e.earned, e.spent, e.wages, e.lost, e.trips, e.sold, log, e.auto(), e.cargo.size(),
-					(int) lineItems(e.returnCargo)));
+					(int) lineItems(e.returnCargo), harbor(home, destination), watchtower(home, destination)));
 		}
 		return views;
 	}

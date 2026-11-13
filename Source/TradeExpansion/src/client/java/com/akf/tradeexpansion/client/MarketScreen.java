@@ -1803,7 +1803,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		BoardS2C.Entry entry = boardEntry();
 		if (entry == null) {
 			if (board.markets().isEmpty() && board.news().isEmpty()) {
-				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.none", TradeExpansionConfig.get().board.radius),
+				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.none", board.radius()),
 						bx + 4, by + 4, listW - 8, COLOR_WHITE, false);
 				return;
 			}

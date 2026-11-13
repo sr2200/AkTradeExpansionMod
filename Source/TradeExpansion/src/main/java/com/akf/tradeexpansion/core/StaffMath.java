@@ -17,6 +17,16 @@ public final class StaffMath {
 		return Math.max(MIN_TRAVEL_TICKS, Math.round(distance / blocksPerDay * PriceModel.TICKS_PER_DAY));
 	}
 
+	/**
+	 * v0.51: the travel time times {@code multiplier} (a harbor at either end, below 1 = faster), still at least
+	 * {@link #MIN_TRAVEL_TICKS}. A multiplier of 1 or more leaves it as it is.
+	 */
+	public static long travelTicks(double distance, double blocksPerDay, double multiplier) {
+		long ticks = travelTicks(distance, blocksPerDay);
+		if (!(multiplier < 1.0)) return ticks;
+		return Math.max(MIN_TRAVEL_TICKS, Math.round(ticks * multiplier));
+	}
+
 	/** Chance of an accident on one loaded trip: min(max, base + perThousand × distance ÷ 1000), within 0..1. */
 	public static double accidentChance(double distance, double base, double perThousandBlocks, double max) {
 		double chance = Math.min(max, base + perThousandBlocks * Math.max(0, distance) / 1000.0);

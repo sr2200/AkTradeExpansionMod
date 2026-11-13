@@ -81,11 +81,14 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 * @param auto     v0.48.1: a carrier choosing its goods (stock is then in items, unit 1)
 	 * @param kinds    an automatic carrier: kinds of goods carried
 	 * @param returnItems v0.54: items of the return cargo carried
+	 * @param travelMultiplier   multiplier of the travel time to the destination (a harbor at either end, 1 = none)
+	 * @param accidentMultiplier multiplier of the accident chance on that trip (a watchtower at either end, 1 = none)
 	 */
 	public record View(int id, int role, long home, Component homeName, boolean atHome, Identifier goods, Identifier item, int unit,
 			long destination, Component destinationName, int distance, int quantity, long buyLimit, long sellLimit, long purse, int stock,
 			int phase, boolean paused, int status, long phaseStart, long nextTime, long wage, long earned, long spent, long wages, long lost,
-			int trips, int sold, List<Component> log, boolean auto, int kinds, int returnItems) {
+			int trips, int sold, List<Component> log, boolean auto, int kinds, int returnItems, double travelMultiplier,
+			double accidentMultiplier) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeVarInt(id);
 			buf.writeVarInt(role);
@@ -120,6 +123,8 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeBoolean(auto);
 			buf.writeVarInt(kinds);
 			buf.writeVarInt(returnItems);
+			buf.writeDouble(travelMultiplier);
+			buf.writeDouble(accidentMultiplier);
 		}
 
 		static View read(RegistryFriendlyByteBuf buf) {
@@ -156,7 +161,7 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			for (int i = 0; i < n; i++) log.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 			return new View(id, role, home, homeName, atHome, goods, item, unit, destination, destinationName, distance, quantity, buyLimit,
 					sellLimit, purse, stock, phase, paused, status, phaseStart, nextTime, wage, earned, spent, wages, lost, trips, sold, log, buf.readBoolean(),
-					buf.readVarInt(), buf.readVarInt());
+					buf.readVarInt(), buf.readVarInt(), buf.readDouble(), buf.readDouble());
 		}
 	}
 
@@ -174,9 +179,12 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 * @param returnItems  v0.54: items of the return cargo it would bring back now (0 = none, or {@code staff.carrierBackhaul} off)
 	 * @param returnKinds  kinds of goods of that return cargo
 	 * @param returnProfit expected profit of that return cargo (after the commission and the accident risk)
+	 * @param travelMultiplier   multiplier of the travel time (a harbor at either end, 1 = none)
+	 * @param accidentMultiplier multiplier of the accident chance (a watchtower at either end, 1 = none)
 	 */
 	public record Destination(long id, Component name, int dx, int dz, int distance, long buyPrice, long sellPrice, int units, long profit,
-			long buyLimit, long sellLimit, int kinds, int returnItems, int returnKinds, long returnProfit) {
+			long buyLimit, long sellLimit, int kinds, int returnItems, int returnKinds, long returnProfit, double travelMultiplier,
+			double accidentMultiplier) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeVarLong(id);
 			ComponentSerialization.STREAM_CODEC.encode(buf, name);
@@ -193,12 +201,14 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeVarInt(returnItems);
 			buf.writeVarInt(returnKinds);
 			buf.writeLong(returnProfit);
+			buf.writeDouble(travelMultiplier);
+			buf.writeDouble(accidentMultiplier);
 		}
 
 		static Destination read(RegistryFriendlyByteBuf buf) {
 			return new Destination(buf.readVarLong(), ComponentSerialization.STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readVarInt(),
 					buf.readVarInt(), buf.readLong(), buf.readLong(), buf.readVarInt(), buf.readLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarInt(),
-					buf.readVarInt(), buf.readVarInt(), buf.readLong());
+					buf.readVarInt(), buf.readVarInt(), buf.readLong(), buf.readDouble(), buf.readDouble());
 		}
 	}
 

@@ -15,8 +15,9 @@ import java.util.List;
  * Latest prices of nearby markets for the bulletin board (design I).
  *
  * @param marketId the market whose screen asked
+ * @param radius   the radius actually used, in blocks ({@code board.radius} of the server, times the tavern's multiplier)
  */
-public record BoardS2C(long marketId, List<Entry> markets, List<News> news) implements CustomPacketPayload {
+public record BoardS2C(long marketId, int radius, List<Entry> markets, List<News> news) implements CustomPacketPayload {
 	public static final Type<BoardS2C> TYPE = new Type<>(TradeExpansion.id("board"));
 
 	/**
@@ -82,6 +83,7 @@ public record BoardS2C(long marketId, List<Entry> markets, List<News> news) impl
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, BoardS2C> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_LONG, BoardS2C::marketId,
+			ByteBufCodecs.VAR_INT, BoardS2C::radius,
 			Entry.CODEC.apply(ByteBufCodecs.list()), BoardS2C::markets,
 			News.CODEC.apply(ByteBufCodecs.list()), BoardS2C::news,
 			BoardS2C::new);

@@ -980,17 +980,20 @@ final class StaffTab {
 				}
 				Component back = returnLine(d);
 				if (back != null) lines.add(back);
-				lines.add(travelLine(d.distance()).withStyle(ChatFormatting.GRAY));
+				lines.add(travelLine(d.distance(), d.travelMultiplier(), d.accidentMultiplier()).withStyle(ChatFormatting.GRAY));
 				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
 		}
 	}
 
-	/** "片道 約 6分・事故の確率 7%". */
-	private net.minecraft.network.chat.MutableComponent travelLine(int distance) {
+	/**
+	 * "片道 約 6分・事故の確率 7%", with the harbor and watchtower multipliers the server worked out for that route
+	 * (the same as the trip itself).
+	 */
+	private net.minecraft.network.chat.MutableComponent travelLine(int distance, double travelMultiplier, double accidentMultiplier) {
 		StaffS2C.Info info = data.info();
-		long ticks = StaffMath.travelTicks(distance, info.blocksPerDay());
-		double chance = StaffMath.accidentChance(distance, info.accidentBase(), info.accidentPerThousand(), info.accidentMax());
+		long ticks = StaffMath.travelTicks(distance, info.blocksPerDay(), travelMultiplier);
+		double chance = StaffMath.accidentChance(distance, info.accidentBase(), info.accidentPerThousand(), info.accidentMax()) * accidentMultiplier;
 		return Component.translatable("screen.ak_trade_expansion.staff.travel", minutes(ticks), percent(chance));
 	}
 
@@ -1004,15 +1007,17 @@ final class StaffTab {
 		if (hiringCarrier) {
 			Component to = destination != null ? destination.name() : edited != null ? edited.destinationName() : Component.empty();
 			int distance = destination != null ? destination.distance() : edited != null ? edited.distance() : 0;
+			double travelMultiplier = destination != null ? destination.travelMultiplier() : edited != null ? edited.travelMultiplier() : 1.0;
+			double accidentMultiplier = destination != null ? destination.accidentMultiplier() : edited != null ? edited.accidentMultiplier() : 1.0;
 			StaffS2C.Destination d = setupDestination();
 			if (auto()) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto", to).withColor(COLOR_GOLD));
-				lines.add(travelLine(distance));
+				lines.add(travelLine(distance, travelMultiplier, accidentMultiplier));
 				if (d != null) lines.add(autoLine(d));
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto.how", quantity));
 			} else {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier", item, to).withColor(COLOR_GOLD));
-			lines.add(travelLine(distance));
+			lines.add(travelLine(distance, travelMultiplier, accidentMultiplier));
 			if (d != null) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.prices", CoinItem.formatCopper(Math.max(0, d.buyPrice())),
 						d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice())));
