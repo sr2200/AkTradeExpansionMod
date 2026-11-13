@@ -3,7 +3,7 @@ rem AK Trade Expansion: release build.
 rem   1. Raises the middle number of "version" in gradle.properties and README.md, the last back to 0 (0.1.3 -> 0.2.0)
 rem      (skip with: release.bat nobump)
 rem   2. Runs "gradlew build releaseZip": tests, the mod jar (build\libs) and the distribution zip (build\distributions)
-rem   3. Redraws the download page thumbnail with the new version (docselease	humbnail.png, needs pwsh)
+rem   3. Redraws the download page thumbnail with the new version (docs\release\thumbnail.png, needs pwsh)
 rem   Other arguments go to Gradle (e.g. release.bat --offline, release.bat nobump --offline)
 setlocal
 cd /d "%~dp0"
