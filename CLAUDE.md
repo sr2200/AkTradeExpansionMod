@@ -14,11 +14,12 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 
 | コマンド | 内容 |
 |---|---|
-| `build.bat` | 普段のビルド。`gradle.properties` と README.md のバージョンの末尾を上げ（0.1.1 → 0.1.2）、`gradlew build`（テスト＋jar）を実行する。`build.bat nobump` なら上げない |
+| `build.bat` | 普段のビルド。`gradle.properties` と README.md のバージョンの末尾を上げ（0.1.1 → 0.1.2）、`gradlew build`（テスト＋jar）を実行する。`build.bat nobump` なら上げない。`build.bat gametest` ならサーバーのゲーム内自動テスト（画面なし、約1分）も実行してチェックリストに記録する（`nobump` と併用可） |
 | `release.bat` | 配布用。バージョンの真ん中を上げ（0.1.3 → 0.2.0）、jar と `build/distributions/AKTradeExpansion-<version>.zip` を作る。**ユーザーに確認してから実行する** |
 | `./gradlew test` | 単体テストだけ実行（ゲームは起動しない） |
 | `./gradlew test --tests com.akf.tradeexpansion.core.PriceModelTest` | 1クラスだけ実行 |
 | `./gradlew runClient` / `runServer` | 開発用のクライアント／サーバー（ユーザーが操作するもの） |
+| `autotest.bat` | ゲーム内の自動テスト（サーバー → クライアント）を実行し、結果を `docs/release/ingame-checklist.md` と `autotest-report.md` に書き込む。`autotest.bat server` / `client` で片方だけ。クライアントはゲームのウィンドウが開く（数分、操作しない）。`-Pautotest.only=2-10+stall` で項目番号かテスト名で絞る |
 
 - Git Bash（Bash ツール）から .bat を実行するときは、フルパスで `cmd` に渡す（`build.bat` とだけ書くと中の `gradlew.bat` が見つからず失敗する）。例：`Source/TradeExpansion` で `cmd //c "$(cygpath -w "$PWD/build.bat") --offline -q"`。`gradlew` を直接使うときも同じ形（`cmd //c "$(cygpath -w "$PWD/gradlew.bat") test --offline -q"`）。
 - バージョンの上げ方は `tools/version/bump.ps1`。手で書き換えない。
@@ -38,13 +39,14 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 - **データ駆動**：商品の定義と市場プロファイル（条件、抽選プール、価格倍率）は `src/main/resources/data/ak_trade_expansion/ak_trade_expansion/{goods,market_profile}/` のデータパック。読み込みは `data/`。同梱データの読み込みは `BundledDataTest` で検証する。
 - **設定**：`config/ak_trade_expansion.json`（`config/`）。表示に必要な値は `ConfigSyncS2C` でクライアントに同期する。設定を足したら `TradeExpansionConfig`（Codec）と `ConfigValidator`（範囲の補正）に加えて、README の設定値一覧、設計書 G章、YACL の画面（`src/client/.../config`）、言語ファイルも合わせて直す。
 - **言語ファイル**：`assets/ak_trade_expansion/lang/` の `ja_jp.json` と `en_us.json` の両方に同じキーを足す。
+- **ゲーム内の自動テスト**（`src/gametest`、別の Mod `ak_trade_expansion_test`。配布 jar には入らない）：Loom の `fabricApi.configureTests` で `runGameTest`（サーバー、`server/ServerCases.java`）と `runClientGameTest`（クライアント、`client/ClientChecklistTests.java`）を作る。各テストは `ingame-checklist.md` の項目番号と、一部だけ確かめる時はその範囲（日本語）を持ち、結果は `build/autotest/*-results.json` → `tools/checklist/record.js` でチェックリストに書き込む。サーバーの項目は1つのゲームテストの中で順に実行する（市場がワールド全体で共有されるため）。Minecraft 標準の仮プレイヤーはクリエイティブ固定なので `ServerCtx.player` を使う。方針と章ごとの対応表は `docs/release/autotest-plan.md`。`runGameTest` は Loom の既定では `check` に入るが、`build.gradle` で外している
 
 ## 文書と運用ルール
 
 - 仕様の正本は `docs/trade-mod-design.md`（章 A〜R、`v0.xx` の版表記は設計書の版で、Mod のバージョンとは別）と `docs/goods-design.md`。仕様を変えたら設計書も更新する（先頭の版と、付録B の改版履歴も）。README は遊ぶ人向けの説明で、ソースと一致させる。
 - TODO は `docs/TODO`（Todo+ 書式：`☐` と `✔ ... @done(yy-mm-dd HH:MM)`）。README や設計書には書かない。
 - 0.1.0 より後に入れた、遊ぶ人に見える変更は `docs/release/CHANGES.md` の「未リリース」に、遊ぶ人向けの言葉で書く（追加、変更、修正。設定を足したら設定名も書く。公開前の機能を直した時は、その機能の「追加」の説明を書き直す）。短い版 `docs/release/CHANGES-short.md`（投稿ページの更新履歴用、1つの変更を1行）も合わせて直す。`release.bat` を実行したら、両方の「未リリース」の見出しをそのバージョンと日付に変え、新しい「未リリース」を上に作る。
-- ゲーム内で確認が必要な項目は `docs/release/ingame-checklist.md` に足す。
+- ゲーム内で確認が必要な項目は `docs/release/ingame-checklist.md` に足す（番号は重ねない。記録スクリプトが番号で行を探す）。自動で確かめられるものはテストも足し、`autotest-plan.md` の表を直す。チェックリストの〔自動 ✔〕〔一部自動 ✔〕〔自動 ✘〕の注記は `record.js` が書くので手で直さない。`autotest-report.md` は生成物
 - 作業の終わりは `build.bat` → コミット（push はしない）。`release.bat` は聞いてから実行する。
 - ビルドとコミットのたびに新しいセッションで続ける運用なので、やり残したことや次の作業は会話ではなく `docs/TODO` に残す。
 - 文書とコミットメッセージは日本語で書く。コードのコメントは英語で書く（既存のコードに合わせる）。

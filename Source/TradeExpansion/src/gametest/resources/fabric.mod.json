@@ -1,0 +1,22 @@
+{
+	"schemaVersion": 1,
+	"id": "ak_trade_expansion_test",
+	"version": "${version}",
+	"name": "AK Trade Expansion automated tests",
+	"description": "Automated checks of docs/release/ingame-checklist.md (development only, not distributed).",
+	"license": "LGPL-2.1-only",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"com.akf.tradeexpansion.test.server.ServerChecklistTests"
+		],
+		"fabric-client-gametest": [
+			"com.akf.tradeexpansion.test.client.ClientChecklistTests"
+		]
+	},
+	"depends": {
+		"ak_trade_expansion": "*",
+		"fabric-gametest-api-v1": "*",
+		"fabric-client-gametest-api-v1": "*"
+	}
+}

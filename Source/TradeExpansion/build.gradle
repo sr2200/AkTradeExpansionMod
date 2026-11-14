@@ -41,6 +41,41 @@ loom {
 	}
 }
 
+// Automated in-game tests (docs/release/ingame-checklist.md): the "gametest" source set is a separate test mod
+// (ak_trade_expansion_test), not part of the mod jar. runGameTest starts a headless server and runs the server game
+// tests; runClientGameTest starts a real client window and runs the client game tests. autotest.bat runs both.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "ak_trade_expansion_test"
+		enableGameTests = true
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
+// Loom makes "check" (and so "build") run the server game tests; here they run only when asked for
+// (build.bat gametest, autotest.bat or gradlew runGameTest).
+tasks.named("check") {
+	setDependsOn(dependsOn.findAll { !(it instanceof org.gradle.api.tasks.TaskProvider && it.name == "runGameTest") && it != "runGameTest" })
+}
+
+// -Pautotest.only=2-10,stall runs only the automated cases whose name or checklist number matches (see
+// ServerChecklistTests / ClientChecklistTests).
+def autotestOnly = providers.gradleProperty("autotest.only").orElse("")
+loom {
+	runs {
+		configureEach {
+			if (name == "gameTest" || name == "clientGameTest") {
+				vmArg "-Dak.autotest.only=${autotestOnly.get()}"
+			}
+		}
+		named("gameTest") {
+			vmArg "-Dfabric-api.gametest.report-file=${layout.buildDirectory.file("autotest/server-junit.xml").get().asFile.absolutePath}"
+		}
+	}
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
