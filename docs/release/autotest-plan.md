@@ -10,6 +10,7 @@
 | B | クライアントのテスト（`src/gametest/.../client/ClientChecklistTests.java`、ケースは `ClientTradeCases`・`ClientConfigCases` にも）。本物のクライアントを**日本語**で起動してワールドを作り、キーとマウスで操作する。専用サーバー（同じプロセスの中で起動）にも接続する | `autotest.bat client`（ゲームのウィンドウが開く。数分） | 自動 |
 | B′ | Mod Menu・YACL を外したクライアント（`runClientGameTestMinimal`。jar はクラスパスに残るが、Fabric Loader の `fabric.debug.disableModIds` で読み込まない）。起動してタイトル画面が出ることだけを確かめる（`ak.autotest.minimal`） | `autotest.bat minimal`（約1分）。`autotest.bat` でも流れる | 自動 |
 | C | B の中でスクリーンショットを撮る（`build/autotest/screenshots/`） | B と同じ | 人が画像を見る |
+| 投稿用 | チェックリスト外。配布ページのスクリーンショット4枚（`PostScreenshots`、`runClientGameTestShots`、`ak.autotest.shots`）。決まったシード（`PostScreenshots.SEED`）の普通の世界で村の屋台を探し（無ければ屋台の建物を置く）、村の建物2つをその場で建て、ほかの市場3つと商会のニュース、価格の履歴を用意して、1920×1080・GUI と HUD を隠して撮る | `shots.bat`（約5分）。`release.bat` が呼ぶ | 人が画像を見る（`docs/release/Screenshot/auto/`） |
 | 手 | 手で確認する（他の Mod・2人のプレイ・遊んだ感触・自然に生成された村など） | ― | 人 |
 
 結果は `tools/checklist/record.js` がチェックリストの各行に書き込みます（全部を確かめた項目は `[x]` と〔自動 ✔ 版 日付〕、一部だけなら〔一部自動 ✔ 版 日付：確かめた範囲〕、失敗は〔自動 ✘ 版 日付：テスト名〕）。一覧は `autotest-report.md` です。
@@ -36,15 +37,16 @@
 - 相場の戻りは、値段ではなく圧力 X が半減期どおりに減るかで判定する。半減期は `market.params(good).halfLifeDays()`（消耗品は短い）
 - B でマウスを押す時、左ボタンは `InputConstants.MOUSE_BUTTON_LEFT`（26.3 は SDL なので 1。0 は部品に無視される）。マウスを動かしてから1ティック待ってから押す
 - B で言語を切り替えたら、再読み込みの完了と読み込み画面（`gui.overlay()`）が消えるのを待つ。撮影と表示の判定の前に進捗の通知（トースト）を消す
-- 確率の項目は設定で確率を 1 にする。日数の項目は市場の時計を `DAY_TIME` にして時刻を進める（予定）
+- 確率の項目は設定で確率を 1 にする。日数の項目は下の「時間を進めるテスト」のとおり
 - 本体のコードにテスト専用の処理は足さない（画面の内部の値はリフレクションで読む）。描画の途中に印を付ける時はテスト用の Mixin を使う（「まとめて売る」の枠は一覧の上に同じ層で描かれるので、`MarketScreenMixin` が枠の描き始めに印を付け、枠の下に隠れた一覧の文字を判定から外す）
 - B で YACL の型を使うケースは `ClientConfigCases` に置く。Mod Menu・YACL なしの実行（B′）でも `ClientChecklistTests` を読み込めるように、そこから YACL の型（catch の型も）を参照しない
 - B の専用サーバー（`worldBuilder().createServer()`）は同じプロセスの中で動くので、設定（`TradeExpansionConfig` の static）はクライアントと共有になる。「サーバーと自分の設定が違う時」を確かめる 35章は B ではできない（手で確かめる）
 - B の設定画面のケースは、始める前に設定ファイルを読んでおき、終わったら書き戻して読み直す（シングルでは内蔵サーバーも読み直す）
+- 投稿用の撮影で、世界を作った後に描画距離を変えると、`waitForChunksRender` が終わらなくなる（内蔵サーバーの見える距離は起動時に決まる）。描画距離は世界を作る前に決める。1920×1080 ではマウスの位置が GUI の座標と少しずれることがあるので、ゲームが読んだ位置を見て合わせる（`PostScreenshots.hoverAt`）
 
 ## 時間を進めるテスト
 
-依頼の期限・品不足の入れ替わりなど、日がたつ必要があるテストは、市場を作る前に設定 `recovery.clock` を `DAY_TIME` にし（`ServerChapterCases.dayClock`）、`/time add` で昼夜の時計を進める（`addDays`）。`market advance` は相場と在庫の回復しか進めない。
+依頼の期限・品不足の入れ替わりなど、日がたつ必要があるテストは、`/aktradeex clock advance <日数>`（すべての市場の時計を進める。13-10 のテストで使っている）で進められる。それより前に書いたテストは、市場を作る前に設定 `recovery.clock` を `DAY_TIME` にし（`ServerChapterCases.dayClock`）、`/time add` で昼夜の時計を進めている（`addDays`）。新しく書くテストは `clock advance` を使う（設定を変えずに済む）。`market advance` は相場と在庫の回復しか進めない。
 
 ワールドは実行のたびに変わる（市場の品揃え・依頼・品不足・ばらつき）。たまたま合う品に頼らないこと：値段が 1c 動くのに必要な数を計算して売り買いする（安い品は数個では動かない）、評判の値引きは品ごとの上限で 0 になる品がある、★3の依頼には評判が要る、2つの市場に共通の品が無いことがある（`ServerChapterCases.shared` は無ければ足す）。足したテストは `gradlew runGameTest` を何回か続けて流して確かめる。
 

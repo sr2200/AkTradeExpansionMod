@@ -83,7 +83,24 @@ loom {
 			vmArg "-Dfabric.debug.disableModIds=modmenu,yet_another_config_lib_v3"
 			vmArg "-Dak.autotest.minimal=true"
 		}
+		// Screenshots for the download page (shots.bat, called by release.bat): PostScreenshots in the test mod writes
+		// docs/release/Screenshot/auto/*.png. A run directory of its own, emptied first (a new world every time).
+		register("clientGameTestShots") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (download page screenshots)"
+			getRunDirectory().set(file("build/run/clientGameTestShots"))
+			vmArg "-Dak.autotest.shots=true"
+			vmArg "-Dak.shots.dir=${file("../../docs/release/Screenshot/auto").absolutePath}"
+		}
 	}
+}
+
+def deleteShotsRunDir = tasks.register("deleteClientGameTestShotsRunDir", Delete) {
+	group = "fabric"
+	delete file("build/run/clientGameTestShots")
+}
+tasks.matching { it.name == "runClientGameTestShots" }.configureEach {
+	dependsOn deleteShotsRunDir
 }
 
 def deleteMinimalRunDir = tasks.register("deleteClientGameTestMinimalRunDir", Delete) {

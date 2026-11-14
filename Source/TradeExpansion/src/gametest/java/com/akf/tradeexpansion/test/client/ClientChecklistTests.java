@@ -128,6 +128,12 @@ public class ClientChecklistTests implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext context) {
 		boolean minimal = Boolean.getBoolean("ak.autotest.minimal");
 		setLanguage(context, LANGUAGE);
+		if (Boolean.getBoolean("ak.autotest.shots")) {
+			// shots.bat (runClientGameTestShots): only the screenshots for the download page, no checklist results.
+			PostScreenshots.run(context);
+			backToTitle(context);
+			return;
+		}
 		Session session = new Session(context);
 		List<CaseResult> results = new ArrayList<>();
 		for (ClientCase c : minimal ? minimalCases() : filter(cases())) {

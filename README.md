@@ -17,7 +17,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.2.7（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.2.8（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -1015,7 +1015,9 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | コマンド | 内容 |
 |---|---|
 | `build.bat` | 普段のビルド。バージョンの末尾を上げて（0.1.2 → 0.1.3。この README の表記も）、テストと jar（`build/libs/ak_trade_expansion-<version>.jar`）を作る。`build.bat nobump` で上げずにビルド |
-| `release.bat` | 配布用のビルド。バージョンの真ん中を上げて（0.1.3 → 0.2.0）、jar と配布用 zip（`build/distributions/AKTradeExpansion-<version>.zip`：jar・導入方法の README.txt・LICENSE）を作る |
+| `release.bat` | 配布用のビルド。バージョンの真ん中を上げて（0.1.3 → 0.2.0）、jar と配布用 zip（`build/distributions/AKTradeExpansion-<version>.zip`：jar・導入方法の README.txt・LICENSE）を作る。続けて、配布ページのサムネイル・下書き（`docs/release/post-draft.md` のバージョンと数）・スクリーンショット（`shots.bat`）も作り直す |
+| `autotest.bat` | ゲーム内の自動テスト（サーバー・クライアント・Mod Menu と YACL なしのクライアント）を実行し、結果を `docs/release/ingame-checklist.md` と `autotest-report.md` に書き込む。クライアントのテストはゲームのウィンドウが数分開く（操作しない）。`autotest.bat server` / `client` / `minimal` でそれだけ。`build.bat gametest` でもサーバーのテストを実行する |
+| `shots.bat` | 配布ページ用のスクリーンショット4枚（交易画面・村の屋台と商人・掲示板・村の建物）を `docs/release/Screenshot/auto/` に撮る（ゲームのウィンドウが約5分開く） |
 | `./gradlew test` | 単体テストだけを実行する（ゲームは起動しない） |
 | `./gradlew runClient` / `runServer` | 開発用のクライアント／サーバーを起動する（Mod Menu と YACL も読み込まれる） |
 

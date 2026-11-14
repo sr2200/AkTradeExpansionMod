@@ -4,6 +4,9 @@ rem   1. Raises the middle number of "version" in gradle.properties and README.m
 rem      (skip with: release.bat nobump)
 rem   2. Runs "gradlew build releaseZip": tests, the mod jar (build\libs) and the distribution zip (build\distributions)
 rem   3. Redraws the download page thumbnail with the new version (docs\release\thumbnail.png, needs pwsh)
+rem   4. Updates the version and the numbers in the download page draft (docs\release\post-draft.md, needs node)
+rem   5. Takes the screenshots for the download page (shots.bat: opens a game window for a few minutes, do not touch
+rem      it; docs\release\Screenshot\auto)
 rem   Other arguments go to Gradle (e.g. release.bat --offline, release.bat nobump --offline)
 setlocal
 cd /d "%~dp0"
@@ -36,6 +39,14 @@ if errorlevel 1 (
   pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\thumbnail\genthumb.ps1"
   if errorlevel 1 echo Thumbnail update failed.
 )
+
+rem Download page draft: version in the file names, numbers of goods, buildings and advancements.
+node "%~dp0tools\release\postdraft.js"
+if errorlevel 1 echo Download page draft update failed.
+
+rem Screenshots for the download page (a game window opens for a few minutes).
+call "%~dp0shots.bat" %1 %2 %3 %4
+if errorlevel 1 echo Screenshots failed: run shots.bat again (see the log above).
 
 echo.
 echo Mod jar:          %~dp0build\libs

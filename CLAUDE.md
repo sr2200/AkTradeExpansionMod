@@ -15,7 +15,8 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 | コマンド | 内容 |
 |---|---|
 | `build.bat` | 普段のビルド。`gradle.properties` と README.md のバージョンの末尾を上げ（0.1.1 → 0.1.2）、`gradlew build`（テスト＋jar）を実行する。`build.bat nobump` なら上げない。`build.bat gametest` ならサーバーのゲーム内自動テスト（画面なし、約1分）も実行してチェックリストに記録する（`nobump` と併用可） |
-| `release.bat` | 配布用。バージョンの真ん中を上げ（0.1.3 → 0.2.0）、jar と `build/distributions/AKTradeExpansion-<version>.zip` を作る。**ユーザーに確認してから実行する** |
+| `release.bat` | 配布用。バージョンの真ん中を上げ（0.1.3 → 0.2.0）、jar と `build/distributions/AKTradeExpansion-<version>.zip` を作る。続けてサムネイル、投稿ページの下書き（`docs/release/post-draft.md` のバージョンと商品・建物・進捗の数、`tools/release/postdraft.js`）、投稿用のスクリーンショット（`shots.bat`）も作り直す（ゲームのウィンドウが数分開く）。**ユーザーに確認してから実行する** |
+| `shots.bat` | 投稿ページ用のスクリーンショット4枚（交易画面・村の屋台と商人・掲示板・村の建物、1920×1080）を `docs/release/Screenshot/auto/` に撮る（`runClientGameTestShots`、テストの `PostScreenshots`。決まったシードの普通の世界で村を探して撮る。ゲームのウィンドウが約5分開く、操作しない）。`release.bat` が呼ぶ |
 | `./gradlew test` | 単体テストだけ実行（ゲームは起動しない） |
 | `./gradlew test --tests com.akf.tradeexpansion.core.PriceModelTest` | 1クラスだけ実行 |
 | `./gradlew runClient` / `runServer` | 開発用のクライアント／サーバー（ユーザーが操作するもの） |
@@ -45,7 +46,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 
 - 仕様の正本は `docs/trade-mod-design.md`（章 A〜R、`v0.xx` の版表記は設計書の版で、Mod のバージョンとは別）と `docs/goods-design.md`。仕様を変えたら設計書も更新する（先頭の版と、付録B の改版履歴も）。README は遊ぶ人向けの説明で、ソースと一致させる。
 - TODO は `docs/TODO`（Todo+ 書式：`☐` と `✔ ... @done(yy-mm-dd HH:MM)`）。README や設計書には書かない。
-- 0.1.0 より後に入れた、遊ぶ人に見える変更は `docs/release/CHANGES.md` の「未リリース」に、遊ぶ人向けの言葉で書く（追加、変更、修正。設定を足したら設定名も書く。公開前の機能を直した時は、その機能の「追加」の説明を書き直す）。短い版 `docs/release/CHANGES-short.md`（投稿ページの更新履歴用、1つの変更を1行）も合わせて直す。`release.bat` を実行したら、両方の「未リリース」の見出しをそのバージョンと日付に変え、新しい「未リリース」を上に作る。
+- 0.1.0 より後に入れた、遊ぶ人に見える変更は `docs/release/CHANGES.md` の「未リリース」に、遊ぶ人向けの言葉で書く（追加、変更、修正。設定を足したら設定名も書く。公開前の機能を直した時は、その機能の「追加」の説明を書き直す）。短い版 `docs/release/CHANGES-short.md`（投稿ページの更新履歴用、1つの変更を1行）も合わせて直す。`release.bat` を実行したら、両方の「未リリース」の見出しをそのバージョンと日付に変え、新しい「未リリース」を上に作る。同時に投稿ページの下書き `docs/release/post-draft.md` も直す：「更新履歴」の先頭に、そのバージョンの `CHANGES-short.md` を1行にまとめて足し、機能を足した時は「できること」も直す（バージョン・数・スクリーンショットは `release.bat` が更新済み。撮った4枚は見て、おかしければ伝える）。
 - ゲーム内で確認が必要な項目は `docs/release/ingame-checklist.md` に足す（番号は重ねない。記録スクリプトが番号で行を探す）。自動で確かめられるものはテストも足し、`autotest-plan.md` の表を直す。チェックリストの〔自動 ✔〕〔一部自動 ✔〕〔自動 ✘〕の注記は `record.js` が書くので手で直さない。`autotest-report.md` は生成物
 - 作業の終わりは `build.bat` → コミット（push はしない）。`release.bat` は聞いてから実行する。
 - ビルドとコミットのたびに新しいセッションで続ける運用なので、やり残したことや次の作業は会話ではなく `docs/TODO` に残す。
