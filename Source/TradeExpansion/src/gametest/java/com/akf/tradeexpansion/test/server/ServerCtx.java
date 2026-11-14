@@ -67,6 +67,7 @@ public final class ServerCtx {
 	final List<Step> steps = new ArrayList<>();
 	private final List<ServerPlayer> players = new ArrayList<>();
 	private final List<BlockPos> floors = new ArrayList<>();
+	private final List<net.minecraft.world.level.ChunkPos> forced = new ArrayList<>();
 
 	record Step(int delay, ServerCase.Body action) {
 	}
@@ -114,6 +115,12 @@ public final class ServerCtx {
 
 	/** Lays a stone floor around {@code pos} (one block below it); cleared again after the case. */
 	public void floor(BlockPos pos) {
+		// Away from the test structure chunks are not kept loaded: villagers spawned there would not be found.
+		for (int cx = (pos.getX() - FLOOR - 16) >> 4; cx <= (pos.getX() + FLOOR + 16) >> 4; cx++) {
+			for (int cz = (pos.getZ() - FLOOR - 16) >> 4; cz <= (pos.getZ() + FLOOR + 16) >> 4; cz++) {
+				if (level().setChunkForced(cx, cz, true)) forced.add(new net.minecraft.world.level.ChunkPos(cx, cz));
+			}
+		}
 		BlockPos base = pos.below();
 		for (int dx = -FLOOR; dx <= FLOOR; dx++) {
 			for (int dz = -FLOOR; dz <= FLOOR; dz++) {
@@ -147,12 +154,99 @@ public final class ServerCtx {
 		CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
 		ServerPlayer player = new ServerPlayer(server(), level(), profile, cookie.clientInformation());
 		Connection connection = new Connection(PacketFlow.SERVERBOUND);
-		new EmbeddedChannel(connection);
+		// Nothing encodes the packets: what the server sends stays in the channel as packet objects (see sent()).
+		channels.put(player, new EmbeddedChannel(connection));
 		server().getPlayerList().placeNewPlayer(connection, player, cookie);
 		player.setGameMode(GameType.SURVIVAL);
 		player.teleportTo(level(), pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
 		players.add(player);
 		return player;
+	}
+
+	// ---- what the server sent to a test player
+
+	private final java.util.Map<ServerPlayer, EmbeddedChannel> channels = new java.util.HashMap<>();
+	private final java.util.Map<ServerPlayer, List<Object>> received = new java.util.HashMap<>();
+
+	/** Every packet sent to {@code player} since it joined or since {@link #forget}. */
+	public List<Object> sent(ServerPlayer player) {
+		EmbeddedChannel channel = channels.get(player);
+		List<Object> list = received.computeIfAbsent(player, p -> new ArrayList<>());
+		Object msg;
+		while (channel != null && (msg = channel.readOutbound()) != null) list.add(msg);
+		return list;
+	}
+
+	/** Forgets the packets sent so far, so the next checks see only what comes after. */
+	public void forget(ServerPlayer player) {
+		sent(player).clear();
+	}
+
+	/** Mod payloads of {@code type} sent to {@code player}. */
+	public <T> List<T> payloads(ServerPlayer player, Class<T> type) {
+		List<T> out = new ArrayList<>();
+		for (Object msg : sent(player)) {
+			if (msg instanceof net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket p && type.isInstance(p.payload())) {
+				out.add(type.cast(p.payload()));
+			}
+		}
+		return out;
+	}
+
+	/** Chat and action bar messages to {@code player}: the translation key, or the text when not translatable. */
+	public List<String> messages(ServerPlayer player) {
+		List<String> out = new ArrayList<>();
+		for (Object msg : sent(player)) {
+			if (msg instanceof net.minecraft.network.protocol.game.ClientboundSystemChatPacket p) {
+				out.add(p.content().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t ? t.getKey() : p.content().getString());
+			}
+		}
+		return out;
+	}
+
+	public boolean gotMessage(ServerPlayer player, String translationKey) {
+		return messages(player).contains(translationKey);
+	}
+
+	/** The result of the last trade request answered to {@code player}, or {@code null}. */
+	public com.akf.tradeexpansion.trade.TradeResult lastTradeResult(ServerPlayer player) {
+		List<com.akf.tradeexpansion.network.TradeResultS2C> results = payloads(player, com.akf.tradeexpansion.network.TradeResultS2C.class);
+		return results.isEmpty() ? null : results.getLast().result();
+	}
+
+	/** The last market snapshot sent to {@code player} (what its trade screen shows), or {@code null}. */
+	public com.akf.tradeexpansion.network.MarketSnapshotS2C lastSnapshot(ServerPlayer player) {
+		var list = payloads(player, com.akf.tradeexpansion.network.MarketSnapshotS2C.class);
+		return list.isEmpty() ? null : list.getLast();
+	}
+
+	/**
+	 * Everything a request could change for {@code player}: money, bank balance, inventory, and every market's goods,
+	 * development, requests and the employees. Two equal fingerprints = the request changed nothing.
+	 */
+	public String fingerprint(ServerPlayer player) {
+		// Markets catch up with time when touched (lazy recovery, new requests): do that first, so that only what a
+		// request itself changes shows (touching again in the same tick changes nothing).
+		for (Market m : registry().all()) MarketUpkeep.touch(level(), m);
+		StringBuilder sb = new StringBuilder();
+		sb.append("money=").append(balance(player));
+		sb.append(" bank=").append(com.akf.tradeexpansion.bank.BankService.accounts(player).balance(player.getUUID()));
+		sb.append(" inv=[");
+		var inv = player.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			if (!s.isEmpty()) sb.append(i).append(':').append(BuiltInRegistries.ITEM.getKey(s.getItem())).append('x').append(s.getCount())
+					.append(s.getComponentsPatch().isEmpty() ? "" : s.getComponentsPatch().toString()).append(' ');
+		}
+		sb.append(']');
+		for (Market m : registry().all().stream().sorted(java.util.Comparator.comparingLong(Market::id)).toList()) {
+			sb.append(" market#").append(m.id()).append(" dev=").append(m.development());
+			m.goods().entrySet().stream().sorted(java.util.Map.Entry.comparingByKey())
+					.forEach(e -> sb.append(' ').append(e.getKey().getPath()).append('=').append(e.getValue().pressure()).append('/').append(e.getValue().stock()));
+			m.requests().forEach(r -> sb.append(" req").append(r.id()).append(r.accepted()));
+		}
+		sb.append(" staff=").append(registry().employees().size());
+		return sb.toString();
 	}
 
 	public long balance(Player player) {
@@ -180,8 +274,22 @@ public final class ServerCtx {
 	/** {@code player} places a crafted stall at {@code pos} as a player would (the stall item used on the block below). */
 	public void placeStall(ServerPlayer player, BlockPos pos) {
 		ItemStack stack = new ItemStack(ModBlocks.MARKET_STALL.asItem());
+		emptyHand(player); // not over the starting money
 		player.setItemInHand(InteractionHand.MAIN_HAND, stack);
 		click(player, pos.below(), Direction.UP);
+	}
+
+	/** Selects an empty hotbar slot, so that a right click uses no item (and nothing in the hand is lost). */
+	public void emptyHand(ServerPlayer player) {
+		var inv = player.getInventory();
+		if (inv.getSelectedItem().isEmpty()) return;
+		for (int i = 0; i < 9; i++) {
+			if (inv.getItem(i).isEmpty()) {
+				inv.setSelectedSlot(i);
+				return;
+			}
+		}
+		throw new AutotestCheck.Failed("no empty hotbar slot to open the stall with");
 	}
 
 	/** A right click on the {@code face} of the block at {@code pos} with the main hand, through the server's own handling. */
@@ -201,7 +309,7 @@ public final class ServerCtx {
 
 	/** Right-clicks the stall at {@code pos}: opens the trade screen (menu) on the server. */
 	public MarketMenu openStall(ServerPlayer player, BlockPos pos) {
-		player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+		emptyHand(player);
 		click(player, pos, Direction.SOUTH);
 		AutotestCheck.that(player.containerMenu instanceof MarketMenu, "the trade screen did not open");
 		return (MarketMenu) player.containerMenu;
@@ -258,6 +366,19 @@ public final class ServerCtx {
 		return PriceModel.sellPrice(Reputation.params(market, player.getUUID(), goodsId, now), market.good(goodsId).pressure());
 	}
 
+	/** Sends a trade request exactly as given (for invalid and edge-case requests); returns the answer. */
+	public com.akf.tradeexpansion.trade.TradeResult tradeRaw(ServerPlayer player, long marketId, Identifier goodsId, boolean buy, int qty,
+			long expected, boolean card, boolean all) {
+		forget(player);
+		TradeService.handle(player, new TradeRequestC2S(marketId, goodsId, buy, qty, expected, card, all));
+		return lastTradeResult(player);
+	}
+
+	/** Takes every item out of {@code player}'s inventory (also the starting money). */
+	public void emptyInventory(ServerPlayer player) {
+		player.getInventory().clearContent();
+	}
+
 	/** Sends the trade request the buy / sell button sends, with the previewed total; returns that total. */
 	public long trade(ServerPlayer player, Market market, Identifier goodsId, boolean buy, int qty) {
 		long expected = previewTotal(player, market, goodsId, buy, qty);
@@ -274,8 +395,12 @@ public final class ServerCtx {
 			server().getPlayerList().remove(p);
 		}
 		players.clear();
+		channels.clear();
+		received.clear();
 		MarketRegistry registry = registry();
 		for (Market m : List.copyOf(registry.all())) registry.remove(m.id());
+		registry.campaigns().clear();
+		registry.employees().clear();
 		registry.setDirty();
 		for (BlockPos pos : floors) {
 			AABB box = new AABB(pos).inflate(FLOOR + 4, 8, FLOOR + 4);
@@ -291,6 +416,8 @@ public final class ServerCtx {
 			for (Entity e : level().getEntities((Entity) null, new AABB(pos).inflate(FLOOR + 4, 8, FLOOR + 4), e -> !(e instanceof Player))) e.discard();
 		}
 		floors.clear();
+		for (var chunk : forced) level().setChunkForced(chunk.x(), chunk.z(), false);
+		forced.clear();
 		ConfigManager.apply(ConfigManager.copy(defaults));
 	}
 }

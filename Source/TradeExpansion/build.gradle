@@ -121,6 +121,15 @@ test {
 	useJUnitPlatform()
 }
 
+// The test mod's fabric.mod.json carries the version too.
+tasks.named("processGametestResources") {
+	def version = project.version
+	inputs.property "version", version
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
 processResources {
 	def version = project.version
 	inputs.property "version", version

@@ -2,31 +2,62 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.1、2026-11-14 17:39、14 件中 0 件失敗
-- クライアント：バージョン 0.2.1、2026-11-14 17:39、3 件中 0 件失敗
-- チェックリスト 321 項目のうち、今回 自動で完了 6・一部を確認 10・失敗 0
+- サーバー：バージョン 0.2.2、2026-11-14 18:21、35 件中 0 件失敗
+- クライアント：バージョン 0.2.2、2026-11-14 18:22、8 件中 2 件失敗
+- チェックリスト 321 項目のうち、今回 自動で完了 14・一部を確認 10・失敗 6
+
+## 失敗した項目
+
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`（クライアント）：36 layout problems, e.g. ja_jp 854x480 GUI auto buy: "3c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | ja_jp 854x480 GUI auto buy: "3c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | ja_jp 854x480 GUI auto buy: "5c"@250,77-265,86 overlaps "47/128"@258,77-297,86 | ja_jp 854x480 GUI auto sell: "1c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | ja_jp 854x480 GUI auto sell: "1c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | ja_jp 854x480 GUI auto sell: "3c"@250,95-265,104 overlaps "47/128"@258,95-297,104 | ja_jp 854x480 GUI 1 buy: "3c"@464,161-479,170 overlaps "128/128"@466,161-511,170 | ja_jp 854x480 GUI 1 buy: "3c"@464,179-479,188 overlaps "128/128"@466,179-511,188
+- 26-1 `layout_market_screen_en`（クライアント）：36 layout problems, e.g. en_us 854x480 GUI auto buy: "3c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | en_us 854x480 GUI auto buy: "3c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | en_us 854x480 GUI auto buy: "5c"@250,77-265,86 overlaps "48/128"@258,77-297,86 | en_us 854x480 GUI auto sell: "1c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | en_us 854x480 GUI auto sell: "1c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | en_us 854x480 GUI auto sell: "3c"@250,95-265,104 overlaps "48/128"@258,95-297,104 | en_us 854x480 GUI 1 buy: "3c"@464,161-479,170 overlaps "128/128"@466,161-511,170 | en_us 854x480 GUI 1 buy: "3c"@464,179-479,188 overlaps "128/128"@466,179-511,188
 
 ## すべての項目
 
 | 項目 | テスト | 側 | 結果 | 確認した範囲 |
 |---|---|---|---|---|
 | 2-1 | `stall_recipe` | サーバー | ✔ | 全部 |
-| 2-3 | `stall_in_village` | サーバー | ✔ | 置けて市場ができることのみ（チャットの文言は見ていない） |
-| 2-4 | `stall_outside_village` | サーバー | ✔ | 置けずに交易所が戻ることのみ（チャットの理由は見ていない） |
-| 2-5 | `stall_too_close` | サーバー | ✔ | 64〜256ブロックの間に置けないことのみ（理由の文言は見ていない） |
+| 2-3 | `stall_in_village` | サーバー | ✔ | 全部 |
+| 2-4 | `stall_outside_village` | サーバー | ✔ | 全部 |
+| 2-5 | `stall_too_close` | サーバー | ✔ | 全部 |
 | 2-8 | `stall_opens_menu` | サーバー | ✔ | サーバー側で交易画面が開くことのみ |
 | 2-10 | `buy_pays_total` | サーバー | ✔ | 品が手に入り、所持金が合計額どおり減ることのみ（財布へのお釣りは見ていない） |
-| 2-11 | `buy_raises_price` | サーバー | ✔ | 買うたびに値段が上がることのみ（売り切れの表示は見ていない） |
-| 2-12 | `sell_pays_and_lowers_price` | サーバー | ✔ | 所持金が増えて値段が下がることのみ（買取停止は見ていない） |
-| 2-17 | `creative_cannot_trade` | サーバー | ✔ | 取引されないことのみ（メッセージは見ていない） |
+| 2-11 | `buy_raises_price_until_sold_out` | サーバー | ✔ | 買うたびに値段が上がり、在庫が0になると買えないこと（「売り切れ」「入荷まで」の表示は見ていない） |
+| 2-12 | `sell_pays_and_lowers_price_until_full` | サーバー | ✔ | 所持金が増えて値段が下がり、在庫が上限で売れないこと（「買取停止」の表示は見ていない） |
+| 2-14 | `shift_all_beyond_limit` | サーバー | ✔ | 上限（64）を超える数量の Shift 取引をサーバーが受け付けることのみ（最大数は画面側で計算） |
+| 2-15 | `change_drops_when_full` | サーバー | ✔ | 全部 |
+| 2-17 | `creative_cannot_trade` | サーバー | ✔ | 全部 |
+| — | `buy_without_money` | サーバー | ✔ | 全部 |
+| — | `sell_without_items` | サーバー | ✔ | 全部 |
+| — | `price_changed_is_refused` | サーバー | ✔ | 全部 |
+| — | `card_without_card` | サーバー | ✔ | 全部 |
+| — | `unknown_or_missing_good` | サーバー | ✔ | 全部 |
+| 3-10 | `snapshot_totals_match` | サーバー | ✔ | 画面と同じ計算（スナップショットの値）で 1・16・64 個とも確定できること（割引の表示は見ていない） |
+| 16-3 | `reputation_prices_match` | サーバー | ✔ | 評判「お得意様」で買値が下がり売値が上がり、表示どおりに確定できること（評判の名前の表示は見ていない） |
 | 4-1 | `advance_recovers_half` | サーバー | ✔ | 全部 |
 | 7-1 | `wallet_recipe` | サーバー | ✔ | 全部 |
 | 8-3 | `minting_copper_not_iron` | サーバー | ✔ | 全部 |
 | 8-4 | `emerald_coin_stonecutter` | サーバー | ✔ | 全部 |
 | 17-1 | `starting_money` | サーバー | ✔ | 初めて入った時に 240c もらえることのみ（入り直しは見ていない） |
+| — | `request_trade` | サーバー | ✔ | 全部 |
+| — | `request_sell_all` | サーバー | ✔ | 全部 |
+| — | `request_bank` | サーバー | ✔ | 全部 |
+| — | `request_exchange` | サーバー | ✔ | 全部 |
+| — | `request_quest_accept` | サーバー | ✔ | 全部 |
+| — | `request_quest_deliver` | サーバー | ✔ | 全部 |
+| — | `request_cargo_deliver` | サーバー | ✔ | 全部 |
+| — | `request_development` | サーバー | ✔ | 全部 |
+| — | `request_staff` | サーバー | ✔ | 全部 |
+| — | `request_board` | サーバー | ✔ | 全部 |
+| — | `request_wallet_withdraw` | サーバー | ✔ | 全部 |
+| 14-4 | `log_has_no_mod_errors` | サーバー | ✔ | テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ |
 | 1-2 | `startup_with_modmenu_yacl` | クライアント | ✔ | Mod Menu・YACL ありで起動してタイトル画面が出ることのみ（Mod 一覧のアイコンは見ていない） |
 | 1-3 | `config_screen_tabs` | クライアント | ✔ | 設定画面が開き、各タブに切り替えられることのみ（表示は画像で確認） |
 | 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
+| 3-10 | `buy_with_screen_buttons` | クライアント | ✔ | 全部 |
+| 2-9・2-10 | `buy_with_screen_buttons` | クライアント | ✔ | 交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない） |
+| 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✘ | 交易画面の各タブの文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバー・「まとめて売る」の枠は見ていない |
+| 26-1 | `layout_market_screen_en` | クライアント | ✘ | 英語でも交易画面の各タブの文字が重ならず、はみ出さないこと |
+| 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 
 ## 見て確かめる画像
 
@@ -49,3 +80,23 @@
 - 1-3 `config_screen_tabs`：[1-3_config_14.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_14.png)
 - 1-3 `config_screen_tabs`：[1-3_config_15.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_15.png)
 - 2-8 `stall_place_and_open`：[2-8_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/2-8_trade_screen.png)
+- 3-10 `buy_with_screen_buttons`：[3-10_bulk_64.png](../../Source/TradeExpansion/build/autotest/screenshots/3-10_bulk_64.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_bank.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_board.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_board.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_quest.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_quest.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_exchange.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_exchange.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_town.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_town.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_staff.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_1_buy.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_1_buy.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_2_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_2_buy.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_3_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_3_buy.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_auto_buy.png)
+- 26-1 `layout_market_screen_en`：[layout_en_us_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_854x480_GUI_auto_buy.png)
+- 26-1 `layout_market_screen_en`：[layout_en_us_854x480_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_854x480_GUI_1_buy.png)
+- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_1_buy.png)
+- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_2_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_2_buy.png)
+- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_3_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_3_buy.png)
+- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_auto_buy.png)

@@ -297,6 +297,7 @@
   "config.ak_trade_expansion.client.showDebugTooltip": "相場の詳しい情報を表示",
   "config.ak_trade_expansion.client.showDebugTooltip.desc": "交易画面で商品の行にマウスを乗せると、基準価格・今の倍率・在庫・値段と在庫が戻るまでの時間を表示する",
   "item.ak_trade_expansion.wallet": "財布",
+  "tag.item.ak_trade_expansion.consumables": "消耗品（市場で早く減る品）",
   "item.ak_trade_expansion.bank_card": "クレジットカード",
   "item.ak_trade_expansion.cargo_crate": "荷箱",
   "tooltip.ak_trade_expansion.wallet_balance": "残高：%s ／ 容量 %s",

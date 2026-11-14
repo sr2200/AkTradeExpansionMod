@@ -27,9 +27,55 @@ function readResults() {
 	const runs = [];
 	for (const side of Object.keys(SIDES)) {
 		const file = path.join(resultsDir, `${side}-results.json`);
-		if (fs.existsSync(file)) runs.push(JSON.parse(fs.readFileSync(file, 'utf8')));
+		if (!fs.existsSync(file)) continue;
+		const run = JSON.parse(fs.readFileSync(file, 'utf8'));
+		run.cases.push(logCase(side));
+		runs.push(run);
 	}
 	return runs;
+}
+
+// The game's log of each run (copied next to its results when the run wrote them): errors that come from this mod
+// fail the run even when every case passed.
+const LOGS = {
+	server: path.join(resultsDir, 'server.log'),
+	client: path.join(resultsDir, 'client.log'),
+};
+const LOG_CASES = {
+	server: { name: 'log_has_no_mod_errors', checklist: ['14-4'], partial: 'テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ' },
+	client: { name: 'log_has_no_mod_errors', checklist: ['20-4', '25-1'], partial: null },
+};
+const OURS = /tradeexpansion|ak_trade_expansion|TradeExpansion/i;
+const LOG_LINE = /^\[[\d:]+\] \[([^\]]*)\/(ERROR|FATAL|WARN)\] \(([^)]*)\) (.*)$/;
+
+/** Errors (and the mod's own warnings) of a run's log that concern this mod, with their stack traces. */
+function modProblems(file) {
+	if (!fs.existsSync(file)) return [`ログがありません: ${file}`];
+	const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+	const problems = [];
+	for (let i = 0; i < lines.length; i++) {
+		const m = LOG_LINE.exec(lines[i]);
+		if (!m) continue;
+		const [, , level, logger, message] = m;
+		if (logger === 'AKTradeExpansion/autotest') continue; // the tests' own case results
+		let stack = '';
+		for (let j = i + 1; j < lines.length && !LOG_LINE.test(lines[j]) && !/^\[[\d:]+\]/.test(lines[j]); j++) stack += lines[j] + '\n';
+		// A failed case ends the client test with an AssertionError (and Fabric reports it as a crash): that is the
+		// case's own result, already recorded, not an error of the mod.
+		if (/checklist (cases|results) failed/.test(message + stack)) continue;
+		const ours = logger === 'TradeExpansion' || OURS.test(message) || OURS.test(stack);
+		if (level === 'WARN' ? logger === 'TradeExpansion' : ours) problems.push(`${level} (${logger}) ${message}`.slice(0, 300));
+	}
+	return problems;
+}
+
+function logCase(side) {
+	const problems = modProblems(LOGS[side]);
+	const c = LOG_CASES[side];
+	return {
+		name: c.name, checklist: c.checklist, partial: c.partial ?? undefined, ok: problems.length === 0,
+		message: problems.length ? `${problems.length} 件: ${problems.slice(0, 5).join(' | ')}` : undefined, screenshots: [],
+	};
 }
 
 function shortDate(iso) {
@@ -74,7 +120,8 @@ function main() {
 		const full = item.cases.some(c => !c.partial);
 		if (failed) {
 			marked.failed.push(id);
-			return `- [ ] ${id} ${body} 〔自動 ✘ ${stamp}〕`;
+			const names = [...new Set(item.cases.filter(c => !c.ok).map(c => c.name))].join('・');
+			return `- [ ] ${id} ${body} 〔自動 ✘ ${stamp}：${names}（autotest-report.md）〕`;
 		}
 		if (full) {
 			marked.full.push(id);
@@ -129,7 +176,7 @@ function writeReport(runs, marked, itemCount) {
 	L.push('|---|---|---|---|---|');
 	for (const run of runs) {
 		for (const c of run.cases) {
-			L.push(`| ${c.checklist.join('・')} | \`${c.name}\` | ${SIDES[run.side]} | ${c.ok ? '✔' : '✘'} | ${c.partial ?? '全部'} |`);
+			L.push(`| ${c.checklist.join('・') || '—'} | \`${c.name}\` | ${SIDES[run.side]} | ${c.ok ? '✔' : '✘'} | ${c.partial ?? '全部'} |`);
 		}
 	}
 	L.push('');

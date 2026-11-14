@@ -58,6 +58,14 @@ public final class AutotestReport {
 		} catch (IOException e) {
 			throw new RuntimeException("Could not write " + file, e);
 		}
+		// The run directory is deleted by the next game test run (of either side): keep this run's log with its results
+		// for tools/checklist/record.js, which looks for errors of the mod in it.
+		Path log = FabricLoader.getInstance().getGameDir().resolve("logs").resolve("latest.log");
+		try {
+			if (Files.exists(log)) Files.copy(log, directory().resolve(side + ".log"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			LOGGER.warn("Could not copy {}", log, e);
+		}
 		long failed = results.stream().filter(r -> !r.ok()).count();
 		LOGGER.info("Autotest {}: {} cases, {} failed. Results: {}", side, results.size(), failed, file);
 		for (CaseResult r : results) {

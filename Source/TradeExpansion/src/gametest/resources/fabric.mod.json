@@ -14,6 +14,12 @@
 			"com.akf.tradeexpansion.test.client.ClientChecklistTests"
 		]
 	},
+	"mixins": [
+		{
+			"config": "ak_trade_expansion_test.client.mixins.json",
+			"environment": "client"
+		}
+	],
 	"depends": {
 		"ak_trade_expansion": "*",
 		"fabric-gametest-api-v1": "*",

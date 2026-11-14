@@ -297,6 +297,7 @@
   "config.ak_trade_expansion.client.showDebugTooltip": "Show market details",
   "config.ak_trade_expansion.client.showDebugTooltip.desc": "Hovering a good on the trade screen shows its base price, current multiplier, stock and how long prices and stock take to recover",
   "item.ak_trade_expansion.wallet": "Wallet",
+  "tag.item.ak_trade_expansion.consumables": "Consumables (goods markets use up quickly)",
   "item.ak_trade_expansion.bank_card": "Bank Card",
   "item.ak_trade_expansion.cargo_crate": "Cargo Crate",
   "tooltip.ak_trade_expansion.wallet_balance": "Balance: %s / capacity %s",
