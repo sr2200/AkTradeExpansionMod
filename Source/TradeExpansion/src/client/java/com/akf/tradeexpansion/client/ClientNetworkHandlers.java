@@ -76,6 +76,7 @@ public final class ClientNetworkHandlers {
 			ClientMarketCache.clear();
 			PriceLookupCache.clear();
 			ConfigManager.load();
+			com.akf.tradeexpansion.market.MarketClock.setClientOffset(0);
 		});
 	}
 }

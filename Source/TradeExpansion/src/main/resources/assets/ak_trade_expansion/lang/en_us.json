@@ -111,6 +111,8 @@
   "command.ak_trade_expansion.not_traded": "The nearest market does not trade %s",
   "command.ak_trade_expansion.no_market": "There is no market in this dimension",
   "command.ak_trade_expansion.advanced": "Advanced market #%s by %s days",
+  "command.ak_trade_expansion.clock.info": "Market clock: day %s (%s days ahead of the game clock)",
+  "command.ak_trade_expansion.clock.advanced": "Advanced the market clock of every market by %s days (%s days ahead in total)",
   "config.ak_trade_expansion.title": "AK Trade Expansion Settings",
   "config.ak_trade_expansion.server_locked": "Cannot be changed while connected to a server. Edit the server's config/ak_trade_expansion.json and run /aktradeex reload",
   "config.ak_trade_expansion.category.currency": "Currency",

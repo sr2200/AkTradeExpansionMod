@@ -29,7 +29,7 @@ public final class ServerConfig {
 			PriceLookupService.broadcastTradableItems(server); // I (v0.47): recipe viewer pages
 		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			sender.sendPacket(ConfigSyncS2C.fromServer());
+			sender.sendPacket(ConfigSyncS2C.fromServer(server));
 			sender.sendPacket(PriceLookupService.tradableItems());
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> PriceLookupService.forget(handler.getPlayer().getUUID()));
@@ -39,12 +39,17 @@ public final class ServerConfig {
 	public static void reload(MinecraftServer server) {
 		ConfigManager.load();
 		applyRatioLock(server);
-		ConfigSyncS2C sync = ConfigSyncS2C.fromServer();
+		sync(server);
+		PriceLookupService.broadcastTradableItems(server); // goods overrides of the config file may have changed
+		TradeExpansion.LOGGER.info("Reloaded {}", ConfigManager.path());
+	}
+
+	/** Pushes the synced values (settings, clock offset) to every player. */
+	public static void sync(MinecraftServer server) {
+		ConfigSyncS2C sync = ConfigSyncS2C.fromServer(server);
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			ServerPlayNetworking.send(player, sync);
 		}
-		PriceLookupService.broadcastTradableItems(server); // goods overrides of the config file may have changed
-		TradeExpansion.LOGGER.info("Reloaded {}", ConfigManager.path());
 	}
 
 	/**

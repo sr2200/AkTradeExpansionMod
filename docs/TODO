@@ -158,13 +158,20 @@
     ☐ 雇い人の様子をどこでも見られるようにする（商人の手帳 B章の案と合わせる。今は交易画面の雇い人タブだけ） @今後 @小 @ソロ
     ☐ マルチで大勢が運び屋を雇った時、相場が動きすぎないか確かめる（市場ごとに雇い人の売買の量の上限を付けるか） @今後 @小
   G. 技術面:
-    ☐ テスト用に市場の時計を進めるコマンド：今の market advance は相場と在庫の回復だけで、掘り出し物・依頼の期限・利息・評判の減り方・商会の動き・流行は進まない（チェックリスト 0章） @今後 @小
-    ☐ 市場を探す処理の高速化：市場が数百を超えたら範囲で探す仕組み（設計書 C-2 の MarketIndex） @今後 @中
-    ☐ 単体テストの範囲を広げる：Propagation（波及の重み × 商品の link）・SettlementRule・MarketProfiles.choose は Minecraft のクラスと設定のシングルトンに依存していてテストできない。計算の部分を core/ に切り出してテストを書く @今後 @小
-    ☐ 他 Mod 向けの API：取引や相場の変化を他の Mod が受け取れるようにする @今後 @中
+    ☐ ゲーム内で確かめる：チェックリスト 13-10 の画面の表示（`clock advance` の後、開いたままの交易画面で依頼・建設・雇い人の残り時間がすぐ変わるか。クライアントのテストはまだ無い） @小
+    ☐ 建物を守る判定（FacilityBuilder.isProtected）と看板・目印を探す処理が、ブロックを壊すたびに全市場の建物を見ている。市場の索引（MarketRegistry.within）で siteRadius 以内の市場だけに絞る @今後 @小
+    ☐ 他 Mod 向けの API の続き：雇い人の売買も TRADE イベントで知らせるか（今は MARKETS_CHANGED だけ）。書き換え（取引させる・相場を動かす）を API に入れるか。Maven で配って依存できるようにするか（設計書 S章） @今後 @中
     ☐ NeoForge 版 @今後 @大
 
 Archives:
+  ✔ テスト用に市場の時計を進めるコマンド：今の market advance は相場と在庫の回復だけで、掘り出し物・依頼の期限・利息・評判の減り方・商会の動き・流行は進まない（チェックリスト 0章） @今後 @小 @done(26-11-14 20:18)
+    `/aktradeex clock advance <日数>`（市場の時計のずれ、設計書 B-3）。チェックリスト 13-10・自動テスト clock_advance_moves_everything
+  ✔ 市場を探す処理の高速化：市場が数百を超えたら範囲で探す仕組み（設計書 C-2 の MarketIndex） @今後 @中 @done(26-11-14 20:18)
+    core/SpatialHash（512ブロックのマス）を MarketRegistry が次元ごとに持つ。波及・一番近い市場・半径内の市場に使う
+  ✔ 単体テストの範囲を広げる：Propagation（波及の重み × 商品の link）・SettlementRule・MarketProfiles.choose は Minecraft のクラスと設定のシングルトンに依存していてテストできない。計算の部分を core/ に切り出してテストを書く @今後 @小 @done(26-11-14 20:18)
+    core/PropagationMath・SettlementMath・ProfileChoice とそのテスト
+  ✔ 他 Mod 向けの API：取引や相場の変化を他の Mod が受け取れるようにする @今後 @中 @done(26-11-14 20:18)
+    com.akf.tradeexpansion.api（TradeExpansionEvents・TradeExpansionApi、設計書 S章）
   ✔ Q38：市場レベルに「村人と紐付いたベッド（ネザー・エンドは職業ブロック）が1つ以上」の条件を付けるか決める（案と検討点は設計書 L-1） @保留 @done(26-11-05 13:07)
     決定：付けない（今の仕様で確定）
   ✔ Q39：村ごとの評判（信用値）を作るか決める（案と検討点は設計書 L-2） @保留 @done(26-11-05 13:07)

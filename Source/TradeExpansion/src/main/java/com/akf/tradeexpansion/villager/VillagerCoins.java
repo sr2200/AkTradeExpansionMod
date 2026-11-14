@@ -148,7 +148,7 @@ public final class VillagerCoins {
 	private static long marketFloor(ServerLevel level, BlockPos pos, Identifier id, int count) {
 		if (!GoodsCatalog.get(id).buy()) return 0;
 		double far = TradeExpansionConfig.get().distance.farRadius;
-		Market market = MarketRegistry.get(level.getServer()).inDimension(level.dimension()).stream()
+		Market market = MarketRegistry.get(level.getServer()).within(level.dimension(), pos, far).stream()
 				.filter(m -> m.good(id) != null && m.horizontalDistanceTo(pos) <= far)
 				.min(Comparator.comparingDouble(m -> m.horizontalDistanceTo(pos)))
 				.orElse(null);
@@ -164,7 +164,7 @@ public final class VillagerCoins {
 		if (!GoodsCatalog.get(id).sell()) return 0;
 		double far = TradeExpansionConfig.get().distance.farRadius;
 		long best = 0;
-		for (Market market : MarketRegistry.get(level.getServer()).inDimension(level.dimension())) {
+		for (Market market : MarketRegistry.get(level.getServer()).within(level.dimension(), pos, far)) {
 			if (market.good(id) == null || market.horizontalDistanceTo(pos) > far) continue;
 			MarketUpkeep.touch(level, market);
 			GoodParams params = market.params(id);

@@ -121,6 +121,11 @@ public final class SellAllService {
 			WalletService.give(player, total);
 		}
 		registry.setDirty();
+		for (Planned p : plan) { // S: API event, one per goods
+			com.akf.tradeexpansion.api.TradeExpansionEvents.TRADE.invoker().onTrade(new com.akf.tradeexpansion.api.TradeExpansionEvents.Trade(
+					player, market.id(), p.goods(), p.def().item(), false, p.units(), p.units() * p.def().unit(), p.total(), card,
+					com.akf.tradeexpansion.api.TradeExpansionEvents.Source.SELL_ALL));
+		}
 		TradeService.broadcast(player.level().getServer(), registry, changed, now);
 		// R: advancements (the whole sale counts as one trade)
 		for (Planned p : plan) {

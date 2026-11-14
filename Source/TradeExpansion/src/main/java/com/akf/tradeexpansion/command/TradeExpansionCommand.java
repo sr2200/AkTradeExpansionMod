@@ -111,6 +111,7 @@ public final class TradeExpansionCommand {
 				.then(admin(Commands.literal("staff"))
 						.executes(TradeExpansionCommand::staffList)
 						.then(Commands.literal("hurry").executes(TradeExpansionCommand::staffHurry)))
+				.then(ClockCommand.build(admin(Commands.literal("clock"))))
 				.then(admin(Commands.literal("market"))
 						.then(Commands.literal("setx")
 								.then(Commands.argument("goods", IdentifierArgument.id())
@@ -230,9 +231,7 @@ public final class TradeExpansionCommand {
 
 	/** The market whose center is nearest to the player in the same dimension. */
 	static Market nearestMarket(ServerPlayer player) {
-		return MarketRegistry.get(player.level().getServer()).inDimension(player.level().dimension()).stream()
-				.min(Comparator.comparingDouble(m -> m.horizontalDistanceTo(player.blockPosition())))
-				.orElse(null);
+		return MarketRegistry.get(player.level().getServer()).nearestWithin(player.level().dimension(), player.blockPosition(), Double.MAX_VALUE);
 	}
 
 	/** M (v0.29): the player's reputation with the nearest market. */

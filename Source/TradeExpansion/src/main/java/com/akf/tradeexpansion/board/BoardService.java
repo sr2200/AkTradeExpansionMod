@@ -42,7 +42,7 @@ public final class BoardService {
 		double reach = here.hasFacility(com.akf.tradeexpansion.development.FacilityKind.TAVERN)
 				? Math.max(1.0, TradeExpansionConfig.get().development.tavernBoardMultiplier) : 1.0;
 		double radius = config.radius * reach;
-		List<Market> nearby = new ArrayList<>(registry.inDimension(here.dimension()).stream()
+		List<Market> nearby = new ArrayList<>(registry.within(here.dimension(), here.center(), radius).stream()
 				.filter(m -> m != here && m.horizontalDistanceTo(here.center()) <= radius)
 				.sorted(Comparator.comparingDouble(m -> m.horizontalDistanceTo(here.center())))
 				.limit((long) Math.ceil(config.maxMarkets * reach))

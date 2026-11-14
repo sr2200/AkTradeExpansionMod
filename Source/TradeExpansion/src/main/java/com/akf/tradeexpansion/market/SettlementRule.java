@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.market;
 
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.core.SettlementMath;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -32,9 +33,14 @@ public final class SettlementRule {
 				.orElse(null);
 	}
 
-	/** v0.27.1: villages often have more villagers than beds; this many beds are enough whatever the villager count. */
-	private static boolean enoughBeds(long beds, TradeExpansionConfig.Market config) {
-		return config.newMarketEnoughBeds > 0 && beds >= config.newMarketEnoughBeds;
+	/** The counting rule of {@code market.newMarketRequires} (not VILLAGE); the formula is {@link SettlementMath}. */
+	public static SettlementMath.Requirement requirement(TradeExpansionConfig.Market config) {
+		SettlementMath.Mode mode = switch (config.newMarketRequires) {
+			case BEDS -> SettlementMath.Mode.BEDS;
+			case VILLAGERS -> SettlementMath.Mode.VILLAGERS;
+			case BEDS_AND_VILLAGERS, VILLAGE -> SettlementMath.Mode.BEDS_AND_VILLAGERS;
+		};
+		return new SettlementMath.Requirement(mode, config.newMarketMinBeds, config.newMarketMinVillagers, config.newMarketEnoughBeds);
 	}
 
 	/** {@code null} if a new market may be founded at {@code pos}, otherwise the reason shown to the player. */
@@ -44,21 +50,15 @@ public final class SettlementRule {
 		if (mode == TradeExpansionConfig.NewMarketRequires.VILLAGE) {
 			return villageAt(level, pos) != null ? null : Component.translatable("message.ak_trade_expansion.new_market.village");
 		}
+		SettlementMath.Requirement requirement = requirement(config);
 		boolean noBeds = MarketFactory.usesVillagers(level);
 		long beds = noBeds ? 0 : MarketFactory.countBeds(level, pos);
-		long villagers = mode == TradeExpansionConfig.NewMarketRequires.BEDS ? 0 : MarketFactory.countVillagers(level, pos);
-		boolean ok = switch (mode) {
-			case BEDS -> noBeds ? MarketFactory.countVillagers(level, pos) >= config.newMarketMinVillagers : beds >= config.newMarketMinBeds;
-			case VILLAGERS -> villagers >= config.newMarketMinVillagers;
-			case BEDS_AND_VILLAGERS -> villagers >= config.newMarketMinVillagers
-					&& (noBeds || (beds >= config.newMarketMinBeds && (beds >= villagers || enoughBeds(beds, config))));
-			case VILLAGE -> true;
-		};
-		if (ok) return null;
+		long villagers = SettlementMath.needsVillagers(requirement.mode(), noBeds) ? MarketFactory.countVillagers(level, pos) : 0;
+		if (SettlementMath.allows(requirement, noBeds, beds, villagers)) return null;
 		int radius = config.levelRadius;
 		return switch (mode) {
 			case BEDS -> noBeds
-					? Component.translatable("message.ak_trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, MarketFactory.countVillagers(level, pos))
+					? Component.translatable("message.ak_trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers)
 					: Component.translatable("message.ak_trade_expansion.new_market.beds", radius, config.newMarketMinBeds, beds);
 			case VILLAGERS -> Component.translatable("message.ak_trade_expansion.new_market.villagers", radius, config.newMarketMinVillagers, villagers);
 			default -> noBeds

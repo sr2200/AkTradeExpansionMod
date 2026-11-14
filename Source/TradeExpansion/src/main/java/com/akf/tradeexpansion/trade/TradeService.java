@@ -167,6 +167,10 @@ public final class TradeService {
 		affected.forEach(m -> changed.add(m.id()));
 		broadcast(player.level().getServer(), registry, changed, now);
 
+		// S: API event
+		com.akf.tradeexpansion.api.TradeExpansionEvents.TRADE.invoker().onTrade(new com.akf.tradeexpansion.api.TradeExpansionEvents.Trade(
+				player, market.id(), goodsId, def.item(), buy, qty, itemCount, total, card, com.akf.tradeexpansion.api.TradeExpansionEvents.Source.SCREEN));
+
 		// R: advancements
 		if (!buy) TradeAdvancements.afterSale(player, registry, market, goodsId, PriceModel.sellCapacity(params, state) < 1, now);
 		TradeAdvancements.afterTrade(player, market, buy, qty, total, now);
@@ -187,6 +191,9 @@ public final class TradeService {
 				m.refresh(now);
 				ServerPlayNetworking.send(viewer, MarketSnapshotS2C.of(m, viewer, now));
 			}
+		}
+		if (!marketIds.isEmpty()) {
+			com.akf.tradeexpansion.api.TradeExpansionEvents.MARKETS_CHANGED.invoker().onMarketsChanged(server, Set.copyOf(marketIds)); // S
 		}
 	}
 }

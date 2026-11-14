@@ -49,7 +49,7 @@ import static com.akf.tradeexpansion.test.server.ServerCase.partial;
 
 /**
  * Server cases of the chapters where money and saved data change: 4 (prices), 7 (wallet, bank, card), 18 (sell all),
- * 9 and 21 (requests, transport requests) and 26 (staff). Time-dependent cases switch the market clock to the day clock
+ * 9 and 21 (requests, transport requests), 26 (staff) and 13 (the market clock command). Time-dependent cases switch the market clock to the day clock
  * ({@code recovery.clock = DAY_TIME}) before the markets exist and move it with {@code /time add}.
  */
 final class ServerChapterCases {
@@ -66,6 +66,7 @@ final class ServerChapterCases {
 		chapter9(cases);
 		chapter21(cases);
 		chapter26(cases);
+		chapter13(cases);
 		return cases;
 	}
 
@@ -842,6 +843,51 @@ final class ServerChapterCases {
 			if (o.good(id) == null) o.addGood(id, new GoodState(1.0, 0, GoodsCatalog.get(id).targetStock(), now));
 		}
 		return id;
+	}
+
+	// ---- 13. commands
+
+	private static void chapter13(List<ServerCase> cases) {
+		// Last of all: the market clock of the whole world moves forward and never back.
+		cases.add(partial("clock_advance_moves_everything", List.of("13-10"),
+				"市場の時計だけが進み、依頼の入れ替え・預金の利息・相場の回復がまとめて進むこと（画面の表示の更新は見ていない）", ctx -> {
+			ctx.config(cfg -> {
+				cfg.bank.minMarketLevel = 1;
+				cfg.bank.interestRatePerDay = 0.01;
+				cfg.bank.interestMaxBalance = 0;
+			});
+			ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+				c.openStall(player, stall);
+				c.emptyInventory(player);
+				player.getInventory().setItem(0, new ItemStack(ModItems.WALLET));
+				c.giveMoney(player, 10_000);
+				BankService.handle(player, new BankRequestC2S(market.id(), BankRequestC2S.Action.DEPOSIT, 10_000));
+				equal(10_000, bank(player), "bank after depositing 10,000c");
+				// A lowered price to see recovery as well.
+				Identifier good = c.tradableGood(market, 0, 16);
+				player.getInventory().add(new ItemStack(c.item(good), 16));
+				c.trade(player, market, good, false, 16);
+				double x0 = market.good(good).pressure();
+				List<Integer> before = market.requests().stream().filter(r -> !r.isTransport()).map(Request::id).toList();
+				that(!before.isEmpty(), "the market has no request");
+				long deadline = market.requests().stream().filter(r -> !r.isTransport()).mapToLong(Request::deadline).max().orElseThrow();
+				long gameTime = c.level().getGameTime();
+				long now = c.now();
+
+				c.command(player, "aktradeex clock advance 3.05");
+				that(c.now() - now >= Math.round(3.05 * DAY), "the market clock moved by %d ticks", c.now() - now);
+				that(c.level().getGameTime() - gameTime < DAY / 10, "the game clock moved by %d ticks", c.level().getGameTime() - gameTime);
+				that(c.now() > deadline, "the market clock did not pass the deadline (%d, deadline %d)", c.now(), deadline);
+				MarketUpkeep.touch(c.level(), market);
+				List<Integer> after = market.requests().stream().filter(r -> !r.isTransport()).map(Request::id).toList();
+				that(after.stream().noneMatch(before::contains), "old requests are still listed: %s / %s", before, after);
+				double x1 = market.good(good).pressure();
+				that(Math.abs(x1) < Math.abs(x0), "the price did not recover: X %.3f -> %.3f", x0, x1);
+				long expected = Math.round(10_000 * (Math.pow(1.01, 3.05) - 1));
+				long interest = bank(player) - 10_000;
+				that(Math.abs(interest - expected) <= 2, "interest after 3.05 days: %dc, expected about %dc", interest, expected);
+			});
+		}));
 	}
 
 	/** Market clock = the overworld day clock, so that {@link #addDays} can move it (set before the markets exist). */

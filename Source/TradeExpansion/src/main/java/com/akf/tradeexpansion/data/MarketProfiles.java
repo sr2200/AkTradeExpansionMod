@@ -1,7 +1,7 @@
 package com.akf.tradeexpansion.data;
 
 import com.akf.tradeexpansion.TradeExpansion;
-import com.akf.tradeexpansion.core.GoodsSelector;
+import com.akf.tradeexpansion.core.ProfileChoice;
 import com.akf.tradeexpansion.data.condition.MarketCondition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -46,21 +46,13 @@ public final class MarketProfiles {
 	 * @return the chosen profile id, or {@code null} if not even a default exists
 	 */
 	public static Identifier choose(MarketContext context, Random random) {
-		List<Identifier> best = new ArrayList<>();
-		int bestPriority = Integer.MIN_VALUE;
+		List<ProfileChoice.Candidate<Identifier>> candidates = new ArrayList<>();
 		for (Map.Entry<Identifier, MarketProfile> e : profiles.entrySet()) {
 			if (isFallback(e.getKey()) || !MarketCondition.all(e.getValue().conditions(), context)) continue;
-			int priority = e.getValue().priority();
-			if (priority > bestPriority) {
-				best.clear();
-				bestPriority = priority;
-			}
-			if (priority == bestPriority) best.add(e.getKey());
+			candidates.add(new ProfileChoice.Candidate<>(e.getKey(), e.getValue().priority(), e.getValue().weight()));
 		}
-		if (!best.isEmpty()) {
-			int[] weights = best.stream().mapToInt(id -> profiles.get(id).weight()).toArray();
-			return best.get(GoodsSelector.pickIndex(weights, random));
-		}
+		Identifier chosen = ProfileChoice.choose(candidates, random);
+		if (chosen != null) return chosen;
 		Identifier fallback = defaultFor(context.world().dimension());
 		if (profiles.containsKey(fallback)) return fallback;
 		Identifier generic = TradeExpansion.id("default");

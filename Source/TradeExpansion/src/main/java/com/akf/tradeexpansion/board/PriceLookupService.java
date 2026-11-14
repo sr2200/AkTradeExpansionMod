@@ -57,7 +57,7 @@ public final class PriceLookupService {
 		List<PriceLookupS2C.Entry> entries = new ArrayList<>();
 		if (!goodsIds.isEmpty()) {
 			BlockPos pos = player.blockPosition();
-			List<Market> candidates = MarketRegistry.get(player.level().getServer()).inDimension(player.level().dimension()).stream()
+			List<Market> candidates = MarketRegistry.get(player.level().getServer()).within(player.level().dimension(), pos, radius).stream()
 					.filter(m -> m.horizontalDistanceTo(pos) <= radius && goodsIds.stream().anyMatch(id -> m.good(id) != null))
 					.sorted(Comparator.comparingDouble(m -> m.horizontalDistanceTo(pos)))
 					.toList();

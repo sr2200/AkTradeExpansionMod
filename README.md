@@ -17,7 +17,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.2.4（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.2.5（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -563,7 +563,8 @@ OP 権限が必要です（既定はレベル2。設定 `command.permissionLevel
 | `/aktradeex give <金額>` | 自分にコインを渡す |
 | `/aktradeex pay <金額>` | 自分の所持金から支払う（支払い処理の確認用） |
 | `/aktradeex simulate <商品> <buy\|sell> <数>` | 取引せずに、最寄りの市場での価格の推移を表示 |
-| `/aktradeex market advance <日数>` | 最寄りの市場の相場と在庫を、指定した日数分だけ回復させる |
+| `/aktradeex clock advance <日数>` | すべての市場の時計を指定した日数だけ進める。相場と在庫の回復・本日の掘り出し物・依頼の期限・品不足・流行・商会の動き・預金の利息・評判の減り方・雇い人・建設がまとめて進む（昼夜や作物は変わらない。戻せない）。`/aktradeex clock` で今どれだけ進めたかを表示 |
+| `/aktradeex market advance <日数>` | 最寄りの市場の相場と在庫を、指定した日数分だけ回復させる（市場の時計は進まない） |
 | `/aktradeex market setx <商品> <X>` | 最寄りの市場の相場のずれ X を直接設定する |
 | `/aktradeex reputation set <ポイント>` | 最寄りの市場での自分の評判ポイントを設定する |
 | `/aktradeex development add <発展度>` | 最寄りの市場の発展度を増やす（マイナスで減らす） |
@@ -1025,11 +1026,27 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | 場所（`Source/TradeExpansion/` から） | 内容 |
 |---|---|
 | `src/main/java/.../core/` | Minecraft に依存しない計算（価格・距離・コイン・市場レベル・商品の抽選・評判・利息・依頼・発展度・商会・流行・雇い人）。単体テストの大半はここが対象 |
+| `src/main/java/.../api/` | 他の Mod 向けの API（下の「他の Mod から使う」） |
 | `src/main/java/...` のほかのパッケージ | 市場と保存データ（`market`）、取引（`trade`）、お金（`currency`・`bank`）、依頼と掲示板（`quest`・`board`）、商会（`rival`）、村の発展（`development`）、雇い人（`staff`）、進捗（`advancement`）、村人交易（`villager`）、村の屋台（`worldgen`）、商人（`entity`）、通信（`network`）、設定（`config`）、コマンド（`command`）、データパックの読み込み（`data`） |
 | `src/client/java/...` | 交易画面などクライアント専用のコードと、他の Mod との連携（`compat/`） |
 | `src/main/resources/data/ak_trade_expansion/` | 同梱のデータパック（商品・プロファイル・建物・商品グループ・商会・構造物・進捗・レシピ） |
 | `src/test/java/...` | 単体テスト |
 | `src/dist/README.txt` | 配布用 zip に入れる導入方法 |
+
+### 他の Mod から使う
+
+ほかの Mod から、取引や相場の変化を受け取ったり、市場と値段を読んだりできます（サーバー側、サーバーのスレッドで使います）。公開しているのは `com.akf.tradeexpansion.api` の2つのクラスだけで、ほかのクラスは版ごとに変わることがあります。詳しくは設計書の S章です。
+
+| クラス | 内容 |
+|---|---|
+| `TradeExpansionEvents` | `TRADE`：プレイヤーの取引が成立した後（プレイヤー・市場・商品・買ったか・数・合計）。`MARKETS_CHANGED`：市場の相場や在庫などが変わった後（変わった市場の ID） |
+| `TradeExpansionApi` | 市場の一覧・一番近い市場・半径内の市場、市場ごとの商品の買値・売値・在庫（評判の割引なし）、アイテムから商品 ID、市場の時計 |
+
+```java
+TradeExpansionEvents.TRADE.register(trade -> {
+	if (trade.buy()) LOGGER.info("{} が {} を {}c で買った", trade.player().getName().getString(), trade.goods(), trade.total());
+});
+```
 
 ---
 

@@ -130,7 +130,7 @@ public final class PlacementGuide {
 		BlockPos pos = player.blockPosition();
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		double reach = config.distance.minNewMarketDistance + DRAW_RANGE;
-		List<BlockPos> markets = MarketRegistry.get(level.getServer()).inDimension(level.dimension()).stream()
+		List<BlockPos> markets = MarketRegistry.get(level.getServer()).within(level.dimension(), pos, reach).stream()
 				.filter(m -> m.horizontalDistanceTo(pos) <= reach)
 				.sorted(java.util.Comparator.comparingDouble(m -> m.horizontalDistanceTo(pos)))
 				.limit(MAX_MARKETS)

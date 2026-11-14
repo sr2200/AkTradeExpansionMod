@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.61（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-14（改版履歴は付録B）
+- 版：v0.62（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定、商人NPCの出し方と実施順の変更、財布・銀行・カードの追加、エメラルド貨、商品・品揃え設計書の採用を反映）　作成日：2026-11-02　更新日：2026-11-14（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 と拡張機能（輸送依頼 J-2、評判 M、村の発展 N、商会 O、村の流行 P、雇い人 Q、進捗 R）を実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`
@@ -266,6 +266,7 @@ lastUpdateGameTime ← 現在
   - 寝てスキップした分も回復させたい場合は設定 `recovery.clock = DAY_TIME` に切替（既定 `GAME_TIME`）。
   - `DAY_TIME` では `/time set` で時刻が戻ることがあるため、`Δt < 0` の場合は `Δt = 0` として扱い、`lastUpdateGameTime` を現在値に更新する。
   - クライアントのプレビューも同じ時計で計算する必要があるため、スナップショットには選んだ時計の時刻を入れ、`recovery.clock` をクライアントに同期する（F-2、G章）。
+  - 【v0.62】市場の時計＝選んだ時計＋ワールドの「時計のずれ」（`/aktradeex clock advance <日数>`、テスト用、G章）。ずれは `ak_trade_expansion:markets` の `clock_offset`（tick、省略時 0）に保存し、`ConfigSyncS2C` でクライアントにも送る。この時計で動くもの（相場と在庫の回復・掘り出し物・依頼の期限・品不足・流行・商会の動き・利息・評判の減り方・市場のレベルの測り直し・雇い人・建設）がすべて同じだけ進む。ずれは増えるだけで、戻らない。
 - サーバー停止中は時間が進まないので回復もしない（自然）。
 - r と c には全体倍率 `recovery.restockMultiplier` を掛ける。
 - 【v0.14.1】**消耗品**：食料・松明・燃料・原木・木材など、市場で使われてなくなる品は、在庫も買取数も早く回復させる。
@@ -433,7 +434,7 @@ w(d) = 1                                  (d ≤ Rnear)
 
 - 波及するのは **相場（X）だけ**。在庫（S）は波及しない（遠くの店の棚が空になるのは不自然）。
 - 波及先がその商品を扱っていない場合は無視。扱いがあるが `B` が違っても `X` で波及するので「割合」で連動する。
-- 計算量：市場は多くて数百。空間インデックス（512ブロックのセルでハッシュ）で `Rfar` 内だけ走査する予定（`MarketIndex`）。v0.29 時点も全件走査で代用している（市場が数百でも問題ない量）。
+- 計算量：【v0.62】空間インデックス（`MarketIndex`）：次元ごとに、市場の中心を512ブロックのマスに分けたハッシュ（`core/SpatialHash`）を `MarketRegistry` が持つ（保存はせず、読み込み時と市場の作成・削除の時に作り直す。市場の中心と次元は変わらない）。波及は `Rfar`（`Rnear` の方が大きければ `Rnear`）以内のマスだけを見る（ネザーとの連動では相手の次元の座標に直して探す）。一番近い市場（交易所の割り当て・評判・発展の目印・村人の換算額）、半径内の市場（掲示板・値段の問い合わせ・置き場所の案内）も同じ索引で探す。半径が広くてマスを見る方が多くなる時は全件を見る。結果は全件走査と同じ（同じ距離なら ID の小さい方）。v0.61 までは全件走査だった。
 
 #### C-3. ネザー・エンド
 
@@ -866,6 +867,7 @@ MarketRegistry
            GoodState { priceFactor(double), X(double), S(double), lastTradeGameTime, history: List<X>（最大14日）, lastSampleDay }   … 基準価格 B は保存せず D-1 の式で計算。history は相場グラフ用（A-4。1日1回、市場の更新時に X を記録）
 ```
 - 【v0.48】雇い人（Q章）も同じ `ak_trade_expansion:markets` に持つ：`next_employee_id`・`employees`（項目は Q-4）。どれも省略可能。
+- 【v0.62】`clock_offset`：市場の時計のずれ（tick、B-3。省略時 0）。
 - 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
 - 【v0.9】銀行口座は別の SavedData `ak_trade_expansion:bank`（サーバー全体に1つ）：`accounts: Map<UUID, Account>`、`Account { balance: long, cardNumber: int }`。財布の残高はアイテム側（データコンポーネント）に持つので、保存データには入らない。
 - 交易所ブロックエンティティは `market_id`（未割当は `-1`。自然生成品は最初の右クリックまで未割当、A-3）と `origin`（`natural`/`crafted`。v0.4.1 で追加、段階8で実装済み。割り当て直しの判定に使う。保存されていない古い屋台は A-3 のとおり補う）を保存。【v0.16、段階10】紐付いた商人NPCの UUID（`trader`）も保存する。商人NPC 側は `market_id`・紐付いた交易所の座標 `stall`（①④のみ）・`link_nearby_stall`（村の建物で置かれ、まだ紐付けていない印）を自分のエンティティデータに持つ（保存データには入らない）。
@@ -887,7 +889,7 @@ MarketRegistry
 | `AccountS2C` | S→C | 銀行残高, 有効なカードを持っているか, 直前の銀行操作の結果 | 画面を開いた時／取引・銀行操作の後に本人へ | 実装済 |
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
 | `VillagerPricesS2C` | S→C | 村人の取引画面のID, 取引ごとのコインの代金（コイン化しない取引は -1） | 村人・行商人の取引一覧を送る時（v0.20、段階14a、H-3） | 実装済 |
-| `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も。v0.29.1：預金の利率と上限も。v0.59：両替の手数料も） | ログイン時／`/aktradeex reload` 時 | 実装済 |
+| `ConfigSyncS2C` | S→C | G章「クライアントに同期する値」（v0.11：財布の容量・銀行タブの市場レベル・カード手数料も。v0.29.1：預金の利率と上限も。v0.59：両替の手数料も。v0.62：市場の時計のずれも） | ログイン時／`/aktradeex reload` 時／`/aktradeex clock advance` 時 | 実装済 |
 | `BoardRequestC2S` / `BoardS2C` | C→S / S→C | 市場ID ／ 近くの市場ごとの（ID・表示名「名前（レベル名）」（v0.15、C-4）・相対座標 dx/dz（方角と距離はクライアントで計算）・中心座標（v0.34、地図への登録用）・商品の価格と在庫・不足の印・お買い得の割合（v0.24、今いる市場と比べて安く買える％・高く売れる％））・実際に使った半径（v0.59、`board.radius` × 酒場の倍率。市場が無い時の案内に出す） | 掲示板タブを開いた時 | 実装済（段階13） |
 | `TradableItemsS2C`（v0.47） | S→C | 市場で扱う品の ID の一覧（どれかの商品定義が買う・売る品） | 参加した時・データパックの再読み込みの後・`/aktradeex reload` の後 | 実装済（I章） |
 | `PriceLookupC2S` / `PriceLookupS2C`（v0.47） | C→S / S→C | 品の ID ／ 品の ID・半径（`board.radius`）・市場ごとの（ID・表示名・距離・プレイヤーからの dx/dz・単位・買値・売値（-1 は不可）・在庫・品不足の印）。近い順に最大5つの市場 | レシピ表示 Mod の「市場の相場」のページを表示している間（5秒ごと） | 実装済（I章） |
@@ -937,6 +939,7 @@ MarketRegistry
 | `bank.cardFee` / `bank.cardTransactionFee` | カード発行ボタンの表示・カード払いの最大数量 |
 | `bank.interestRatePerDay` / `bank.interestMaxBalance` | 銀行タブの利率の表示（v0.29.1） |
 | `currency.exchangeFee` | 両替タブの手数料の表示（v0.59） |
+| 時計のずれ（設定ではない） | 【v0.62】市場の時計（B-3）。`/aktradeex clock advance` の後は全員に送り直す。依頼・建設・雇い人の残り時間、プレビューの時間による回復に使う |
 
 ※ 商品ごとのパラメータ（`price.*` から決まる B・τ・s・Vmin・Vmax 等）はスナップショットに含めて送るので同期不要。
 
@@ -1886,6 +1889,37 @@ Mod 専用の進捗タブ「商いの始まり」を足す。進捗はデータ�
 - 雇い人の売買・村人との取引は「取引」に数えない。クリエイティブモードで取引できない設定（既定）の時は、取引の進捗も付かない。
 - 検証：`BundledDataTest.advancements`（親がある・トリガーが存在する・`trade_event` の条件を実際のコーデックで読む・出来事の名前がすべて使われている・アイコンと条件のアイテムがある・両方の言語ファイルに訳がある）。
 
+### S. 他 Mod 向けの API【v0.62 追加】
+
+ほかの Mod が、取引や相場の変化を受け取ったり、市場と値段を読んだりできるようにする。パッケージ `com.akf.tradeexpansion.api` の2つのクラスだけを公開の API とし、それ以外のクラスは版ごとに変わってよい。互換を壊す変更をしたら `TradeExpansionApi.VERSION`（今は 1）を上げる。
+
+#### S-1. イベント（`TradeExpansionEvents`）
+
+Fabric API の `Event` で作る。どれもサーバーのスレッドで、変更が終わった後に呼ぶ。
+
+| イベント | 呼ぶ時 | 渡すもの |
+|---|---|---|
+| `TRADE` | プレイヤーの取引が成立した後。交易画面の売買（`Source.SCREEN`）と、まとめて売る（`Source.SELL_ALL`、商品ごとに1回） | `Trade`：プレイヤー、市場 ID、商品 ID、アイテム ID、買ったか、取引単位の数、アイテムの数、合計（銅貨換算）、カード払いか、`Source` |
+| `MARKETS_CHANGED` | 市場の状態が変わった後（その市場の画面を開いている人に新しいスナップショットを送る時、`TradeService.broadcast`）。取引と波及先・まとめて売る・雇い人・依頼・発展・商会・管理コマンド・`clock advance`（全市場） | サーバー、変わった市場の ID の集合 |
+
+- 雇い人の売買・村人との取引は `TRADE` に入れない（雇い人の売買で相場が動いた時は `MARKETS_CHANGED` が来る）。
+- 時間による回復では `MARKETS_CHANGED` は来ない（遅延評価、B-3）。値段が要る時に読む。
+
+#### S-2. 読み取り（`TradeExpansionApi`）
+
+サーバー側で、サーバーのスレッドから呼ぶ。値段は市場そのものの値段（評判の効果・まとめ買い割引は入れない）で、読む時に市場の時計（B-3）まで時間による回復を進める（プレイヤーが画面を開いた時と同じ）。
+
+| メソッド | 内容 |
+|---|---|
+| `markets(server)` / `market(server, id)` | 市場の一覧／1つ（`MarketInfo`：ID・次元・中心・名前・レベル・扱う商品 ID） |
+| `nearestMarket(level, pos, radius)` / `marketsWithin(level, pos, radius)` | 一番近い市場／半径内の市場（C-2 の索引で探す） |
+| `quote(server, marketId, goods)` | 値段（`Quote`：1取引単位の買値・売値、在庫、取引単位）。扱っていなければ空 |
+| `goodsOf(item)` | そのアイテムの商品 ID（同じアイテムで `components` が違う商品があるので複数） |
+| `marketTime(level)` | 市場の時計の今の時刻（tick） |
+
+- 書き換え（取引・相場の変更）は API に入れない（取引の確認や評判などの処理を通らなくなるため）。必要になったら別に考える。
+- 検証：純粋な計算ではないので単体テストは無い。中身は既存の処理（`MarketRegistry`・`PriceModel`）を呼ぶだけ。
+
 ---
 
 ## 3. 数値例
@@ -1966,6 +2000,10 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ReputationMath.java        ✅ … 評判の減衰・レベル、値段の有利さを B と s の調整で表す（上限つき、M章、v0.29）
 │   ├─ InterestMath.java          ✅ … 預金の利息：毎日複利、上限の残高まで（E-7、v0.29.1）
 │   ├─ DistanceModel.java         ✅ … w(d), 新規市場の初期相場（C-1）
+│   ├─ PropagationMath.java       ✅ … 波及の式：ΔX × w(d) × link を X の範囲に収める（C-2、v0.62 で Propagation から切り出し）
+│   ├─ SpatialHash.java           ✅ … 市場の空間インデックス（512ブロックのマス、半径内・一番近いもの。C-2 MarketIndex、v0.62）
+│   ├─ SettlementMath.java        ✅ … 新しい市場を作れるかのベッドと村人の数の判定（C-1 `newMarketRequires`、v0.62 で SettlementRule から切り出し）
+│   ├─ ProfileChoice.java         ✅ … 市場プロファイルの選び方：優先度の一番高いもの、同じなら重みで抽選（D-1、v0.62 で MarketProfiles から切り出し）
 │   ├─ CoinMath.java              ✅ … 比率→価値, 支払い・お釣り・貪欲分解
 │   ├─ GoodParams.java (record)   ✅ … B, τ, s, T, Scap, r, Vmin, Vmax, c, H（X のクランプ範囲も計算）
 │   ├─ GoodState.java             ✅ … priceFactor, X, S, lastTradeGameTime, 相場の記録（history）
@@ -2007,11 +2045,11 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ Market.java                ✅ … 市場1つ（goods: 商品IDをキーに表示順を保つ Map、プロファイル・レベル、遅延回復）
 │   ├─ MarketOrigin.java          ✅ … natural / crafted（v0.4 追加。MarketId は long で代用）
 │   ├─ MarketRegistry.java        ✅ … SavedData（Codec、schema 2）、屋台の割当・統合
-│   ├─ MarketIndex.java              … 空間インデックス（次元×512セル）。v0.4 は全件走査で代用
+│   ├─ （MarketIndex）            ✅ … 空間インデックス（次元×512セル）。v0.62 で `MarketRegistry` の中に `core/SpatialHash` を次元ごとに持つ形で実装
 │   ├─ MarketFactory.java         ✅ … 新規市場の中身（プロファイル選択・レベル測定・商品の抽選・auto_add）、レベルアップ
 │   ├─ Propagation.java           ✅ … 波及処理
 │   ├─ Reputation.java            ✅ … 市場×プレイヤーの評判：ポイントの増減・レベル・効果・村人と商人への攻撃（M章、v0.29）
-│   ├─ MarketClock.java           ✅ … 回復の時計（`recovery.clock`、B-3）
+│   ├─ MarketClock.java           ✅ … 回復の時計（`recovery.clock`＋時計のずれ、B-3）
 │   ├─ PlacementGuide.java        ✅ … 置き場所の案内（`/aktradeex where`・範囲のパーティクル・交易所を持った時の案内、C-1）
 │   ├─ SettlementRule.java        ✅ … 新しい市場を作れる場所の判定（C-1、`market.newMarketRequires`）
 │   ├─ MarketNames.java           ✅ … 市場名の整形・自動の名前・変えられる人の判定（C-4）
@@ -2048,6 +2086,9 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ VillagerTradeToggle.java       ✅ … バニラ村人の交易を無効化（`vanilla.disableVillagerTrades`、Q5）
 ├─ villager/                       … 段階14：村人交易のコイン化（H章）
 │   └─ VillagerCoins.java         ✅ … 取引ごとの代金（エメラルド換算・市場の買値の下限）、代金の保管と送信、支払い（14a）
+├─ api/                             … v0.62（S章）
+│   ├─ TradeExpansionApi.java     ✅ … 他 Mod 向けの読み取り（市場の一覧・近くの市場・値段）
+│   └─ TradeExpansionEvents.java  ✅ … 他 Mod 向けのイベント（取引・市場の変化）
 ├─ advancement/                    … v0.49
 │   ├─ TradeEventTrigger.java     ✅ … 進捗のトリガー `trade_event`（出来事の名前と値、R-1）
 │   ├─ AdvancementEvents.java     ✅ … 出来事の名前の一覧（Minecraft 非依存、テストでも使う）
@@ -2101,6 +2142,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ entity/                         … 段階10
 │   └─ TraderEntity.java          ✅ … 商人NPC（市場ID・紐付いた交易所、無敵・デスポーンしない、押されない、右クリックで交易画面、A-5）
 └─ command/
+    ├─ ClockCommand.java          ✅ … `clock [advance <日数>]`：市場の時計を進める（B-3・G、v0.62）
     ├─ TradeExpansionCommand.java ✅ … balance|pay|give|reload、where [show|hide]、simulate <商品> <buy|sell> <数>、audit、consumable list|add|remove|reset、goods info|set|reset、market info|advance|reset|reroll|delete|setx|name、bank balance|set|add
     ├─ AuditCommand.java          ✅ … クラフト・鋳造の裏技検出（B-6・E-2）
     ├─ VillagerAudit.java         ✅ … 村人から買って市場で売ると儲かる取引の検出（`audit villagers`、14c）
@@ -2251,7 +2293,7 @@ src/main/resources/
 | **2. 通貨ロジック** | `build.gradle` にJUnit追加（5-2）、`CoinMath`（純Java）＋JUnit、`WalletService`、スニーク右クリック崩し、`/aktradeex pay` テストコマンド | 支払い・お釣りがテスト通過 | ✅（`/aktradeex balance`・`give` も追加） |
 | **3. MVP：固定市場** | 交易所ブロック、`Market` 1種固定（JSONで5商品）、価格は固定、交易画面（購入/売却）、C2S/S2Cパケット | マルチで買って売れる | ✅（商品は JSON ではなく組み込み10商品。段階4と同時に実装したため価格は最初から変動） |
 | **4. 価格モデル** | `PriceModel`＋JUnit、在庫・売り切れ・X、遅延回復、`SavedData` 永続化 | 再起動しても相場が残る、3章の数値が再現 | ✅（3章の数値はテストで再現。再起動での残存はゲーム内未確認） |
-| **5. 市場の分割・統合** | 設置位置で市場を作成/統合、`MarketIndex` | 64ブロック内の屋台が同一市場 | △（統合・設置拒否は実装。`MarketIndex` は全件走査で代用） |
+| **5. 市場の分割・統合** | 設置位置で市場を作成/統合、`MarketIndex` | 64ブロック内の屋台が同一市場 | ✅（統合・設置拒否は実装。`MarketIndex` は v0.62 で実装） |
 | **6. 距離波及** | `DistanceModel`＋JUnit、`Propagation`、全体スナップショットの再送で同期（Q19） | 500ブロック先で約54%の影響 | △（波及は実装。同期は全体再送、Q19。商品ごとの `link` 係数は段階11で実装。ネザー連動は未） |
 | **7. 地域品揃え** | goods / market_profile のデータパック、条件評価、シード抽選、`/reload`、ディメンション別の既定プロファイル、市場レベル（ベッド数、ネザー・エンドは村人の人数）と商品数 10〜20・`min_level`（D-4）、取引単位 `unit`・`auto_add`、エメラルド貨とそのレシピ（E-5） | 砂漠村と雪原村、オーバーワールドとネザーで品揃えが違う。村が大きいほど商品が多い。村の市場でだけエメラルド貨を10枚単位で売れる | ✅（ゲーム内は未確認。goods の `components`・減額買取の取引処理は段階11へ移した。エメラルド貨の枚数設定と `market reroll` は段階8で実装済み） |
 | **8. 設定・管理コマンド** | `ak_trade_expansion.json`（G章の「クライアントに同期する値」も含む）、Mod Menu＋YACL の設定画面（Q35）、`/aktradeex market info/reset/delete/reroll`、`/aktradeex simulate`、ログ、屋台の生成元 `origin` の保存と割り当て直し時の判定（A-3） | 設定変更が反映 | ✅（ゲーム内の確認は進行中。`market setx` は段階11で実装） |
@@ -2289,7 +2331,7 @@ src/main/resources/
 | 手動テスト（シングル） | UI | チェックリスト：売り切れ表示、買取停止、在庫・所持金不足時の中止と最大数量表示、インベントリ満杯時のお釣りドロップ、画面を開いたまま時間経過、売却スロットに置いたまま閉じる、画面を開いたまま屋台を壊す、Shift で全数、両替、掲示板・依頼の納品、所持金の表示位置の切り替え、名札での名付けと権限、村の屋台の建物の生成、`/aktradeex goods set` の値が画面の価格に反映される、花の並び方 |
 | 手動テスト（商人NPC） | 段階10 | 交易所を開くと正面に1体出る・2回目は出ない・殺せない・交易所を壊すと消える・スポーンエッグと `/summon` で出した商人が近くの市場で取引できる・市場が無い所では「近くに市場がありません」・離れると画面が閉じる |
 | 手動テスト（マルチ） | 同期 | `runServer` ＋ `runClient` を2つ（ユーザー名を変えて起動）。同じ屋台を2人で開き、片方の取引がもう片方に即反映、同時押しで二重購入しない、価格変動時の拒否 |
-| 永続化 | SavedData | 取引→サーバー停止→起動で状態一致。ゲーム内時間を `/time add` ではなく実時間待ち or テストコマンド `/aktradeex market advance <日数>`（最寄り市場に指定日数分の回復を適用、v0.4 実装済み）で回復確認。`/aktradeex market info` で X・S・価格を確認できる |
+| 永続化 | SavedData | 取引→サーバー停止→起動で状態一致。ゲーム内時間を `/time add` ではなく実時間待ち or テストコマンド `/aktradeex market advance <日数>`（最寄り市場に指定日数分の回復を適用、v0.4 実装済み）で回復確認。日付や期限で決まるものは `/aktradeex clock advance <日数>`（市場の時計を進める、v0.62）で確認。`/aktradeex market info` で X・S・価格を確認できる |
 | 手動テスト（共通の注意） | — | `trade.allowCreative` の既定が false なので、**取引の確認はサバイバルモードで行う**（お金は `/aktradeex give <額>` で用意） |
 | バランス | 経済 | `/aktradeex simulate <商品ID> <buy\|sell> <数>`（実際には取引せず価格推移を表示）、`/aktradeex audit`、`/aktradeex consumable list`、`/aktradeex where`（置き場所の確認）、`/aktradeex audit villagers`（村人の取引の抜け道） |
 | 専用サーバー | クライアントコード分離 | `runServer` が起動し、屋台を右クリックしてもサーバー側で例外が出ないこと |
@@ -2474,3 +2516,4 @@ test {
 | v0.59 | 2026-11-13 | クライアントが自分の設定を読んでいた表示を、サーバーの値に合わせた：G章 同期する値に `currency.exchangeFee`（両替タブの手数料）。F-2 `BoardS2C` に実際に使った半径（`board.radius` × 酒場の倍率、市場が無い時の案内）。`StaffS2C` の行き先と雇い人に港・見張り塔の倍率を足し、雇い人タブの移動時間・事故の確率の目安に入れた（港の倍率の計算を `StaffMath.travelTicks` に移してテストを追加） |
 | v0.61 | 2026-11-14 | Q-5 に帰り荷（v0.54）の儲けの試算（帰り荷なし／あり・64〜2000 ブロック）と、128 ブロック以内の市場どうしの確かめを足した（設定は変えない）。試算のプログラム `CarrierProfitSim` を残した。交易画面の一覧の列（A-4）：値段の右端を左に寄せて在庫の欄を広げ、入らない在庫の数字は縮めて描く。取引・まとめて売るが断られた時に送り返すスナップショットは、開いている画面の市場の時だけにした |
 | v0.60 | 2026-11-13 | A-5 商人の見た目：服の色を8種類にし、最初に出た時にランダムで決める（エンティティデータ `variant`、同期データで送る。テクスチャは行商人のものの色を変えてクライアントで作る）。4-2 に `core/TraderPalette` を追加 |
+| v0.62 | 2026-11-14 | B-3 市場の時計に「時計のずれ」を足し、テスト用のコマンド `/aktradeex clock advance <日数>`（`clock` で今のずれを表示）で全市場の時計を進められるようにした（掘り出し物・依頼の期限・利息・評判・商会・流行・雇い人なども進む。保存は F-1 の `clock_offset`、同期は G章）。C-2 の `MarketIndex` を実装した（`core/SpatialHash`、512ブロックのマス。波及・一番近い市場・半径内の市場の検索に使う）。計算の部分を core/ に切り出してテストを足した：`PropagationMath`（C-2）・`SettlementMath`（C-1）・`ProfileChoice`（D-1）。S章（他 Mod 向けの API：取引と市場の変化のイベント、市場と値段の読み取り）を追加 |

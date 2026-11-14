@@ -111,6 +111,8 @@
   "command.ak_trade_expansion.not_traded": "最寄りの市場は %s を扱っていません",
   "command.ak_trade_expansion.no_market": "この次元に市場がありません",
   "command.ak_trade_expansion.advanced": "市場 #%s の時間を %s 日進めました",
+  "command.ak_trade_expansion.clock.info": "市場の時計：%s 日目（ゲームの時計より %s 日進んでいます）",
+  "command.ak_trade_expansion.clock.advanced": "すべての市場の時計を %s 日進めました（合計 %s 日進んでいます）",
   "config.ak_trade_expansion.title": "AK Trade Expansion の設定",
   "config.ak_trade_expansion.server_locked": "サーバーに接続中のため変更できません。サーバーの config/ak_trade_expansion.json を編集して /aktradeex reload を実行してください",
   "config.ak_trade_expansion.category.currency": "通貨",
