@@ -9,4 +9,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface GuiTextRenderStateAccessor {
 	@Accessor("text")
 	FormattedCharSequence ak_trade_expansion_test$text();
+
+	@Accessor("color")
+	int ak_trade_expansion_test$color();
 }

@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "GuiRenderStateMixin",
-    "GuiTextRenderStateAccessor"
+    "GuiTextRenderStateAccessor",
+    "MarketScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

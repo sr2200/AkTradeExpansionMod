@@ -1,17 +1,19 @@
 @echo off
 rem AK Trade Expansion: automated in-game tests (docs\release\ingame-checklist.md, test code in src\gametest).
-rem   autotest.bat          server game tests (no window, about 1 minute) and client game tests
-rem                         (opens a game window for a few minutes: do not touch it while it runs)
+rem   autotest.bat          server game tests (no window, about 1 minute), client game tests
+rem                         (opens a game window for a few minutes: do not touch it while it runs) and the client
+rem                         without Mod Menu and YACL (checklist 1-1, opens the window once more for a minute)
 rem   autotest.bat server   server game tests only
-rem   autotest.bat client   client game tests only
+rem   autotest.bat client   client game tests only (with Mod Menu and YACL)
+rem   autotest.bat minimal  the client without Mod Menu and YACL only
 rem   Then records the results in docs\release\ingame-checklist.md and docs\release\autotest-report.md (needs node).
 rem   Other arguments go to Gradle, e.g. autotest.bat server --offline
 rem   Only some cases: -Pautotest.only=2-10+2-11+stall (checklist numbers or case names, joined with +)
 setlocal
 cd /d "%~dp0"
 
-set "TASKS=runGameTest runClientGameTest"
-set "SIDES=server client"
+set "TASKS=runGameTest runClientGameTest runClientGameTestMinimal"
+set "SIDES=server client client-minimal"
 if /i "%~1"=="server" (
   set "TASKS=runGameTest"
   set "SIDES=server"
@@ -19,6 +21,10 @@ if /i "%~1"=="server" (
 ) else if /i "%~1"=="client" (
   set "TASKS=runClientGameTest"
   set "SIDES=client"
+  shift
+) else if /i "%~1"=="minimal" (
+  set "TASKS=runClientGameTestMinimal"
+  set "SIDES=client-minimal"
   shift
 )
 

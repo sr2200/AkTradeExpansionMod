@@ -22,10 +22,11 @@ public final class LayoutCheck {
 
 	public static List<String> check(String where, List<Text> texts, int guiWidth, int guiHeight, Panel panel) {
 		List<String> problems = new ArrayList<>();
+		int base = TextRecorder.baseStratum(texts);
 		for (Text t : texts) {
 			if (t.x0() < 0 || t.y0() < 0 || t.x1() > guiWidth || t.y1() > guiHeight) {
 				problems.add(where + ": " + t + " leaves the screen (" + guiWidth + "x" + guiHeight + ")");
-			} else if (panel != null && t.stratum() == 0
+			} else if (panel != null && t.stratum() == base
 					&& (t.x0() < panel.x0() || t.y0() < panel.y0() || t.x1() > panel.x1() || t.y1() > panel.y1())) {
 				problems.add(where + ": " + t + " leaves the panel " + panel.x0() + "," + panel.y0() + "-" + panel.x1() + "," + panel.y1());
 			}

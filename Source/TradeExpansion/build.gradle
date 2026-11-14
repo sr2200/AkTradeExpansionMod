@@ -73,7 +73,25 @@ loom {
 		named("gameTest") {
 			vmArg "-Dfabric-api.gametest.report-file=${layout.buildDirectory.file("autotest/server-junit.xml").get().asFile.absolutePath}"
 		}
+		// Checklist 1-1: the client with Fabric API only. Mod Menu and YACL stay on the classpath (localRuntime) but Fabric
+		// Loader leaves them out (fabric.debug.disableModIds), as when they are not installed. The test mod then runs only
+		// its startup case (ak.autotest.minimal) and writes build/autotest/client-minimal-results.json.
+		register("clientGameTestMinimal") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (Fabric API only)"
+			getRunDirectory().set(file("build/run/clientGameTestMinimal"))
+			vmArg "-Dfabric.debug.disableModIds=modmenu,yet_another_config_lib_v3"
+			vmArg "-Dak.autotest.minimal=true"
+		}
 	}
+}
+
+def deleteMinimalRunDir = tasks.register("deleteClientGameTestMinimalRunDir", Delete) {
+	group = "fabric"
+	delete file("build/run/clientGameTestMinimal")
+}
+tasks.matching { it.name == "runClientGameTestMinimal" }.configureEach {
+	dependsOn deleteMinimalRunDir
 }
 
 dependencies {
@@ -91,6 +109,8 @@ dependencies {
 	// source set) resolve them in src/client.
 	clientCompileOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	// The client game tests drive the YACL screen (ClientConfigCases).
+	gametestCompileOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	localRuntime "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 

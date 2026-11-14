@@ -19,7 +19,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 | `./gradlew test` | 単体テストだけ実行（ゲームは起動しない） |
 | `./gradlew test --tests com.akf.tradeexpansion.core.PriceModelTest` | 1クラスだけ実行 |
 | `./gradlew runClient` / `runServer` | 開発用のクライアント／サーバー（ユーザーが操作するもの） |
-| `autotest.bat` | ゲーム内の自動テスト（サーバー → クライアント）を実行し、結果を `docs/release/ingame-checklist.md` と `autotest-report.md` に書き込む。`autotest.bat server` / `client` で片方だけ。クライアントはゲームのウィンドウが開く（数分、操作しない）。`-Pautotest.only=2-10+stall` で項目番号かテスト名で絞る |
+| `autotest.bat` | ゲーム内の自動テスト（サーバー → クライアント → Mod Menu・YACL なしのクライアント）を実行し、結果を `docs/release/ingame-checklist.md` と `autotest-report.md` に書き込む。`autotest.bat server` / `client` / `minimal` でそれだけ。クライアントはゲームのウィンドウが開く（数分、操作しない）。`-Pautotest.only=2-10+stall` で項目番号かテスト名で絞る |
 
 - Git Bash（Bash ツール）から .bat を実行するときは、フルパスで `cmd` に渡す（`build.bat` とだけ書くと中の `gradlew.bat` が見つからず失敗する）。例：`Source/TradeExpansion` で `cmd //c "$(cygpath -w "$PWD/build.bat") --offline -q"`。`gradlew` を直接使うときも同じ形（`cmd //c "$(cygpath -w "$PWD/gradlew.bat") test --offline -q"`）。
 - バージョンの上げ方は `tools/version/bump.ps1`。手で書き換えない。
@@ -39,7 +39,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 - **データ駆動**：商品の定義と市場プロファイル（条件、抽選プール、価格倍率）は `src/main/resources/data/ak_trade_expansion/ak_trade_expansion/{goods,market_profile}/` のデータパック。読み込みは `data/`。同梱データの読み込みは `BundledDataTest` で検証する。
 - **設定**：`config/ak_trade_expansion.json`（`config/`）。表示に必要な値は `ConfigSyncS2C` でクライアントに同期する。設定を足したら `TradeExpansionConfig`（Codec）と `ConfigValidator`（範囲の補正）に加えて、README の設定値一覧、設計書 G章、YACL の画面（`src/client/.../config`）、言語ファイルも合わせて直す。
 - **言語ファイル**：`assets/ak_trade_expansion/lang/` の `ja_jp.json` と `en_us.json` の両方に同じキーを足す。
-- **ゲーム内の自動テスト**（`src/gametest`、別の Mod `ak_trade_expansion_test`。配布 jar には入らない）：Loom の `fabricApi.configureTests` で `runGameTest`（サーバー、`server/ServerCases.java`）と `runClientGameTest`（クライアント、`client/ClientChecklistTests.java`）を作る。各テストは `ingame-checklist.md` の項目番号と、一部だけ確かめる時はその範囲（日本語）を持ち、結果は `build/autotest/*-results.json` → `tools/checklist/record.js` でチェックリストに書き込む。サーバーの項目は1つのゲームテストの中で順に実行する（市場がワールド全体で共有されるため）。Minecraft 標準の仮プレイヤーはクリエイティブ固定なので `ServerCtx.player` を使う。クライアントのテストは日本語で実行し、画面の文字の重なり・はみ出しを自動で判定する（`TextRecorder`・`LayoutCheck`）。サーバーのテストは仮のプレイヤーに届いたパケットで結果コードやチャットを判定でき、不正な要求のテスト（`ServerRequestCases`）もある。方針・章ごとの対応表・書く時の注意（26.3 の左クリックは SDL の 1 など）は `docs/release/autotest-plan.md`。`runGameTest` は Loom の既定では `check` に入るが、`build.gradle` で外している
+- **ゲーム内の自動テスト**（`src/gametest`、別の Mod `ak_trade_expansion_test`。配布 jar には入らない）：Loom の `fabricApi.configureTests` で `runGameTest`（サーバー、`server/ServerCases.java`）と `runClientGameTest`（クライアント、`client/ClientChecklistTests.java`。ケースは `ClientTradeCases`・`ClientConfigCases` にも）を作る。`runClientGameTestMinimal` は Mod Menu・YACL を外したクライアント（`build.gradle` で追加、チェックリスト 1-1）で、YACL を使うケースは `ClientConfigCases` にまとめてある（YACL なしでも `ClientChecklistTests` を読み込めるように）。各テストは `ingame-checklist.md` の項目番号と、一部だけ確かめる時はその範囲（日本語）を持ち、結果は `build/autotest/*-results.json` → `tools/checklist/record.js` でチェックリストに書き込む。サーバーの項目は1つのゲームテストの中で順に実行する（市場がワールド全体で共有されるため）。Minecraft 標準の仮プレイヤーはクリエイティブ固定なので `ServerCtx.player` を使う。クライアントのテストは日本語で実行し、画面の文字の重なり・はみ出しを自動で判定する（`TextRecorder`・`LayoutCheck`）。サーバーのテストは仮のプレイヤーに届いたパケットで結果コードやチャットを判定でき、不正な要求のテスト（`ServerRequestCases`）もある。方針・章ごとの対応表・書く時の注意（26.3 の左クリックは SDL の 1 など）は `docs/release/autotest-plan.md`。`runGameTest` は Loom の既定では `check` に入るが、`build.gradle` で外している
 
 ## 文書と運用ルール
 

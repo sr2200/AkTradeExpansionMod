@@ -2,7 +2,8 @@
 //
 //   node tools/checklist/record.js        (run in Source/TradeExpansion; autotest.bat runs it)
 //
-// Reads build/autotest/server-results.json and client-results.json (written by the game tests in src/gametest) and
+// Reads build/autotest/server-results.json, client-results.json and client-minimal-results.json (the client without
+// Mod Menu and YACL; all written by the game tests in src/gametest) and
 //   1. marks the items of docs/release/ingame-checklist.md the tests covered:
 //        all cases passed and one covers the whole item -> "- [x] ... 〔自動 ✔ 0.2.1 26-11-14〕"
 //        all cases passed but only partly                -> "- [ ] ... 〔一部自動 ✔ 0.2.1 26-11-14：<what was checked>〕"
@@ -21,7 +22,7 @@ const resultsDir = path.join(project, 'build', 'autotest');
 const checklistFile = path.join(root, 'docs', 'release', 'ingame-checklist.md');
 const reportFile = path.join(root, 'docs', 'release', 'autotest-report.md');
 
-const SIDES = { server: 'サーバー', client: 'クライアント' };
+const SIDES = { server: 'サーバー', client: 'クライアント', 'client-minimal': 'クライアント（Mod Menu・YACL なし）' };
 
 function readResults() {
 	const runs = [];
@@ -40,10 +41,12 @@ function readResults() {
 const LOGS = {
 	server: path.join(resultsDir, 'server.log'),
 	client: path.join(resultsDir, 'client.log'),
+	'client-minimal': path.join(resultsDir, 'client-minimal.log'),
 };
 const LOG_CASES = {
 	server: { name: 'log_has_no_mod_errors', checklist: ['14-4'], partial: 'テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ' },
 	client: { name: 'log_has_no_mod_errors', checklist: ['20-4', '25-1'], partial: null },
+	'client-minimal': { name: 'log_has_no_mod_errors', checklist: ['1-1'], partial: null },
 };
 const OURS = /tradeexpansion|ak_trade_expansion|TradeExpansion/i;
 const LOG_LINE = /^\[[\d:]+\] \[([^\]]*)\/(ERROR|FATAL|WARN)\] \(([^)]*)\) (.*)$/;

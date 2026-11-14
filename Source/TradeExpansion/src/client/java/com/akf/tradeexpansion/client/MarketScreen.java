@@ -1864,7 +1864,24 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			extractDeals(g, hovered);
 			return;
 		}
-		g.textWithWordWrap(font, entry.title(), leftPos + panelX, topPos + 38, PANEL_W, COLOR_TEXT, false);
+		// The market's title in at most 2 lines: a third one would run into the legend below (long English titles such as
+		// "... Village (Hamlet)"). What does not fit ends with "…".
+		List<net.minecraft.util.FormattedCharSequence> titleLines = font.split(entry.title(), PANEL_W);
+		for (int i = 0; i < Math.min(2, titleLines.size()); i++) {
+			int lineY = topPos + 38 + i * font.lineHeight;
+			if (i == 1 && titleLines.size() > 2) {
+				StringBuilder first = new StringBuilder();
+				titleLines.getFirst().accept((index, style, codePoint) -> {
+					first.appendCodePoint(codePoint);
+					return true;
+				});
+				String full = entry.title().getString();
+				String rest = full.substring(Math.min(full.length(), first.length())).trim();
+				g.text(font, font.plainSubstrByWidth(rest, PANEL_W - font.width("…")) + "…", leftPos + panelX, lineY, COLOR_TEXT, false);
+			} else {
+				g.text(font, titleLines.get(i), leftPos + panelX, lineY, COLOR_TEXT, false);
+			}
+		}
 		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.columns"), leftPos + panelX, topPos + 62, PANEL_W, COLOR_DARK, false);
 		// Header line: goods / buy price (the player pays) / sell price (the player gets).
 		g.fill(bx, by, bx + listW, by + BOARD_HEADER_H, COLOR_DARK);
