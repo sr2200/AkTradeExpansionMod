@@ -142,6 +142,11 @@ final class ServerRequestCases {
 				long expected = c.previewTotal(player, a, good, true, 1);
 				TradeService.handle(player, new TradeRequestC2S(id, good, true, 1, expected, false, false));
 			}, CHANGES);
+			// A refused request for another market must not send that market's prices (they could be read from afar).
+			c.forget(player);
+			TradeService.handle(player, new TradeRequestC2S(b.id(), good, true, 1, 1, false, false));
+			that(c.payloads(player, com.akf.tradeexpansion.network.MarketSnapshotS2C.class).stream().noneMatch(p -> p.marketId() == b.id()),
+					"a refused request for another market sent that market's snapshot");
 			// Quantities out of range, with the screen open.
 			String before = c.fingerprint(player);
 			for (int qty : new int[] {0, -1, -64, Integer.MIN_VALUE, TradeExpansionConfig.get().trade.maxPerTransaction + 1}) {
@@ -160,6 +165,10 @@ final class ServerRequestCases {
 				long expected = c.previewTotal(player, a, good, false, 4);
 				SellAllService.handle(player, new SellAllC2S(id, List.of(new SellAllC2S.Line(good, 4)), expected, false));
 			}, CHANGES);
+			c.forget(player);
+			SellAllService.handle(player, new SellAllC2S(b.id(), List.of(new SellAllC2S.Line(good, 4)), 1, false));
+			that(c.payloads(player, com.akf.tradeexpansion.network.MarketSnapshotS2C.class).stream().noneMatch(p -> p.marketId() == b.id()),
+					"a refused sell-all for another market sent that market's snapshot");
 			String before = c.fingerprint(player);
 			for (int units : new int[] {0, -4}) {
 				SellAllService.handle(player, new SellAllC2S(a.id(), List.of(new SellAllC2S.Line(good, units)), 0, false));

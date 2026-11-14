@@ -52,11 +52,17 @@ public final class TradeService {
 		TradeResultS2C result = process(player, registry, market, request, now);
 		ServerPlayNetworking.send(player, result);
 		BankService.sendAccount(player); // bank balance / card validity may have changed (E-7 / E-8)
-		if (result.result() != TradeResult.SUCCESS && market != null) {
-			// Show the latest prices / stock after a refused trade.
+		if (result.result() != TradeResult.SUCCESS && viewing(player, market)) {
+			// Show the latest prices / stock after a refused trade (only of the market on the open screen: the request
+			// may name any market, and its prices must not be had from afar).
 			now = MarketUpkeep.touch(player.level(), market);
 			ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
 		}
+	}
+
+	/** The player has the trade screen of {@code market} open (it may be too far away to trade). */
+	static boolean viewing(ServerPlayer player, Market market) {
+		return market != null && player.containerMenu instanceof MarketMenu menu && menu.marketId() == market.id();
 	}
 
 	/** Largest quantity of a Shift trade: a full main inventory of single items (B-5). */

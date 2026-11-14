@@ -2,14 +2,9 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.2、2026-11-14 18:21、35 件中 0 件失敗
-- クライアント：バージョン 0.2.2、2026-11-14 18:22、8 件中 2 件失敗
-- チェックリスト 321 項目のうち、今回 自動で完了 14・一部を確認 10・失敗 6
-
-## 失敗した項目
-
-- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`（クライアント）：36 layout problems, e.g. ja_jp 854x480 GUI auto buy: "3c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | ja_jp 854x480 GUI auto buy: "3c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | ja_jp 854x480 GUI auto buy: "5c"@250,77-265,86 overlaps "47/128"@258,77-297,86 | ja_jp 854x480 GUI auto sell: "1c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | ja_jp 854x480 GUI auto sell: "1c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | ja_jp 854x480 GUI auto sell: "3c"@250,95-265,104 overlaps "47/128"@258,95-297,104 | ja_jp 854x480 GUI 1 buy: "3c"@464,161-479,170 overlaps "128/128"@466,161-511,170 | ja_jp 854x480 GUI 1 buy: "3c"@464,179-479,188 overlaps "128/128"@466,179-511,188
-- 26-1 `layout_market_screen_en`（クライアント）：36 layout problems, e.g. en_us 854x480 GUI auto buy: "3c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | en_us 854x480 GUI auto buy: "3c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | en_us 854x480 GUI auto buy: "5c"@250,77-265,86 overlaps "48/128"@258,77-297,86 | en_us 854x480 GUI auto sell: "1c"@250,41-265,50 overlaps "128/128"@252,41-297,50 | en_us 854x480 GUI auto sell: "1c"@250,59-265,68 overlaps "128/128"@252,59-297,68 | en_us 854x480 GUI auto sell: "3c"@250,95-265,104 overlaps "48/128"@258,95-297,104 | en_us 854x480 GUI 1 buy: "3c"@464,161-479,170 overlaps "128/128"@466,161-511,170 | en_us 854x480 GUI 1 buy: "3c"@464,179-479,188 overlaps "128/128"@466,179-511,188
+- サーバー：バージョン 0.2.2、2026-11-14 19:22、35 件中 0 件失敗
+- クライアント：バージョン 0.2.2、2026-11-14 19:23、8 件中 0 件失敗
+- チェックリスト 321 項目のうち、今回 自動で完了 14・一部を確認 16・失敗 0
 
 ## すべての項目
 
@@ -55,8 +50,8 @@
 | 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
 | 3-10 | `buy_with_screen_buttons` | クライアント | ✔ | 全部 |
 | 2-9・2-10 | `buy_with_screen_buttons` | クライアント | ✔ | 交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない） |
-| 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✘ | 交易画面の各タブの文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバー・「まとめて売る」の枠は見ていない |
-| 26-1 | `layout_market_screen_en` | クライアント | ✘ | 英語でも交易画面の各タブの文字が重ならず、はみ出さないこと |
+| 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブの文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバー・「まとめて売る」の枠は見ていない |
+| 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブの文字が重ならず、はみ出さないこと |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 
 ## 見て確かめる画像
@@ -89,14 +84,3 @@
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_exchange.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_exchange.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_town.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_town.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_staff.png)
-- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_1_buy.png)
-- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_1_buy.png)
-- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_2_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_2_buy.png)
-- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_3_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_3_buy.png)
-- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_1920x1080_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_1920x1080_GUI_auto_buy.png)
-- 26-1 `layout_market_screen_en`：[layout_en_us_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_854x480_GUI_auto_buy.png)
-- 26-1 `layout_market_screen_en`：[layout_en_us_854x480_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_854x480_GUI_1_buy.png)
-- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_1_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_1_buy.png)
-- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_2_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_2_buy.png)
-- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_3_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_3_buy.png)
-- 26-1 `layout_market_screen_en`：[layout_en_us_1920x1080_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_en_us_1920x1080_GUI_auto_buy.png)

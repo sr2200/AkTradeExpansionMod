@@ -1246,18 +1246,21 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		String price = !available
 				? Component.translatable(buy ? "screen.ak_trade_expansion.sold_out" : "screen.ak_trade_expansion.not_buying").getString()
 				: CoinItem.formatCopper(unitPrice) + (view.unit() > 1 ? "/" + view.unit() : "");
-		g.text(font, price, rx + 136 + wide - font.width(price), textY, available ? COLOR_GOLD : COLOR_RED);
+		// Columns: name | price (right edge PRICE_RIGHT) | ▲▼ | stock (right edge STOCK_RIGHT) | meter
+		g.text(font, price, rx + PRICE_RIGHT + wide - font.width(price), textY, available ? COLOR_GOLD : COLOR_RED);
 		// The name uses the space up to the price and shrinks when it does not fit.
-		fitText(g, name, rx + 20, textY, 136 + wide - 20 - font.width(price) - 4, textColor, true);
+		fitText(g, name, rx + 20, textY, PRICE_RIGHT + wide - 20 - font.width(price) - 4, textColor, true);
 
 		// Q17: change since the screen opened.
 		Long base = (buy ? baselineBuy : baselineSell).get(view.goods());
 		if (available && base != null && base != unitPrice) {
-			g.text(font, unitPrice > base ? "▲" : "▼", rx + 137 + wide, textY, unitPrice > base ? COLOR_RED : COLOR_GREEN);
+			g.text(font, unitPrice > base ? "▲" : "▼", rx + PRICE_RIGHT + 1 + wide, textY, unitPrice > base ? COLOR_RED : COLOR_GREEN);
 		}
 
 		String stock = (int) Math.floor(state.stock()) + "/" + (int) params.targetStock();
-		g.text(font, stock, rx + 168 + wide - font.width(stock), textY, textColor);
+		// "128/128" is wider than the column: it shrinks instead of running into the price (checklist 3-6).
+		int stockW = STOCK_RIGHT - STOCK_LEFT;
+		fitText(g, stock, rx + STOCK_RIGHT + wide - Math.min(font.width(stock), stockW), textY, stockW, textColor, true);
 
 		// Q17: market meter. Center = normal price; right = expensive (red), left = cheap (green); log scale, ends at ×3 / ÷3.
 		double v = PriceModel.multiplier(params, state.pressure());
@@ -1385,6 +1388,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	/** Smallest scale a name is shrunk to before it is cut with "…". */
 	private static final float MIN_TEXT_SCALE = 0.6f;
+	/** Goods rows: right edge of the price, left and right edge of the stock (after the ▲▼ mark), from the row's left. */
+	private static final int PRICE_RIGHT = 124;
+	private static final int STOCK_LEFT = PRICE_RIGHT + 10;
+	private static final int STOCK_RIGHT = 168;
 
 	/**
 	 * Draws {@code text} within {@code maxWidth}: as is when it fits, otherwise shrunk (down to {@link #MIN_TEXT_SCALE},

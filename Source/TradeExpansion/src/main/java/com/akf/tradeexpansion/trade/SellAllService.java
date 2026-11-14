@@ -51,7 +51,7 @@ public final class SellAllService {
 		TradeResultS2C result = process(player, registry, market, request, now);
 		ServerPlayNetworking.send(player, result);
 		BankService.sendAccount(player);
-		if (result.result() != TradeResult.SUCCESS && market != null) {
+		if (result.result() != TradeResult.SUCCESS && TradeService.viewing(player, market)) { // only the open screen's market
 			now = MarketUpkeep.touch(player.level(), market);
 			ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
 		}
