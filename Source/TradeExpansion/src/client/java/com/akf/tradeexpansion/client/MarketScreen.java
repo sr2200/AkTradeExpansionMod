@@ -1735,12 +1735,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			String label = stack.getHoverName().getString() + " ×" + r.request().quantity();
 			if (r.transport().isPresent()) label += " → " + r.transport().get().destinationName().getString(); // J-2
 			boolean othersCargo = r.request().taken() && !r.accepted(); // J-2: another player carries it
-			fitText(g, label, rx + 20, y + 5, 100 + wide, othersCargo ? COLOR_GRAY : COLOR_WHITE, true);
-			g.text(font, "★".repeat(r.request().difficulty()), rx + 132 + wide, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
-			if (r.accepted()) g.text(font, "✔", rx + 124 + wide, y + 5, COLOR_GREEN);
 			String reward = othersCargo ? Component.translatable("screen.ak_trade_expansion.quest.cargo.carrying").getString()
 					: CoinItem.formatCopper(r.request().reward());
-			g.text(font, reward, rx + listW - 8 - font.width(reward), y + 5, othersCargo ? COLOR_GRAY : COLOR_GOLD);
+			int rewardX = rx + listW - 8 - font.width(reward);
+			g.text(font, reward, rewardX, y + 5, othersCargo ? COLOR_GRAY : COLOR_GOLD);
+			// Stars and ✔ stay left of the reward, so that a large reward ("25,200c") does not run into them.
+			String stars = "★".repeat(r.request().difficulty());
+			int starsX = Math.min(rx + 132 + wide, rewardX - 3 - font.width(stars));
+			g.text(font, stars, starsX, y + 5, r.locked() ? COLOR_GRAY : COLOR_GOLD);
+			if (r.accepted()) g.text(font, "✔", starsX - 8, y + 5, COLOR_GREEN);
+			fitText(g, label, rx + 20, y + 5, Math.min(100 + wide, starsX - 8 - 4 - (rx + 20)), othersCargo ? COLOR_GRAY : COLOR_WHITE, true);
 			if (mouseX >= rx + 2 && mouseX < rx + 18 && mouseY >= y && mouseY < y + ROW_H) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 		}
 	}

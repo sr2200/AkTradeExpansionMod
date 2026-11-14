@@ -115,11 +115,14 @@ public final class ServerCases {
 				ctx -> withMarket(ctx, (c, player, market, stall) -> {
 					c.openStall(player, stall);
 					c.giveMoney(player, 1_000_000);
-					Identifier good = c.tradableGood(market, 4, 0);
+					Identifier good = sensitiveGood(c, market, 5);
 					long p0 = c.buyPrice(player, market, good);
-					c.trade(player, market, good, true, 2);
+					// Enough units per purchase for the price to rise by a whole coin (V rises by exp(n / τ) for n units).
+					int step = (int) Math.ceil(market.params(good).elasticity() * Math.log((p0 + 2.0) / p0)) + 1;
+					that(market.good(good).stock() >= 2 * step + 1, "%s has too little stock (%.0f) for 2 x %d", good, market.good(good).stock(), step);
+					c.trade(player, market, good, true, step);
 					long p1 = c.buyPrice(player, market, good);
-					c.trade(player, market, good, true, 2);
+					c.trade(player, market, good, true, step);
 					long p2 = c.buyPrice(player, market, good);
 					that(p0 < p1 && p1 < p2, "buy price did not rise: %d -> %d -> %d", p0, p1, p2);
 					// Buy the rest of the stock, then one more.
@@ -139,12 +142,14 @@ public final class ServerCases {
 					c.openStall(player, stall);
 					Identifier good = c.tradableGood(market, 0, 8);
 					Item item = c.item(good);
-					player.getInventory().add(new ItemStack(item, 8));
-					long money = c.balance(player);
 					long p0 = c.sellPrice(player, market, good);
-					long total = c.trade(player, market, good, false, 8);
-					equal(money + total, c.balance(player), "money after selling 8");
-					equal(0, c.count(player, item), "items left after selling all 8");
+					// Enough units for the price to fall by a whole coin (V falls by exp(-n / τ) for n units).
+					int n = Math.max(8, (int) Math.ceil(market.params(good).elasticity() * Math.log(p0 / Math.max(1.0, p0 - 2.0))) + 1);
+					ServerCases.giveItems(player, item, n);
+					long money = c.balance(player);
+					long total = c.trade(player, market, good, false, n);
+					equal(money + total, c.balance(player), "money after selling " + n);
+					equal(0, c.count(player, item), "items left after selling all " + n);
 					long p1 = c.sellPrice(player, market, good);
 					that(p1 < p0, "sell price did not fall: %d -> %d", p0, p1);
 					// Sell up to the stock limit, then one more.
@@ -268,10 +273,13 @@ public final class ServerCases {
 					sellAsScreen(c, player, market, good, sellQty);
 				})));
 		cases.add(partial("reputation_prices_match", List.of("16-3"), "評判「お得意様」で買値が下がり売値が上がり、表示どおりに確定できること（評判の名前の表示は見ていない）",
-				ctx -> withMarket(ctx, (c, player, market, stall) -> {
+				// 3% of a cheap price is under 1c: dearer prices for this case, so that some good shows the bonus.
+				ctx -> withMarket(withConfig(ctx, cfg -> cfg.price.globalMultiplier = 20), (c, player, market, stall) -> {
 					c.openStall(player, stall);
 					c.giveMoney(player, 1_000_000);
-					Identifier good = c.tradableGood(market, 2, 0);
+					// The bonus is capped per good so that selling and buying back never pays (B-6); some goods get none: pick one
+					// whose prices move by at least 1c with the bonus of "お得意様".
+					Identifier good = bonusGood(c, market, Reputation.priceBonus(3));
 					var plain = view(c.lastSnapshot(player), good);
 					c.command(player, "aktradeex reputation set 400");
 					c.forget(player);
@@ -335,6 +343,7 @@ public final class ServerCases {
 			equal(TradeExpansionConfig.get().currency.startingMoney, ctx.balance(player), "money of a new player");
 		}));
 
+		cases.addAll(ServerChapterCases.all());
 		cases.addAll(ServerRequestCases.all());
 		return cases;
 	}
@@ -375,6 +384,38 @@ public final class ServerCases {
 			left -= n;
 		}
 		that(left == 0, "no room for %d %s outside the hotbar", count, item);
+	}
+
+	static ServerCtx withConfig(ServerCtx ctx, java.util.function.Consumer<TradeExpansionConfig> change) {
+		ctx.config(change);
+		return ctx;
+	}
+
+	/** The buyable good whose price moves most per unit (B ÷ τ), with stock for {@code qty}: each purchase changes its price. */
+	private static Identifier sensitiveGood(ServerCtx c, Market market, int qty) {
+		MarketUpkeep.touch(c.level(), market);
+		return market.regularGoods().stream().filter(id -> {
+			GoodsDefinition def = GoodsCatalog.get(id);
+			GoodState state = market.good(id);
+			return def != null && state != null && def.buy() && def.unit() == 1 && def.components().isEmpty() && state.stock() >= qty
+					&& BuiltInRegistries.ITEM.getValue(def.item()) != Items.AIR;
+		}).max(java.util.Comparator.comparingDouble(id -> market.params(id).basePrice() / market.params(id).elasticity()))
+				.orElseThrow(() -> new AutotestCheck.Failed("market #" + market.id() + " has no good to buy " + qty));
+	}
+
+	/** A good with stock to buy 2 whose buy price falls and sell price rises by the reputation bonus {@code bonus}. */
+	private static Identifier bonusGood(ServerCtx c, Market market, double bonus) {
+		MarketUpkeep.touch(c.level(), market);
+		for (Identifier id : market.regularGoods()) {
+			GoodsDefinition def = GoodsCatalog.get(id);
+			GoodState state = market.good(id);
+			if (def == null || state == null || !def.buy() || !def.sell() || def.unit() != 1 || def.components().isPresent() || state.stock() < 3) continue;
+			var p = market.params(id);
+			var better = com.akf.tradeexpansion.core.ReputationMath.withBonus(p, bonus);
+			if (PriceModel.buyPrice(better, state.pressure()) < PriceModel.buyPrice(p, state.pressure())
+					&& PriceModel.sellPrice(better, state.pressure()) > PriceModel.sellPrice(p, state.pressure())) return id;
+		}
+		throw new AutotestCheck.Failed("market #" + market.id() + " has no good whose prices move with a reputation bonus of " + bonus);
 	}
 
 	/** A good of {@code market} that costs at most {@code maxPrice} for one (unit 1, no components). */

@@ -17,7 +17,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.2.3（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.2.4（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
