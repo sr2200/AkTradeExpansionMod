@@ -1997,40 +1997,38 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			room = imageWidth - 16 - font.width(topRightBalance(viewer)) - 8;
 		}
 		String titleText = title.getString();
-		// P (v0.46): "│ 流行" at the right end of the title row, with the trends on hover.
-		if (snapshot != null && !snapshot.trends().isEmpty()) {
-			String trendLabel = Component.translatable("screen.ak_trade_expansion.trend.label").getString();
-			String separator = " │ ";
-			int tx = 8 + room - font.width(trendLabel);
-			g.text(font, separator, tx - font.width(separator), 6, COLOR_GRAY, false);
+		// "市場名 │ 評判：常連 │ 流行" (M, P v0.46): the reputation and the trends follow the title, each with its details on
+		// hover; a long title shrinks so both always show.
+		String separator = " │ ";
+		String repLabel = snapshot != null && snapshot.reputation().enabled()
+				? Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString() : null;
+		String trendLabel = snapshot != null && !snapshot.trends().isEmpty()
+				? Component.translatable("screen.ak_trade_expansion.trend.label").getString() : null;
+		int suffixWidth = (repLabel == null ? 0 : font.width(separator + repLabel)) + (trendLabel == null ? 0 : font.width(separator + trendLabel));
+		int titleWidth = Math.min(font.width(titleText), room - suffixWidth);
+		fitText(g, titleText, 8, 6, titleWidth, COLOR_TEXT, false);
+		int x = 8 + titleWidth;
+		int mx = mouseX - leftPos;
+		int my = mouseY - topPos;
+		if (repLabel != null) {
+			g.text(font, separator, x, 6, COLOR_GRAY, false);
+			int rx = x + font.width(separator);
+			g.text(font, repLabel, rx, 6, 0xFF6040A0, false);
+			x = rx + font.width(repLabel);
+			if (mx >= rx && mx < x && my >= 4 && my < 16) g.setTooltipForNextFrame(font, reputationTooltip(), Optional.empty(), mouseX, mouseY);
+		}
+		if (trendLabel != null) {
+			g.text(font, separator, x, 6, COLOR_GRAY, false);
+			int tx = x + font.width(separator);
 			g.text(font, trendLabel, tx, 6, 0xFFB05010, false);
-			room -= font.width(separator + trendLabel);
-			int mx = mouseX - leftPos;
-			int my = mouseY - topPos;
-			if (mx >= tx && mx < tx + font.width(trendLabel) && my >= 4 && my < 16) {
+			x = tx + font.width(trendLabel);
+			if (mx >= tx && mx < x && my >= 4 && my < 16) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(Component.translatable("screen.ak_trade_expansion.trend.title"));
 				for (MarketSnapshotS2C.TrendView t : snapshot.trends()) lines.add(trendLine(t, false));
 				lines.add(Component.translatable("screen.ak_trade_expansion.trend.hint").withColor(COLOR_GRAY));
 				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
 			}
-		}
-		if (snapshot != null && snapshot.reputation().enabled()) {
-			String label = Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString();
-			String separator = " │ ";
-			int labelWidth = font.width(separator + label);
-			int titleWidth = Math.min(font.width(titleText), room - labelWidth);
-			fitText(g, titleText, 8, 6, titleWidth, COLOR_TEXT, false);
-			int lx = 8 + titleWidth;
-			g.text(font, separator, lx, 6, COLOR_GRAY, false);
-			int rx = lx + font.width(separator);
-			g.text(font, label, rx, 6, 0xFF6040A0, false);
-			// Details on hover.
-			int mx = mouseX - leftPos;
-			int my = mouseY - topPos;
-			if (mx >= rx && mx < rx + font.width(label) && my >= 4 && my < 16) g.setTooltipForNextFrame(font, reputationTooltip(), Optional.empty(), mouseX, mouseY);
-		} else {
-			fitText(g, titleText, 8, 6, room, COLOR_TEXT, false);
 		}
 		Player player = player();
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
