@@ -6,7 +6,9 @@ import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.currency.WalletService;
 import com.akf.tradeexpansion.data.GoodsCatalog;
+import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.market.Market;
+import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketNames;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
@@ -101,6 +103,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				true, (s, r) -> layout(s, r, LANGUAGE)));
 		cases.add(new ClientCase("layout_market_screen_en", List.of("26-1"), "英語でも交易画面の各タブの文字が重ならず、はみ出さないこと",
 				true, (s, r) -> layout(s, r, "en_us")));
+		cases.add(new ClientCase("clock_advance_updates_open_screen", List.of("13-10"),
+				"開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない）", true, ClientChecklistTests::clockAdvance));
 		return cases;
 	}
 
@@ -330,6 +334,61 @@ public class ClientChecklistTests implements FabricClientGameTest {
 			check(got == qty, "buying %d gave %d items", qty, got);
 			context.waitTicks(3); // the new snapshot
 		}
+	}
+
+	/**
+	 * 13-10: {@code /aktradeex clock advance} while the trade screen is open. The client gets the new clock offset and a
+	 * fresh snapshot, and the time left of the selected request shrinks by the advanced time at once.
+	 */
+	private static void clockAdvance(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		MarketScreen screen = openStall(s);
+		context.clickScreenButton("screen.ak_trade_expansion.tab.quest");
+		context.waitTicks(2);
+		MarketSnapshotS2C before = context.computeOnClient(client -> (MarketSnapshotS2C) get(screen, "snapshot"));
+		// The request with the most time left (a request lasts quest.durationDays, 3 days by default).
+		MarketSnapshotS2C.RequestView request = before.requests().stream()
+				.max(Comparator.comparingLong(r -> r.request().deadline()))
+				.orElseThrow(() -> new AssertionError("the market has no request"));
+		context.runOnClient(client -> {
+			set(screen, "selectedRequest", request.request().id());
+			call(screen, "updateButtons");
+		});
+		context.getInput().setCursorPos(0, 0);
+		context.waitTicks(2);
+		long left0 = timeLeft(context);
+		check(left0 > 15, "the request has only %d minutes left", left0);
+
+		s.world.getServer().runCommand("aktradeex clock advance 0.5"); // = 10 minutes of the time left
+		MarketSnapshotS2C after = before;
+		for (int i = 0; i < 40 && after == before; i++) {
+			context.waitTick();
+			after = context.computeOnClient(client -> (MarketSnapshotS2C) get(screen, "snapshot"));
+		}
+		check(after != before, "no new snapshot after \"clock advance\"");
+		check(after.gameTime() - before.gameTime() >= PriceModel.TICKS_PER_DAY / 2, "the snapshot's market time moved by %d ticks",
+				after.gameTime() - before.gameTime());
+		long serverOffset = s.world.getServer().computeOnServer(server -> MarketRegistry.get(server).clockOffset());
+		long clientOffset = context.computeOnClient(client -> MarketClock.offset(client.level));
+		check(clientOffset == serverOffset, "the client's clock offset is %d, the server's %d", clientOffset, serverOffset);
+		context.waitTicks(2);
+		long left1 = timeLeft(context);
+		check(left0 - left1 >= 9 && left0 - left1 <= 11, "the time left went %d -> %d minutes (expected 10 less)", left0, left1);
+		screenshot(context, result, "13-10_quest_after_clock_advance");
+	}
+
+	/** Minutes of "残り約%s分" on the screen. */
+	private static long timeLeft(ClientGameTestContext context) {
+		String[] parts = Language.getInstance().getOrDefault("screen.ak_trade_expansion.quest.time_left").split("%s", -1);
+		List<TextRecorder.Text> texts = TextRecorder.capture(context);
+		for (TextRecorder.Text t : texts) {
+			String text = t.text();
+			if (text.startsWith(parts[0]) && text.endsWith(parts[1])) {
+				String number = text.substring(parts[0].length(), text.length() - parts[1].length()).replace(",", "").trim();
+				if (number.matches("\\d+")) return Long.parseLong(number);
+			}
+		}
+		throw new AssertionError("no time left on the screen (texts: " + texts.stream().map(TextRecorder.Text::text).toList() + ")");
 	}
 
 	private static MarketSnapshotS2C.GoodView selectedView(MarketScreen screen, Identifier good) {
