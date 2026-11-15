@@ -591,6 +591,8 @@ final class ServerChapterCases {
 						shared(c, a, 0, 8, b); // a good both deal in (added to B if they share none)
 						// Every good is dear at A: nothing pays on the way out, everything on the way back.
 						for (Identifier g : a.goods().keySet()) a.good(g).setPressure(a.params(g).minPressure() * 0.8);
+						// ...and cheap at B: a shortage, trend or rival push there could still leave a good that pays on the way out.
+						for (Identifier g : b.goods().keySet()) b.good(g).setPressure(b.params(g).maxPressure() * 0.8);
 						var hired = staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, Employee.AUTO, b.id(), 64, 0, 0, 0, false);
 						that(hired == TradeResult.SUCCESS, "hiring gave %s", hired);
 						StaffS2C.View e = only(c, player, a);
@@ -623,6 +625,8 @@ final class ServerChapterCases {
 						c.command(player, "aktradeex reputation set 150");
 						c.giveMoney(player, 20_000);
 						for (Identifier g : a.goods().keySet()) a.good(g).setPressure(a.params(g).minPressure() * 0.8);
+						// Dear at A and cheap at B: nothing pays on the way out (a shortage, trend or rival push at B could leave one).
+						for (Identifier g : b.goods().keySet()) b.good(g).setPressure(b.params(g).maxPressure() * 0.8);
 						staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, Employee.AUTO, b.id(), 64, 0, 0, 0, false);
 						StaffS2C.View e = only(c, player, a);
 						staff(c, player, a, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), Employee.AUTO, 0, 0, 0, 0, 10_000, false);

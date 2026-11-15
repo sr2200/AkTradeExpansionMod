@@ -219,7 +219,8 @@ final class ServerReputationCases {
 		})));
 		cases.add(partial("reputation_per_player", List.of("16-9", "16-10"),
 				"評判レベル4の人とレベル0の人に、それぞれの評判で交易画面のデータ（追加の掘り出し物・値段・評判）が送られること（本物の2人のクライアントでの表示は見ていない）",
-				ctx -> ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+				// Dearer prices, as in 16-3: in a market of cheap goods the bonus may move no price by 1c.
+				ctx -> ServerCases.withMarket(ServerCases.withConfig(ctx, cfg -> cfg.price.globalMultiplier = 20), (c, player, market, stall) -> {
 					ServerPlayer other = c.player(stall.south(3));
 					int bonusLevel = TradeExpansionConfig.get().reputation.specialBonusLevel;
 					c.command(player, "aktradeex reputation set " + threshold(bonusLevel));

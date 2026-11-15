@@ -353,6 +353,7 @@ public final class ServerCases {
 		cases.addAll(ServerWorldCases.all());
 		cases.addAll(ServerReputationCases.all());
 		cases.addAll(ServerAdvancementCases.all());
+		cases.addAll(ServerDevelopmentCases.all());
 		cases.addAll(ServerGoodsCases.all());
 		cases.addAll(ServerRequestCases.all());
 		return cases;

@@ -425,6 +425,13 @@ public final class ServerCtx {
 
 	// ---- clean-up
 
+	private final List<net.minecraft.world.level.levelgen.structure.BoundingBox> extraBuildings = new ArrayList<>();
+
+	/** Also clears {@code box} after the case (a building no facility points to any more, e.g. before it was rebuilt elsewhere). */
+	public void clearAfter(net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+		extraBuildings.add(box);
+	}
+
 	/** Removes the case's markets, blocks, entities and players and restores the default config. */
 	void cleanUp() {
 		for (ServerPlayer p : players) {
@@ -435,7 +442,18 @@ public final class ServerCtx {
 		channels.clear();
 		received.clear();
 		MarketRegistry registry = registry();
+		// Facility buildings are taller than the cleared layers above the floors and may stand beyond them.
+		List<net.minecraft.world.level.levelgen.structure.BoundingBox> buildings = new ArrayList<>(extraBuildings);
+		extraBuildings.clear();
+		for (Market m : registry.all()) for (var f : m.facilities().values()) buildings.add(f.box());
 		for (Market m : List.copyOf(registry.all())) registry.remove(m.id());
+		for (var box : buildings) {
+			for (BlockPos p : BlockPos.betweenClosed(box.minX() - 1, box.minY(), box.minZ() - 1, box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1)) {
+				level().setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+			}
+			AABB around = AABB.of(box).inflate(3);
+			for (Entity e : level().getEntities((Entity) null, around, e -> !(e instanceof Player))) e.discard();
+		}
 		registry.campaigns().clear();
 		registry.employees().clear();
 		registry.setDirty();

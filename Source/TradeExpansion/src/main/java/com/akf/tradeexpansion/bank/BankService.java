@@ -124,10 +124,6 @@ public final class BankService {
 		if (!hasBank(market)) return Result.NO_BANK;
 
 		BankAccounts bank = accounts(player);
-		// N-4: using the bank of a market with a bank building registers the account there (higher interest cap).
-		if (market.hasFacility(FacilityKind.BANK) && request.action() != BankRequestC2S.Action.ISSUE_CARD) {
-			bank.setBankFacility(player.getUUID(), market.id());
-		}
 		long amount = request.amount();
 		switch (request.action()) {
 			case DEPOSIT -> {
@@ -152,6 +148,11 @@ public final class BankService {
 				log(player, "ISSUE_CARD#" + number, fee, market);
 				TradeAdvancements.event(player, TradeAdvancements.CARD_ISSUED); // R
 			}
+		}
+		// N-4: using the bank of a market with a bank building registers the account there (higher interest cap). After the
+		// action, so that a player's first deposit (which opens the account) registers too.
+		if (market.hasFacility(FacilityKind.BANK) && request.action() != BankRequestC2S.Action.ISSUE_CARD) {
+			bank.setBankFacility(player.getUUID(), market.id());
 		}
 		TradeAdvancements.checkWealth(player); // R
 		return Result.SUCCESS;
