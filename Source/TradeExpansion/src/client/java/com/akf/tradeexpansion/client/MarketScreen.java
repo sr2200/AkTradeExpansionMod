@@ -1775,8 +1775,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (r.locked() && snapshot != null) {
 			// M: 3-star requests need reputation.hardQuestLevel.
 			int needed = snapshot.reputation().hardQuestLevel();
-			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 104, PANEL_W, COLOR_WARNING, false);
+			twoLineText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 103, PANEL_W, COLOR_WARNING);
 		}
+	}
+
+	/** Wraps text onto up to two lines (the second is shrunk if still too long), instead of shrinking it all onto one. */
+	private void twoLineText(GuiGraphicsExtractor g, String text, int x, int y, int maxWidth, int color) {
+		if (font.width(text) <= maxWidth) {
+			g.text(font, text, x, y, color, false);
+			return;
+		}
+		String first = font.plainSubstrByWidth(text, maxWidth);
+		// Prefer breaking after a closing bracket or a space when one is near the end of the first line.
+		int cut = Math.max(first.lastIndexOf('」'), first.lastIndexOf(' '));
+		if (cut > first.length() / 2) first = first.substring(0, cut + 1);
+		g.text(font, first.stripTrailing(), x, y, color, false);
+		fitText(g, text.substring(first.length()).stripLeading(), x, y + 9, maxWidth, color, false);
 	}
 
 	/** J-2 (v0.35): destination, direction / distance, reward, deposit and time left of a transport request. */
@@ -1796,7 +1810,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		g.text(font, Component.translatable("screen.ak_trade_expansion.quest.time_left", minutes), px, y + 93, COLOR_TEXT, false);
 		if (r.locked() && snapshot != null) {
 			int needed = snapshot.reputation().hardQuestLevel();
-			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 104, PANEL_W, COLOR_WARNING, false);
+			twoLineText(g, Component.translatable("screen.ak_trade_expansion.quest.locked", reputationName(needed)).getString(), px, y + 103, PANEL_W, COLOR_WARNING);
 		} else if (r.request().taken() && !r.accepted()) {
 			fitText(g, Component.translatable("screen.ak_trade_expansion.quest.cargo.carrying").getString(), px, y + 104, PANEL_W, COLOR_GRAY, false);
 		}
