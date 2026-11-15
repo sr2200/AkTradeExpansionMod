@@ -286,13 +286,15 @@ public final class FacilityBuilder {
 	 */
 	private static void foundation(ServerLevel level, BoundingBox box, boolean waterside) {
 		int floorY = box.minY();
+		net.minecraft.world.level.block.Block deck = waterside ? deck(level, box) : null;
 		for (int x = box.minX(); x <= box.maxX(); x++) {
 			for (int z = box.minZ(); z <= box.maxZ(); z++) {
 				BlockPos below = new BlockPos(x, floorY - 1, z);
 				BlockState floor = level.getBlockState(new BlockPos(x, floorY, z));
 				if (waterside && !floor.isAir() && SiteFinder.overWater(level, below)) {
-					// v0.51 harbor: posts (logs) of the pier go down to the bottom; the deck stays above the water
-					if (floor.is(net.minecraft.tags.BlockTags.LOGS)) {
+					// v0.51 harbor: posts of the pier go down to the bottom; the deck stays above the water. The posts are
+					// the style's pillar (a log, cut sandstone, a purpur pillar): whatever is not the deck.
+					if (!floor.is(deck)) {
 						BlockPos.MutableBlockPos p = below.mutable();
 						for (int i = 0; i < 24 && p.getY() > level.getMinY() && SiteFinder.waterOrReplaceable(level.getBlockState(p)); i++, p.move(0, -1, 0)) {
 							level.setBlockAndUpdate(p, floor);
@@ -305,6 +307,18 @@ public final class FacilityBuilder {
 				level.setBlockAndUpdate(below, dirt ? Blocks.DIRT.defaultBlockState() : floor);
 			}
 		}
+	}
+
+	/** The deck of a waterside building: the most common block of its floor over the water. */
+	private static net.minecraft.world.level.block.Block deck(ServerLevel level, BoundingBox box) {
+		java.util.Map<net.minecraft.world.level.block.Block, Integer> counts = new java.util.HashMap<>();
+		for (int x = box.minX(); x <= box.maxX(); x++) {
+			for (int z = box.minZ(); z <= box.maxZ(); z++) {
+				BlockState floor = level.getBlockState(new BlockPos(x, box.minY(), z));
+				if (!floor.isAir() && SiteFinder.overWater(level, new BlockPos(x, box.minY() - 1, z))) counts.merge(floor.getBlock(), 1, Integer::sum);
+			}
+		}
+		return counts.entrySet().stream().max(java.util.Map.Entry.comparingByValue()).map(java.util.Map.Entry::getKey).orElse(Blocks.AIR);
 	}
 
 	/** N-4: villagers come to a completed inn (once per market, not when it is rebuilt). */

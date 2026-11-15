@@ -865,7 +865,7 @@ function build(style, m, kind, spec) {
 			const corner = x !== c && z !== c;
 			if (y <= 3) set(x, y, z, block(corner ? m.stoneBase : m.found));
 			else if (corner) set(x, y, z, up(m.pillar));
-			else if (y === 6 || y === 9) set(x, y, z, block('minecraft:iron_bars'));
+			else if ((y === 6 || y === 9) && !(x === c && z === c + 1)) set(x, y, z, block('minecraft:iron_bars')); // not behind the ladder (it needs a solid wall)
 			else set(x, y, z, block(m.wall));
 		}
 		door(c, 1);

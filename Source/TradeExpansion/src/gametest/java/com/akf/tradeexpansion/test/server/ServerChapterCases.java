@@ -742,7 +742,7 @@ final class ServerChapterCases {
 	}
 
 	/** The player's employees as the staff tab lists them (opened at {@code market}). */
-	private static List<StaffS2C.View> list(ServerCtx c, ServerPlayer player, Market market) {
+	static List<StaffS2C.View> list(ServerCtx c, ServerPlayer player, Market market) {
 		c.forget(player);
 		StaffService.handle(player, new StaffRequestC2S(market.id(), StaffRequestC2S.Action.LIST, 0, Employee.AUTO, 0, 0, 0, 0, 0, false));
 		List<StaffS2C> answers = c.payloads(player, StaffS2C.class);
@@ -750,7 +750,7 @@ final class ServerChapterCases {
 		return answers.getLast().staff();
 	}
 
-	private static StaffS2C.View only(ServerCtx c, ServerPlayer player, Market market) {
+	static StaffS2C.View only(ServerCtx c, ServerPlayer player, Market market) {
 		List<StaffS2C.View> views = list(c, player, market);
 		equal(1, views.size(), "employees");
 		return views.getFirst();

@@ -694,7 +694,7 @@ final class ServerDevelopmentCases {
 	// ---- helpers
 
 	/** {@link ServerCases#withMarket} on a stone floor of about 73×73 blocks, with no materials needed. */
-	private static void town(ServerCtx ctx, ServerCases.MarketBody body) {
+	static void town(ServerCtx ctx, ServerCases.MarketBody body) {
 		for (int dx = -24; dx <= 24; dx += 24) {
 			for (int dz = -24; dz <= 24; dz += 24) {
 				if (dx != 0 || dz != 0) ctx.floor(ctx.center().offset(dx, 0, dz));
@@ -705,24 +705,24 @@ final class ServerDevelopmentCases {
 	}
 
 	/** Enough reputation and development points to build anything. */
-	private static void builder(ServerCtx c, ServerPlayer player, Market market) {
+	static void builder(ServerCtx c, ServerPlayer player, Market market) {
 		c.command(player, "aktradeex reputation set " + threshold(Development.config().buildReputationLevel));
 		c.command(player, "aktradeex development add 100000");
 		that(points(c, market) >= 100_000, "\"development add\" did not add points");
 	}
 
-	private static void buildAndComplete(ServerCtx c, ServerPlayer player, Market market, Identifier id) {
+	static void buildAndComplete(ServerCtx c, ServerPlayer player, Market market, Identifier id) {
 		TradeResult r = build(c, player, market, id);
 		that(r == TradeResult.SUCCESS, "building %s gave %s", id, r);
 		c.command(player, "aktradeex development complete");
 		that(market.facilities().get(id).complete(), "%s did not complete", id);
 	}
 
-	private static TradeResult build(ServerCtx c, ServerPlayer player, Market market, Identifier id) {
+	static TradeResult build(ServerCtx c, ServerPlayer player, Market market, Identifier id) {
 		return dev(c, player, market, DevelopmentRequestC2S.Action.BUILD, 0, id.toString()).result();
 	}
 
-	private static DevelopmentResultS2C donate(ServerCtx c, ServerPlayer player, Market market, long amount, boolean card) {
+	static DevelopmentResultS2C donate(ServerCtx c, ServerPlayer player, Market market, long amount, boolean card) {
 		ensureOpen(c, player, market);
 		c.forget(player);
 		DevelopmentService.handle(player, new DevelopmentRequestC2S(market.id(), DevelopmentRequestC2S.Action.DONATE_COINS, amount, "", card));
@@ -730,7 +730,7 @@ final class ServerDevelopmentCases {
 	}
 
 	/** Sends a development request from the market's trade screen (opened first if needed); returns the answer. */
-	private static DevelopmentResultS2C dev(ServerCtx c, ServerPlayer player, Market market, DevelopmentRequestC2S.Action action, long amount, String facility) {
+	static DevelopmentResultS2C dev(ServerCtx c, ServerPlayer player, Market market, DevelopmentRequestC2S.Action action, long amount, String facility) {
 		ensureOpen(c, player, market);
 		int before = c.payloads(player, DevelopmentResultS2C.class).size(); // the chat is kept for the case's checks
 		DevelopmentService.handle(player, new DevelopmentRequestC2S(market.id(), action, amount, facility, false));
@@ -746,7 +746,7 @@ final class ServerDevelopmentCases {
 	}
 
 	/** The player stands at the market's stall with its trade screen open. */
-	private static void ensureOpen(ServerCtx c, ServerPlayer player, Market market) {
+	static void ensureOpen(ServerCtx c, ServerPlayer player, Market market) {
 		BlockPos stall = market.stalls().iterator().next();
 		if (player.containerMenu instanceof MarketMenu menu && menu.marketId() == market.id() && menu.stillValid(player)) return;
 		player.closeContainer();
@@ -755,7 +755,7 @@ final class ServerDevelopmentCases {
 	}
 
 	/** What the development tab gets when the screen is opened now. */
-	private static MarketSnapshotS2C.DevelopmentView view(ServerCtx c, ServerPlayer player, BlockPos stall) {
+	static MarketSnapshotS2C.DevelopmentView view(ServerCtx c, ServerPlayer player, BlockPos stall) {
 		player.closeContainer();
 		c.forget(player);
 		c.openStall(player, stall);
@@ -764,12 +764,12 @@ final class ServerDevelopmentCases {
 		return snapshot.development();
 	}
 
-	private static MarketSnapshotS2C.FacilityView facility(MarketSnapshotS2C.DevelopmentView view, Identifier id) {
+	static MarketSnapshotS2C.FacilityView facility(MarketSnapshotS2C.DevelopmentView view, Identifier id) {
 		return view.facilities().stream().filter(f -> f.id().equals(id.toString())).findFirst()
 				.orElseThrow(() -> new AutotestCheck.Failed("the development tab has no " + id + ": " + view.facilities().stream().map(MarketSnapshotS2C.FacilityView::id).toList()));
 	}
 
-	private static double points(ServerCtx c, Market market) {
+	static double points(ServerCtx c, Market market) {
 		return Development.points(market, c.now());
 	}
 
@@ -827,12 +827,12 @@ final class ServerDevelopmentCases {
 	}
 
 	/** The player breaks the block as by hand (survival rules and the break events). @return it was broken */
-	private static boolean breakBlock(ServerPlayer player, BlockPos pos) {
+	static boolean breakBlock(ServerPlayer player, BlockPos pos) {
 		return player.gameMode.destroyBlock(pos);
 	}
 
 	/** The player places a building site stake at {@code pos} (on the block below). */
-	private static void placeStake(ServerCtx c, ServerPlayer player, BlockPos pos) {
+	static void placeStake(ServerCtx c, ServerPlayer player, BlockPos pos) {
 		c.emptyHand(player);
 		player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModBlocks.CONSTRUCTION_MARKER.asItem()));
 		c.click(player, pos.below(), Direction.UP);
