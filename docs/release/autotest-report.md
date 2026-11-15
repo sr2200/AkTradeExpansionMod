@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.24、2026-11-15 20:23、77 件中 0 件失敗
+- クライアント：バージョン 0.2.25、2026-11-15 21:09、84 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 135・一部を確認 124・失敗 0
+- チェックリスト 326 項目のうち、今回 自動で完了 139・一部を確認 121・失敗 0
 
 ## すべての項目
 
@@ -194,6 +194,13 @@
 | 3-8・3-9 | `row_states` | クライアント | ✔ | 全部 |
 | 3-7 | `row_states` | クライアント | ✔ | 全部 |
 | 3-11 | `max_with_exact_money` | クライアント | ✔ | 全部 |
+| 2-9・2-10 | `max_and_change` | クライアント | ✔ | 全部 |
+| 2-14 | `shift_confirm_all` | クライアント | ✔ | 全部 |
+| 5-7 | `special_and_emerald_rows` | クライアント | ✔ | 本日の掘り出し物の行の名前に★が付いて水色になり、ツールチップに説明が出ること（入れ替わり・レベルごとの数はサーバーのテストで見ている） |
+| 5-2 | `special_and_emerald_rows` | クライアント | ✔ | 売却タブのエメラルド貨の行が「4c/10」のように10枚あたりの値段で、選ぶと数量が「1 (10)」と10枚単位になること（ネザー・エンド・前のバージョンの市場は見ていない） |
+| 14-2 | `other_player_buys` | クライアント | ✔ | サーバーに足した2人目のプレイヤー（同じ屋台の画面を開いている）が10個買うと、開いたままの画面の行の値段と在庫がすぐ変わること（本物の2人では見ていない） |
+| 16-3 | `regular_customer_prices` | クライアント | ✔ | 全部 |
+| 23-10 | `price_changed_message` | クライアント | ✔ | 選んだ品の値段をサーバーで変えてから（日をまたいで商会や流行が動いた時の代わり）表示どおりの額で買うと、赤い「価格が変動しました…」が出て、品もお金も動かず、画面が最新の値段になること |
 | 2-13 | `sell_slot_selects_good` | クライアント | ✔ | 全部 |
 | 16-1・24-1 | `title_reputation_trends` | クライアント | ✔ | 全部 |
 | 24-1b | `trend_position_setting` | クライアント | ✔ | 全部 |
@@ -296,6 +303,13 @@
 - 3-8・3-9 `row_states`：[3-8_not_buying_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-8_not_buying_tooltip.png)
 - 3-8・3-9 `row_states`：[3-9_not_buying_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/3-9_not_buying_sell_slot.png)
 - 3-11 `max_with_exact_money`：[3-11_max_exact_money.png](../../Source/TradeExpansion/build/autotest/screenshots/3-11_max_exact_money.png)
+- 2-9・2-10 `max_and_change`：[2-9_max.png](../../Source/TradeExpansion/build/autotest/screenshots/2-9_max.png)
+- 2-14 `shift_confirm_all`：[2-14_shift.png](../../Source/TradeExpansion/build/autotest/screenshots/2-14_shift.png)
+- 5-7 `special_and_emerald_rows`：[5-7_special.png](../../Source/TradeExpansion/build/autotest/screenshots/5-7_special.png)
+- 5-2 `special_and_emerald_rows`：[5-2_emerald_coin.png](../../Source/TradeExpansion/build/autotest/screenshots/5-2_emerald_coin.png)
+- 14-2 `other_player_buys`：[14-2_other_player_bought.png](../../Source/TradeExpansion/build/autotest/screenshots/14-2_other_player_bought.png)
+- 16-3 `regular_customer_prices`：[16-3_regular_customer.png](../../Source/TradeExpansion/build/autotest/screenshots/16-3_regular_customer.png)
+- 23-10 `price_changed_message`：[23-10_price_changed.png](../../Source/TradeExpansion/build/autotest/screenshots/23-10_price_changed.png)
 - 2-13 `sell_slot_selects_good`：[2-13_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/2-13_sell_slot.png)
 - 16-1・24-1 `title_reputation_trends`：[24-1_title_row.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1_title_row.png)
 - 16-1・24-1 `title_reputation_trends`：[16-1_reputation_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/16-1_reputation_tooltip.png)

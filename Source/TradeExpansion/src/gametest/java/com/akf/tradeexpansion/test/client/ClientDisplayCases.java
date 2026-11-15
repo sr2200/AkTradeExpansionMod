@@ -684,7 +684,9 @@ final class ClientDisplayCases {
 	private static int freeSlot(ServerPlayer player, int from, int to) {
 		Inventory inventory = player.getInventory();
 		for (int i = from; i < to; i++) if (inventory.getItem(i).isEmpty()) return i;
-		throw new AssertionError("no free inventory slot between " + from + " and " + to);
+		List<String> held = new java.util.ArrayList<>();
+		for (int i = from; i < to; i++) held.add(inventory.getItem(i).getCount() + " " + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(inventory.getItem(i).getItem()));
+		throw new AssertionError("no free inventory slot between " + from + " and " + to + ": " + held);
 	}
 
 	@SuppressWarnings("unchecked")

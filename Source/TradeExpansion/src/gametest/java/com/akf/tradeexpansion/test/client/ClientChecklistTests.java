@@ -106,6 +106,15 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("row_states", List.of("3-8", "3-9"), null, true, ClientTradeCases::rowStates,
 				List.of("3-7"), null));
 		cases.add(new ClientCase("max_with_exact_money", List.of("3-11"), null, true, ClientTradeCases::maxWithExactMoney));
+		cases.add(new ClientCase("max_and_change", List.of("2-9", "2-10"), null, true, ClientBuySellCases::maxAndChange));
+		cases.add(new ClientCase("shift_confirm_all", List.of("2-14"), null, true, ClientBuySellCases::shiftConfirm));
+		cases.add(new ClientCase("special_and_emerald_rows", List.of("5-7"), "本日の掘り出し物の行の名前に★が付いて水色になり、ツールチップに説明が出ること（入れ替わり・レベルごとの数はサーバーのテストで見ている）",
+				true, ClientBuySellCases::specialsAndEmeralds, List.of("5-2"), "売却タブのエメラルド貨の行が「4c/10」のように10枚あたりの値段で、選ぶと数量が「1 (10)」と10枚単位になること（ネザー・エンド・前のバージョンの市場は見ていない）"));
+		cases.add(new ClientCase("other_player_buys", List.of("14-2"), "サーバーに足した2人目のプレイヤー（同じ屋台の画面を開いている）が10個買うと、開いたままの画面の行の値段と在庫がすぐ変わること（本物の2人では見ていない）",
+				true, ClientBuySellCases::otherPlayerBuys));
+		cases.add(new ClientCase("regular_customer_prices", List.of("16-3"), null, true, ClientBuySellCases::regularCustomer));
+		cases.add(new ClientCase("price_changed_message", List.of("23-10"), "選んだ品の値段をサーバーで変えてから（日をまたいで商会や流行が動いた時の代わり）表示どおりの額で買うと、赤い「価格が変動しました…」が出て、品もお金も動かず、画面が最新の値段になること",
+				true, ClientBuySellCases::priceChanged));
 		cases.add(new ClientCase("sell_slot_selects_good", List.of("2-13"), null, true, ClientTradeCases::sellSlot));
 		cases.add(new ClientCase("title_reputation_trends", List.of("16-1", "24-1"), null, true, ClientDisplayCases::titleRow));
 		cases.add(new ClientCase("trend_position_setting", List.of("24-1b"), null, true, ClientDisplayCases::trendPosition));
