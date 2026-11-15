@@ -151,6 +151,18 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("21-2"), "「荷箱を受け取る」で保証金が引かれて荷箱が手に入り、ボタンが「受け取り済み」になること（荷箱の説明は見ていない）"));
 		cases.add(new ClientCase("transport_taken_by_other", List.of("21-4"), "ほかの人が受け取った輸送依頼（受けた人をサーバーで足したもの）が一覧で灰色の「運送中」になり、受け取るボタンが出ないこと（本物の2人では見ていない）",
 				true, ClientBankQuestCases::transportTaken));
+		cases.add(new ClientCase("town_donations", List.of("22-2", "22-3", "22-4"), null, true, ClientTownCases::donations, List.of("28-8"), null));
+		cases.add(new ClientCase("town_build_reasons", List.of("22-22", "22-25"), null, true, ClientTownCases::buildReasons,
+				List.of("22-23b"), "資材が足りない時に「建てる」のツールチップが「資材があと N 個必要です」になり、development.requireMaterials を OFF にすると押せること（資材の数の倍率は見ていない）"));
+		cases.add(new ClientCase("town_materials_and_stake", List.of("22-23"), "「資材を寄付（N）」の数が持っている資材の数で、押すと資材が減り、発展度が増え、残りの数が減ること（上限まで寄付した後は見ていない）",
+				true, ClientTownCases::materialsAndStake, List.of("22-35"), "「杭をもらう」で杭が手に入り、持っている時はもらえないこと（置いた時は見ていない）"));
+		cases.add(new ClientCase("town_row_states", List.of("22-24", "22-26", "22-33", "29-13"),
+				"発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない）",
+				true, ClientTownCases::rowStates));
+		cases.add(new ClientCase("facility_sign_opens_tab", List.of("22-32"), null, true, ClientTownCases::signOpensTab));
+		cases.add(new ClientCase("tabs_turned_off", List.of("22-9", "26-20", "24-7"),
+				"設定を OFF にすると画面を開き直した時に「発展」タブが消え、雇い人がいない人には「雇い人」タブが無く、いる人には出ること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないこと・雇い人の操作は見ていない）",
+				true, ClientTownCases::tabsTurnedOff));
 		// The staff cases share their employees (in this order); staff_layout lets them go.
 		cases.add(new ClientCase("staff_hire_carrier", List.of("26-4"), null, true, ClientStaffCases::hireCarrier,
 				List.of("26-3"), "品の一覧の先頭が「おまかせ（売れる品を何種類も）」で、各行に「見込み +○c/往復」か「今は利益なし」が出て見込みの大きい順に並び、ツールチップにおすすめの行き先と数が出ること（宝箱のアイコンは画像で見る）"));

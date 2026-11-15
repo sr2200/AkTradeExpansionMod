@@ -1,0 +1,685 @@
+package com.akf.tradeexpansion.test.client;
+
+import com.akf.tradeexpansion.block.FacilitySignBlock;
+import com.akf.tradeexpansion.client.MarketScreen;
+import com.akf.tradeexpansion.config.ConfigManager;
+import com.akf.tradeexpansion.config.TradeExpansionConfig;
+import com.akf.tradeexpansion.currency.WalletService;
+import com.akf.tradeexpansion.development.Facility;
+import com.akf.tradeexpansion.development.FacilityKind;
+import com.akf.tradeexpansion.item.CoinItem;
+import com.akf.tradeexpansion.market.Market;
+import com.akf.tradeexpansion.market.MarketClock;
+import com.akf.tradeexpansion.market.MarketRegistry;
+import com.akf.tradeexpansion.network.MarketSnapshotS2C;
+import com.akf.tradeexpansion.network.MarketSnapshotS2C.FacilityView;
+import com.akf.tradeexpansion.core.PriceModel;
+import com.akf.tradeexpansion.registry.ModBlocks;
+import com.akf.tradeexpansion.staff.Employee;
+import com.akf.tradeexpansion.test.CaseResult;
+import com.akf.tradeexpansion.test.client.ClientChecklistTests.Session;
+import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.function.Consumer;
+
+import static com.akf.tradeexpansion.test.client.ClientUtil.*;
+
+/**
+ * Client cases of the development tab (checklist chapters 22, 28 and 29): the coin donations, why "建てる" cannot be
+ * pressed, the materials and the stake, the rows' states, a building's sign opening its tab, and the tabs that go away
+ * when their feature is turned off. Buildings are made on the server without their blocks (a facility sign at the
+ * core keeps a completed one from counting as destroyed) and removed at the end of each case.
+ */
+final class ClientTownCases {
+	private ClientTownCases() {
+	}
+
+	private static final String NS = "ak_trade_expansion";
+	private static final String T = "screen." + NS + ".town.";
+	private static final int TOWN_HEADER_H = 10;
+
+	private static String text(String key, Object... args) {
+		return Component.translatable(key, args).getString();
+	}
+
+	private static String prefix(String key) {
+		return Language.getInstance().getOrDefault(key).split("%s", -1)[0];
+	}
+
+	private static String squeeze(String s) {
+		return s.replaceAll("\\s", "").replace("…", "");
+	}
+
+	private static String coins(long amount) {
+		return CoinItem.formatCopper(amount);
+	}
+
+	/** Development points as the screen writes them. */
+	private static String points(double value) {
+		return String.format(Locale.ROOT, "%,d", (long) Math.floor(value + 1e-9));
+	}
+
+	private static Identifier id(String name) {
+		return Identifier.fromNamespaceAndPath(NS, name);
+	}
+
+	// ---- set-up on the server
+
+	private static void config(Session s, Consumer<TradeExpansionConfig> change) {
+		s.world.getServer().runOnServer(server -> {
+			TradeExpansionConfig config = ConfigManager.copy(TradeExpansionConfig.get());
+			change.accept(config);
+			ConfigManager.apply(config);
+		});
+	}
+
+	private static TradeExpansionConfig saveConfig(Session s) {
+		return s.world.getServer().computeOnServer(server -> ConfigManager.copy(TradeExpansionConfig.get()));
+	}
+
+	private static void restoreConfig(Session s, TradeExpansionConfig old) {
+		s.world.getServer().runOnServer(server -> ConfigManager.apply(old));
+	}
+
+	private static void setPoints(Session s, double reputation, double development) {
+		BlockPos stall = s.stall;
+		s.world.getServer().runOnServer(server -> {
+			Market market = market(server, stall);
+			long now = MarketClock.now(server.overworld());
+			UUID id = player(server).getUUID();
+			if (reputation >= 0) market.setStanding(new Market.Standing(id, reputation, now));
+			if (development >= 0) market.setDevelopment(development, now);
+			MarketRegistry.get(server).setDirty();
+		});
+	}
+
+	private record Saved(Market.Standing standing, double development) {
+	}
+
+	private static Saved save(Session s) {
+		BlockPos stall = s.stall;
+		return s.world.getServer().computeOnServer(server -> {
+			Market market = market(server, stall);
+			return new Saved(market.standing(player(server).getUUID()), market.development());
+		});
+	}
+
+	private static void restore(Session s, Saved saved, List<String> facilities, List<BlockPos> signs) {
+		BlockPos stall = s.stall;
+		s.world.getServer().runOnServer(server -> {
+			Market market = market(server, stall);
+			for (String f : facilities) market.facilities().remove(id(f));
+			for (BlockPos pos : signs) server.overworld().setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
+			UUID uuid = player(server).getUUID();
+			long now = MarketClock.now(server.overworld());
+			market.setStanding(saved.standing() != null ? saved.standing() : new Market.Standing(uuid, 0, now));
+			market.setDevelopment(saved.development(), now);
+			MarketRegistry.get(server).setDirty();
+		});
+	}
+
+	private enum State { CONSTRUCTING, COMPLETE, DESTROYED }
+
+	/**
+	 * A facility of the stall's market without its blocks. A completed one gets its sign at {@code core} (without it the
+	 * next touch of the market counts it as destroyed).
+	 */
+	private static void facility(MinecraftServer server, BlockPos stall, String name, FacilityKind kind, State state, BlockPos core) {
+		ServerLevel level = server.overworld();
+		Market market = market(server, stall);
+		long now = MarketClock.now(level);
+		Facility f = new Facility(id(name), kind);
+		f.start(core, Rotation.NONE, core, new BoundingBox(core), "plains", now, now + 2 * PriceModel.TICKS_PER_DAY);
+		if (state != State.CONSTRUCTING) {
+			if (state == State.COMPLETE) {
+				level.setBlock(core, ModBlocks.FACILITY_SIGN.defaultBlockState().setValue(FacilitySignBlock.KIND, kind).setValue(FacilitySignBlock.BUILT, true), 2);
+			}
+			f.complete(core);
+			if (state == State.DESTROYED) f.destroy();
+		}
+		market.facilities().put(id(name), f);
+		MarketRegistry.get(server).setDirty();
+	}
+
+	// ---- the screen
+
+	private static MarketScreen openTown(Session s) {
+		ClientGameTestContext context = s.context;
+		context.setScreen(() -> null);
+		context.waitTicks(2);
+		MarketScreen screen = ClientChecklistTests.openStall(s);
+		context.clickScreenButton("screen." + NS + ".tab.town");
+		context.waitTicks(3);
+		mouseAway(context);
+		return screen;
+	}
+
+	private static MarketSnapshotS2C.DevelopmentView development(ClientGameTestContext context, MarketScreen screen) {
+		return snapshot(context, screen).development();
+	}
+
+	private static FacilityView view(ClientGameTestContext context, MarketScreen screen, String name) {
+		return development(context, screen).facilities().stream().filter(f -> f.kind().equals(name)).findFirst()
+				.orElseThrow(() -> new AssertionError("the development tab has no " + name));
+	}
+
+	private static void selectFacility(ClientGameTestContext context, MarketScreen screen, String name) {
+		String id = view(context, screen, name).id();
+		context.runOnClient(c -> {
+			set(screen, "selectedFacility", id);
+			call(screen, "updateButtons");
+		});
+		context.waitTicks(2);
+	}
+
+	/** The texts of a building's row (scrolled into view). */
+	private static List<String> row(ClientGameTestContext context, MarketScreen screen, String name) {
+		List<FacilityView> facilities = development(context, screen).facilities();
+		int index = facilities.stream().map(FacilityView::kind).toList().indexOf(name);
+		check(index >= 0, "the development tab has no %s", name);
+		int n = facilities.size();
+		int rowH = context.computeOnClient(c -> (Integer) call(screen, "townRowH", n));
+		int visible = context.computeOnClient(c -> (Integer) call(screen, "townVisible", n));
+		int scroll = Math.clamp(index, 0, Math.max(0, n - visible));
+		context.runOnClient(c -> set(screen, "townScroll", scroll));
+		mouseAway(context);
+		int top = context.computeOnClient(c -> topPos(screen)) + constant(MarketScreen.class, "LIST_Y") + TOWN_HEADER_H + (index - scroll) * rowH;
+		return strings(TextRecorder.capture(context).stream().filter(t -> t.y0() >= top && t.y0() < top + rowH).toList());
+	}
+
+	private static String all(ClientGameTestContext context) {
+		mouseAway(context);
+		return squeeze(String.join("", strings(TextRecorder.capture(context))));
+	}
+
+	private static Button button(ClientGameTestContext context, MarketScreen screen, String field) {
+		return context.computeOnClient(c -> (Button) get(screen, field));
+	}
+
+	/** The tooltip shown with the mouse over a button, joined without spaces. */
+	private static String buttonTooltip(ClientGameTestContext context, Button b) {
+		moveTo(context, b.getX() + b.getWidth() / 2.0, b.getY() + b.getHeight() / 2.0);
+		context.waitTicks(3);
+		String tip = squeeze(String.join("", strings(tooltip(TextRecorder.capture(context)))));
+		mouseAway(context);
+		return tip;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Button donation(ClientGameTestContext context, MarketScreen screen, int index) {
+		return context.computeOnClient(c -> ((List<Button>) get(screen, "townWidgets")).get(index));
+	}
+
+	private static double serverDevelopment(Session s) {
+		BlockPos stall = s.stall;
+		return s.world.getServer().computeOnServer(server -> market(server, stall).development());
+	}
+
+	private static double serverReputation(Session s) {
+		BlockPos stall = s.stall;
+		return s.world.getServer().computeOnServer(server -> {
+			Market.Standing st = market(server, stall).standing(player(server).getUUID());
+			return st == null ? 0 : st.points();
+		});
+	}
+
+	/** Clicks a donation button and waits for the result; returns the money it took. */
+	private static long donate(Session s, MarketScreen screen, int index) {
+		long before = serverMoney(s);
+		clickWidget(s.context, donation(s.context, screen, index));
+		mouseAway(s.context);
+		for (int i = 0; i < 40 && serverMoney(s) == before; i++) s.context.waitTick();
+		s.context.waitTicks(4); // the result and the new snapshot
+		return before - serverMoney(s);
+	}
+
+	// ---- 22-2 / 22-3 / 22-4 / 28-8 donations
+
+	/**
+	 * 22-2: the tab shows the points, "寄付した人：まだいません", "あなた：0" and "コインを寄付する" with 100c / 1,000c /
+	 * 10,000c. 22-3: 100c takes 100c, adds 100 points and 3 reputation points, and lists the player. 22-4: more than the
+	 * player has: "所持金が足りません" and nothing changes. 28-8: with a park 1,000c gives "発展度 +1,250" and the same
+	 * reputation as without.
+	 */
+	static void donations(Session s, CaseResult.Builder result, CaseResult.Builder also) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		List<BlockPos> signs = new ArrayList<>();
+		long[] taken = {0};
+		try {
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				market.contributors().clear();
+				market.setDevelopment(0, MarketClock.now(server.overworld()));
+				WalletService.give(player(server), 20_000);
+				MarketRegistry.get(server).setDirty();
+			});
+			MarketScreen screen = openTown(s);
+			String shown = all(context);
+			for (String line : List.of(text(T + "points", points(0)), text(T + "contributors") + text(T + "contributors.none"), text(T + "mine", points(0)),
+					text(T + "donate"))) {
+				check(shown.contains(squeeze(line)), "the development tab does not say \"%s\": %s", line, shown);
+			}
+			for (int i = 0; i < 3; i++) {
+				Button b = donation(context, screen, i);
+				String label = coins(new long[] {100, 1_000, 10_000}[i]);
+				check(b.visible && b.getMessage().getString().equals(label), "the donation button %d says \"%s\" (visible %s), not \"%s\"", i,
+						b.getMessage().getString(), b.visible, label);
+			}
+			screenshot(context, result, "22-2_town_donations");
+
+			// 22-3: 100c.
+			double rep0 = serverReputation(s);
+			long paid = donate(s, screen, 0);
+			check(paid == 100, "\"100c\" took %dc", paid);
+			check(Math.abs(serverDevelopment(s) - 100) < 1e-6, "the points are %.1f after 100c (100 expected)", serverDevelopment(s));
+			double gained = serverReputation(s) - rep0;
+			check(Math.abs(gained - 3) < 0.05, "100c gave %.2f reputation points, not 3", gained);
+			String name = context.computeOnClient(c -> c.player.getName().getString());
+			shown = all(context);
+			for (String line : List.of(text(T + "points", points(100)), "1." + name, text(T + "mine", points(100)), text(T + "donated", coins(100), points(100)))) {
+				check(shown.contains(squeeze(line)), "after donating 100c the tab does not say \"%s\": %s", line, shown);
+			}
+			screenshot(context, result, "22-3_donated");
+
+			// 22-4: not enough money.
+			s.world.getServer().runOnServer(server -> {
+				ServerPlayer player = player(server);
+				long all = WalletService.balance(player);
+				long change = WalletService.take(player, all);
+				WalletService.give(player, change);
+				taken[0] = all - change;
+				WalletService.give(player, 5_000);
+			});
+			context.waitTicks(3);
+			double points = serverDevelopment(s);
+			long money = serverMoney(s);
+			clickWidget(context, donation(context, screen, 2)); // 10,000c
+			mouseAway(context);
+			context.waitTicks(10);
+			check(serverMoney(s) == money && Math.abs(serverDevelopment(s) - points) < 1e-6, "a refused donation changed the money (%d -> %d) or the points",
+					money, serverMoney(s));
+			String refused = squeeze(text("trade." + NS + ".result.insufficient_funds"));
+			check(all(context).contains(refused), "the status line does not say \"%s\"", refused);
+			screenshot(context, result, "22-4_not_enough");
+
+			// 28-8: a park.
+			try {
+				BlockPos core = stall.above(5);
+				signs.add(core);
+				s.world.getServer().runOnServer(server -> facility(server, stall, "park", FacilityKind.PARK, State.COMPLETE, core));
+				screen = openTown(s);
+				double before = serverDevelopment(s);
+				double rep1 = serverReputation(s);
+				check(donate(s, screen, 1) == 1_000, "\"1,000c\" did not take 1,000c");
+				double expected = 1_000 * TradeExpansionConfig.get().development.parkPointsMultiplier;
+				check(Math.abs(serverDevelopment(s) - before - expected) < 1e-6, "1,000c with a park gave %.1f points, not %.1f", serverDevelopment(s) - before, expected);
+				String line = squeeze(text(T + "donated", coins(1_000), points(expected)));
+				check(all(context).contains(line), "the status line does not say \"%s\"", line);
+				double rep = serverReputation(s) - rep1;
+				check(Math.abs(rep - 30) < 0.2, "1,000c with a park gave %.2f reputation points, not 30 (as without a park)", rep);
+				screenshot(context, also, "28-8_park_donation");
+			} catch (Throwable t) {
+				throw new ClientChecklistTests.AlsoFailed(t);
+			}
+		} finally {
+			context.setScreen(() -> null);
+			if (taken[0] > 0) s.world.getServer().runOnServer(server -> WalletService.give(player(server), taken[0]));
+			restore(s, saved, List.of("park"), signs);
+		}
+	}
+
+	// ---- 22-22 / 22-23b / 22-25 why "建てる" cannot be pressed
+
+	/**
+	 * 22-22: below the reputation to choose a building "建てる" cannot be pressed; its tooltip says from which reputation.
+	 * 22-23b: with the reputation but without the materials it says how many are missing; with
+	 * {@code development.requireMaterials} off it can be pressed. 22-25: while another building is under construction
+	 * it says so.
+	 */
+	static void buildReasons(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		TradeExpansionConfig old = saveConfig(s);
+		BlockPos stall = s.stall;
+		try {
+			setPoints(s, 0, 1_000_000);
+			MarketScreen screen = openTown(s);
+			selectFacility(context, screen, "warehouse");
+			Button build = button(context, screen, "buildButton");
+			check(build.visible && !build.active, "\"建てる\" can be pressed with the reputation 0 (visible %s)", build.visible);
+			int level = development(context, screen).buildLevel();
+			String reputation = squeeze(text(T + "reason.reputation", Component.translatable("screen." + NS + ".reputation.level." + level)));
+			String tip = buttonTooltip(context, build);
+			check(tip.contains(reputation), "the tooltip of \"建てる\" does not say \"%s\": %s", reputation, tip);
+			screenshot(context, result, "22-22_reputation");
+
+			int threshold = TradeExpansionConfig.get().reputation.levelThresholds.get(Math.max(0, level - 1));
+			setPoints(s, threshold + 50, -1);
+			screen = openTown(s);
+			selectFacility(context, screen, "warehouse");
+			FacilityView w = view(context, screen, "warehouse");
+			int missing = w.wanted().stream().mapToInt(x -> Math.max(0, x.required() - x.donated())).sum();
+			check(missing > 0, "the warehouse wants no materials");
+			build = button(context, screen, "buildButton");
+			check(!build.active, "\"建てる\" can be pressed without the materials");
+			String materials = squeeze(text(T + "reason.materials", missing));
+			tip = buttonTooltip(context, build);
+			check(tip.contains(materials), "the tooltip of \"建てる\" does not say \"%s\": %s", materials, tip);
+			screenshot(context, result, "22-23b_materials");
+
+			config(s, c -> c.development.requireMaterials = false);
+			screen = openTown(s);
+			selectFacility(context, screen, "warehouse");
+			check(button(context, screen, "buildButton").active, "\"建てる\" cannot be pressed with development.requireMaterials off");
+
+			// 22-25: another building under construction.
+			s.world.getServer().runOnServer(server -> facility(server, stall, "inn", FacilityKind.INN, State.CONSTRUCTING, stall.above(5)));
+			screen = openTown(s);
+			selectFacility(context, screen, "warehouse");
+			build = button(context, screen, "buildButton");
+			check(!build.active, "\"建てる\" can be pressed while the inn is under construction");
+			String limit = squeeze(text(T + "reason.limit"));
+			tip = buttonTooltip(context, build);
+			check(tip.contains(limit), "the tooltip of \"建てる\" does not say \"%s\": %s", limit, tip);
+			screenshot(context, result, "22-25_limit");
+		} finally {
+			context.setScreen(() -> null);
+			restoreConfig(s, old);
+			restore(s, saved, List.of("inn"), List.of());
+		}
+	}
+
+	// ---- 22-23 / 22-35 materials and the stake
+
+	/**
+	 * 22-23: "資材を寄付（N）" counts the wanted materials carried; pressing it takes them, adds points and lowers the
+	 * number still wanted; without them it cannot be pressed. 22-35: "杭をもらう" gives the stake once ("建設予定地の杭を
+	 * もう持っています" the second time).
+	 */
+	static void materialsAndStake(Session s, CaseResult.Builder result, CaseResult.Builder also) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		try {
+			MarketScreen screen = openTown(s);
+			FacilityView w = view(context, screen, "warehouse");
+			MarketSnapshotS2C.WantedView wanted = w.wanted().stream().filter(x -> x.tag().isEmpty() && x.required() > x.donated()).findFirst()
+					.orElseThrow(() -> new AssertionError("the warehouse wants no single item"));
+			Identifier item = wanted.item();
+			int give = Math.min(32, wanted.required() - wanted.donated());
+			int held0 = s.world.getServer().computeOnServer(server -> count(player(server), BuiltInRegistries.ITEM.getValue(item)));
+			s.world.getServer().runOnServer(server -> giveItems(player(server), BuiltInRegistries.ITEM.getValue(item), give));
+			screen = openTown(s);
+			selectFacility(context, screen, "warehouse");
+			Button donate = button(context, screen, "donateItemsButton");
+			FacilityView selected = view(context, screen, "warehouse");
+			MarketScreen shown = screen;
+			int donatable = context.computeOnClient(c -> (Integer) call(shown, "donatable", selected));
+			check(donatable >= give, "only %d of the %d given count as donatable", donatable, give);
+			check(donate.visible && donate.active && donate.getMessage().getString().equals(text(T + "donate_items", donatable)),
+					"the button says \"%s\" (active %s), not \"%s\"", donate.getMessage().getString(), donate.active, text(T + "donate_items", donatable));
+			int left0 = wanted.required() - wanted.donated();
+			double points0 = serverDevelopment(s);
+			clickWidget(context, donate);
+			mouseAway(context);
+			MarketScreen open = screen;
+			check(waitClient(context, c -> {
+				MarketSnapshotS2C now = (MarketSnapshotS2C) get(open, "snapshot");
+				return now.development().facilities().stream().filter(f -> f.kind().equals("warehouse")).findFirst().orElseThrow().wanted().stream()
+						.anyMatch(x -> x.item().equals(item) && x.required() - x.donated() < left0);
+			}, 60), "the number still wanted did not go down");
+			context.waitTicks(3);
+			int held = s.world.getServer().computeOnServer(server -> count(player(server), BuiltInRegistries.ITEM.getValue(item)));
+			check(held < held0 + give, "no %s was taken", item);
+			check(serverDevelopment(s) > points0, "donating the materials added no points");
+			check(all(context).contains(squeeze(prefix(T + "donated_items"))), "the status line does not say \"%s…\"", prefix(T + "donated_items"));
+			if (held == 0) check(!button(context, screen, "donateItemsButton").active, "\"資材を寄付\" can be pressed without materials");
+			screenshot(context, result, "22-23_materials_donated");
+
+			// 22-35: the stake.
+			try {
+				selectFacilityNone(context, screen);
+				Button marker = button(context, screen, "markerButton");
+				check(marker.visible && marker.getMessage().getString().equals(text(T + "marker")), "no \"%s\" button", text(T + "marker"));
+				clickWidget(context, marker);
+				mouseAway(context);
+				check(waitClient(context, c -> c.player.getInventory().contains(new net.minecraft.world.item.ItemStack(ModBlocks.CONSTRUCTION_MARKER)), 40),
+						"\"%s\" gave no stake", text(T + "marker"));
+				context.waitTicks(3);
+				check(all(context).contains(squeeze(text(T + "marker_given"))), "the status line does not say \"%s\"", text(T + "marker_given"));
+				clickWidget(context, marker);
+				mouseAway(context);
+				context.waitTicks(5);
+				String has = squeeze(text("trade." + NS + ".result.has_marker"));
+				check(all(context).contains(has), "a second stake was not refused with \"%s\"", text("trade." + NS + ".result.has_marker"));
+				int stakes = s.world.getServer().computeOnServer(server -> count(player(server), ModBlocks.CONSTRUCTION_MARKER.asItem()));
+				check(stakes == 1, "the player has %d stakes", stakes);
+				screenshot(context, also, "22-35_stake");
+			} catch (Throwable t) {
+				throw new ClientChecklistTests.AlsoFailed(t);
+			}
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				ServerPlayer player = player(server);
+				for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+					if (player.getInventory().getItem(i).is(ModBlocks.CONSTRUCTION_MARKER.asItem())) player.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+				}
+			});
+			restore(s, saved, List.of(), List.of());
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				market.clearDonations(id("warehouse"));
+				MarketRegistry.get(server).setDirty();
+			});
+		}
+	}
+
+	private static void selectFacilityNone(ClientGameTestContext context, MarketScreen screen) {
+		context.runOnClient(c -> {
+			set(screen, "selectedFacility", null);
+			call(screen, "updateButtons");
+		});
+		context.waitTicks(2);
+	}
+
+	// ---- 22-24 / 22-26 / 22-33 / 29-13 the rows' states
+
+	/**
+	 * The rows: a building under construction "建設中 約N分", a completed one "✔ 完成", a destroyed one "壊れた <cost>"
+	 * (the cost to build it again), and the festival plaza "✔ 今日は祭り" or "✔ 祭りまでN日".
+	 */
+	static void rowStates(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		List<BlockPos> signs = List.of(stall.above(5), stall.above(6));
+		try {
+			s.world.getServer().runOnServer(server -> {
+				facility(server, stall, "warehouse", FacilityKind.WAREHOUSE, State.CONSTRUCTING, stall.above(7));
+				facility(server, stall, "inn", FacilityKind.INN, State.COMPLETE, signs.get(0));
+				facility(server, stall, "bank", FacilityKind.BANK, State.DESTROYED, stall.above(8));
+				facility(server, stall, "festival", FacilityKind.FESTIVAL, State.COMPLETE, signs.get(1));
+			});
+			MarketScreen screen = openTown(s);
+			FacilityView warehouse = view(context, screen, "warehouse");
+			int minutes = context.computeOnClient(c -> (Integer) call(screen, "minutesUntil", warehouse.due()));
+			check(minutes > 0, "the warehouse is due in %d minutes", minutes);
+			List<String> problems = new ArrayList<>();
+			expectRow(context, screen, "warehouse", text(T + "state.constructing", minutes), problems);
+			expectRow(context, screen, "inn", text(T + "state.complete"), problems);
+			expectRow(context, screen, "bank", text(T + "state.destroyed", points(view(context, screen, "bank").cost())), problems);
+			int festivalIn = development(context, screen).festivalIn();
+			check(festivalIn >= 0, "the market with a festival plaza has no festival day (%d)", festivalIn);
+			expectRow(context, screen, "festival", festivalIn == 0 ? text(T + "state.festival_today") : text(T + "state.festival_in", festivalIn), problems);
+			check(problems.isEmpty(), "%s", problems);
+			row(context, screen, "warehouse");
+			screenshot(context, result, "22-24_rows");
+		} finally {
+			context.setScreen(() -> null);
+			restore(s, saved, List.of("warehouse", "inn", "bank", "festival"), signs);
+		}
+	}
+
+	private static void expectRow(ClientGameTestContext context, MarketScreen screen, String name, String status, List<String> problems) {
+		List<String> row = row(context, screen, name);
+		if (!row.contains(status)) problems.add("the row of " + name + " does not say \"" + status + "\": " + row);
+	}
+
+	// ---- 22-32 the sign of a completed building
+
+	/** 22-32: right-clicking the sign of a completed building opens the trade screen on its tab. */
+	static void signOpensTab(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		// Within reach of the player (2 south of the stall), no sign in the way of another.
+		List<BlockPos> signs = List.of(stall.east(2), stall.west(2), stall.south(2).east(2), stall.south(2).west(2));
+		record Case(String name, FacilityKind kind, BlockPos core, String tab) {
+		}
+		List<Case> list = List.of(new Case("quest_hall", FacilityKind.QUEST_HALL, signs.get(0), "QUEST"),
+				new Case("bank", FacilityKind.BANK, signs.get(1), "BANK"), new Case("warehouse", FacilityKind.WAREHOUSE, signs.get(2), "TOWN"),
+				new Case("inn", FacilityKind.INN, signs.get(3), "TOWN"));
+		try {
+			s.world.getServer().runOnServer(server -> {
+				for (Case c : list) facility(server, stall, c.name(), c.kind(), State.COMPLETE, c.core());
+			});
+			List<String> problems = new ArrayList<>();
+			for (Case c : list) {
+				context.setScreen(() -> null);
+				context.waitTicks(2);
+				context.getInput().lookAt(c.core());
+				context.waitTicks(2);
+				context.getInput().pressKey(options -> options.keyUse);
+				if (!waitClient(context, m -> m.gui.screen() instanceof MarketScreen, 40)) {
+					problems.add("the sign of the " + c.name() + " opened no trade screen");
+					continue;
+				}
+				context.waitTicks(5);
+				String tab = context.computeOnClient(m -> ((Enum<?>) get(m.gui.screen(), "tab")).name());
+				if (!tab.equals(c.tab())) problems.add("the sign of the " + c.name() + " opened the tab " + tab + ", not " + c.tab());
+				screenshot(context, result, "22-32_sign_" + c.name());
+			}
+			check(problems.isEmpty(), "%s", problems);
+		} finally {
+			context.setScreen(() -> null);
+			restore(s, saved, list.stream().map(Case::name).toList(), signs);
+		}
+	}
+
+	// ---- 22-9 / 26-20 / 24-7 tabs turned off
+
+	private static boolean tabShown(ClientGameTestContext context, String tab) {
+		String key = "screen." + NS + ".tab." + tab;
+		return context.computeOnClient(c -> c.gui.screen().children().stream().anyMatch(ch -> ch instanceof AbstractWidget w && w.visible
+				&& w.getMessage().getContents() instanceof TranslatableContents t && t.getKey().equals(key)));
+	}
+
+	private static MarketScreen reopen(Session s) {
+		s.context.setScreen(() -> null);
+		s.context.waitTicks(2);
+		return ClientChecklistTests.openStall(s);
+	}
+
+	/**
+	 * 22-9: with {@code development.enabled} off the development tab is gone. 26-20: with {@code staff.enabled} off the
+	 * staff tab is gone for a player without employees and stays for one with an employee. 24-7: with no trends to
+	 * choose ({@code trend.popularCount} and {@code unpopularCount} 0) the next period has none and "流行" is not shown.
+	 */
+	static void tabsTurnedOff(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		TradeExpansionConfig old = saveConfig(s);
+		BlockPos stall = s.stall;
+		try {
+			reopen(s);
+			check(tabShown(context, "town") && tabShown(context, "staff"), "the development or staff tab is missing before turning them off");
+			config(s, c -> c.development.enabled = false);
+			reopen(s);
+			check(!tabShown(context, "town"), "the development tab shows with development.enabled off");
+			screenshot(context, result, "22-9_no_town_tab");
+
+			config(s, c -> c.staff.enabled = false);
+			reopen(s);
+			check(!tabShown(context, "staff"), "the staff tab shows with staff.enabled off (no employees)");
+			s.world.getServer().runOnServer(server -> {
+				ServerPlayer player = player(server);
+				Market market = market(server, stall);
+				MarketRegistry registry = MarketRegistry.get(server);
+				long now = MarketClock.now(server.overworld());
+				// Employee.hire is package-private: called by reflection (a test set-up only).
+				Employee e;
+				try {
+					var hire = java.util.Arrays.stream(Employee.class.getDeclaredMethods()).filter(m -> m.getName().equals("hire")).findFirst().orElseThrow();
+					hire.setAccessible(true);
+					e = (Employee) hire.invoke(null, registry.takeEmployeeId(), player.getUUID(), player.getPlainTextName(), Employee.Role.CLERK, market.id(),
+							market.regularGoods().getFirst(), -1L, 0, 1L, 1L, now, (long) PriceModel.TICKS_PER_DAY);
+				} catch (ReflectiveOperationException ex) {
+					throw new AssertionError("cannot hire an employee", ex);
+				}
+				registry.employees().add(e);
+				registry.setDirty();
+			});
+			reopen(s);
+			check(tabShown(context, "staff"), "the staff tab is gone for a player with an employee (staff.enabled off)");
+			screenshot(context, result, "26-20_staff_tab_kept");
+			s.world.getServer().runOnServer(server -> {
+				UUID id = player(server).getUUID();
+				MarketRegistry.get(server).employees().removeIf(e -> e.owner().equals(id));
+			});
+			reopen(s);
+			check(!tabShown(context, "staff"), "the staff tab stays after the last employee left (staff.enabled off)");
+
+			// 24-7: the next period with no trends to choose.
+			config(s, c -> {
+				c.trend.popularCount = 0;
+				c.trend.unpopularCount = 0;
+			});
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				market.setTrendPeriod(market.trendPeriod() - 1); // as if a new period began
+				MarketRegistry.get(server).setDirty();
+			});
+			MarketScreen screen = reopen(s);
+			check(snapshot(context, screen).trends().isEmpty(), "the market has trends with trend.popularCount and unpopularCount 0: %s", snapshot(context, screen).trends());
+			String label = text("screen." + NS + ".trend.label");
+			mouseAway(context);
+			List<String> texts = strings(TextRecorder.capture(context));
+			check(texts.stream().noneMatch(t -> t.contains(label)), "the title row still shows \"%s\": %s", label, texts);
+			screenshot(context, result, "24-7_no_trends");
+		} finally {
+			context.setScreen(() -> null);
+			restoreConfig(s, old);
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				market.setTrendPeriod(market.trendPeriod() - 1); // trends again from the next touch
+				MarketRegistry.get(server).setDirty();
+			});
+		}
+	}
+}
