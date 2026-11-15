@@ -446,7 +446,7 @@
   "config.ak_trade_expansion.consumables.remove.desc": "タグに入っていても消耗品として扱わないアイテムID。追加の一覧やタグより優先する。/aktradeex consumable remove でも指定できる",
   "config.ak_trade_expansion.category.goods": "商品",
   "config.ak_trade_expansion.goods_manager.open": "追加の商品と消耗品",
-  "config.ak_trade_expansion.goods_manager.open.desc": "アイコンからアイテムを選んで、商品として追加したり、消耗品の一覧に追加・除外したりする画面を開く。「完了」で設定ファイルに保存され、すぐに反映される。追加した商品は、どの市場でも「本日の掘り出し物」として並ぶことがある",
+  "config.ak_trade_expansion.goods_manager.open.desc": "アイコンからアイテムを選んで、商品として追加したり、消耗品の一覧に追加・除外したりする画面を開く。「完了」で設定ファイルに保存され、すぐに反映される。追加した商品は、どの市場でも「本日の掘り出し物」として並ぶことがある。ワールドに入っている時だけ開ける（タイトル画面からは開けない）",
   "config.ak_trade_expansion.goods_manager.open.button": "開く…",
   "config.ak_trade_expansion.goods_manager.title": "追加の商品と消耗品",
   "config.ak_trade_expansion.goods_manager.mode.goods": "追加の商品",

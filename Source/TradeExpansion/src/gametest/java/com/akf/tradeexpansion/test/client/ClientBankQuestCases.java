@@ -246,6 +246,126 @@ final class ClientBankQuestCases {
 		}
 	}
 
+	// ---- 7-8 / 7-9 the card on the screen
+
+	/** Gives the player a valid bank card (as "カードを発行" does, without the fee). */
+	static void giveCard(Session s) {
+		s.world.getServer().runOnServer(server -> {
+			ServerPlayer player = player(server);
+			int number = BankService.accounts(player).nextCardNumber(player.getUUID());
+			net.minecraft.world.item.ItemStack card = new net.minecraft.world.item.ItemStack(com.akf.tradeexpansion.registry.ModItems.BANK_CARD);
+			card.set(com.akf.tradeexpansion.registry.ModDataComponents.CARD_OWNER,
+					new com.akf.tradeexpansion.registry.ModDataComponents.CardOwner(player.getUUID(), player.getPlainTextName(), number));
+			player.getInventory().add(card);
+		});
+		s.context.waitTicks(2);
+	}
+
+	/** Takes every bank card from the player (the later cases pay with cash). */
+	static void takeCards(Session s) {
+		s.world.getServer().runOnServer(server -> {
+			var inventory = player(server).getInventory();
+			for (int i = 0; i < inventory.getContainerSize(); i++) {
+				if (inventory.getItem(i).getItem() instanceof com.akf.tradeexpansion.item.BankCardItem) inventory.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+			}
+		});
+		s.context.waitTicks(2);
+	}
+
+	private static boolean carriesCard(ClientGameTestContext context) {
+		return context.computeOnClient(c -> {
+			for (net.minecraft.world.item.ItemStack stack : c.player.getInventory()) {
+				if (stack.getItem() instanceof com.akf.tradeexpansion.item.BankCardItem) return true;
+			}
+			return false;
+		});
+	}
+
+	/**
+	 * 7-8: the bank tab's "カードを発行（N）" takes the fee from the account and gives a card; without a card the trade tabs
+	 * have no payment button. 7-9: with the card the buy tab shows "支払い：カード" and buying takes the bank balance,
+	 * not the cash; selling pays into the account. Pressed, the button says "支払い：現金" and buying takes the cash.
+	 */
+	static void cardButtons(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		takeCards(s);
+		long fee = TradeExpansionConfig.get().bank.cardFee;
+		s.world.getServer().runOnServer(server -> {
+			ServerPlayer player = player(server);
+			BankService.accounts(player).add(player.getUUID(), fee + 20_000);
+			com.akf.tradeexpansion.currency.WalletService.give(player, 20_000);
+		});
+		try {
+			MarketScreen screen = reopen(s);
+			context.clickScreenButton(S + "tab.buy");
+			context.waitTicks(2);
+			check(!field(context, screen, "paymentButton").visible, "the payment button shows without a card");
+
+			context.clickScreenButton(S + "tab.bank");
+			context.waitTicks(3);
+			@SuppressWarnings("unchecked")
+			Button issue = context.computeOnClient(c -> ((List<Button>) get(screen, "bankWidgets")).getLast());
+			check(issue.visible && issue.getMessage().getString().equals(text(S + "bank.issue_card", coins(fee))), "the issue button says \"%s\" (visible %s), not \"%s\"",
+					issue.getMessage().getString(), issue.visible, text(S + "bank.issue_card", coins(fee)));
+			long bank0 = bankBalance(s);
+			long cash0 = serverMoney(s);
+			clickWidget(context, issue);
+			mouseAway(context);
+			long bank1 = newBalance(s, bank0);
+			check(bank0 - bank1 == fee, "issuing the card took %dc from the account (the fee is %dc)", bank0 - bank1, fee);
+			check(serverMoney(s) == cash0, "issuing the card took cash");
+			check(waitClient(context, c -> account(context, screen) != null && account(context, screen).validCard(), 40) && carriesCard(context),
+					"no valid card after \"%s\"", text(S + "bank.issue_card", coins(fee)));
+			screenshot(context, result, "7-8_card_issued");
+
+			// 7-9: pay by card.
+			context.clickScreenButton(S + "tab.buy");
+			context.waitTicks(2);
+			Button pay = field(context, screen, "paymentButton");
+			check(pay.visible && pay.getMessage().getString().equals(text(S + "pay.card")), "the payment button says \"%s\" (visible %s), not \"%s\"",
+					pay.getMessage().getString(), pay.visible, text(S + "pay.card"));
+			MarketSnapshotS2C.GoodView good = visibleGoods(context, screen).stream()
+					.filter(v -> v.buy() && v.sell() && v.unit() == 1 && v.stock() >= 4 && v.patch().isEmpty())
+					.min(java.util.Comparator.comparingDouble(v -> v.params().basePrice()))
+					.orElseThrow(() -> new AssertionError("no good to buy and sell"));
+			screenshot(context, result, "7-9_pay_by_card");
+			long[] moved = trade(s, screen, good.goods(), "confirm.buy");
+			check(moved[0] < 0 && moved[1] == 0, "buying by card moved the bank by %dc and the cash by %dc", moved[0], moved[1]);
+			context.clickScreenButton(S + "tab.sell");
+			context.waitTicks(2);
+			moved = trade(s, screen, good.goods(), "confirm.sell");
+			check(moved[0] > 0 && moved[1] == 0, "selling with the card moved the bank by %dc and the cash by %dc", moved[0], moved[1]);
+
+			// Cash.
+			context.clickScreenButton(S + "tab.buy");
+			context.waitTicks(2);
+			clickWidget(context, pay);
+			mouseAway(context);
+			check(pay.getMessage().getString().equals(text(S + "pay.cash")), "after a click the payment button says \"%s\", not \"%s\"",
+					pay.getMessage().getString(), text(S + "pay.cash"));
+			moved = trade(s, screen, good.goods(), "confirm.buy");
+			check(moved[0] == 0 && moved[1] < 0, "buying with cash moved the bank by %dc and the cash by %dc", moved[0], moved[1]);
+			screenshot(context, result, "7-9_pay_by_cash");
+		} finally {
+			context.setScreen(() -> null);
+			takeCards(s);
+		}
+	}
+
+	/** One of the good with the confirm button of the current tab; returns how much the bank balance and the cash moved. */
+	private static long[] trade(Session s, MarketScreen screen, Identifier good, String confirm) {
+		ClientGameTestContext context = s.context;
+		select(context, screen, good);
+		mouseAway(context);
+		long bank = bankBalance(s);
+		long cash = serverMoney(s);
+		context.clickScreenButton(S + confirm);
+		for (int i = 0; i < 40 && bankBalance(s) == bank && serverMoney(s) == cash; i++) context.waitTick();
+		context.waitTicks(3);
+		return new long[] {bankBalance(s) - bank, serverMoney(s) - cash};
+	}
+
 	// ---- 9-2 / 16-5 the requests
 
 	/** A plain request for {@code good} put first in the market's list (reward 500c, 3 days, the given stars). */
@@ -493,7 +613,7 @@ final class ClientBankQuestCases {
 	}
 
 	/** A transport request to the nearest other market put first in the list; {@code carrier}: someone has taken it. */
-	private static int addTransport(Session s, UUID carrier) {
+	static int addTransport(Session s, UUID carrier) {
 		BlockPos stall = s.stall;
 		return s.world.getServer().computeOnServer(server -> {
 			Market market = market(server, stall);

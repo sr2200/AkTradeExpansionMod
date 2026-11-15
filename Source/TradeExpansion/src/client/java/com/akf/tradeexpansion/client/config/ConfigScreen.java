@@ -101,7 +101,8 @@ public final class ConfigScreen {
 						.text(Component.translatable(KEY + "goods_manager.open.button"))
 						.description(description("goods_manager.open"))
 						.action((screen, option) -> Minecraft.getInstance().gui.setScreen(new GoodsManagerScreen(screen, edit, this::saveGoodsLists)))
-						.available(!serverLocked)
+						// The icons need the items' data, loaded only with a world: not on the title screen.
+						.available(!serverLocked && Minecraft.getInstance().level != null)
 						.build());
 
 		ConfigCategory.Builder distance = category("distance")

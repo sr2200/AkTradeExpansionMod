@@ -7,8 +7,9 @@ import java.util.List;
 
 /**
  * Finds layout problems in the texts of one frame: two texts of the same layer that overlap (by at least 2 x 2 GUI
- * pixels), and texts that leave the screen or the screen's panel. Tooltips are another layer and are not compared
- * with the screen below (the tests move the mouse away anyway).
+ * pixels), texts that leave the screen or the screen's panel, and untranslated texts (a translation key of this mod or
+ * a format placeholder such as %s drawn as it is). Tooltips are another layer and are not compared with the screen
+ * below (the tests move the mouse away anyway).
  */
 public final class LayoutCheck {
 	private LayoutCheck() {
@@ -20,10 +21,22 @@ public final class LayoutCheck {
 
 	private static final int MIN_OVERLAP = 2;
 
+	/** A translation key of this mod (missing in both language files) or a placeholder left in a translated text. */
+	private static final java.util.regex.Pattern UNTRANSLATED = java.util.regex.Pattern.compile(
+			"(?:^|[^A-Za-z0-9_:])[a-z]+\\.ak_trade_expansion\\.[a-z0-9_.]+|%(?:\\d+\\$)?[sd]");
+
+	/** The untranslated part of a text, or {@code null}. */
+	public static String untranslated(String text) {
+		java.util.regex.Matcher m = UNTRANSLATED.matcher(text);
+		return m.find() ? m.group().trim() : null;
+	}
+
 	public static List<String> check(String where, List<Text> texts, int guiWidth, int guiHeight, Panel panel) {
 		List<String> problems = new ArrayList<>();
 		int base = TextRecorder.baseStratum(texts);
 		for (Text t : texts) {
+			String raw = untranslated(t.text());
+			if (raw != null) problems.add(where + ": " + t + " is not translated (" + raw + ")");
 			if (t.x0() < 0 || t.y0() < 0 || t.x1() > guiWidth || t.y1() > guiHeight) {
 				problems.add(where + ": " + t + " leaves the screen (" + guiWidth + "x" + guiHeight + ")");
 			} else if (panel != null && t.stratum() == base

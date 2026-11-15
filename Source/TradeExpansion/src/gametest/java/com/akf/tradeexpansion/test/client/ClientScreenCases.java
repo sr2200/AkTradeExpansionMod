@@ -1,6 +1,9 @@
 package com.akf.tradeexpansion.test.client;
 
 import com.akf.tradeexpansion.client.MarketScreen;
+import com.akf.tradeexpansion.currency.WalletService;
+import com.akf.tradeexpansion.item.CoinItem;
+import com.akf.tradeexpansion.villager.VillagerCoins;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.network.BoardS2C;
@@ -17,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.advancements.AdvancementTab;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
+import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.client.multiplayer.chat.GuiMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.locale.Language;
@@ -26,7 +30,12 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.trading.ItemCost;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.item.trading.MerchantOffers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +46,8 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
 
 /**
  * Client cases of the lists' scrollbars, the market coordinates in the chat, the advancements screen, the names of the
- * goods and the staff tab's hiring rules (checklist chapters 19, 20, 26, 27 and 30).
+ * goods, the staff tab's hiring rules and the coin prices on a villager's trade screen (checklist chapters 12, 19, 20,
+ * 26, 27 and 30).
  */
 final class ClientScreenCases {
 	private ClientScreenCases() {
@@ -53,6 +63,115 @@ final class ClientScreenCases {
 		s.context.setScreen(() -> null);
 		s.context.waitTicks(2);
 		return ClientChecklistTests.openStall(s);
+	}
+
+	// ---- 12-1 / 12-4 the villager's trade screen
+
+	/** A farmer that does not move, with coin trades (rows 1, 3 and 4) and one trade that pays emeralds (row 2). */
+	private static UUID farmer(Session s, BlockPos pos) {
+		return s.world.getServer().computeOnServer(server -> {
+			var level = server.overworld();
+			var v = net.minecraft.world.entity.EntityTypes.VILLAGER.spawn(level, pos, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			v.setNoAi(true);
+			v.setVillagerData(v.getVillagerData().withProfession(level.registryAccess(), VillagerProfession.FARMER).withLevel(2));
+			MerchantOffers offers = new MerchantOffers();
+			offers.add(new MerchantOffer(new ItemCost(Items.EMERALD, 1), new ItemStack(Items.BREAD, 6), 16, 1, 0.05f));
+			offers.add(new MerchantOffer(new ItemCost(Items.WHEAT, 20), new ItemStack(Items.EMERALD), 16, 2, 0.05f));
+			offers.add(new MerchantOffer(new ItemCost(Items.EMERALD, 5), java.util.Optional.of(new ItemCost(Items.BOOK)), new ItemStack(Items.BELL), 12, 1, 0.05f));
+			offers.add(new MerchantOffer(new ItemCost(Items.EMERALD, 10), new ItemStack(Items.BELL), 12, 1, 0.05f));
+			v.setOffers(offers);
+			return v.getUUID();
+		});
+	}
+
+	/**
+	 * 12-1: on a villager's trade screen each coin trade shows its coin price in gold over the emerald, inside the
+	 * trade's row (its left part, where the cost is); the trade that pays emeralds shows none. 12-4: with a coin trade
+	 * chosen, the line "代金 N（所持 M）" under the payment slots is red when the cash is short, dark gray when enough.
+	 */
+	static void villagerPrices(Session s, CaseResult.Builder result, CaseResult.Builder also) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		context.setScreen(() -> null);
+		BlockPos feet = s.world.getServer().computeOnServer(server -> player(server).blockPosition());
+		BlockPos at = feet.east(2);
+		UUID id = farmer(s, at);
+		// No cash at first (12-4); given back at the end.
+		long cash = s.world.getServer().computeOnServer(server -> {
+			ServerPlayer player = player(server);
+			long all = WalletService.balance(player);
+			WalletService.pay(player, all);
+			return all;
+		});
+		try {
+			context.waitTicks(5);
+			context.getInput().lookAt(at);
+			context.waitTicks(2);
+			context.getInput().pressKey(options -> options.keyUse);
+			context.waitForScreen(MerchantScreen.class);
+			context.waitTicks(10);
+			mouseAway(context);
+			MerchantScreen screen = (MerchantScreen) context.computeOnClient(c -> c.gui.screen());
+			int left = context.computeOnClient(c -> leftPos(screen));
+			int top = context.computeOnClient(c -> topPos(screen));
+			long[] prices = context.computeOnClient(c -> new long[] {VillagerCoins.price(c.player, 0), VillagerCoins.price(c.player, 1),
+					VillagerCoins.price(c.player, 2), VillagerCoins.price(c.player, 3)});
+			check(prices[0] > 0 && prices[1] < 0 && prices[2] > 0 && prices[3] > 0, "the coin prices of the 4 trades are %s", java.util.Arrays.toString(prices));
+			List<TextRecorder.Text> texts = TextRecorder.capture(context);
+			for (int row = 0; row < 4; row++) {
+				// The trade buttons of the vanilla screen: x 5..93, 20 pixels a row from y 16; the cost is on their left part.
+				int y0 = top + 16 + row * 20;
+				int number = row + 1;
+				List<TextRecorder.Text> inRow = texts.stream().filter(t -> t.x1() > left + 5 && t.x0() < left + 93 && t.y0() >= y0 && t.y0() < y0 + 20).toList();
+				if (prices[row] < 0) {
+					check(inRow.stream().noneMatch(t -> t.text().matches("[\\d,.]+[kM]?c")), "the emerald trade (row %d) shows a coin price: %s", number, inRow);
+					continue;
+				}
+				String price = CoinItem.formatCopper(prices[row]);
+				TextRecorder.Text t = inRow.stream().filter(x -> x.text().equals(price)).findFirst()
+						.orElseThrow(() -> new AssertionError("row " + number + " does not show " + price + ": " + inRow));
+				// The text's bounds include the line below the letters (1 pixel into the next row).
+				check(t.x0() >= left + 5 && t.x1() <= left + 45 && t.y0() >= y0 && t.y1() <= y0 + 21,
+						"the price %s of row %d is at %s (the cost of the row is %d,%d-%d,%d)", price, number, t, left + 5, y0, left + 45, y0 + 20);
+				check((t.color() & 0xFFFFFF) == 0xFFD700, "the price %s is not gold (%08x)", price, t.color());
+			}
+			screenshot(context, result, "12-1_villager_coin_prices");
+
+			try {
+				// Choose the bread (row 1) with no cash: the line is red.
+				clickAt(context, left + 5 + 44, top + 16 + 10);
+				mouseAway(context);
+				String key = "screen." + NS + ".villager_price";
+				String prefix = Language.getInstance().getOrDefault(key).split("%s", -1)[0];
+				TextRecorder.Text line = priceLine(context, prefix);
+				String expected = text(key, CoinItem.formatCopper(prices[0]), CoinItem.formatCopper(0));
+				check(line.text().equals(expected), "the line says \"%s\", not \"%s\"", line.text(), expected);
+				check(line.color() == 0xFFA02020, "with no cash the line \"%s\" is %08x, not red", line.text(), line.color());
+				screenshot(context, also, "12-4_villager_price_short");
+				s.world.getServer().runOnServer(server -> WalletService.give(player(server), prices[0] * 2));
+				context.waitTicks(5);
+				line = priceLine(context, prefix);
+				check(line.color() == 0xFF404040, "with enough cash the line \"%s\" is %08x, not dark gray", line.text(), line.color());
+			} catch (Throwable e) {
+				throw new ClientChecklistTests.AlsoFailed(e);
+			}
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				var v = server.overworld().getEntity(id);
+				if (v != null) v.discard();
+				ServerPlayer player = player(server);
+				WalletService.pay(player, WalletService.balance(player));
+				WalletService.give(player, cash);
+			});
+			context.waitTicks(2);
+		}
+	}
+
+	private static TextRecorder.Text priceLine(ClientGameTestContext context, String prefix) {
+		List<TextRecorder.Text> texts = TextRecorder.capture(context);
+		return texts.stream().filter(t -> t.text().startsWith(prefix)).findFirst()
+				.orElseThrow(() -> new AssertionError("no \"" + prefix + "…\" line under the payment slots: " + strings(texts)));
 	}
 
 	// ---- 19-4 the scrollbars

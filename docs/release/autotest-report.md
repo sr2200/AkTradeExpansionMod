@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.24、2026-11-15 19:49、73 件中 0 件失敗
+- クライアント：バージョン 0.2.24、2026-11-15 20:23、77 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 134・一部を確認 124・失敗 0
+- チェックリスト 326 項目のうち、今回 自動で完了 135・一部を確認 124・失敗 0
 
 ## すべての項目
 
@@ -184,7 +184,7 @@
 | 14-4 | `log_has_no_mod_errors` | サーバー | ✔ | テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ |
 | 1-2 | `startup_with_modmenu_yacl` | クライアント | ✔ | Mod Menu・YACL ありで起動してタイトル画面が出ることのみ（Mod 一覧のアイコンは見ていない） |
 | 1-3 | `config_screen_tabs` | クライアント | ✔ | 設定画面が開き、各タブに切り替えられることのみ（表示は画像で確認） |
-| 1-3 | `layout_config_screen` | クライアント | ✔ | 設定画面の各タブの文字が重ならず、画面からはみ出さないこと（日本語、854×480） |
+| 1-3 | `layout_config_screen` | クライアント | ✔ | タイトル画面から開いた設定画面の各タブの文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（日本語と英語、854×480 と 1920×1080）。タイトル画面では「追加の商品と消耗品」が押せないこと |
 | 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
 | 2-2 | `placement_hint` | クライアント | ✔ | 全部 |
 | 3-10 | `buy_with_screen_buttons` | クライアント | ✔ | 全部 |
@@ -217,10 +217,14 @@
 | 27-1 | `advancements_screen` | クライアント | ✔ | 全部 |
 | 27-11 | `advancements_screen` | クライアント | ✔ | 全部 |
 | 13-10 | `clock_advance_updates_open_screen` | クライアント | ✔ | 開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない） |
-| 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼を選んだ状態・「まとめて売る」の枠も）の文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
-| 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブの文字が重ならず、はみ出さないこと |
+| 12-1 | `villager_coin_prices` | クライアント | ✔ | 全部 |
+| 12-4 | `villager_coin_prices` | クライアント | ✔ | 支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている） |
+| 7-8・7-9 | `bank_card_buttons` | クライアント | ✔ | 全部 |
+| 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
+| 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブ（日本語と同じ状態）の文字が重ならず、はみ出さず、翻訳キーがそのまま出ないこと |
 | 13-1 | `config_save_applies` | クライアント | ✔ | 全部 |
 | 33-3 | `special_settings` | クライアント | ✔ | 設定画面の「市場」タブに2つの設定があり、変えて保存するとすぐ設定とファイルに入ること（次の日の掘り出し物は見ていない） |
+| 1-3 | `layout_goods_manager` | クライアント | ✔ | 「追加の商品と消耗品」画面（3つのモード）の文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（ワールドの中で開く。日本語と英語、854×480 と 1920×1080） |
 | 13-6・13-8・13-9 | `goods_manager` | クライアント | ✔ | 全部 |
 | 5-4 | `bank_tab_by_level` | クライアント | ✔ | 全部 |
 | 22-30 | `bank_tab_by_level` | クライアント | ✔ | 銀行の建物があればレベル1でも銀行タブが出て、そこで預けると利息の行が「200,000c まで・〇〇の銀行に登録」になること（カード払いの手数料は見ていない） |
@@ -327,6 +331,11 @@
 - 27-1 `advancements_screen`：[27-1_advancements_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/27-1_advancements_tab.png)
 - 27-11 `advancements_screen`：[27-11_advancements_en.png](../../Source/TradeExpansion/build/autotest/screenshots/27-11_advancements_en.png)
 - 13-10 `clock_advance_updates_open_screen`：[13-10_quest_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_quest_after_clock_advance.png)
+- 12-1 `villager_coin_prices`：[12-1_villager_coin_prices.png](../../Source/TradeExpansion/build/autotest/screenshots/12-1_villager_coin_prices.png)
+- 12-4 `villager_coin_prices`：[12-4_villager_price_short.png](../../Source/TradeExpansion/build/autotest/screenshots/12-4_villager_price_short.png)
+- 7-8・7-9 `bank_card_buttons`：[7-8_card_issued.png](../../Source/TradeExpansion/build/autotest/screenshots/7-8_card_issued.png)
+- 7-8・7-9 `bank_card_buttons`：[7-9_pay_by_card.png](../../Source/TradeExpansion/build/autotest/screenshots/7-9_pay_by_card.png)
+- 7-8・7-9 `bank_card_buttons`：[7-9_pay_by_cash.png](../../Source/TradeExpansion/build/autotest/screenshots/7-9_pay_by_cash.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png)
@@ -335,8 +344,10 @@
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_board_market_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_board_market_.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_quest.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_quest.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_quest_request_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_quest_request_.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_quest_transport_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_quest_transport_.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_exchange.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_exchange.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_town.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_town.png)
+- 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_town_building_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_town_building_.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_staff.png)
 - 13-1 `config_save_applies`：[13-1_max_per_transaction_48.png](../../Source/TradeExpansion/build/autotest/screenshots/13-1_max_per_transaction_48.png)
 - 33-3 `special_settings`：[33-3_market_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/33-3_market_tab.png)

@@ -95,7 +95,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				false, ClientChecklistTests::startup));
 		cases.add(new ClientCase("config_screen_tabs", List.of("1-3"), "設定画面が開き、各タブに切り替えられることのみ（表示は画像で確認）",
 				false, ClientChecklistTests::configScreen));
-		cases.add(new ClientCase("layout_config_screen", List.of("1-3"), "設定画面の各タブの文字が重ならず、画面からはみ出さないこと（日本語、854×480）",
+		cases.add(new ClientCase("layout_config_screen", List.of("1-3"), "タイトル画面から開いた設定画面の各タブの文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（日本語と英語、854×480 と 1920×1080）。タイトル画面では「追加の商品と消耗品」が押せないこと",
 				false, ClientConfigCases::layout));
 		cases.add(new ClientCase("stall_place_and_open", List.of("2-8"), null, true, ClientChecklistTests::stallScreen));
 		cases.add(new ClientCase("placement_hint", List.of("2-2"), null, true, ClientTradeCases::placementHint));
@@ -131,14 +131,19 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("27-11"), null));
 		cases.add(new ClientCase("clock_advance_updates_open_screen", List.of("13-10"),
 				"開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない）", true, ClientChecklistTests::clockAdvance));
+		cases.add(new ClientCase("villager_coin_prices", List.of("12-1"), null, true, ClientScreenCases::villagerPrices,
+				List.of("12-4"), "支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている）"));
+		cases.add(new ClientCase("bank_card_buttons", List.of("7-8", "7-9"), null, true, ClientBankQuestCases::cardButtons));
 		cases.add(new ClientCase("layout_market_screen_ja", List.of("3-6", "19-1", "19-2", "19-3", "22-1", "26-1"),
-				"交易画面の各タブ（掲示板で市場を選んだ状態・依頼を選んだ状態・「まとめて売る」の枠も）の文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない",
+				"交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない",
 				true, (s, r) -> layout(s, r, LANGUAGE)));
-		cases.add(new ClientCase("layout_market_screen_en", List.of("26-1"), "英語でも交易画面の各タブの文字が重ならず、はみ出さないこと",
+		cases.add(new ClientCase("layout_market_screen_en", List.of("26-1"), "英語でも交易画面の各タブ（日本語と同じ状態）の文字が重ならず、はみ出さず、翻訳キーがそのまま出ないこと",
 				true, (s, r) -> layout(s, r, "en_us")));
 		cases.add(new ClientCase("config_save_applies", List.of("13-1"), null, true, ClientConfigCases::saveApplies));
 		cases.add(new ClientCase("special_settings", List.of("33-3"), "設定画面の「市場」タブに2つの設定があり、変えて保存するとすぐ設定とファイルに入ること（次の日の掘り出し物は見ていない）",
 				true, ClientConfigCases::specialSettings));
+		cases.add(new ClientCase("layout_goods_manager", List.of("1-3"), "「追加の商品と消耗品」画面（3つのモード）の文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（ワールドの中で開く。日本語と英語、854×480 と 1920×1080）",
+				true, ClientConfigCases::goodsManagerLayout));
 		cases.add(new ClientCase("goods_manager", List.of("13-6", "13-8", "13-9"), null, true, ClientConfigCases::goodsManager));
 		cases.add(new ClientCase("bank_tab_by_level", List.of("5-4"), null, true, ClientBankQuestCases::bankTabByLevel,
 				List.of("22-30"), "銀行の建物があればレベル1でも銀行タブが出て、そこで預けると利息の行が「200,000c まで・〇〇の銀行に登録」になること（カード払いの手数料は見ていない）"));
@@ -495,7 +500,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 	/**
 	 * Every tab of the trade screen, at every size: no texts on top of each other, none outside the screen or panel.
 	 * The board is checked again with a market selected (the second market of {@link ClientTradeCases#placementHint}),
-	 * the requests with one selected, and the sell tab with the "sell all" box open.
+	 * the requests with a request and a transport request selected, the development tab with a building selected, and
+	 * the sell tab with the "sell all" box open. The player carries a bank card: the payment button shows on the tabs.
 	 */
 	private static void layout(Session s, CaseResult.Builder result, String language) {
 		ClientGameTestContext context = s.context;
@@ -506,11 +512,13 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		List<MarketSnapshotS2C.GoodView> sellable = snapshot.goods().stream().filter(v -> v.sell() && v.unit() == 1 && v.patch().isEmpty()).limit(4).toList();
 		context.setScreen(() -> null);
 		s.world.getServer().runOnServer(server -> sellable.forEach(v -> giveItems(player(server), itemOf(v), 8)));
+		ClientBankQuestCases.giveCard(s);
+		int transport = ClientBankQuestCases.addTransport(s, null);
 		context.waitTicks(3);
 		setLanguage(context, language);
 		openStall(s);
 		List<String> problems = new ArrayList<>();
-		boolean[] seen = new boolean[3]; // board market, request, sell all
+		boolean[] seen = new boolean[5]; // board market, request, sell all, transport, building
 		try {
 			for (int[] size : SIZES) {
 				context.getInput().resizeWindow(size[0], size[1]);
@@ -541,11 +549,26 @@ public class ClientChecklistTests implements FabricClientGameTest {
 						}
 						case "quest" -> {
 							MarketSnapshotS2C now = snapshot(context, screen);
-							if (!now.requests().isEmpty()) {
-								setOnScreen(context, screen, "selectedRequest", now.requests().getFirst().request().id());
+							var plain = now.requests().stream().filter(r -> r.transport().isEmpty()).findFirst();
+							if (plain.isPresent()) {
+								setOnScreen(context, screen, "selectedRequest", plain.get().request().id());
 								checkLayout(context, result, where + "(request)", everyTab, problems, null);
-								setOnScreen(context, screen, "selectedRequest", -1);
 								seen[1] = true;
+							}
+							if (now.requests().stream().anyMatch(r -> r.request().id() == transport)) {
+								setOnScreen(context, screen, "selectedRequest", transport);
+								checkLayout(context, result, where + "(transport)", everyTab, problems, null);
+								seen[3] = true;
+							}
+							setOnScreen(context, screen, "selectedRequest", -1);
+						}
+						case "town" -> {
+							MarketSnapshotS2C now = snapshot(context, screen);
+							if (!now.development().facilities().isEmpty()) {
+								setOnScreen(context, screen, "selectedFacility", now.development().facilities().getLast().id());
+								checkLayout(context, result, where + "(building)", everyTab, problems, null);
+								setOnScreen(context, screen, "selectedFacility", null);
+								seen[4] = true;
 							}
 						}
 						case "sell" -> {
@@ -574,12 +597,21 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				client.resizeGui();
 			});
 			setLanguage(context, LANGUAGE);
+			context.setScreen(() -> null);
+			ClientBankQuestCases.takeCards(s);
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, s.stall);
+				market.requests().removeIf(r -> r.id() == transport);
+				MarketRegistry.get(server).setDirty();
+			});
 		}
 		problems.forEach(p -> AutotestReport.LOGGER.info("LAYOUT {}", p));
 		check(problems.isEmpty(), "%d layout problems, e.g. %s", problems.size(), String.join(" | ", problems.subList(0, Math.min(8, problems.size()))));
 		check(seen[0], "the board listed no other market to select (the case placement_hint founds one)");
 		check(seen[1], "the market has no request to select");
 		check(seen[2], "the sell tab was not checked with the \"sell all\" box");
+		check(seen[3], "the transport request was not listed");
+		check(seen[4], "the development tab listed no building");
 	}
 
 	private static void setOnScreen(ClientGameTestContext context, MarketScreen screen, String field, Object value) {

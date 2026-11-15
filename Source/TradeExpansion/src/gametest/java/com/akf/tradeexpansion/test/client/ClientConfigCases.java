@@ -56,30 +56,106 @@ final class ClientConfigCases {
 
 	// ---- 1-3 the layout of every tab
 
-	/** 1-3: the texts of every tab of the settings screen do not overlap or leave the screen (Japanese, 854×480). */
+	/** Window sizes and GUI scales (0 = auto) the settings screens are checked at. */
+	private static final int[][] SIZES = {{854, 480, 0}, {1920, 1080, 0}, {1920, 1080, 2}};
+
+	/**
+	 * 1-3: the texts of every tab of the settings screen (opened from the title screen) do not overlap, leave the
+	 * screen or show a translation key (Japanese and English, at {@link #SIZES}). The goods manager button is grayed
+	 * out there: the screen needs the items' data, loaded only with a world (it crashed the game).
+	 */
 	static void layout(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
+		YACLScreen title = openConfig(context);
+		check(!((ButtonOption) option(title, GOODS_KEY + "open")).available(), "the goods manager button can be pressed on the title screen");
+		eachLanguageAndSize(context, (at, problems) -> configTabs(context, result, at, problems));
+	}
+
+	/** 1-3 (partly): the goods manager screen in its three modes, in a world, as {@link #layout}. */
+	static void goodsManagerLayout(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		eachLanguageAndSize(context, (at, problems) -> goodsManagerModes(context, result, at, problems));
+	}
+
+	private static void eachLanguageAndSize(ClientGameTestContext context, java.util.function.BiConsumer<String, List<String>> check) {
+		List<String> problems = new ArrayList<>();
+		try {
+			for (String language : List.of(ClientChecklistTests.LANGUAGE, "en_us")) {
+				ClientChecklistTests.setLanguage(context, language);
+				for (int[] size : SIZES) {
+					resize(context, size);
+					check.accept(String.format("%s %dx%d GUI %s", language, size[0], size[1], size[2] == 0 ? "auto" : size[2]), problems);
+				}
+			}
+		} finally {
+			resize(context, SIZES[0]);
+			ClientChecklistTests.setLanguage(context, ClientChecklistTests.LANGUAGE);
+		}
+		problems.forEach(p -> AutotestReport.LOGGER.info("LAYOUT {}", p));
+		check(problems.isEmpty(), "%d layout problems, e.g. %s", problems.size(), String.join(" | ", problems.subList(0, Math.min(8, problems.size()))));
+	}
+
+	private static void resize(ClientGameTestContext context, int[] size) {
+		context.getInput().resizeWindow(size[0], size[1]);
+		context.runOnClient(client -> {
+			client.options.guiScale().set(size[2]);
+			client.resizeGui();
+		});
+		context.waitTicks(3);
+	}
+
+	private static void configTabs(ClientGameTestContext context, CaseResult.Builder result, String at, List<String> problems) {
 		context.setScreen(() -> ConfigScreen.create(new TitleScreen()));
 		context.waitTicks(5);
-		List<String> problems = new ArrayList<>();
 		int tabs = context.computeOnClient(client -> tabBar(client.gui.screen()).getTabs().size());
 		for (int i = 0; i < tabs; i++) {
 			int index = i;
 			context.runOnClient(client -> tabBar(client.gui.screen()).selectTab(index, false));
-			mouseAway(context);
-			context.runOnClient(client -> client.gui.toastManager().clear());
-			context.waitTicks(3);
 			String title = context.computeOnClient(client -> tabBar(client.gui.screen()).getTabs().get(index).getTabTitle().getString());
 			// YACL's tab bar scrolls sideways: its tabs beyond the screen and its arrows are YACL's own layout, not checked.
 			int tabsBottom = context.computeOnClient(client -> ((YACLScreen) client.gui.screen()).tabArea.top());
-			List<TextRecorder.Text> texts = TextRecorder.capture(context).stream().filter(t -> t.y0() >= tabsBottom).toList();
-			List<String> found = context.computeOnClient(client -> LayoutCheck.check("config " + title, texts,
-					client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), null));
-			if (!found.isEmpty()) screenshot(context, result, String.format("layout_config_%02d", i + 1));
-			problems.addAll(found);
+			checkScreen(context, result, String.format("config %s %02d %s", at, i + 1, title), t -> t.y0() >= tabsBottom, null, problems);
 		}
-		problems.forEach(p -> AutotestReport.LOGGER.info("LAYOUT {}", p));
-		check(problems.isEmpty(), "%d layout problems, e.g. %s", problems.size(), String.join(" | ", problems.subList(0, Math.min(8, problems.size()))));
+	}
+
+	/** The goods manager screen (opened on its own with a copy of the settings: nothing is saved) in its three modes. */
+	private static void goodsManagerModes(ClientGameTestContext context, CaseResult.Builder result, String at, List<String> problems) {
+		TradeExpansionConfig copy = ConfigManager.copy(TradeExpansionConfig.get());
+		// The HUD under the screen (the hotbar's item counts) is not part of the screen's layout: its texts, recorded with
+		// no screen open, are left out.
+		context.setScreen(() -> null);
+		mouseAway(context);
+		List<TextRecorder.Text> hud = TextRecorder.capture(context);
+		java.util.function.Predicate<TextRecorder.Text> ownText = t -> hud.stream().noneMatch(h -> h.text().equals(t.text())
+				&& h.x0() == t.x0() && h.y0() == t.y0());
+		context.setScreen(() -> new GoodsManagerScreen(null, copy, () -> {
+		}));
+		context.waitTicks(3);
+		for (String mode : List.of("goods", "consumable_add", "consumable_remove")) {
+			// The screen opens in the first mode, whose button is grayed out.
+			if (!mode.equals("goods")) context.clickScreenButton(GOODS_KEY + "mode." + mode);
+			context.waitTicks(2);
+			LayoutCheck.Panel panel = context.computeOnClient(client -> {
+				Screen screen = client.gui.screen();
+				int left = (Integer) call(screen, "left");
+				int top = (Integer) call(screen, "top");
+				return new LayoutCheck.Panel(left, top, left + constant(GoodsManagerScreen.class, "PANEL_W"), top + constant(GoodsManagerScreen.class, "PANEL_H"));
+			});
+			checkScreen(context, result, "goods manager " + at + " " + mode, ownText, panel, problems);
+		}
+		context.setScreen(() -> null);
+	}
+
+	private static void checkScreen(ClientGameTestContext context, CaseResult.Builder result, String where,
+			java.util.function.Predicate<TextRecorder.Text> checked, LayoutCheck.Panel panel, List<String> problems) {
+		mouseAway(context);
+		context.runOnClient(client -> client.gui.toastManager().clear());
+		context.waitTicks(3);
+		List<TextRecorder.Text> texts = TextRecorder.capture(context).stream().filter(checked).toList();
+		List<String> found = context.computeOnClient(client -> LayoutCheck.check(where, texts,
+				client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), panel));
+		if (!found.isEmpty()) screenshot(context, result, "layout_" + where);
+		problems.addAll(found);
 	}
 
 	static TabNavigationBar tabBar(Screen screen) {
@@ -157,7 +233,7 @@ final class ClientConfigCases {
 			});
 			check(index >= 0, "no tab \"%s\" on the config screen", market);
 			context.runOnClient(client -> tabBar(client.gui.screen()).selectTab(index, false));
-			context.waitTicks(3);
+		context.waitTicks(3);
 			mouseAway(context);
 			screenshot(context, result, "33-3_market_tab");
 			context.runOnClient(client -> {
@@ -219,7 +295,7 @@ final class ClientConfigCases {
 			check(open.available(), "the goods manager button is grayed out in singleplayer");
 			context.runOnClient(client -> open.action().accept(yacl, open));
 			context.waitForScreen(GoodsManagerScreen.class);
-			context.waitTicks(3);
+		context.waitTicks(3);
 			GoodsManagerScreen screen = (GoodsManagerScreen) context.computeOnClient(client -> client.gui.screen());
 
 			// 13-6: search, pick the icon, type the price, "追加".

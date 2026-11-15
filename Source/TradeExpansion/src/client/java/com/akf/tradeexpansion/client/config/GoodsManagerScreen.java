@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.config.GoodsOverride;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.client.FittedButton;
 import com.akf.tradeexpansion.item.CoinItem;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -81,6 +82,22 @@ public final class GoodsManagerScreen extends Screen {
 		filtered = allItems;
 	}
 
+	/** Draws one line of text, made smaller (down to 60%, then cut with "…") when it is wider than {@code maxWidth}. */
+	private void fitText(GuiGraphicsExtractor g, String text, int x, int y, int maxWidth, int color) {
+		int width = font.width(text);
+		if (width <= maxWidth) {
+			g.text(font, text, x, y, color);
+			return;
+		}
+		float scale = Math.max(0.6f, maxWidth / (float) width);
+		String shown = width * scale > maxWidth ? font.plainSubstrByWidth(text, (int) (maxWidth / scale) - font.width("…")) + "…" : text;
+		g.pose().pushMatrix();
+		g.pose().translate(x, y + font.lineHeight * (1 - scale) / 2);
+		g.pose().scale(scale, scale);
+		g.text(font, shown, 0, 0, color);
+		g.pose().popMatrix();
+	}
+
 	private int left() {
 		return width / 2 - PANEL_W / 2;
 	}
@@ -97,8 +114,9 @@ public final class GoodsManagerScreen extends Screen {
 		Mode[] modes = Mode.values();
 		for (int i = 0; i < modes.length; i++) {
 			Mode m = modes[i];
-			modeButtons.add(addRenderableWidget(Button.builder(Component.translatable(KEY + "mode." + m.name().toLowerCase(Locale.ROOT)), b -> setMode(m))
-					.bounds(left + i * 114, top, 112, 18).build()));
+			// Shrinks a label wider than the button instead of scrolling it.
+			modeButtons.add(addRenderableWidget(FittedButton.create(Component.translatable(KEY + "mode." + m.name().toLowerCase(Locale.ROOT)), b -> setMode(m),
+					left + i * 114, top, 112, 18)));
 		}
 		String query = search == null ? "" : search.getValue();
 		search = addRenderableWidget(new EditBox(font, left, top + 24, GRID_COLS * CELL, 16, Component.translatable(KEY + "search")));
@@ -317,7 +335,7 @@ public final class GoodsManagerScreen extends Screen {
 
 		// Picked item and add / remove
 		int px = left + 176;
-		g.text(font, Component.translatable(KEY + "help." + mode.name().toLowerCase(Locale.ROOT)), px, top + 24, COLOR_GRAY);
+		fitText(g, Component.translatable(KEY + "help." + mode.name().toLowerCase(Locale.ROOT)).getString(), px, top + 24, left + PANEL_W - px - 6, COLOR_GRAY);
 		if (picked != null) {
 			g.item(new ItemStack(picked), px, top + 36);
 			g.text(font, font.plainSubstrByWidth(new ItemStack(picked).getHoverName().getString(), 140), px + 20, top + 36, COLOR_TEXT);
