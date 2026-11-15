@@ -74,7 +74,7 @@ public final class SiteFinder {
 		// 2. The nearest free place around the center, the front facing the center first.
 		TradeExpansionConfig.Development c = TradeExpansionConfig.get().development;
 		BlockPos center = market.center();
-		for (int[] offset : DevelopmentMath.siteOffsets(c.siteRadius, STEP, c.siteSearchLimit)) {
+		for (int[] offset : DevelopmentMath.siteOffsets(Development.siteRadius(market), STEP, c.siteSearchLimit)) {
 			int x = center.getX() + offset[0];
 			int z = center.getZ() + offset[1];
 			for (Direction facing : facingsToward(offset[0], offset[1])) {

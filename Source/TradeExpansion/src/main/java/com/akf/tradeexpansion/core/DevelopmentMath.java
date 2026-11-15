@@ -38,6 +38,18 @@ public final class DevelopmentMath {
 		return Math.max(0, Math.min(offered, required - donated));
 	}
 
+	/** v0.67: the site radius never grows past this (the radius that joins stalls into one market). */
+	public static final int MAX_SITE_RADIUS = 64;
+
+	/**
+	 * v0.67 N-5: site radius of a market of {@code level} (1..5): {@code base} at level 1, {@code perLevel} more per level
+	 * above it, at most {@link #MAX_SITE_RADIUS} (but never below {@code base}).
+	 */
+	public static int siteRadius(int base, int perLevel, int level) {
+		long r = base + (long) Math.max(0, perLevel) * Math.max(0, level - 1);
+		return (int) Math.max(base, Math.min(MAX_SITE_RADIUS, r));
+	}
+
 	/**
 	 * N-5: offsets {dx, dz} from the market center tried by the automatic site search: every {@code step} blocks within
 	 * {@code radius} (horizontal), nearest first (ties: by angle, then x, z), at most {@code limit}. The center itself is

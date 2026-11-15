@@ -181,6 +181,7 @@ public final class ConfigValidator {
 		dv.maxConcurrentBuilds = clamp("development.maxConcurrentBuilds", dv.maxConcurrentBuilds, 1, 4);
 		dv.buildDays = clamp("development.buildDays", dv.buildDays, 0, 100);
 		dv.siteRadius = clamp("development.siteRadius", dv.siteRadius, 8, 64);
+		dv.siteRadiusPerLevel = clamp("development.siteRadiusPerLevel", dv.siteRadiusPerLevel, 0, 16);
 		dv.siteSearchLimit = clamp("development.siteSearchLimit", dv.siteSearchLimit, 16, 4096);
 		dv.rebuildCostRatio = clamp("development.rebuildCostRatio", dv.rebuildCostRatio, 0, 1);
 		dv.warehouseStockMultiplier = clamp("development.warehouseStockMultiplier", dv.warehouseStockMultiplier, 1, 10);

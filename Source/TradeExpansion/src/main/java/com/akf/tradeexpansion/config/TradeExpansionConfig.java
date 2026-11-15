@@ -1182,10 +1182,12 @@ public final class TradeExpansionConfig {
 		public int maxConcurrentBuilds = 1;
 		/** In-game days a facility takes to build. */
 		public double buildDays = 2.0;
-		/** Horizontal radius around the market center searched for a site (and for markers). */
+		/** Horizontal radius around the market center searched for a site (and for markers) at market level 1. */
 		public int siteRadius = 32;
-		/** Positions tried by one site search. */
-		public int siteSearchLimit = 256;
+		/** v0.67: blocks the site radius grows per market level above 1 (at most DevelopmentMath.MAX_SITE_RADIUS). */
+		public int siteRadiusPerLevel = 8;
+		/** Positions tried by one site search (4096 covers the whole of the largest radius). */
+		public int siteSearchLimit = 4096;
 		/** Share of the development cost paid to rebuild a destroyed facility. */
 		public double rebuildCostRatio = 0.5;
 		/** Completed facilities cannot be broken in survival or by explosions. */
@@ -1246,7 +1248,7 @@ public final class TradeExpansionConfig {
 		private record Facilities(int siteSearchLimit, double rebuildCostRatio, boolean protectFacilities, double warehouseStockMultiplier,
 				double warehouseRestockMultiplier, int questHallExtraQuests, int questHallExtraTransport, int innVillagers,
 				double bankInterestMaxMultiplier, double reputationPerPoint, boolean requireMaterials, double materialCountMultiplier,
-				boolean constructionEffects, double fountainReputationMultiplier, double parkPointsMultiplier) {
+				boolean constructionEffects, double fountainReputationMultiplier, double parkPointsMultiplier, int siteRadiusPerLevel) {
 			static final MapCodec<Facilities> CODEC = RecordCodecBuilder.mapCodec(i -> {
 				Development d = new Development();
 				return i.group(
@@ -1264,7 +1266,8 @@ public final class TradeExpansionConfig {
 						Codec.DOUBLE.fieldOf("materialCountMultiplier").orElse(d.materialCountMultiplier).forGetter(Facilities::materialCountMultiplier),
 						Codec.BOOL.fieldOf("constructionEffects").orElse(d.constructionEffects).forGetter(Facilities::constructionEffects),
 						Codec.DOUBLE.fieldOf("fountainReputationMultiplier").orElse(d.fountainReputationMultiplier).forGetter(Facilities::fountainReputationMultiplier),
-						Codec.DOUBLE.fieldOf("parkPointsMultiplier").orElse(d.parkPointsMultiplier).forGetter(Facilities::parkPointsMultiplier)
+						Codec.DOUBLE.fieldOf("parkPointsMultiplier").orElse(d.parkPointsMultiplier).forGetter(Facilities::parkPointsMultiplier),
+						Codec.INT.fieldOf("siteRadiusPerLevel").orElse(d.siteRadiusPerLevel).forGetter(Facilities::siteRadiusPerLevel)
 				).apply(i, Facilities::new);
 			});
 		}
@@ -1345,11 +1348,12 @@ public final class TradeExpansionConfig {
 			c.constructionEffects = f.constructionEffects();
 			c.fountainReputationMultiplier = f.fountainReputationMultiplier();
 			c.parkPointsMultiplier = f.parkPointsMultiplier();
+			c.siteRadiusPerLevel = f.siteRadiusPerLevel();
 			return c;
 		}, c -> Pair.of(c, new Facilities(c.siteSearchLimit, c.rebuildCostRatio, c.protectFacilities, c.warehouseStockMultiplier,
 				c.warehouseRestockMultiplier, c.questHallExtraQuests, c.questHallExtraTransport, c.innVillagers, c.bankInterestMaxMultiplier,
 				c.reputationPerPoint, c.requireMaterials, c.materialCountMultiplier, c.constructionEffects, c.fountainReputationMultiplier,
-				c.parkPointsMultiplier)));
+				c.parkPointsMultiplier, c.siteRadiusPerLevel)));
 
 		static final Codec<Development> CODEC = Codec.mapPair(FIRST_CODEC, Buildings.CODEC).xmap(pair -> {
 			Development c = pair.getFirst();

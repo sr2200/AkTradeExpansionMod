@@ -41,6 +41,21 @@ class DevelopmentMathTest {
 	}
 
 	@Test
+	void siteRadiusGrowsWithTheMarketLevelUpTo64() {
+		assertEquals(32, DevelopmentMath.siteRadius(32, 8, 1));
+		assertEquals(48, DevelopmentMath.siteRadius(32, 8, 3));
+		assertEquals(64, DevelopmentMath.siteRadius(32, 8, 5));
+		assertEquals(64, DevelopmentMath.siteRadius(48, 16, 5));
+		assertEquals(32, DevelopmentMath.siteRadius(32, 0, 5));
+	}
+
+	@Test
+	void defaultSearchLimitCoversTheLargestRadius() {
+		assertEquals(DevelopmentMath.siteOffsets(64, 2, Integer.MAX_VALUE).size(),
+				DevelopmentMath.siteOffsets(64, 2, new com.akf.tradeexpansion.config.TradeExpansionConfig.Development().siteSearchLimit).size());
+	}
+
+	@Test
 	void siteOffsetsNearestFirstWithinTheRadius() {
 		List<int[]> offsets = DevelopmentMath.siteOffsets(4, 2, 1000);
 		assertEquals(12, offsets.size()); // (±2,0) (0,±2) (±2,±2) (±4,0) (0,±4); (±4,±2) is outside

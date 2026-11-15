@@ -287,6 +287,7 @@ public final class ConfigScreen {
 				.option(intField("development.maxConcurrentBuilds", dd.maxConcurrentBuilds, () -> dev.maxConcurrentBuilds, v -> dev.maxConcurrentBuilds = v, 1, 4))
 				.option(doubleField("development.buildDays", dd.buildDays, () -> dev.buildDays, v -> dev.buildDays = v, 0, 100))
 				.option(intField("development.siteRadius", dd.siteRadius, () -> dev.siteRadius, v -> dev.siteRadius = v, 8, 64))
+				.option(intField("development.siteRadiusPerLevel", dd.siteRadiusPerLevel, () -> dev.siteRadiusPerLevel, v -> dev.siteRadiusPerLevel = v, 0, 16))
 				.option(intField("development.siteSearchLimit", dd.siteSearchLimit, () -> dev.siteSearchLimit, v -> dev.siteSearchLimit = v, 16, 4096))
 				.option(doubleField("development.rebuildCostRatio", dd.rebuildCostRatio, () -> dev.rebuildCostRatio, v -> dev.rebuildCostRatio = v, 0, 1))
 				.option(bool("development.protectFacilities", dd.protectFacilities, () -> dev.protectFacilities, v -> dev.protectFacilities = v))

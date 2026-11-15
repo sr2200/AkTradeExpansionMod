@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * Building site stake (design N-5): placed where the next facility should stand, facing the side its front should face.
- * Registered with the nearest market within {@code development.siteRadius}; used up when a building starts there.
+ * Registered with the nearest market whose site radius (it grows with the market level) reaches it; used up when a building starts there.
  */
 public class ConstructionMarkerBlock extends HorizontalDirectionalBlock {
 	/** A post with a small flag, defined facing north. */

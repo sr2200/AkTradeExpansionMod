@@ -25,6 +25,26 @@ public final class Development {
 		return TradeExpansionConfig.get().development;
 	}
 
+	/** v0.67 N-5: radius searched for a site and for stakes around {@code market}; it grows with the market level. */
+	public static int siteRadius(com.akf.tradeexpansion.market.Market market) {
+		TradeExpansionConfig.Development c = config();
+		return com.akf.tradeexpansion.core.DevelopmentMath.siteRadius(c.siteRadius, c.siteRadiusPerLevel, market.level());
+	}
+
+	/** v0.67 N-5: the nearest market whose site radius reaches {@code pos}, or {@code null}. */
+	public static com.akf.tradeexpansion.market.Market siteMarket(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos) {
+		com.akf.tradeexpansion.market.Market market = com.akf.tradeexpansion.market.MarketRegistry.get(level.getServer())
+				.nearestWithin(level.dimension(), pos, com.akf.tradeexpansion.core.DevelopmentMath.MAX_SITE_RADIUS);
+		return market != null && market.horizontalDistanceTo(pos) <= siteRadius(market) ? market : null;
+	}
+
+	/** Radius told when a stake has no market: that of the nearest market in reach, else the level 1 radius. */
+	public static int siteRadiusNear(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos) {
+		com.akf.tradeexpansion.market.Market market = com.akf.tradeexpansion.market.MarketRegistry.get(level.getServer())
+				.nearestWithin(level.dimension(), pos, com.akf.tradeexpansion.core.DevelopmentMath.MAX_SITE_RADIUS);
+		return market != null ? siteRadius(market) : config().siteRadius;
+	}
+
 	/** Markets of this dimension can develop ({@code development.enabled} and {@code development.dimensions}). */
 	public static boolean enabledIn(ResourceKey<Level> dimension) {
 		TradeExpansionConfig.Development c = config();

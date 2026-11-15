@@ -70,10 +70,10 @@ public final class MarkerPreview {
 
 	/** Shows the outlines of the stake at {@code pos} to {@code player} and lists the buildings in the chat. */
 	public static void show(ServerPlayer player, ServerLevel level, BlockPos pos) {
-		Market market = MarketRegistry.get(level.getServer()).nearestWithin(level.dimension(), pos, Development.config().siteRadius);
+		Market market = Development.siteMarket(level, pos);
 		if (market == null || !Development.enabled(market)) {
 			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_no_market",
-					Development.config().siteRadius).withStyle(ChatFormatting.YELLOW));
+					Development.siteRadiusNear(level, pos)).withStyle(ChatFormatting.YELLOW));
 			return;
 		}
 		Direction facing = level.getBlockState(pos).getValue(HorizontalDirectionalBlock.FACING);

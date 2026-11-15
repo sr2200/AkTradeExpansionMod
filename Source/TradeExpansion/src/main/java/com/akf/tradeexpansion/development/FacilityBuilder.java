@@ -403,12 +403,12 @@ public final class FacilityBuilder {
 		});
 	}
 
-	/** N-5: a stake registers with the nearest market within {@code development.siteRadius}. */
+	/** N-5: a stake registers with the nearest market whose site radius (Development.siteRadius) reaches it. */
 	public static void onMarkerPlaced(ServerLevel level, BlockPos pos, ServerPlayer player) {
-		Market market = MarketRegistry.get(level.getServer()).nearestWithin(level.dimension(), pos, Development.config().siteRadius);
+		Market market = Development.siteMarket(level, pos);
 		if (market == null || !Development.enabled(market)) {
 			if (player != null) player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_no_market",
-					Development.config().siteRadius).withStyle(ChatFormatting.YELLOW));
+					Development.siteRadiusNear(level, pos)).withStyle(ChatFormatting.YELLOW));
 			return;
 		}
 		if (!market.markers().contains(pos)) market.markers().add(pos.immutable());
