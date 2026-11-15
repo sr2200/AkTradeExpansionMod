@@ -2209,9 +2209,24 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		int index = scroll + (mouseY - ry) / ROW_H;
 		List<GoodView> goods = visibleGoods();
 		if (index >= goods.size()) return;
-		boolean tooltipRight = !rowTooltip(goods.get(index)).isEmpty();
-		extractGraph(g, goods.get(index), tooltipRight ? mouseX - 10 - 124 : mouseX + 10, mouseY + 6);
+		List<Component> tooltip = rowTooltip(goods.get(index));
+		if (tooltip.isEmpty()) {
+			extractGraph(g, goods.get(index), mouseX + 10, mouseY + 6);
+		} else if (mouseX - 10 - GRAPH_W >= 4) {
+			// The tooltip is right of the cursor: the graph goes to the left.
+			extractGraph(g, goods.get(index), mouseX - 10 - GRAPH_W, mouseY + 6);
+		} else {
+			// No room on the left (a small screen): below the tooltip, or above it when that does not fit (16-11).
+			int lines = wrap(tooltip).size();
+			int tipTop = tooltipY(mouseY) - 12 - 4;
+			int tipBottom = tooltipY(mouseY) - 12 + lines * 10 + 2 + 4;
+			int gy = tipBottom + 2 + GRAPH_H + 4 <= height ? tipBottom + 2 : Math.max(4, tipTop - 2 - GRAPH_H);
+			extractGraph(g, goods.get(index), mouseX + 12, gy);
+		}
 	}
+
+	private static final int GRAPH_W = 120;
+	private static final int GRAPH_H = 64;
 
 	private void extractGraph(GuiGraphicsExtractor g, GoodView view, int gx, int gy) {
 		boolean buy = tab == Tab.BUY;
@@ -2225,9 +2240,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			min = Math.min(min, prices[i]);
 			max = Math.max(max, prices[i]);
 		}
-		int w = 120;
-		int h = 64;
-		gx = Math.min(gx, width - w - 4);
+		int w = GRAPH_W;
+		int h = GRAPH_H;
+		gx = Math.max(4, Math.min(gx, width - w - 4));
 		gy = Math.min(gy, height - h - 4);
 		g.fill(gx, gy, gx + w, gy + h, 0xF0100010);
 		g.outline(gx, gy, w, h, 0xFF5000FF);

@@ -43,6 +43,7 @@ final class ClientTradeCases {
 	private static final int COLOR_RED = 0xFFFF5555;
 	private static final int COLOR_GRAY = 0xFFA0A0A0;
 	private static final int COLOR_ORANGE = 0xFFFFAA33;
+	private static final int COLOR_GREEN = 0xFF55FF55;
 
 	private static String text(String key, Object... args) {
 		return Component.translatable(key, args).getString();
@@ -178,10 +179,26 @@ final class ClientTradeCases {
 
 	// ---- 3-1 the change since opening
 
-	/** 3-1: a good bought while the screen is open shows ▲ in its row (its price went up since the screen opened). */
+	/**
+	 * 3-1: a good bought while the screen is open shows a red ▲ in its row (its price went up since the screen opened);
+	 * a good sold while it is open shows a green ▼ on the sell tab. Rows of goods not traded show neither.
+	 */
 	static void priceArrows(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
 		s.world.getServer().runOnServer(server -> WalletService.give(player(server), 1_000_000));
+		context.waitTicks(3);
+		context.setScreen(() -> null);
+		context.waitTicks(2);
+		// The good to sell: the dearest the market buys well over 64 of (cheap goods do not move by 1c; at its stock limit it
+		// is "買取停止" with no arrow), 64 of it in the inventory before the screen opens.
+		MarketScreen probe = ClientChecklistTests.openStall(s);
+		GoodView toSell = snapshot(context, probe).goods().stream()
+				.filter(v -> v.sell() && v.unit() == 1 && v.patch().isEmpty() && !v.displayStack().isDamageableItem()
+						&& PriceModel.sellCapacity(v.params(), v.state()) >= 96)
+				.max(Comparator.comparingDouble(v -> v.params().basePrice()))
+				.orElseThrow(() -> new AssertionError("no good the market buys 96 of"));
+		context.setScreen(() -> null);
+		s.world.getServer().runOnServer(server -> giveItems(player(server), itemOf(toSell), 64));
 		context.waitTicks(3);
 		MarketScreen screen = ClientChecklistTests.openStall(s);
 		context.clickScreenButton("screen.ak_trade_expansion.tab.buy");
@@ -189,7 +206,7 @@ final class ClientTradeCases {
 		int rows = context.computeOnClient(client -> (Integer) get(screen, "rows"));
 		List<GoodView> goods = visibleGoods(context, screen);
 		GoodView good = goods.subList(0, Math.min(rows, goods.size())).stream()
-				.filter(v -> v.unit() == 1 && v.stock() >= 65 && v.patch().isEmpty())
+				.filter(v -> v.unit() == 1 && v.stock() >= 65 && v.patch().isEmpty() && !v.goods().equals(toSell.goods()))
 				.max(Comparator.comparingDouble(v -> v.params().basePrice()))
 				.orElseThrow(() -> new AssertionError("no good with stock for 64 in the first rows"));
 		int rowY = showRow(context, screen, good.goods());
@@ -202,6 +219,34 @@ final class ClientTradeCases {
 		check(row.stream().anyMatch(t -> t.text().equals("▲") && t.color() == COLOR_RED), "no red ▲ in the row of %s after buying 64 (row: %s)",
 				good.goods(), strings(row));
 		screenshot(context, result, "3-1_price_up");
+
+		// Sell 64 with the screen's buttons: the sell price went down, a green ▼.
+		context.clickScreenButton("screen.ak_trade_expansion.tab.sell");
+		context.waitTicks(2);
+		int sellY = showRow(context, screen, toSell.goods());
+		mouseAway(context);
+		List<TextRecorder.Text> sellRow = rowTexts(TextRecorder.capture(context), sellY);
+		check(sellRow.stream().noneMatch(t -> t.text().equals("▲") || t.text().equals("▼")), "the sell row of %s shows %s before selling", toSell.goods(), strings(sellRow));
+		select(context, screen, toSell.goods());
+		clickWidget(context, "64");
+		mouseAway(context);
+		MarketSnapshotS2C before = snapshot(context, screen);
+		long money = serverMoney(s);
+		context.clickScreenButton("screen.ak_trade_expansion.confirm.sell");
+		long after = money;
+		for (int i = 0; i < 40 && after == money; i++) {
+			context.waitTick();
+			after = serverMoney(s);
+		}
+		check(after > money, "selling 64 %s with the buttons paid nothing", toSell.goods());
+		newSnapshot(context, screen, before);
+		context.waitTicks(2);
+		sellY = showRow(context, screen, toSell.goods());
+		mouseAway(context);
+		List<TextRecorder.Text> sold = rowTexts(TextRecorder.capture(context), sellY);
+		check(sold.stream().anyMatch(t -> t.text().equals("▼") && t.color() == COLOR_GREEN), "no green ▼ in the row of %s after selling 64 (row: %s)",
+				toSell.goods(), strings(sold));
+		screenshot(context, result, "3-1_price_down");
 	}
 
 	// ---- 3-4 the money
@@ -272,6 +317,16 @@ final class ClientTradeCases {
 			check(row.stream().anyMatch(t -> t.color() == COLOR_ORANGE && t.x0() < listX(context, open) + 100),
 					"the name of the short good %s is not orange (row: %s)", shortGood.goods(), strings(row));
 			screenshot(context, result, "3-7_shortage_orange");
+			// The mouse over it: the shortage line in orange with its multiplier.
+			moveTo(context, listX(context, open) + 40, rowY + 8);
+			context.waitTicks(2);
+			List<TextRecorder.Text> shortTip = tooltip(TextRecorder.capture(context));
+			String shortLine = text("screen.ak_trade_expansion.shortage.tooltip", String.format(java.util.Locale.ROOT, "×%.2f",
+					view(context, open, shortGood.goods()).shortageMultiplier()));
+			check(shortTip.stream().anyMatch(t -> t.text().equals(shortLine) && t.styleColor() == (COLOR_ORANGE & 0xFFFFFF)),
+					"the tooltip of the short good has no orange \"%s\": %s", shortLine, strings(shortTip));
+			screenshot(context, result, "3-7_shortage_tooltip");
+			mouseAway(context);
 
 			// 3-8: sold out.
 			rowY = showRow(context, open, soldOut.goods());

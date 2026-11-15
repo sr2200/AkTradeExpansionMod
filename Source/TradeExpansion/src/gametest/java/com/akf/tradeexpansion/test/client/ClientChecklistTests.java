@@ -59,7 +59,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 
 	/**
 	 * One case. {@code alsoChecklist} / {@code alsoPartial}: items the case covers too, recorded as a second result
-	 * (with the same outcome, unless the case throws {@link ClientConfigCases.SettingsFailed} for the second one only).
+	 * (with the same outcome, unless the case throws {@link AlsoFailed} for the second one only).
 	 */
 	record ClientCase(String name, List<String> checklist, String partial, boolean world, Body body, List<String> alsoChecklist, String alsoPartial) {
 		ClientCase(String name, List<String> checklist, String partial, boolean world, SimpleBody body) {
@@ -68,6 +68,13 @@ public class ClientChecklistTests implements FabricClientGameTest {
 
 		ClientCase(String name, List<String> checklist, String partial, boolean world, SimpleBody body, List<String> alsoChecklist, String alsoPartial) {
 			this(name, checklist, partial, world, (s, r, a) -> body.run(s, r), alsoChecklist, alsoPartial);
+		}
+	}
+
+	/** Thrown by a case when only its second item ({@code alsoChecklist}) failed: the first is recorded as passed. */
+	static class AlsoFailed extends RuntimeException {
+		AlsoFailed(Throwable cause) {
+			super(cause.getMessage(), cause);
 		}
 	}
 
@@ -94,19 +101,24 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("placement_hint", List.of("2-2"), null, true, ClientTradeCases::placementHint));
 		cases.add(new ClientCase("buy_with_screen_buttons", List.of("3-10"), null, true, ClientChecklistTests::buyWithButtons,
 				List.of("2-9", "2-10"), "交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない）"));
-		cases.add(new ClientCase("price_arrows", List.of("3-1"), "画面を開いたまま買った商品の行に ▲ が出ることのみ（▼ は見ていない）",
-				true, ClientTradeCases::priceArrows));
+		cases.add(new ClientCase("price_arrows", List.of("3-1"), null, true, ClientTradeCases::priceArrows));
 		cases.add(new ClientCase("balance_display", List.of("3-4"), null, true, ClientTradeCases::balance));
 		cases.add(new ClientCase("row_states", List.of("3-8", "3-9"), null, true, ClientTradeCases::rowStates,
-				List.of("3-7"), "品不足の商品の名前がオレンジ色になることのみ（ツールチップは見ていない）"));
+				List.of("3-7"), null));
 		cases.add(new ClientCase("max_with_exact_money", List.of("3-11"), null, true, ClientTradeCases::maxWithExactMoney));
 		cases.add(new ClientCase("sell_slot_selects_good", List.of("2-13"), null, true, ClientTradeCases::sellSlot));
 		cases.add(new ClientCase("title_reputation_trends", List.of("16-1", "24-1"), null, true, ClientDisplayCases::titleRow));
 		cases.add(new ClientCase("trend_position_setting", List.of("24-1b"), null, true, ClientDisplayCases::trendPosition));
-		cases.add(new ClientCase("debug_tooltip", List.of("16-11"), "基準価格・値段・在庫の行が出て、OFF にすると出ないこと（倍率・戻るまでの時間・価格グラフの位置は見ていない）",
-				true, ClientDisplayCases::debugTooltip));
+		cases.add(new ClientCase("debug_tooltip", List.of("16-11"), null, true, ClientDisplayCases::debugTooltip));
 		cases.add(new ClientCase("board_news_and_markets", List.of("23-3", "23-4", "24-4"), null, true, ClientDisplayCases::board,
 				List.of("9-1"), "市場の行に名前と方角・距離が出て、ニュースから開いた市場の商品の一覧に列の見出し（列とずれていない、マウスで説明）があり、ホイールで最後の商品まで見えること（市場一覧の並び・買値以外の説明は見ていない）"));
+		cases.add(new ClientCase("board_deals", List.of("9-1b"), null, true, ClientDisplayCases::boardDeals));
+		cases.add(new ClientCase("map_coordinates_to_chat", List.of("20-5"), "JourneyMap なしで「この市場の座標」が掲示板の市場の一覧に出て、押すとこの市場の名前と座標が自分のチャットに出る（クリックでコピー）こと。市場を選ぶと消えること（近くに市場が無い時は見ていない）",
+				true, ClientScreenCases::coordinates, List.of("20-1"), "JourneyMap なしで、選んだ市場の「座標を表示」を押すと、市場名と座標が自分のチャットに出て、クリックで座標がコピーされること（マルチの他のプレイヤーは見ていない）"));
+		cases.add(new ClientCase("list_scrollbars", List.of("19-4"), null, true, ClientScreenCases::scrollbars));
+		cases.add(new ClientCase("goods_names", List.of("30-1"), "交易画面と掲示板に並ぶ品（このワールドの市場の品）の名前が翻訳されていて、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は見ていない）",
+				true, ClientScreenCases::goodsNames));
+		cases.add(new ClientCase("staff_needs_reputation", List.of("26-2"), null, true, ClientScreenCases::staffNeedsReputation));
 		cases.add(new ClientCase("sell_all_box", List.of("18-1", "31-2"), null, true, ClientDisplayCases::sellAll,
 				List.of("18-2"), "行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る）"));
 		cases.add(new ClientCase("goods_order", List.of("31-1"), null, true, ClientDisplayCases::goodsOrder));
@@ -115,6 +127,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("exchange_tab", List.of("8-6"), null, true, ClientDisplayCases::exchange));
 		cases.add(new ClientCase("wallet_screen", List.of("7-4"), null, true, ClientDisplayCases::wallet));
 		cases.add(new ClientCase("trader_opens_market", List.of("6-3"), null, true, ClientDisplayCases::traderOpens));
+		cases.add(new ClientCase("advancements_screen", List.of("27-1"), null, true, (ses, r, a) -> ClientScreenCases.advancements(ses, r, a),
+				List.of("27-11"), null));
 		cases.add(new ClientCase("clock_advance_updates_open_screen", List.of("13-10"),
 				"開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない）", true, ClientChecklistTests::clockAdvance));
 		cases.add(new ClientCase("layout_market_screen_ja", List.of("3-6", "19-1", "19-2", "19-3", "22-1", "26-1"),
@@ -123,6 +137,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("layout_market_screen_en", List.of("26-1"), "英語でも交易画面の各タブの文字が重ならず、はみ出さないこと",
 				true, (s, r) -> layout(s, r, "en_us")));
 		cases.add(new ClientCase("config_save_applies", List.of("13-1"), null, true, ClientConfigCases::saveApplies));
+		cases.add(new ClientCase("special_settings", List.of("33-3"), "設定画面の「市場」タブに2つの設定があり、変えて保存するとすぐ設定とファイルに入ること（次の日の掘り出し物は見ていない）",
+				true, ClientConfigCases::specialSettings));
 		cases.add(new ClientCase("goods_manager", List.of("13-6", "13-8", "13-9"), null, true, ClientConfigCases::goodsManager));
 		cases.add(new ClientCase("reopen_world_keeps_market", List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
 		// Breaks the stall: the last case of the world.
@@ -161,8 +177,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				if (!c.alsoChecklist().isEmpty()) results.add(also.pass());
 			} catch (Throwable t) {
 				AutotestReport.LOGGER.error("Case {} failed", c.name(), t);
-				if (t.getClass().getSimpleName().equals("SettingsFailed")) {
-					// Only the second item failed (checked by name: this class must load without YACL's).
+				if (t instanceof AlsoFailed) {
+					// Only the second item failed.
 					results.add(result.pass());
 					results.add(also.fail(t.getCause()));
 				} else {

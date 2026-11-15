@@ -128,6 +128,66 @@ final class ClientConfigCases {
 		}
 	}
 
+	// ---- 33-3 the settings of the specials
+
+	/**
+	 * 33-3 (partly): the "市場" tab has "掘り出し物を市場の規模に合わせる" and "高い掘り出し物の出にくさ"; changed and
+	 * saved, the values apply at once and are in the file.
+	 */
+	static void specialSettings(Session s, CaseResult.Builder result) throws IOException {
+		ClientGameTestContext context = s.context;
+		byte[] file = Files.readAllBytes(ConfigManager.path());
+		try {
+			boolean grade = TradeExpansionConfig.get().market.specialUseGrade;
+			double exponent = TradeExpansionConfig.get().market.specialPriceExponent == 1.5 ? 1.2 : 1.5;
+			YACLScreen screen = openConfig(context);
+			String market = Component.translatable(KEY + "category.market").getString();
+			for (String key : List.of(KEY + "market.specialUseGrade", KEY + "market.specialPriceExponent")) {
+				String category = categoryOf(screen, key);
+				check(category.equals(market), "%s is on the tab \"%s\", not \"%s\"", Component.translatable(key).getString(), category, market);
+			}
+			@SuppressWarnings("unchecked")
+			Option<Boolean> useGrade = (Option<Boolean>) option(screen, KEY + "market.specialUseGrade");
+			@SuppressWarnings("unchecked")
+			Option<Double> priceExponent = (Option<Double>) option(screen, KEY + "market.specialPriceExponent");
+			// Show the tab, for a person to look at.
+			int index = context.computeOnClient(client -> {
+				List<String> titles = tabBar(client.gui.screen()).getTabs().stream().map(t -> t.getTabTitle().getString()).toList();
+				return titles.indexOf(market);
+			});
+			check(index >= 0, "no tab \"%s\" on the config screen", market);
+			context.runOnClient(client -> tabBar(client.gui.screen()).selectTab(index, false));
+			context.waitTicks(3);
+			mouseAway(context);
+			screenshot(context, result, "33-3_market_tab");
+			context.runOnClient(client -> {
+				useGrade.requestSet(!grade);
+				priceExponent.requestSet(exponent);
+			});
+			context.waitTicks(2);
+			save(context, screen);
+			check(waitClient(context, client -> TradeExpansionConfig.get().market.specialUseGrade == !grade
+					&& TradeExpansionConfig.get().market.specialPriceExponent == exponent, 40),
+					"after saving, specialUseGrade %s / specialPriceExponent %s (expected %s / %s)", TradeExpansionConfig.get().market.specialUseGrade,
+					TradeExpansionConfig.get().market.specialPriceExponent, !grade, exponent);
+			TradeExpansionConfig saved = ConfigManager.read(ConfigManager.path());
+			check(saved.market.specialUseGrade == !grade && saved.market.specialPriceExponent == exponent, "the config file does not have the new values");
+		} finally {
+			restore(s, file);
+		}
+	}
+
+	private static String categoryOf(YACLScreen screen, String key) {
+		for (ConfigCategory category : screen.config.categories()) {
+			for (OptionGroup group : category.groups()) {
+				for (Option<?> option : group.options()) {
+					if (option.name().getContents() instanceof TranslatableContents t && t.getKey().equals(key)) return category.name().getString();
+				}
+			}
+		}
+		throw new AssertionError("no option " + key + " on the config screen");
+	}
+
 	// ---- 13-6 / 13-8 / 13-9 the goods manager
 
 	/**
@@ -367,9 +427,9 @@ final class ClientConfigCases {
 	}
 
 	/** 13-2 failed (recorded on its own result) while 14-1 passed. */
-	static final class SettingsFailed extends RuntimeException {
+	static final class SettingsFailed extends ClientChecklistTests.AlsoFailed {
 		SettingsFailed(Throwable cause) {
-			super(cause.getMessage(), cause);
+			super(cause);
 		}
 	}
 

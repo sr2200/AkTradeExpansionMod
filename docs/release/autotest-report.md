@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.19、2026-11-15 15:22、171 件中 0 件失敗
-- クライアント：バージョン 0.2.12、2026-11-15 10:43、36 件中 0 件失敗
+- クライアント：バージョン 0.2.20、2026-11-15 15:51、45 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 107・一部を確認 135・失敗 0
+- チェックリスト 326 項目のうち、今回 自動で完了 115・一部を確認 135・失敗 0
 
 ## すべての項目
 
@@ -189,17 +189,23 @@
 | 2-2 | `placement_hint` | クライアント | ✔ | 全部 |
 | 3-10 | `buy_with_screen_buttons` | クライアント | ✔ | 全部 |
 | 2-9・2-10 | `buy_with_screen_buttons` | クライアント | ✔ | 交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない） |
-| 3-1 | `price_arrows` | クライアント | ✔ | 画面を開いたまま買った商品の行に ▲ が出ることのみ（▼ は見ていない） |
+| 3-1 | `price_arrows` | クライアント | ✔ | 全部 |
 | 3-4 | `balance_display` | クライアント | ✔ | 全部 |
 | 3-8・3-9 | `row_states` | クライアント | ✔ | 全部 |
-| 3-7 | `row_states` | クライアント | ✔ | 品不足の商品の名前がオレンジ色になることのみ（ツールチップは見ていない） |
+| 3-7 | `row_states` | クライアント | ✔ | 全部 |
 | 3-11 | `max_with_exact_money` | クライアント | ✔ | 全部 |
 | 2-13 | `sell_slot_selects_good` | クライアント | ✔ | 全部 |
 | 16-1・24-1 | `title_reputation_trends` | クライアント | ✔ | 全部 |
 | 24-1b | `trend_position_setting` | クライアント | ✔ | 全部 |
-| 16-11 | `debug_tooltip` | クライアント | ✔ | 基準価格・値段・在庫の行が出て、OFF にすると出ないこと（倍率・戻るまでの時間・価格グラフの位置は見ていない） |
+| 16-11 | `debug_tooltip` | クライアント | ✔ | 全部 |
 | 23-3・23-4・24-4 | `board_news_and_markets` | クライアント | ✔ | 全部 |
 | 9-1 | `board_news_and_markets` | クライアント | ✔ | 市場の行に名前と方角・距離が出て、ニュースから開いた市場の商品の一覧に列の見出し（列とずれていない、マウスで説明）があり、ホイールで最後の商品まで見えること（市場一覧の並び・買値以外の説明は見ていない） |
+| 9-1b | `board_deals` | クライアント | ✔ | 全部 |
+| 20-5 | `map_coordinates_to_chat` | クライアント | ✔ | JourneyMap なしで「この市場の座標」が掲示板の市場の一覧に出て、押すとこの市場の名前と座標が自分のチャットに出る（クリックでコピー）こと。市場を選ぶと消えること（近くに市場が無い時は見ていない） |
+| 20-1 | `map_coordinates_to_chat` | クライアント | ✔ | JourneyMap なしで、選んだ市場の「座標を表示」を押すと、市場名と座標が自分のチャットに出て、クリックで座標がコピーされること（マルチの他のプレイヤーは見ていない） |
+| 19-4 | `list_scrollbars` | クライアント | ✔ | 全部 |
+| 30-1 | `goods_names` | クライアント | ✔ | 交易画面と掲示板に並ぶ品（このワールドの市場の品）の名前が翻訳されていて、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は見ていない） |
+| 26-2 | `staff_needs_reputation` | クライアント | ✔ | 全部 |
 | 18-1・31-2 | `sell_all_box` | クライアント | ✔ | 全部 |
 | 18-2 | `sell_all_box` | クライアント | ✔ | 行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る） |
 | 31-1 | `goods_order` | クライアント | ✔ | 全部 |
@@ -208,10 +214,13 @@
 | 8-6 | `exchange_tab` | クライアント | ✔ | 全部 |
 | 7-4 | `wallet_screen` | クライアント | ✔ | 全部 |
 | 6-3 | `trader_opens_market` | クライアント | ✔ | 全部 |
+| 27-1 | `advancements_screen` | クライアント | ✔ | 全部 |
+| 27-11 | `advancements_screen` | クライアント | ✔ | 全部 |
 | 13-10 | `clock_advance_updates_open_screen` | クライアント | ✔ | 開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない） |
 | 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼を選んだ状態・「まとめて売る」の枠も）の文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
 | 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブの文字が重ならず、はみ出さないこと |
 | 13-1 | `config_save_applies` | クライアント | ✔ | 全部 |
+| 33-3 | `special_settings` | クライアント | ✔ | 設定画面の「市場」タブに2つの設定があり、変えて保存するとすぐ設定とファイルに入ること（次の日の掘り出し物は見ていない） |
 | 13-6・13-8・13-9 | `goods_manager` | クライアント | ✔ | 全部 |
 | 4-3 | `reopen_world_keeps_market` | クライアント | ✔ | 全部 |
 | 2-16 | `screen_closes_when_away` | クライアント | ✔ | 全部 |
@@ -247,8 +256,10 @@
 - 2-2 `placement_hint`：[2-2_hint_new.png](../../Source/TradeExpansion/build/autotest/screenshots/2-2_hint_new.png)
 - 3-10 `buy_with_screen_buttons`：[3-10_bulk_64.png](../../Source/TradeExpansion/build/autotest/screenshots/3-10_bulk_64.png)
 - 3-1 `price_arrows`：[3-1_price_up.png](../../Source/TradeExpansion/build/autotest/screenshots/3-1_price_up.png)
+- 3-1 `price_arrows`：[3-1_price_down.png](../../Source/TradeExpansion/build/autotest/screenshots/3-1_price_down.png)
 - 3-4 `balance_display`：[3-4_balance_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-4_balance_tooltip.png)
 - 3-8・3-9 `row_states`：[3-7_shortage_orange.png](../../Source/TradeExpansion/build/autotest/screenshots/3-7_shortage_orange.png)
+- 3-8・3-9 `row_states`：[3-7_shortage_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-7_shortage_tooltip.png)
 - 3-8・3-9 `row_states`：[3-8_sold_out_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-8_sold_out_tooltip.png)
 - 3-8・3-9 `row_states`：[3-8_not_buying_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-8_not_buying_tooltip.png)
 - 3-8・3-9 `row_states`：[3-9_not_buying_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/3-9_not_buying_sell_slot.png)
@@ -265,6 +276,17 @@
 - 23-3・23-4・24-4 `board_news_and_markets`：[24-4_board_market_trends.png](../../Source/TradeExpansion/build/autotest/screenshots/24-4_board_market_trends.png)
 - 23-3・23-4・24-4 `board_news_and_markets`：[23-4_news_opens_market.png](../../Source/TradeExpansion/build/autotest/screenshots/23-4_news_opens_market.png)
 - 23-3・23-4・24-4 `board_news_and_markets`：[9-1_board_market_scrolled.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1_board_market_scrolled.png)
+- 9-1b `board_deals`：[9-1b_board_deals.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1b_board_deals.png)
+- 9-1b `board_deals`：[9-1b_board_cheap.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1b_board_cheap.png)
+- 9-1b `board_deals`：[9-1b_board_dear.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1b_board_dear.png)
+- 20-5 `map_coordinates_to_chat`：[20-5_here_coords.png](../../Source/TradeExpansion/build/autotest/screenshots/20-5_here_coords.png)
+- 20-5 `map_coordinates_to_chat`：[20-1_board_coords.png](../../Source/TradeExpansion/build/autotest/screenshots/20-1_board_coords.png)
+- 20-5 `map_coordinates_to_chat`：[20-1_chat.png](../../Source/TradeExpansion/build/autotest/screenshots/20-1_chat.png)
+- 19-4 `list_scrollbars`：[19-4_buy_list.png](../../Source/TradeExpansion/build/autotest/screenshots/19-4_buy_list.png)
+- 19-4 `list_scrollbars`：[19-4_board_market.png](../../Source/TradeExpansion/build/autotest/screenshots/19-4_board_market.png)
+- 19-4 `list_scrollbars`：[19-4_sell_all.png](../../Source/TradeExpansion/build/autotest/screenshots/19-4_sell_all.png)
+- 30-1 `goods_names`：[30-1_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_goods.png)
+- 26-2 `staff_needs_reputation`：[26-2_staff_needs_reputation.png](../../Source/TradeExpansion/build/autotest/screenshots/26-2_staff_needs_reputation.png)
 - 18-1・31-2 `sell_all_box`：[18-1_sell_all.png](../../Source/TradeExpansion/build/autotest/screenshots/18-1_sell_all.png)
 - 18-1・31-2 `sell_all_box`：[18-2_excluded.png](../../Source/TradeExpansion/build/autotest/screenshots/18-2_excluded.png)
 - 31-1 `goods_order`：[31-1_sell_order.png](../../Source/TradeExpansion/build/autotest/screenshots/31-1_sell_order.png)
@@ -274,6 +296,8 @@
 - 8-6 `exchange_tab`：[8-6_exchange_down.png](../../Source/TradeExpansion/build/autotest/screenshots/8-6_exchange_down.png)
 - 7-4 `wallet_screen`：[7-4_wallet_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/7-4_wallet_screen.png)
 - 6-3 `trader_opens_market`：[6-3_trader_opens.png](../../Source/TradeExpansion/build/autotest/screenshots/6-3_trader_opens.png)
+- 27-1 `advancements_screen`：[27-1_advancements_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/27-1_advancements_tab.png)
+- 27-11 `advancements_screen`：[27-11_advancements_en.png](../../Source/TradeExpansion/build/autotest/screenshots/27-11_advancements_en.png)
 - 13-10 `clock_advance_updates_open_screen`：[13-10_quest_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_quest_after_clock_advance.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)
@@ -287,6 +311,7 @@
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_town.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_town.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_staff.png)
 - 13-1 `config_save_applies`：[13-1_max_per_transaction_48.png](../../Source/TradeExpansion/build/autotest/screenshots/13-1_max_per_transaction_48.png)
+- 33-3 `special_settings`：[33-3_market_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/33-3_market_tab.png)
 - 13-6・13-8・13-9 `goods_manager`：[13-6_goods_added.png](../../Source/TradeExpansion/build/autotest/screenshots/13-6_goods_added.png)
 - 13-6・13-8・13-9 `goods_manager`：[13-9_already_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/13-9_already_goods.png)
 - 13-6・13-8・13-9 `goods_manager`：[13-8_consumable_remove.png](../../Source/TradeExpansion/build/autotest/screenshots/13-8_consumable_remove.png)

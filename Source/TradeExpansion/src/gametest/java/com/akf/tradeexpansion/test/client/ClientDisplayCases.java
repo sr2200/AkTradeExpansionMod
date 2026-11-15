@@ -29,6 +29,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -36,6 +37,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
@@ -308,25 +310,53 @@ final class ClientDisplayCases {
 
 	/**
 	 * 16-11: with {@code client.showDebugTooltip} the tooltip of a goods row adds the base price, the multiplier, the
-	 * prices and the stock (the values of the snapshot); without it they are not there.
+	 * prices, the stock and how long the price and the stock take to recover (a good made dear with half its stock);
+	 * without it they are not there. The price graph is left of the cursor (above or below the tooltip when there is no
+	 * room on the left), inside the screen, on no tooltip line.
 	 */
 	static void debugTooltip(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
 		boolean before = TradeExpansionConfig.get().client.showDebugTooltip;
 		try {
 			client(context, c -> c.showDebugTooltip = true);
+			MarketScreen probe = reopen(s);
+			context.clickScreenButton("screen.ak_trade_expansion.tab.buy");
+			context.waitTicks(2);
+			GoodView picked = visibleGoods(context, probe).stream().filter(v -> PriceModel.canBuy(v.state()) && v.patch().isEmpty() && v.params().targetStock() >= 8)
+					.findFirst().orElseThrow(() -> new AssertionError("no good to buy"));
+			// Dearer than normal and half the stock: the tooltip forecasts both recoveries.
+			BlockPos stall = s.stall;
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				GoodState st = market.good(picked.goods());
+				st.setPressure(market.params(picked.goods()).minPressure() * 0.5);
+				st.setStock(Math.floor(market.params(picked.goods()).targetStock() / 2));
+				MarketRegistry.get(server).setDirty();
+			});
 			MarketScreen screen = reopen(s);
 			context.clickScreenButton("screen.ak_trade_expansion.tab.buy");
 			context.waitTicks(2);
-			GoodView good = visibleGoods(context, screen).stream().filter(v -> PriceModel.canBuy(v.state()) && v.patch().isEmpty()).findFirst()
-					.orElseThrow(() -> new AssertionError("no good to buy"));
+			GoodView good = view(context, screen, picked.goods());
 			int rowY = showRow(context, screen, good.goods());
-			moveTo(context, listX(context, screen) + 60, rowY + 8);
+			int mouseX = listX(context, screen) + 60;
+			moveTo(context, mouseX, rowY + 8);
 			context.waitTicks(2);
-			List<TextRecorder.Text> tip = tip(context);
+			List<TextRecorder.Text> frame = TextRecorder.capture(context);
+			// The price graph (120 x 64, its title 4 / 3 pixels in) is drawn over the screen too: its texts (the title,
+			// "112%", "10c - 12c", "3日") are told apart from the tooltip's by what they say.
+			String graphTitle = text("screen.ak_trade_expansion.graph.buy");
+			String[] days = Language.getInstance().getOrDefault("screen.ak_trade_expansion.graph.days").split("%s", -1);
+			TextRecorder.Text graph = frame.stream().filter(t -> t.text().equals(graphTitle)).findFirst()
+					.orElseThrow(() -> new AssertionError("no price graph (\"" + graphTitle + "\") next to the cursor"));
+			int[] gbox = {graph.x0() - 4, graph.y0() - 3, graph.x0() - 4 + 120, graph.y0() - 3 + 64};
+			java.util.function.Predicate<TextRecorder.Text> graphText = t -> t.text().equals(graphTitle) || t.text().matches("\\d+%")
+					|| t.text().matches(".+c - .+c") || t.text().matches(java.util.regex.Pattern.quote(days[0]) + "\\d+" + java.util.regex.Pattern.quote(days[1]));
+			List<TextRecorder.Text> tip = tooltip(frame).stream().filter(graphText.negate()).toList();
+			int[] size = context.computeOnClient(c -> new int[] {c.getWindow().getGuiScaledWidth(), c.getWindow().getGuiScaledHeight()});
+			check(tip.stream().allMatch(t -> t.x0() >= 0 && t.y0() >= 0 && t.x1() <= size[0] && t.y1() <= size[1]), "tooltip lines run off the screen: %s", tip);
 			String base = text("screen.ak_trade_expansion.debug.base", CoinItem.formatCopper(Math.round(good.params().basePrice())));
 			check(tip.stream().anyMatch(t -> t.text().equals(base)), "the tooltip has no \"%s\": %s", base, strings(tip));
-			for (String key : List.of("debug.prices", "debug.stock")) {
+			for (String key : List.of("debug.prices", "debug.stock", "debug.multiplier.high", "debug.price_recovery", "debug.restock")) {
 				String p = prefix("screen.ak_trade_expansion." + key);
 				check(tip.stream().anyMatch(t -> t.text().startsWith(p)), "the tooltip has no \"%s…\": %s", p, strings(tip));
 			}
@@ -334,6 +364,22 @@ final class ClientDisplayCases {
 			String stock = String.valueOf((long) Math.floor(state.stock()));
 			check(tip.stream().anyMatch(t -> t.text().startsWith(prefix("screen.ak_trade_expansion.debug.stock")) && t.text().contains(stock)),
 					"the stock line does not say %s: %s", stock, strings(tip));
+			String v = String.format("%.2f", PriceModel.multiplier(good.params(), state.pressure()));
+			check(tip.stream().anyMatch(t -> t.text().equals(text("screen.ak_trade_expansion.debug.multiplier.high", v))),
+					"the multiplier line does not say ×%s: %s", v, strings(tip));
+			// The graph: left of the cursor (the tooltip is on the right) when there is room for it, otherwise above or
+			// below the tooltip; inside the screen, on none of the tooltip's lines.
+			int tipTop = tip.stream().mapToInt(TextRecorder.Text::y0).min().orElse(0);
+			int tipBottom = tip.stream().mapToInt(TextRecorder.Text::y1).max().orElse(0);
+			if (mouseX - 10 - 120 >= 4) {
+				check(gbox[2] <= mouseX, "the price graph (x %d-%d) is not left of the cursor (x %d)", gbox[0], gbox[2], mouseX);
+			} else {
+				check(gbox[1] >= tipBottom || gbox[3] <= tipTop, "with no room on the left, the price graph (y %d-%d) is not above or below the tooltip (y %d-%d)",
+						gbox[1], gbox[3], tipTop, tipBottom);
+			}
+			check(gbox[0] >= 0 && gbox[3] <= size[1], "the price graph (%d,%d-%d,%d) runs off the %dx%d screen", gbox[0], gbox[1], gbox[2], gbox[3], size[0], size[1]);
+			List<TextRecorder.Text> covered = tip.stream().filter(t -> t.inside(gbox[0], gbox[1], gbox[2], gbox[3])).toList();
+			check(covered.isEmpty(), "the price graph covers tooltip lines: %s", covered);
 			screenshot(context, result, "16-11_debug_tooltip");
 
 			client(context, c -> c.showDebugTooltip = false);
@@ -490,6 +536,147 @@ final class ClientDisplayCases {
 			});
 			context.setScreen(() -> null);
 		}
+	}
+
+	// ---- 9-1b deals on the board
+
+	private static final int COLOR_DEAL_BUY = 0xFF55FFFF;
+	private static final int COLOR_DEAL_SELL = 0xFFFF88FF;
+
+	/**
+	 * 9-1b: one good of the other market made cheap (to buy) and one made dear (to sell) against the stall's market.
+	 * The market row shows "安n" in cyan and "高n" in pink (n: the deals the board sent); the mouse over it shows the best
+	 * deals with their % in the right panel. With the market selected, the cheap good's buy price is cyan with "↓" and
+	 * the dear good's sell price pink with "↑"; the mouse over them says how much. No texts overlap.
+	 */
+	static void boardDeals(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		context.setScreen(() -> null);
+		BlockPos stall = s.stall;
+		// {other market id, cheap good, dear good} and the pressures to put back.
+		List<Runnable> restore = new ArrayList<>();
+		Object[] picked = s.world.getServer().computeOnServer(server -> {
+			Market home = market(server, stall);
+			Market other = other(server, home);
+			MarketUpkeep.touch(server.overworld(), other);
+			Identifier cheap = other.goods().keySet().stream().filter(g -> {
+				var def = com.akf.tradeexpansion.data.GoodsCatalog.get(g);
+				return def != null && def.buy() && def.components().isEmpty() && other.good(g).stock() >= 1;
+			}).findFirst().orElseThrow(() -> new AssertionError("the other market sells nothing"));
+			Identifier dear = other.goods().keySet().stream().filter(g -> {
+				var def = com.akf.tradeexpansion.data.GoodsCatalog.get(g);
+				return def != null && def.sell() && def.components().isEmpty() && !g.equals(cheap) && PriceModel.canSell(other.params(g), other.good(g));
+			}).findFirst().orElseThrow(() -> new AssertionError("the other market buys nothing"));
+			for (Market m : List.of(home, other)) {
+				for (Identifier g : List.of(cheap, dear)) {
+					GoodState st = m.good(g);
+					if (st == null) continue;
+					double x = st.pressure();
+					restore.add(() -> st.setPressure(x));
+				}
+			}
+			for (Identifier g : List.of(cheap, dear)) if (home.good(g) != null) home.good(g).setPressure(0);
+			other.good(cheap).setPressure(other.params(cheap).maxPressure() * 0.8);
+			other.good(dear).setPressure(other.params(dear).minPressure() * 0.8);
+			MarketRegistry.get(server).setDirty();
+			return new Object[] {other.id(), cheap, dear};
+		});
+		long otherId = (Long) picked[0];
+		Item cheapItem = item((Identifier) picked[1]);
+		Item dearItem = item((Identifier) picked[2]);
+		try {
+			MarketScreen screen = reopen(s);
+			context.clickScreenButton("screen.ak_trade_expansion.tab.board");
+			context.waitTicks(2);
+			BoardS2C board = board(context, screen);
+			BoardS2C.Entry entry = board.markets().stream().filter(e -> e.id() == otherId).findFirst()
+					.orElseThrow(() -> new AssertionError("the other market is not on the board"));
+			BoardS2C.Good cheapGood = entry.goods().stream().filter(g -> BuiltInRegistries.ITEM.getValue(g.item()) == cheapItem).findFirst()
+					.orElseThrow(() -> new AssertionError("the board has no " + cheapItem + " of the other market"));
+			BoardS2C.Good dearGood = entry.goods().stream().filter(g -> BuiltInRegistries.ITEM.getValue(g.item()) == dearItem).findFirst()
+					.orElseThrow(() -> new AssertionError("the board has no " + dearItem + " of the other market"));
+			check(cheapGood.buyDeal() > 0, "the cheap good %s is no deal to buy: %s", cheapItem, cheapGood);
+			check(dearGood.sellDeal() > 0, "the dear good %s is no deal to sell: %s", dearItem, dearGood);
+			long buyDeals = entry.goods().stream().filter(g -> g.buyDeal() > 0).count();
+			long sellDeals = entry.goods().stream().filter(g -> g.sellDeal() > 0).count();
+			int bestBuy = entry.goods().stream().mapToInt(BoardS2C.Good::buyDeal).max().orElseThrow();
+			int bestSell = entry.goods().stream().mapToInt(BoardS2C.Good::sellDeal).max().orElseThrow();
+
+			// The market row: "安n" in cyan, "高n" in pink.
+			int listY = context.computeOnClient(c -> topPos(screen)) + constant(MarketScreen.class, "LIST_Y");
+			int rowH = constant(MarketScreen.class, "ROW_H");
+			int x0 = listX(context, screen);
+			int index = board.news().size() + board.markets().indexOf(entry);
+			int rows = context.computeOnClient(c -> (Integer) get(screen, "rows"));
+			int scroll = Math.max(0, index - rows + 1);
+			context.runOnClient(c -> set(screen, "scroll", scroll));
+			int rowY = listY + (index - scroll) * rowH;
+			mouseAway(context);
+			List<TextRecorder.Text> texts = TextRecorder.capture(context);
+			List<TextRecorder.Text> row = rowTexts(texts, rowY);
+			String buyCount = text("screen.ak_trade_expansion.board.deal_buy_count", buyDeals);
+			String sellCount = text("screen.ak_trade_expansion.board.deal_sell_count", sellDeals);
+			TextRecorder.Text buyText = find(row, buyCount, "deals to buy");
+			TextRecorder.Text sellText = find(row, sellCount, "deals to sell");
+			check(buyText.color() == COLOR_DEAL_BUY, "\"%s\" is not cyan (%08X)", buyCount, buyText.color());
+			check(sellText.color() == COLOR_DEAL_SELL, "\"%s\" is not pink (%08X)", sellCount, sellText.color());
+			layoutOk(context, "9-1b board", texts);
+
+			// The mouse over the row: the best deals in the right panel.
+			moveTo(context, x0 + 40, rowY + 8);
+			context.waitTicks(2);
+			int px = context.computeOnClient(c -> leftPos(screen) + (Integer) get(screen, "panelX"));
+			List<TextRecorder.Text> hovered = TextRecorder.capture(context);
+			List<TextRecorder.Text> panel = hovered.stream().filter(t -> t.x0() >= px).toList();
+			find(panel, text("screen.ak_trade_expansion.board.deal_buy_title"), "title of the deals to buy");
+			find(panel, text("screen.ak_trade_expansion.board.deal_sell_title"), "title of the deals to sell");
+			find(panel, "-" + bestBuy + "%", "the best deal to buy");
+			find(panel, "+" + bestSell + "%", "the best deal to sell");
+			layoutOk(context, "9-1b board hovered", hovered);
+			screenshot(context, result, "9-1b_board_deals");
+
+			// Select the market: the prices of the deals with their arrows and colors, the % on hover.
+			clickAt(context, x0 + 40, rowY + 8);
+			mouseAway(context);
+			check(context.computeOnClient(c -> (Long) get(screen, "boardMarket")) == otherId, "a click on the market row did not select it");
+			int headerH = 10;
+			int goodsRows = (rows * rowH - headerH) / rowH;
+			for (BoardS2C.Good good : List.of(cheapGood, dearGood)) {
+				boolean buy = good == cheapGood;
+				int i = entry.goods().indexOf(good);
+				int top = Math.max(0, Math.min(i, entry.goods().size() - goodsRows));
+				context.runOnClient(c -> set(screen, "scroll", top));
+				context.waitTicks(1);
+				int gy = listY + headerH + (i - top) * rowH;
+				mouseAway(context);
+				List<TextRecorder.Text> goods = TextRecorder.capture(context);
+				String price = buy ? "↓" + CoinItem.formatCopper(good.buy()) : "↑" + CoinItem.formatCopper(good.sell());
+				TextRecorder.Text p = find(area(goods, gy + 3, gy + rowH), price, buy ? "cheap buy price" : "dear sell price");
+				check(p.color() == (buy ? COLOR_DEAL_BUY : COLOR_DEAL_SELL), "\"%s\" is not %s (%08X)", price, buy ? "cyan" : "pink", p.color());
+				layoutOk(context, "9-1b board market", goods);
+				moveTo(context, x0 + 40, gy + 8);
+				context.waitTicks(2);
+				List<TextRecorder.Text> tip = tip(context);
+				String line = buy ? text("screen.ak_trade_expansion.board.deal_buy", good.buyDeal()) : text("screen.ak_trade_expansion.board.deal_sell", good.sellDeal());
+				check(tip.stream().anyMatch(t -> t.text().equals(line)), "the tooltip of %s has no \"%s\": %s", buy ? cheapItem : dearItem, line, strings(tip));
+				screenshot(context, result, buy ? "9-1b_board_cheap" : "9-1b_board_dear");
+			}
+		} finally {
+			s.world.getServer().runOnServer(server -> {
+				restore.forEach(Runnable::run);
+				MarketRegistry.get(server).setDirty();
+			});
+			mouseAway(context);
+			context.setScreen(() -> null);
+		}
+	}
+
+	/** No texts on top of each other, none outside the screen or the panel. */
+	private static void layoutOk(ClientGameTestContext context, String where, List<TextRecorder.Text> texts) {
+		List<String> problems = context.computeOnClient(c -> LayoutCheck.check(where, texts, c.getWindow().getGuiScaledWidth(),
+				c.getWindow().getGuiScaledHeight(), null));
+		check(problems.isEmpty(), "%s", problems);
 	}
 
 	// ---- 18-1 / 18-2 / 31-2 sell all
