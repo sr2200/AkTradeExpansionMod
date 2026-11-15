@@ -20,9 +20,10 @@ public final class TextRecorder {
 	/**
 	 * One text of the frame; {@code stratum} grows for layers drawn on top (tooltips, overlays). {@code color}: the
 	 * text's ARGB color (styled parts of a text may have their own). {@code afterMark}: drawn after the frame's mark
-	 * ({@link #onMark}: the "sell all" box over the goods list).
+	 * ({@link #onMark}: the "sell all" box over the goods list). {@code styleColor}: RGB of the first styled
+	 * color in the text (a tooltip line made with withColor), -1 when none.
 	 */
-	public record Text(String text, int x0, int y0, int x1, int y1, int stratum, int color, boolean afterMark) {
+	public record Text(String text, int x0, int y0, int x1, int y1, int stratum, int color, boolean afterMark, int styleColor) {
 		public int width() {
 			return x1 - x0;
 		}
@@ -64,7 +65,7 @@ public final class TextRecorder {
 				if (mark >= 0) {
 					for (int i = mark; i < frame.size(); i++) {
 						Text t = frame.get(i);
-						frame.set(i, new Text(t.text(), t.x0(), t.y0(), t.x1(), t.y1(), t.stratum(), t.color(), true));
+						frame.set(i, new Text(t.text(), t.x0(), t.y0(), t.x1(), t.y1(), t.stratum(), t.color(), true, t.styleColor()));
 					}
 				}
 				captured = List.copyOf(frame);
@@ -89,14 +90,16 @@ public final class TextRecorder {
 		ScreenRectangle bounds = text.bounds();
 		if (bounds == null || bounds.width() <= 0 || bounds.height() <= 0) return; // clipped away
 		StringBuilder sb = new StringBuilder();
+		int[] styleColor = {-1};
 		GuiTextRenderStateAccessor access = (GuiTextRenderStateAccessor) (Object) text;
 		access.ak_trade_expansion_test$text().accept((index, style, codePoint) -> {
 			sb.appendCodePoint(codePoint);
+			if (styleColor[0] < 0 && style.getColor() != null) styleColor[0] = style.getColor().getValue() & 0xFFFFFF;
 			return true;
 		});
 		String s = sb.toString();
 		if (s.isBlank()) return;
-		current.add(new Text(s, bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), stratum, access.ak_trade_expansion_test$color(), false));
+		current.add(new Text(s, bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), stratum, access.ak_trade_expansion_test$color(), false, styleColor[0]));
 	}
 
 	/**

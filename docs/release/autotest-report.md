@@ -2,10 +2,10 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.11、2026-11-15 09:41、112 件中 0 件失敗
-- クライアント：バージョン 0.2.6、2026-11-14 20:57、23 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.6、2026-11-14 20:54、2 件中 0 件失敗
-- チェックリスト 322 項目のうち、今回 自動で完了 66・一部を確認 87・失敗 0
+- サーバー：バージョン 0.2.12、2026-11-15 10:33、126 件中 0 件失敗
+- クライアント：バージョン 0.2.12、2026-11-15 10:43、36 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
+- チェックリスト 323 項目のうち、今回 自動で完了 86・一部を確認 104・失敗 0
 
 ## すべての項目
 
@@ -33,7 +33,7 @@
 | 7-1 | `wallet_recipe` | サーバー | ✔ | 全部 |
 | 8-3 | `minting_copper_not_iron` | サーバー | ✔ | 全部 |
 | 8-4 | `emerald_coin_stonecutter` | サーバー | ✔ | 全部 |
-| 17-1 | `starting_money` | サーバー | ✔ | 初めて入った時に 240c もらえることのみ（入り直しは見ていない） |
+| 17-1 | `starting_money` | サーバー | ✔ | 全部 |
 | 4-2 | `propagation_by_distance` | サーバー | ✔ | 全部 |
 | 4-4 | `consumables_come_back` | サーバー | ✔ | 全部 |
 | 4-5 | `goods_set_base_price` | サーバー | ✔ | 全部 |
@@ -111,6 +111,20 @@
 | 24-5 | `trends_change_with_period` | サーバー | ✔ | 全部 |
 | 24-6 | `reroll_rerolls_trends` | サーバー | ✔ | 全部 |
 | 24-7 | `trends_off` | サーバー | ✔ | 流行の数を両方 0 にすると次の期間から流行が無くなり、交易画面に送る流行も空になること（設定はファイルの再読み込みでなくその場で変えた。画面の表示は見ていない） |
+| 27-2 | `advancements_first_trades` | サーバー | ✔ | 全部 |
+| 27-3 | `advancements_selling` | サーバー | ✔ | 全部 |
+| 27-4 | `advancements_three_markets` | サーバー | ✔ | 3つの市場で取引すると「行商」が付くこと（ネザー・エンドの市場は見ていない） |
+| 27-5 | `advancements_requests` | サーバー | ✔ | 依頼を納めると「頼れる人」が付くこと（★3 の「腕利き」と輸送依頼の「長い旅路」は見ていない） |
+| 27-6 | `advancements_reputation_and_hiring` | サーバー | ✔ | 評判を 50・400・2500 にして交易画面を開くと「顔見知り」「お得意様」「名士」、運び屋を雇うと「人を使う身」が付くこと（運び屋の往復の「留守を任せて」は見ていない） |
+| 27-7 | `advancements_donation` | サーバー | ✔ | 「発展」タブでコインを寄付すると「村への投資」が付くこと（建物の完成の「槌音」「村おこし」は見ていない） |
+| 27-8 | `advancements_money` | サーバー | ✔ | 全部 |
+| 27-9 | `advancements_after_joining_again` | サーバー | ✔ | 評判が高い人が入り直すと、ログインした時に評判の進捗が付くこと（建物・所持金は見ていない） |
+| 27-10 | `advancements_survive_death` | サーバー | ✔ | 2つの市場で取引してから死んで生き返っても、取引した市場の記録（「行商」の数）が残っていること（生き返った後の取引は見ていない） |
+| 30-7・32-2 | `consumable_goods` | サーバー | ✔ | 真紅の幹・歪んだ幹・ハチミツ入りの瓶・サトウキビ・矢・茶色の卵・青い卵が消耗品で、相場の戻り（半減期）と在庫の減りが消耗品の速さになること（画面の表示は見ていない） |
+| 32-1 | `brown_and_blue_eggs` | サーバー | ✔ | 茶色の卵・青い卵の値段が卵と同じ 6c／4c で、茶色の卵は砂漠・サバンナの村とジャングル、青い卵は雪原・タイガの村の品揃えの候補にあること（実際の村での並び方とアイコンは見ていない） |
+| 30-5 | `snowy_ice_prices` | サーバー | ✔ | 雪原の村で氷と氷塊の両方に ×0.7 が掛かり、氷塊1個の買値が氷9個の買値より安いこと（市場ごとのばらつき ±15% の両端でも）（実際の村では見ていない） |
+| 30-6 | `savanna_saddle_price` | サーバー | ✔ | サバンナの村の鞍の基準価格が 117c（×0.9）で、革3つと鉄インゴットを買って作って売っても儲からないこと（実際の村では見ていない） |
+| 33-1 | `specials_of_a_small_market` | サーバー | ✔ | 全部 |
 | — | `request_trade` | サーバー | ✔ | 全部 |
 | — | `request_sell_all` | サーバー | ✔ | 全部 |
 | — | `request_bank` | サーバー | ✔ | 全部 |
@@ -136,6 +150,19 @@
 | 3-7 | `row_states` | クライアント | ✔ | 品不足の商品の名前がオレンジ色になることのみ（ツールチップは見ていない） |
 | 3-11 | `max_with_exact_money` | クライアント | ✔ | 全部 |
 | 2-13 | `sell_slot_selects_good` | クライアント | ✔ | 全部 |
+| 16-1・24-1 | `title_reputation_trends` | クライアント | ✔ | 全部 |
+| 24-1b | `trend_position_setting` | クライアント | ✔ | 全部 |
+| 16-11 | `debug_tooltip` | クライアント | ✔ | 基準価格・値段・在庫の行が出て、OFF にすると出ないこと（倍率・戻るまでの時間・価格グラフの位置は見ていない） |
+| 23-3・23-4・24-4 | `board_news_and_markets` | クライアント | ✔ | 全部 |
+| 9-1 | `board_news_and_markets` | クライアント | ✔ | 市場の行に名前と方角・距離が出て、ニュースから開いた市場の商品の一覧に列の見出し（列とずれていない、マウスで説明）があり、ホイールで最後の商品まで見えること（市場一覧の並び・買値以外の説明は見ていない） |
+| 18-1・31-2 | `sell_all_box` | クライアント | ✔ | 全部 |
+| 18-2 | `sell_all_box` | クライアント | ✔ | 行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る） |
+| 31-1 | `goods_order` | クライアント | ✔ | 全部 |
+| 22-20・22-21・31-3 | `town_tab` | クライアント | ✔ | 全部 |
+| 28-1・29-1・34-1・34-2 | `town_tab` | クライアント | ✔ | 噴水広場・公園を含む14種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る） |
+| 8-6 | `exchange_tab` | クライアント | ✔ | 全部 |
+| 7-4 | `wallet_screen` | クライアント | ✔ | 全部 |
+| 6-3 | `trader_opens_market` | クライアント | ✔ | 全部 |
 | 13-10 | `clock_advance_updates_open_screen` | クライアント | ✔ | 開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない） |
 | 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼を選んだ状態・「まとめて売る」の枠も）の文字が重ならず、画面と枠からはみ出さないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
 | 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブの文字が重ならず、はみ出さないこと |
@@ -182,6 +209,26 @@
 - 3-8・3-9 `row_states`：[3-9_not_buying_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/3-9_not_buying_sell_slot.png)
 - 3-11 `max_with_exact_money`：[3-11_max_exact_money.png](../../Source/TradeExpansion/build/autotest/screenshots/3-11_max_exact_money.png)
 - 2-13 `sell_slot_selects_good`：[2-13_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/2-13_sell_slot.png)
+- 16-1・24-1 `title_reputation_trends`：[24-1_title_row.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1_title_row.png)
+- 16-1・24-1 `title_reputation_trends`：[16-1_reputation_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/16-1_reputation_tooltip.png)
+- 16-1・24-1 `title_reputation_trends`：[24-1_trends_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1_trends_tooltip.png)
+- 16-1・24-1 `title_reputation_trends`：[16-1_long_name.png](../../Source/TradeExpansion/build/autotest/screenshots/16-1_long_name.png)
+- 24-1b `trend_position_setting`：[24-1b_title_right.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1b_title_right.png)
+- 24-1b `trend_position_setting`：[24-1b_status_row.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1b_status_row.png)
+- 16-11 `debug_tooltip`：[16-11_debug_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/16-11_debug_tooltip.png)
+- 23-3・23-4・24-4 `board_news_and_markets`：[23-3_board_news.png](../../Source/TradeExpansion/build/autotest/screenshots/23-3_board_news.png)
+- 23-3・23-4・24-4 `board_news_and_markets`：[24-4_board_market_trends.png](../../Source/TradeExpansion/build/autotest/screenshots/24-4_board_market_trends.png)
+- 23-3・23-4・24-4 `board_news_and_markets`：[23-4_news_opens_market.png](../../Source/TradeExpansion/build/autotest/screenshots/23-4_news_opens_market.png)
+- 23-3・23-4・24-4 `board_news_and_markets`：[9-1_board_market_scrolled.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1_board_market_scrolled.png)
+- 18-1・31-2 `sell_all_box`：[18-1_sell_all.png](../../Source/TradeExpansion/build/autotest/screenshots/18-1_sell_all.png)
+- 18-1・31-2 `sell_all_box`：[18-2_excluded.png](../../Source/TradeExpansion/build/autotest/screenshots/18-2_excluded.png)
+- 31-1 `goods_order`：[31-1_sell_order.png](../../Source/TradeExpansion/build/autotest/screenshots/31-1_sell_order.png)
+- 22-20・22-21・31-3 `town_tab`：[22-20_town_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/22-20_town_tab.png)
+- 22-20・22-21・31-3 `town_tab`：[29-1_town_scrolled.png](../../Source/TradeExpansion/build/autotest/screenshots/29-1_town_scrolled.png)
+- 22-20・22-21・31-3 `town_tab`：[22-21_warehouse_selected.png](../../Source/TradeExpansion/build/autotest/screenshots/22-21_warehouse_selected.png)
+- 8-6 `exchange_tab`：[8-6_exchange_down.png](../../Source/TradeExpansion/build/autotest/screenshots/8-6_exchange_down.png)
+- 7-4 `wallet_screen`：[7-4_wallet_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/7-4_wallet_screen.png)
+- 6-3 `trader_opens_market`：[6-3_trader_opens.png](../../Source/TradeExpansion/build/autotest/screenshots/6-3_trader_opens.png)
 - 13-10 `clock_advance_updates_open_screen`：[13-10_quest_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_quest_after_clock_advance.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)

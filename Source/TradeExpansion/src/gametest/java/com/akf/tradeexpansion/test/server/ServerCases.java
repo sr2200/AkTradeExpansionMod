@@ -338,14 +338,22 @@ public final class ServerCases {
 		}));
 
 		// ---- 17. starting money
-		cases.add(partial("starting_money", List.of("17-1"), "初めて入った時に 240c もらえることのみ（入り直しは見ていない）", ctx -> {
+		cases.add(full("starting_money", List.of("17-1"), ctx -> {
 			ServerPlayer player = ctx.player(ctx.center());
-			equal(TradeExpansionConfig.get().currency.startingMoney, ctx.balance(player), "money of a new player");
+			long start = TradeExpansionConfig.get().currency.startingMoney;
+			equal(start, ctx.balance(player), "money of a new player");
+			that(ctx.gotMessage(player, "message.ak_trade_expansion.starting_money"), "no starting money message: %s", ctx.messages(player));
+			ServerPlayer again = ctx.rejoin(player);
+			// Who got it is kept per world; the test player's own saved data (its coins) is not read back when it joins again.
+			that(ctx.balance(again) <= start, "joining again gave money again (%dc)", ctx.balance(again));
+			that(!ctx.gotMessage(again, "message.ak_trade_expansion.starting_money"), "the starting money came again");
 		}));
 
 		cases.addAll(ServerChapterCases.all());
 		cases.addAll(ServerWorldCases.all());
 		cases.addAll(ServerReputationCases.all());
+		cases.addAll(ServerAdvancementCases.all());
+		cases.addAll(ServerGoodsCases.all());
 		cases.addAll(ServerRequestCases.all());
 		return cases;
 	}

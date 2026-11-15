@@ -653,10 +653,23 @@ public final class TradeExpansionConfig {
 		}
 	}
 
+	/** P (v0.46): where the trade screen shows the trends label: after the reputation, the right end of the title row, or the status row. */
+	public enum TrendPosition implements StringRepresentable {
+		AFTER_REPUTATION, TITLE_RIGHT, STATUS_ROW;
+
+		public static final Codec<TrendPosition> CODEC = StringRepresentable.fromEnum(TrendPosition::values);
+
+		@Override
+		public String getSerializedName() {
+			return name();
+		}
+	}
+
 	/** Client-only settings: read from each client's own file, never synced. */
 	public static final class Client {
 		public boolean showDebugTooltip = false;
 		public BalancePosition balancePosition = BalancePosition.INVENTORY_RIGHT;
+		public TrendPosition trendPosition = TrendPosition.AFTER_REPUTATION;
 		/** A-4 "sell all" (v0.32): item ids never sold by it. */
 		public List<String> sellAllExclude = new ArrayList<>();
 		/** A-4 "sell all": tools / armour (excluded by default) that it may sell anyway. */
@@ -665,9 +678,11 @@ public final class TradeExpansionConfig {
 		public Client() {
 		}
 
-		Client(boolean showDebugTooltip, BalancePosition balancePosition, List<String> sellAllExclude, List<String> sellAllInclude) {
+		Client(boolean showDebugTooltip, BalancePosition balancePosition, TrendPosition trendPosition, List<String> sellAllExclude,
+				List<String> sellAllInclude) {
 			this.showDebugTooltip = showDebugTooltip;
 			this.balancePosition = balancePosition;
+			this.trendPosition = trendPosition;
 			this.sellAllExclude = new ArrayList<>(sellAllExclude);
 			this.sellAllInclude = new ArrayList<>(sellAllInclude);
 		}
@@ -675,6 +690,7 @@ public final class TradeExpansionConfig {
 		static final Codec<Client> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.BOOL.fieldOf("showDebugTooltip").orElse(false).forGetter(c -> c.showDebugTooltip),
 				BalancePosition.CODEC.fieldOf("balancePosition").orElse(BalancePosition.INVENTORY_RIGHT).forGetter(c -> c.balancePosition),
+				TrendPosition.CODEC.fieldOf("trendPosition").orElse(TrendPosition.AFTER_REPUTATION).forGetter(c -> c.trendPosition),
 				Codec.STRING.listOf().fieldOf("sellAllExclude").orElse(List.of()).forGetter(c -> c.sellAllExclude),
 				Codec.STRING.listOf().fieldOf("sellAllInclude").orElse(List.of()).forGetter(c -> c.sellAllInclude)
 		).apply(i, Client::new));

@@ -39,12 +39,16 @@ import com.akf.tradeexpansion.trade.InventoryUtil;
 import com.akf.tradeexpansion.trade.TradeResult;
 import com.akf.tradeexpansion.trade.TradeService;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -1254,7 +1258,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// Q17: change since the screen opened.
 		Long base = (buy ? baselineBuy : baselineSell).get(view.goods());
 		if (available && base != null && base != unitPrice) {
-			g.text(font, unitPrice > base ? "▲" : "▼", rx + PRICE_RIGHT + 1 + wide, textY, unitPrice > base ? COLOR_RED : COLOR_GREEN);
+			// A little smaller, so it fits between the price and the stock without touching either.
+			g.pose().pushMatrix();
+			g.pose().translate(rx + PRICE_RIGHT + 2 + wide, textY + 1);
+			g.pose().scale(0.8f, 0.8f);
+			g.text(font, unitPrice > base ? "▲" : "▼", 0, 0, unitPrice > base ? COLOR_RED : COLOR_GREEN);
+			g.pose().popMatrix();
 		}
 
 		String stock = (int) Math.floor(state.stock()) + "/" + (int) params.targetStock();
@@ -1274,10 +1283,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		g.fill(center, ry + 6, center + 1, ry + 12, COLOR_LIGHT);
 
 		if (hovered && mouseX < rx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
-		else if (hovered && !available) g.setTooltipForNextFrame(font, unavailableReason(view, buy), Optional.empty(), mouseX, mouseY);
+		else if (hovered && !available) g.setTooltipForNextFrame(font, wrap(unavailableReason(view, buy)), Optional.empty(), mouseX, tooltipY(mouseY));
 		else if (hovered) {
 			List<Component> lines = rowTooltip(view);
-			if (!lines.isEmpty()) g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+			if (!lines.isEmpty()) g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 	}
 
@@ -1384,6 +1393,43 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				: Component.translatable("screen.ak_trade_expansion.reputation.special.no", reputationName(r.specialBonusLevel())));
 		lines.add(Component.translatable("screen.ak_trade_expansion.reputation.how").withStyle(net.minecraft.ChatFormatting.GRAY));
 		return lines;
+	}
+
+	/**
+	 * The mouse y a tooltip is placed from. A tooltip starts 12 pixels above the mouse, so near the top of the window
+	 * (the title row of a small screen) its first line was cut off: it starts at the top edge at the highest.
+	 */
+	private static int tooltipY(int mouseY) {
+		return Math.max(mouseY, 16);
+	}
+
+	/** Tooltip lines of this screen, wrapped to fit it ({@link #wrapTooltip}). */
+	private List<Component> wrap(List<Component> lines) {
+		return wrapTooltip(font, width, lines);
+	}
+
+	/**
+	 * Wraps tooltip lines wider than the screen allows (at most 320 pixels): long explanations such as the reputation's
+	 * or a rival campaign's otherwise ran off the right edge of a small screen. Styles (colors) are kept.
+	 */
+	static List<Component> wrapTooltip(Font font, int screenWidth, List<Component> lines) {
+		int max = Math.max(120, Math.min(screenWidth - 24, 320));
+		List<Component> out = new ArrayList<>();
+		for (Component line : lines) {
+			if (font.width(line) <= max) {
+				out.add(line);
+				continue;
+			}
+			for (FormattedText part : font.getSplitter().splitLines(line, max, Style.EMPTY)) {
+				MutableComponent piece = Component.empty();
+				part.visit((style, text) -> {
+					piece.append(Component.literal(text).withStyle(style));
+					return Optional.empty();
+				}, Style.EMPTY);
+				out.add(piece);
+			}
+		}
+		return out;
 	}
 
 	/** Smallest scale a name is shrunk to before it is cut with "…". */
@@ -1612,9 +1658,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			extractFacilityPanel(g, facility, px, y, mouseX, mouseY);
 		}
 
-		if (hovered != null) g.setTooltipForNextFrame(font, facilityTooltip(hovered), Optional.empty(), mouseX, mouseY);
-		else if (overHeader) g.setTooltipForNextFrame(font, levelTooltip(d), Optional.empty(), mouseX, mouseY);
-		else if (overContributors) g.setTooltipForNextFrame(font, contributorsTooltip(d), Optional.empty(), mouseX, mouseY);
+		if (hovered != null) g.setTooltipForNextFrame(font, wrap(facilityTooltip(hovered)), Optional.empty(), mouseX, tooltipY(mouseY));
+		else if (overHeader) g.setTooltipForNextFrame(font, wrap(levelTooltip(d)), Optional.empty(), mouseX, tooltipY(mouseY));
+		else if (overContributors) g.setTooltipForNextFrame(font, wrap(contributorsTooltip(d)), Optional.empty(), mouseX, tooltipY(mouseY));
 	}
 
 	/** N-6: the selected facility: name, effect, cost, wanted materials (still wanted / required). */
@@ -1628,7 +1674,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			int sx = px + PANEL_W - sizeW;
 			g.text(font, size, sx, y + 40, COLOR_DARK, false);
 			if (mouseX >= sx && mouseX < sx + sizeW && mouseY >= y + 38 && mouseY < y + 50) {
-				g.setTooltipForNextFrame(font, List.of(sizeLine(f)), Optional.empty(), mouseX, mouseY);
+				g.setTooltipForNextFrame(font, wrap(List.of(sizeLine(f))), Optional.empty(), mouseX, tooltipY(mouseY));
 			}
 		}
 		List<FormattedCharSequence> effect = font.split(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect"), PANEL_W);
@@ -1648,7 +1694,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				List<Component> lines = new ArrayList<>();
 				lines.add(w.tag().isEmpty() ? stack.getHoverName() : Component.translatable("screen.ak_trade_expansion.town.wanted.tag", stack.getHoverName()));
 				lines.add(Component.translatable("screen.ak_trade_expansion.town.wanted.count", w.donated(), w.required()));
-				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+				g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 			}
 		}
 	}
@@ -1849,7 +1895,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 						List<Component> lines = new ArrayList<>();
 						lines.add(e.title());
 						for (MarketSnapshotS2C.TrendView t : e.trends()) lines.add(trendLine(t, false));
-						g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+						g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 					}
 				}
 				int y = rowY + 5;
@@ -1906,8 +1952,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		g.text(font, buyHeader, bx + 130 + wide - font.width(buyHeader), headerY, COLOR_GOLD);
 		g.text(font, sellHeader, bx + listW - 8 - font.width(sellHeader), headerY, COLOR_GREEN);
 		if (mouseX >= bx && mouseX < bx + listW && mouseY >= by && mouseY < by + BOARD_HEADER_H) {
-			g.setTooltipForNextFrame(font, List.of(Component.translatable("screen.ak_trade_expansion.board.header.buy.tooltip"),
-					Component.translatable("screen.ak_trade_expansion.board.header.sell.tooltip")), Optional.empty(), mouseX, mouseY);
+			g.setTooltipForNextFrame(font, wrap(List.of(Component.translatable("screen.ak_trade_expansion.board.header.buy.tooltip"),
+					Component.translatable("screen.ak_trade_expansion.board.header.sell.tooltip"))), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 		List<BoardS2C.Good> goods = entry.goods();
 		int goodsRows = (rows * ROW_H - BOARD_HEADER_H) / ROW_H;
@@ -1926,7 +1972,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				lines.add(stack.getHoverName());
 				if (good.buyDeal() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.board.deal_buy", good.buyDeal()));
 				if (good.sellDeal() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.board.deal_sell", good.sellDeal()));
-				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+				g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 			}
 		}
 	}
@@ -1956,7 +2002,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			if (board.markets().stream().anyMatch(e -> e.id() == n.marketId())) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.board.news.open").withColor(COLOR_GRAY));
 			}
-			g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+			g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 	}
 
@@ -2012,13 +2058,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		String titleText = title.getString();
 		// "市場名 │ 評判：常連 │ 流行" (M, P v0.46): the reputation and the trends follow the title, each with its details on
-		// hover; a long title shrinks so both always show.
+		// hover; a long title shrinks so both always show. client.trendPosition may move the trends to the right end of the
+		// title row (as in 0.2.0) or to the right end of the status row below the list.
 		String separator = " │ ";
 		String repLabel = snapshot != null && snapshot.reputation().enabled()
 				? Component.translatable("screen.ak_trade_expansion.reputation.label", reputationName(snapshot.reputation().level())).getString() : null;
-		String trendLabel = snapshot != null && !snapshot.trends().isEmpty()
+		String trendText = snapshot != null && !snapshot.trends().isEmpty()
 				? Component.translatable("screen.ak_trade_expansion.trend.label").getString() : null;
-		int suffixWidth = (repLabel == null ? 0 : font.width(separator + repLabel)) + (trendLabel == null ? 0 : font.width(separator + trendLabel));
+		TradeExpansionConfig.TrendPosition trendPosition = TradeExpansionConfig.get().client.trendPosition;
+		String trendLabel = trendPosition == TradeExpansionConfig.TrendPosition.AFTER_REPUTATION ? trendText : null;
+		int trendRightWidth = trendText != null && trendPosition == TradeExpansionConfig.TrendPosition.TITLE_RIGHT
+				? font.width(separator + trendText) : 0;
+		int suffixWidth = (repLabel == null ? 0 : font.width(separator + repLabel)) + (trendLabel == null ? 0 : font.width(separator + trendLabel))
+				+ trendRightWidth;
 		int titleWidth = Math.min(font.width(titleText), room - suffixWidth);
 		fitText(g, titleText, 8, 6, titleWidth, COLOR_TEXT, false);
 		int x = 8 + titleWidth;
@@ -2029,26 +2081,40 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			int rx = x + font.width(separator);
 			g.text(font, repLabel, rx, 6, 0xFF6040A0, false);
 			x = rx + font.width(repLabel);
-			if (mx >= rx && mx < x && my >= 4 && my < 16) g.setTooltipForNextFrame(font, reputationTooltip(), Optional.empty(), mouseX, mouseY);
+			if (mx >= rx && mx < x && my >= 4 && my < 16) g.setTooltipForNextFrame(font, wrap(reputationTooltip()), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 		if (trendLabel != null) {
 			g.text(font, separator, x, 6, COLOR_GRAY, false);
-			int tx = x + font.width(separator);
-			g.text(font, trendLabel, tx, 6, 0xFFB05010, false);
-			x = tx + font.width(trendLabel);
-			if (mx >= tx && mx < x && my >= 4 && my < 16) {
-				List<Component> lines = new ArrayList<>();
-				lines.add(Component.translatable("screen.ak_trade_expansion.trend.title"));
-				for (MarketSnapshotS2C.TrendView t : snapshot.trends()) lines.add(trendLine(t, false));
-				lines.add(Component.translatable("screen.ak_trade_expansion.trend.hint").withColor(COLOR_GRAY));
-				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
-			}
+			extractTrendLabel(g, trendLabel, x + font.width(separator), 6, mx, my, mouseX, mouseY);
+		} else if (trendRightWidth > 0) {
+			int tx = 8 + room - font.width(trendText);
+			g.text(font, separator, tx - font.width(separator), 6, COLOR_GRAY, false);
+			extractTrendLabel(g, trendText, tx, 6, mx, my, mouseX, mouseY);
 		}
 		Player player = player();
 		if (player != null) extractBalance(g, player, mouseX - leftPos, mouseY - topPos, mouseX, mouseY);
-		if (!sellAllOpen) g.text(font, font.plainSubstrByWidth(status.getString(), imageWidth - 16), 8, LIST_Y + rows * ROW_H + 3,
+		int statusY = LIST_Y + rows * ROW_H + 3;
+		int statusRoom = imageWidth - 16;
+		if (!sellAllOpen && trendText != null && trendPosition == TradeExpansionConfig.TrendPosition.STATUS_ROW) {
+			int tx = imageWidth - 8 - font.width(trendText);
+			extractTrendLabel(g, trendText, tx, statusY, mx, my, mouseX, mouseY);
+			statusRoom = tx - 8 - 6;
+		}
+		if (!sellAllOpen) g.text(font, font.plainSubstrByWidth(status.getString(), statusRoom), 8, statusY,
 				statusColor == COLOR_GREEN ? 0xFF207020 : statusColor == COLOR_RED ? 0xFFA02020 : COLOR_TEXT, false);
 		g.text(font, Component.translatable("screen.ak_trade_expansion.sell_slot"), layout.sellSlotX() - 6, layout.sellSlotY() - 11, COLOR_TEXT, false);
+	}
+
+	/** The "流行" label at (x, y) in screen-local coordinates; hovering lists this village's trends (P). */
+	private void extractTrendLabel(GuiGraphicsExtractor g, String label, int x, int y, int mx, int my, int mouseX, int mouseY) {
+		g.text(font, label, x, y, 0xFFB05010, false);
+		if (mx >= x && mx < x + font.width(label) && my >= y - 2 && my < y + 10) {
+			List<Component> lines = new ArrayList<>();
+			lines.add(Component.translatable("screen.ak_trade_expansion.trend.title"));
+			for (MarketSnapshotS2C.TrendView t : snapshot.trends()) lines.add(trendLine(t, false));
+			lines.add(Component.translatable("screen.ak_trade_expansion.trend.hint").withColor(COLOR_GRAY));
+			g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
+		}
 	}
 
 	/**
@@ -2096,7 +2162,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			y1 = y;
 		}
 		if (mx >= x0 && mx < x1 && my >= y0 && my < y1) {
-			g.setTooltipForNextFrame(font, balanceBreakdown(player), Optional.empty(), mouseX, mouseY);
+			g.setTooltipForNextFrame(font, wrap(balanceBreakdown(player)), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 	}
 

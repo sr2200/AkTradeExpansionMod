@@ -355,6 +355,13 @@ public final class ConfigScreen {
 						.binding(d.client.balancePosition, () -> edit.client.balancePosition, v -> edit.client.balancePosition = v)
 						.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.BalancePosition.class)
 								.formatValue(v -> Component.translatable(KEY + "client.balancePosition." + v.getSerializedName().toLowerCase(Locale.ROOT))))
+						.build())
+				.option(Option.<TradeExpansionConfig.TrendPosition>createBuilder()
+						.name(Component.translatable(KEY + "client.trendPosition"))
+						.description(OptionDescription.of(Component.translatable(KEY + "client.trendPosition.desc")))
+						.binding(d.client.trendPosition, () -> edit.client.trendPosition, v -> edit.client.trendPosition = v)
+						.controller(o -> EnumControllerBuilder.create(o).enumClass(TradeExpansionConfig.TrendPosition.class)
+								.formatValue(v -> Component.translatable(KEY + "client.trendPosition." + v.getSerializedName().toLowerCase(Locale.ROOT))))
 						.build());
 
 		return YetAnotherConfigLib.createBuilder()

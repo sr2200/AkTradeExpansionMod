@@ -150,7 +150,11 @@ public final class ServerCtx {
 
 	/** A survival player at {@code pos} (the vanilla mock player is always creative, and creative cannot trade). */
 	public ServerPlayer player(BlockPos pos) {
-		GameProfile profile = new GameProfile(UUID.randomUUID(), "test" + players.size());
+		return player(pos, new GameProfile(UUID.randomUUID(), "test" + players.size()));
+	}
+
+	/** A survival player with the given profile (the same profile again = the same player joining again). */
+	private ServerPlayer player(BlockPos pos, GameProfile profile) {
 		CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
 		ServerPlayer player = new ServerPlayer(server(), level(), profile, cookie.clientInformation());
 		Connection connection = new Connection(PacketFlow.SERVERBOUND);
@@ -161,6 +165,28 @@ public final class ServerCtx {
 		player.teleportTo(level(), pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
 		players.add(player);
 		return player;
+	}
+
+	/** {@code player} leaves the server and joins again (as after a restart); returns the new player object. */
+	public ServerPlayer rejoin(ServerPlayer player) {
+		BlockPos pos = player.blockPosition();
+		player.closeContainer();
+		server().getPlayerList().remove(player);
+		players.remove(player);
+		channels.remove(player);
+		received.remove(player);
+		return player(pos, player.getGameProfile());
+	}
+
+	/** A dead {@code player} respawns (the respawn button); returns the new player object. */
+	public ServerPlayer respawn(ServerPlayer player) {
+		ServerPlayer fresh = server().getPlayerList().respawn(player, false, Entity.RemovalReason.KILLED);
+		players.set(players.indexOf(player), fresh);
+		EmbeddedChannel channel = channels.remove(player);
+		if (channel != null) channels.put(fresh, channel);
+		received.remove(player);
+		fresh.setGameMode(GameType.SURVIVAL);
+		return fresh;
 	}
 
 	// ---- what the server sent to a test player

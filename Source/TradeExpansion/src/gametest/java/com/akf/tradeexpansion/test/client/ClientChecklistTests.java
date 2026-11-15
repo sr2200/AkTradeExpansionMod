@@ -39,7 +39,7 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * every case itself, records each result (build/autotest/client-results.json) and fails at the end if any case failed.
  * Cases that need a world share one singleplayer world with a small village and a stall placed with the use key.
  * Screenshots go to build/autotest/screenshots for a person to look at. The cases are in this class,
- * {@link ClientTradeCases} and {@link ClientConfigCases}.
+ * {@link ClientTradeCases}, {@link ClientDisplayCases} and {@link ClientConfigCases}.
  * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.minimal} (the run without
  * Mod Menu and YACL, runClientGameTestMinimal): only the startup case, results in client-minimal-results.json.
  */
@@ -101,6 +101,20 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("3-7"), "品不足の商品の名前がオレンジ色になることのみ（ツールチップは見ていない）"));
 		cases.add(new ClientCase("max_with_exact_money", List.of("3-11"), null, true, ClientTradeCases::maxWithExactMoney));
 		cases.add(new ClientCase("sell_slot_selects_good", List.of("2-13"), null, true, ClientTradeCases::sellSlot));
+		cases.add(new ClientCase("title_reputation_trends", List.of("16-1", "24-1"), null, true, ClientDisplayCases::titleRow));
+		cases.add(new ClientCase("trend_position_setting", List.of("24-1b"), null, true, ClientDisplayCases::trendPosition));
+		cases.add(new ClientCase("debug_tooltip", List.of("16-11"), "基準価格・値段・在庫の行が出て、OFF にすると出ないこと（倍率・戻るまでの時間・価格グラフの位置は見ていない）",
+				true, ClientDisplayCases::debugTooltip));
+		cases.add(new ClientCase("board_news_and_markets", List.of("23-3", "23-4", "24-4"), null, true, ClientDisplayCases::board,
+				List.of("9-1"), "市場の行に名前と方角・距離が出て、ニュースから開いた市場の商品の一覧に列の見出し（列とずれていない、マウスで説明）があり、ホイールで最後の商品まで見えること（市場一覧の並び・買値以外の説明は見ていない）"));
+		cases.add(new ClientCase("sell_all_box", List.of("18-1", "31-2"), null, true, ClientDisplayCases::sellAll,
+				List.of("18-2"), "行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る）"));
+		cases.add(new ClientCase("goods_order", List.of("31-1"), null, true, ClientDisplayCases::goodsOrder));
+		cases.add(new ClientCase("town_tab", List.of("22-20", "22-21", "31-3"), null, true, ClientDisplayCases::townTab,
+				List.of("28-1", "29-1", "34-1", "34-2"), "噴水広場・公園を含む14種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る）"));
+		cases.add(new ClientCase("exchange_tab", List.of("8-6"), null, true, ClientDisplayCases::exchange));
+		cases.add(new ClientCase("wallet_screen", List.of("7-4"), null, true, ClientDisplayCases::wallet));
+		cases.add(new ClientCase("trader_opens_market", List.of("6-3"), null, true, ClientDisplayCases::traderOpens));
 		cases.add(new ClientCase("clock_advance_updates_open_screen", List.of("13-10"),
 				"開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない）", true, ClientChecklistTests::clockAdvance));
 		cases.add(new ClientCase("layout_market_screen_ja", List.of("3-6", "19-1", "19-2", "19-3", "22-1", "26-1"),

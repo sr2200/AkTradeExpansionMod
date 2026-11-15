@@ -704,7 +704,7 @@ final class StaffTab {
 			if (!v.atHome()) label += " ＠" + v.homeName().getString();
 			screen.fit(g, label, lx + 20, ry + 5, listW - 34 - statusWidth, v.phase() == PHASE_QUIT ? COLOR_GRAY : COLOR_WHITE, true);
 		}
-		if (hovered != null) g.setTooltipForNextFrame(screen.screenFont(), tooltip(hovered), Optional.empty(), mouseX, mouseY);
+		if (hovered != null) g.setTooltipForNextFrame(screen.screenFont(), MarketScreen.wrapTooltip(screen.screenFont(), screen.width, tooltip(hovered)), Optional.empty(), mouseX, mouseY);
 	}
 
 	private record StatusText(String text, int color) {
@@ -891,7 +891,7 @@ final class StaffTab {
 			if (over && mouseX < lx + 18) g.setTooltipForNextFrame(font, stack, mouseX, mouseY);
 			else if (over && !tip.isEmpty()) {
 				tip.addFirst(stack.getHoverName());
-				g.setTooltipForNextFrame(font, tip, Optional.empty(), mouseX, mouseY);
+				g.setTooltipForNextFrame(font, MarketScreen.wrapTooltip(font, screen.width, tip), Optional.empty(), mouseX, mouseY);
 			}
 		}
 	}
@@ -927,7 +927,7 @@ final class StaffTab {
 			} else if (h != null) {
 				tip.add(Component.translatable("screen.ak_trade_expansion.staff.hint.carrier.none").withStyle(ChatFormatting.GRAY));
 			}
-			g.setTooltipForNextFrame(font, tip, Optional.empty(), mouseX, mouseY);
+			g.setTooltipForNextFrame(font, MarketScreen.wrapTooltip(font, screen.width, tip), Optional.empty(), mouseX, mouseY);
 		}
 	}
 
@@ -981,7 +981,7 @@ final class StaffTab {
 				Component back = returnLine(d);
 				if (back != null) lines.add(back);
 				lines.add(travelLine(d.distance(), d.travelMultiplier(), d.accidentMultiplier()).withStyle(ChatFormatting.GRAY));
-				g.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+				g.setTooltipForNextFrame(font, MarketScreen.wrapTooltip(font, screen.width, lines), Optional.empty(), mouseX, mouseY);
 			}
 		}
 	}

@@ -17,7 +17,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.2.12（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.2.13（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -124,7 +124,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 発展 | 発展度・寄付・建物 | オーバーワールドの市場（設定で変更可） |
 | 雇い人 | 運び屋・番頭を雇う・管理する | すべて（設定で OFF にすると出ない） |
 
-- いちばん上の行に、市場名に続けて「│ 評判：常連」「│ 流行」が出ます。マウスを乗せると詳しい内容が見られます。
+- いちばん上の行に、市場名に続けて「│ 評判：常連」「│ 流行」が出ます。マウスを乗せると詳しい内容が見られます（「流行」の位置は設定 `client.trendPosition` で変えられます）。
 - 購入・売却の一覧は、値段（基準価格）の安い順に並びます。▲▼ は画面を開いてからの値動き、右端のメーターは基準価格からのずれ（右・赤＝高い、左・緑＝安い）です。行にマウスを乗せると直近14日の価格グラフが出ます。
 - 色の意味：品不足の商品はオレンジ（マウスを乗せると基準価格の倍率）、**本日の掘り出し物**は★付きの水色、売り切れ・買取停止の商品は赤みがかった灰色（マウスを乗せると理由と「入荷まで約○分」「買取再開まで約○分」）。
 - 左下の「**売却枠**」に品物を置くと、売却タブでその商品が選ばれます。置いた品も売却の対象になり、画面を閉じるとインベントリに戻ります（買取停止の品なら枠が赤くなります）。
@@ -959,6 +959,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 |---|---|---|---|---|
 | `client.showDebugTooltip` | `false` | true / false | 交易画面で商品の行にマウスを乗せると、基準価格・今の倍率・在庫・値段と在庫が戻るまでの時間を出す（設定画面では「相場の詳しい情報を表示」） | `"showDebugTooltip": true` |
 | `client.balancePosition` | `"INVENTORY_RIGHT"` | "INVENTORY_RIGHT" / "BELOW_SELL_SLOT" / "TOP_RIGHT" | 交易画面の所持金の表示位置（インベントリの右／売却枠の下／右上） | `"balancePosition": "TOP_RIGHT"` |
+| `client.trendPosition` | `"AFTER_REPUTATION"` | "AFTER_REPUTATION" / "TITLE_RIGHT" / "STATUS_ROW" | 交易画面の「流行」の表示位置（いちばん上の行の評判のすぐ後ろ／いちばん上の行の右端／一覧の下の状態表示の行の右端） | `"trendPosition": "STATUS_ROW"` |
 | `client.sellAllExclude` | `[]` | アイテムIDの一覧 | 「まとめて売る」で売らないアイテム（確認の枠で行をクリックすると追加・削除される） | `"sellAllExclude": ["minecraft:diamond"]` |
 | `client.sellAllInclude` | `[]` | アイテムIDの一覧 | 道具・防具（最初から除外）のうち、「まとめて売る」で売るアイテム | `"sellAllInclude": ["minecraft:bow"]` |
 

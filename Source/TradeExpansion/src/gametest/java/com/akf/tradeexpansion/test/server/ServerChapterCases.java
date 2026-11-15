@@ -729,7 +729,7 @@ final class ServerChapterCases {
 	}
 
 	/** Sends a staff request; returns its result (null when the server sent none). */
-	private static TradeResult staff(ServerCtx c, ServerPlayer player, Market market, StaffRequestC2S.Action action, int employee, Identifier goods,
+	static TradeResult staff(ServerCtx c, ServerPlayer player, Market market, StaffRequestC2S.Action action, int employee, Identifier goods,
 			long destination, int quantity, long buyLimit, long sellLimit, long amount, boolean card) {
 		c.forget(player);
 		StaffService.handle(player, new StaffRequestC2S(market.id(), action, employee, goods, destination, quantity, buyLimit, sellLimit, amount, card));
