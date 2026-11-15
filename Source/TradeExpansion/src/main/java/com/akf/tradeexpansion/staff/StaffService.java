@@ -1172,6 +1172,10 @@ public final class StaffService {
 				if (e.quit() || request.amount() <= 0) return new Outcome(TradeResult.INVALID_REQUEST);
 				if (!charge(player, market, request.amount(), request.useCard())) return new Outcome(TradeResult.INSUFFICIENT_FUNDS);
 				e.purse += request.amount();
+				// One waiting for money tries again now (not after RETRY_TICKS); a carrier on the road or resting keeps its time.
+				if (!e.paused && e.status != Employee.Status.RESTING && (e.role == Employee.Role.CLERK || e.phase == Employee.Phase.HOME)) {
+					e.nextTime = Math.min(e.nextTime, now);
+				}
 				return new Outcome(TradeResult.SUCCESS, request.amount(), e.id);
 			}
 			case WITHDRAW_MONEY -> {

@@ -140,7 +140,18 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("special_settings", List.of("33-3"), "設定画面の「市場」タブに2つの設定があり、変えて保存するとすぐ設定とファイルに入ること（次の日の掘り出し物は見ていない）",
 				true, ClientConfigCases::specialSettings));
 		cases.add(new ClientCase("goods_manager", List.of("13-6", "13-8", "13-9"), null, true, ClientConfigCases::goodsManager));
-		cases.add(new ClientCase("reopen_world_keeps_market", List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
+		// The staff cases share their employees (in this order); staff_layout lets them go.
+		cases.add(new ClientCase("staff_hire_carrier", List.of("26-4"), null, true, ClientStaffCases::hireCarrier,
+				List.of("26-3"), "品の一覧の先頭が「おまかせ（売れる品を何種類も）」で、各行に「見込み +○c/往復」か「今は利益なし」が出て見込みの大きい順に並び、ツールチップにおすすめの行き先と数が出ること（宝箱のアイコンは画像で見る）"));
+		cases.add(new ClientCase("staff_carrier_trip", List.of("26-6", "26-7", "26-9", "26-14"),
+				"運び屋の行の「資金不足」「→運送 N分」「←帰路 N分」「休み」「値下がり待ち」、Shift で +1,000c／+10,000c になり10倍入ること、出かけている間は「解雇する」「変更」が押せないこと、「休止」が「再開」になること、往復の後にツールチップのログに往復が出ること、「設定」におすすめが出ること（「利益なし」は見ていない）",
+				true, ClientStaffCases::carrierTrip));
+		cases.add(new ClientCase("staff_clerk", List.of("26-13"), null, true, ClientStaffCases::clerk,
+				List.of("26-11"), "番頭の品の一覧（手持ちのある品が先・「1日 約○c・手持ち○」・おすすめのツールチップ）、下限の初期値がおすすめ（売値の85%）、雇うと品が預けられること（少しずつ売れ続けるのは見ていない）"));
+		cases.add(new ClientCase("staff_limit_and_other_market", List.of("26-15", "26-17"), null, true, ClientStaffCases::limitAndOtherMarket,
+				List.of("26-5"), "おまかせを選ぶと設定が「1回に運ぶ数」だけになり、画面から雇えること"));
+		cases.add(new ClientCase("staff_layout", List.of("26-25"), null, true, ClientStaffCases::layout));
+		cases.add(new ClientCase("reopen_world_keeps_market",List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
 		// Breaks the stall: the last case of the world.
 		cases.add(new ClientCase("screen_closes_when_away", List.of("2-16"), null, true, ClientTradeCases::closesWhenAway));
 		cases.add(new ClientCase("dedicated_server_one_player", List.of("14-1"),
@@ -589,7 +600,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		return keys;
 	}
 
-	private static LayoutCheck.Panel panel(Screen screen) {
+	static LayoutCheck.Panel panel(Screen screen) {
 		if (!(screen instanceof AbstractContainerScreen<?> c)) return null;
 		int left = leftPos(c);
 		int top = topPos(c);

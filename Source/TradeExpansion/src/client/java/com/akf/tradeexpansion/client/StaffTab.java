@@ -121,19 +121,14 @@ final class StaffTab {
 				.bounds(px, y + 104, PANEL_W, 14).build());
 		hireClerkButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.hire.clerk"), b -> startHire(false))
 				.bounds(px, y + 121, PANEL_W, 14).build());
-		depositSmallButton = add.apply(Button.builder(Component.literal("+100c"), b -> deposit(100)).bounds(px, y + 80, 38, 14).build());
-		depositLargeButton = add.apply(Button.builder(Component.literal("+1,000c"), b -> deposit(1000)).bounds(px + 40, y + 80, 38, 14).build());
-		withdrawButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.withdraw"),
-				b -> send(StaffRequestC2S.Action.WITHDRAW_MONEY, 0)).bounds(px, y + 95, 38, 14).build());
-		configureButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.configure"), b -> startEdit())
-				.bounds(px + 40, y + 95, 38, 14).build());
-		depositItemsButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.deposit_items"),
-				b -> send(StaffRequestC2S.Action.DEPOSIT_ITEMS, 0)).bounds(px, y + 110, 38, 14).build());
-		withdrawItemsButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.withdraw_items"),
-				b -> send(StaffRequestC2S.Action.WITHDRAW_ITEMS, 0)).bounds(px + 40, y + 110, 38, 14).build());
-		pauseButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0)).bounds(px, y + 125, 38, 14).build());
-		changeButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.change"), b -> startChange())
-				.bounds(px + 40, y + 125, 38, 14).build());
+		depositSmallButton = add.apply(FittedButton.create(Component.literal("+100c"), b -> deposit(100), px, y + 80, 38, 14));
+		depositLargeButton = add.apply(FittedButton.create(Component.literal("+1,000c"), b -> deposit(1000), px + 40, y + 80, 38, 14));
+		withdrawButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.withdraw"), b -> send(StaffRequestC2S.Action.WITHDRAW_MONEY, 0), px, y + 95, 38, 14));
+		configureButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.configure"), b -> startEdit(), px + 40, y + 95, 38, 14));
+		depositItemsButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.deposit_items"), b -> send(StaffRequestC2S.Action.DEPOSIT_ITEMS, 0), px, y + 110, 38, 14));
+		withdrawItemsButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.withdraw_items"), b -> send(StaffRequestC2S.Action.WITHDRAW_ITEMS, 0), px + 40, y + 110, 38, 14));
+		pauseButton = add.apply(FittedButton.create(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0), px, y + 125, 38, 14));
+		changeButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.change"), b -> startChange(), px + 40, y + 125, 38, 14));
 		dismissButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.DISMISS, 0)).bounds(px, y + 140, PANEL_W, 14).build());
 		backButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.back"), b -> back())
 				.bounds(px, y + 137, PANEL_W, 14).build());
