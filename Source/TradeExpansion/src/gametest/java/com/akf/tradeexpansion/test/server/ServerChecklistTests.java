@@ -18,7 +18,7 @@ import java.util.List;
  * words separated by "," or "+".
  */
 public class ServerChecklistTests {
-	@GameTest(maxTicks = 40000, skyAccess = true)
+	@GameTest(maxTicks = 80000, skyAccess = true)
 	public void checklist(GameTestHelper helper) {
 		new Runner(helper, filter(ServerCases.all())).next();
 	}

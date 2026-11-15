@@ -344,6 +344,7 @@ public final class ServerCases {
 		}));
 
 		cases.addAll(ServerChapterCases.all());
+		cases.addAll(ServerWorldCases.all());
 		cases.addAll(ServerRequestCases.all());
 		return cases;
 	}
@@ -466,7 +467,7 @@ public final class ServerCases {
 	}
 
 	/** Result of a 3x3 crafting grid (row by row; AIR = empty), or EMPTY. */
-	private static ItemStack craft(ServerCtx ctx, Item... grid) {
+	static ItemStack craft(ServerCtx ctx, Item... grid) {
 		List<ItemStack> stacks = Arrays.stream(grid).map(i -> i == Items.AIR ? ItemStack.EMPTY : new ItemStack(i)).toList();
 		CraftingInput input = CraftingInput.of(3, 3, stacks);
 		return ctx.server().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, ctx.level())

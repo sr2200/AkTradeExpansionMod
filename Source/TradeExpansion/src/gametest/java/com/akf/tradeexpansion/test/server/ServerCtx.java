@@ -173,6 +173,11 @@ public final class ServerCtx {
 		EmbeddedChannel channel = channels.get(player);
 		List<Object> list = received.computeIfAbsent(player, p -> new ArrayList<>());
 		Object msg;
+		// The server may write without flushing (it suspends flushing while it handles a command); flush to see them.
+		if (channel != null) {
+			channel.runPendingTasks();
+			channel.flushOutbound();
+		}
 		while (channel != null && (msg = channel.readOutbound()) != null) list.add(msg);
 		return list;
 	}
