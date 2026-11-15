@@ -43,6 +43,7 @@ public final class ConfigManager {
 		}
 		try {
 			JsonElement json = JsonParser.parseString(Files.readString(file));
+			migrate(json, file);
 			TradeExpansionConfig config = TradeExpansionConfig.CODEC.parse(JsonOps.INSTANCE, json)
 					.resultOrPartial(error -> TradeExpansion.LOGGER.error("config: {} in {}", error, file))
 					.orElseGet(TradeExpansionConfig::defaults);
@@ -51,6 +52,23 @@ public final class ConfigManager {
 			TradeExpansion.LOGGER.error("Could not read {}, using defaults", file, e);
 			return TradeExpansionConfig.defaults();
 		}
+	}
+
+	/** Old default of {@code development.siteSearchLimit} (before v0.67): it only reached about 18 blocks from the center. */
+	static final int OLD_SITE_SEARCH_LIMIT = 256;
+
+	/**
+	 * Changes old default values still written in a file from an older version (the file is only rewritten when saved).
+	 * v0.67: a file without {@code development.siteRadiusPerLevel} was written before it; its {@code siteSearchLimit} of
+	 * 256 was the old default and becomes the new one, so that the whole site radius is searched.
+	 */
+	static void migrate(JsonElement json, Path file) {
+		if (!json.isJsonObject() || !(json.getAsJsonObject().get("development") instanceof com.google.gson.JsonObject dev)) return;
+		if (dev.has("siteRadiusPerLevel") || !(dev.get("siteSearchLimit") instanceof com.google.gson.JsonPrimitive limit)) return;
+		if (!limit.isNumber() || limit.getAsDouble() != OLD_SITE_SEARCH_LIMIT) return;
+		int now = new TradeExpansionConfig.Development().siteSearchLimit;
+		dev.addProperty("siteSearchLimit", now);
+		TradeExpansion.LOGGER.info("config: development.siteSearchLimit {} (the old default) is read as {} in {}", OLD_SITE_SEARCH_LIMIT, now, file);
 	}
 
 	public static void write(Path file, TradeExpansionConfig config) {

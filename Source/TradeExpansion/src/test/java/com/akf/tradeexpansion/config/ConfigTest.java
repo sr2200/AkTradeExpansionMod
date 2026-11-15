@@ -143,6 +143,20 @@ class ConfigTest {
 		assertEquals(List.of(2, 4), TradeExpansionConfig.defaults().development.levelBonusThresholds);
 	}
 
+	/** v0.67: an older file's siteSearchLimit of 256 (the old default) is read as the new default; other values are kept. */
+	@Test
+	void oldSiteSearchLimitIsMigrated() throws IOException {
+		Path file = dir.resolve("ak_trade_expansion.json");
+		Files.writeString(file, "{\"development\": {\"siteSearchLimit\": 256, \"siteRadius\": 32}}");
+		assertEquals(4096, ConfigManager.read(file).development.siteSearchLimit);
+		Files.writeString(file, "{\"development\": {\"siteSearchLimit\": 512}}");
+		assertEquals(512, ConfigManager.read(file).development.siteSearchLimit);
+		// Written by this version (it has siteRadiusPerLevel): 256 was chosen.
+		Files.writeString(file, "{\"development\": {\"siteSearchLimit\": 256, \"siteRadiusPerLevel\": 8}}");
+		assertEquals(256, ConfigManager.read(file).development.siteSearchLimit);
+		assertEquals(4096, TradeExpansionConfig.defaults().development.siteSearchLimit);
+	}
+
 	/** D-5: specials per level; a short list repeats its last entry, a wrong size falls back to the defaults. */
 	@Test
 	void specialGoodsPerLevel() throws IOException {

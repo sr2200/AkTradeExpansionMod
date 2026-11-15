@@ -512,7 +512,96 @@ final class ServerDevelopmentCases {
 				that(market.facilities().isEmpty(), "a build with no site started a facility");
 			});
 		}));
-		cases.add(full("protect_facilities", List.of("22-39"), ctx -> town(ctx, (c, player, market, stall) -> {
+		cases.add(full("site_radius_by_level", List.of("22-37b"), ctx -> {
+			ctx.config(cfg -> {
+				cfg.development.siteRadius = 12;
+				cfg.development.siteRadiusPerLevel = 8;
+			});
+			town(ctx, (c, player, market, stall) -> {
+				builder(c, player, market);
+				int level = market.level();
+				market.setLevel(1);
+				equal(12, Development.siteRadius(market), "site radius at market level 1");
+				market.setLevel(3);
+				equal(28, Development.siteRadius(market), "site radius at market level 3");
+				market.setLevel(5);
+				equal(44, Development.siteRadius(market), "site radius at market level 5");
+				c.config(cfg -> cfg.development.siteRadiusPerLevel = 16);
+				equal(DevelopmentMath.MAX_SITE_RADIUS, Development.siteRadius(market), "site radius at market level 5 with 16 per level (at most 64)");
+				c.config(cfg -> cfg.development.siteRadiusPerLevel = 8);
+				// Stakes: one 24 blocks from the center belongs to the market only once its radius reaches it.
+				BlockPos spot = market.center().south(24);
+				market.setLevel(1);
+				player.closeContainer();
+				player.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() - 1.5);
+				c.forget(player);
+				placeStake(c, player, spot);
+				that(c.gotMessage(player, "message.ak_trade_expansion.facility.marker_no_market"), "no \"no market\" message for a stake outside the level 1 radius: %s", c.messages(player));
+				that(!market.markers().contains(spot), "a stake outside the level 1 radius became a building site");
+				c.level().setBlock(spot, Blocks.AIR.defaultBlockState(), 3);
+				market.setLevel(3);
+				c.forget(player);
+				placeStake(c, player, spot);
+				that(market.markers().contains(spot), "a stake inside the level 3 radius did not become a building site: %s", market.markers());
+				that(c.gotMessage(player, "message.ak_trade_expansion.facility.marker_placed"), "no \"building site\" message at level 3: %s", c.messages(player));
+				c.level().setBlock(spot, Blocks.AIR.defaultBlockState(), 3);
+				market.markers().clear();
+				// The automatic search: posts every 4 blocks within 20 leave no free place inside the level 1 radius.
+				BlockPos center = c.center();
+				for (int dx = -20; dx <= 20; dx += 4) {
+					for (int dz = -20; dz <= 20; dz += 4) {
+						BlockPos p = center.offset(dx, 0, dz);
+						if (c.level().getBlockState(p).isAir()) c.level().setBlock(p, Blocks.OAK_LOG.defaultBlockState(), 3);
+					}
+				}
+				market.setLevel(1);
+				double points = points(c, market);
+				that(build(c, player, market, QUEST_HALL) == TradeResult.NO_SITE, "building with nothing free within 12 blocks did not say \"no site\"");
+				that(points(c, market) == points && market.facilities().isEmpty(), "the build with no site changed something");
+				market.setLevel(3);
+				that(build(c, player, market, QUEST_HALL) == TradeResult.SUCCESS, "building at level 3 (radius 28) failed");
+				Facility f = market.facilities().get(QUEST_HALL);
+				double d = market.horizontalDistanceTo(f.front());
+				that(d > 12 && d <= 28, "the level 3 building stands %.1f blocks from the center (expected 12..28)", d);
+				market.setLevel(level);
+			});
+		}));
+		cases.add(partial("site_search_time", List.of("22-37c"), "既定の設定（半径32＋レベルごとに8）の市場レベル5で、半径64の中が杭で全部埋まっている時に「建てる場所がありません」になり、その場所探しにかかった時間をログに出すこと（重さの判定はしない。混んだ本物の村では測っていない）",
+				ctx -> town(ctx, (c, player, market, stall) -> {
+					builder(c, player, market);
+					int level = market.level();
+					market.setLevel(5);
+					equal(DevelopmentMath.MAX_SITE_RADIUS, Development.siteRadius(market), "site radius at market level 5 with the defaults");
+					// Posts every 4 blocks within 64, on top of the ground (also on the world outside the floor); removed again below.
+					java.util.Map<BlockPos, BlockState> posts = new java.util.LinkedHashMap<>();
+					BlockPos center = c.center();
+					for (int dx = -68; dx <= 68; dx += 4) {
+						for (int dz = -68; dz <= 68; dz += 4) {
+							int x = center.getX() + dx, z = center.getZ() + dz;
+							BlockPos p = new BlockPos(x, c.level().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+							BlockState was = c.level().getBlockState(p);
+							if (!was.canBeReplaced()) continue;
+							posts.put(p, was);
+							c.level().setBlock(p, Blocks.OAK_LOG.defaultBlockState(), 3);
+						}
+					}
+					try {
+						double points = points(c, market);
+						for (Identifier id : List.of(QUEST_HALL, WAREHOUSE)) { // the smallest (5×5) and a largest (9×9) building
+							long start = System.nanoTime();
+							TradeResult r = build(c, player, market, id);
+							long micros = (System.nanoTime() - start) / 1000;
+							TradeExpansion.LOGGER.info("[autotest] site search for {} over radius 64 with nothing free: {} ms ({} positions)",
+									id, micros / 1000.0, DevelopmentMath.siteOffsets(64, 2, Development.config().siteSearchLimit).size());
+							that(r == TradeResult.NO_SITE, "building %s with nothing free within 64 blocks gave %s", id, r);
+						}
+						that(points(c, market) == points && market.facilities().isEmpty(), "the build with no site changed something");
+					} finally {
+						posts.forEach((p, was) -> c.level().setBlock(p, was, 3));
+						market.setLevel(level);
+					}
+				})));
+		cases.add(full("protect_facilities", List.of("22-39"),ctx -> town(ctx, (c, player, market, stall) -> {
 			builder(c, player, market);
 			buildAndComplete(c, player, market, WAREHOUSE);
 			Facility f = market.facilities().get(WAREHOUSE);
