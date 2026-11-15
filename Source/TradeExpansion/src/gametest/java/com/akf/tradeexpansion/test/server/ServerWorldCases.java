@@ -579,7 +579,7 @@ final class ServerWorldCases {
 
 	// ---- 12. villager trades in coins
 
-	private static final int BREAD = 0, WHEAT = 1, BOOK = 2, BELL = 3;
+	static final int BREAD = 0, WHEAT = 1, BOOK = 2, BELL = 3;
 
 	/** A farmer with four offers: emerald → 6 bread, 20 wheat → emerald, 5 emeralds + book → bell, 10 emeralds → bell. */
 	private static MerchantOffers offers() {
@@ -591,7 +591,7 @@ final class ServerWorldCases {
 		return offers;
 	}
 
-	private static Villager farmer(ServerCtx c, BlockPos pos) {
+	static Villager farmer(ServerCtx c, BlockPos pos) {
 		Villager v = villager(c, pos);
 		v.setVillagerData(v.getVillagerData().withProfession(c.level().registryAccess(), VillagerProfession.FARMER).withLevel(2));
 		v.setOffers(offers());
@@ -599,7 +599,7 @@ final class ServerWorldCases {
 	}
 
 	/** Right-clicks the merchant as a player does; returns the merchant screen. */
-	private static MerchantMenu openMerchant(ServerCtx c, ServerPlayer player, net.minecraft.world.entity.Entity merchant) {
+	static MerchantMenu openMerchant(ServerCtx c, ServerPlayer player, net.minecraft.world.entity.Entity merchant) {
 		player.closeContainer();
 		c.emptyHand(player);
 		player.interactOn(merchant, InteractionHand.MAIN_HAND, Vec3.ZERO);
@@ -608,7 +608,7 @@ final class ServerWorldCases {
 	}
 
 	/** Chooses an offer in the list (what ServerboundSelectTradePacket does). */
-	private static ItemStack select(MerchantMenu menu, int index) {
+	static ItemStack select(MerchantMenu menu, int index) {
 		menu.setSelectionHint(index);
 		menu.tryMoveItems(index);
 		return menu.getSlot(2).getItem();

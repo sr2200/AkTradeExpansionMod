@@ -274,6 +274,12 @@ public final class ServerCtx {
 		server().getCommands().performPrefixedCommand(source, command);
 	}
 
+	/** Runs a command as {@code player} with full permission; its feedback goes to the player's chat (see {@link #messages}). */
+	public void commandShown(ServerPlayer player, String command) {
+		CommandSourceStack source = player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.OWNER);
+		server().getCommands().performPrefixedCommand(source, command);
+	}
+
 	// ---- stalls and trades
 
 	/** {@code player} places a crafted stall at {@code pos} as a player would (the stall item used on the block below). */

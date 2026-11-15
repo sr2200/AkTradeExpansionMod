@@ -345,6 +345,7 @@ public final class ServerCases {
 
 		cases.addAll(ServerChapterCases.all());
 		cases.addAll(ServerWorldCases.all());
+		cases.addAll(ServerReputationCases.all());
 		cases.addAll(ServerRequestCases.all());
 		return cases;
 	}
@@ -405,7 +406,7 @@ public final class ServerCases {
 	}
 
 	/** A good with stock to buy 2 whose buy price falls and sell price rises by the reputation bonus {@code bonus}. */
-	private static Identifier bonusGood(ServerCtx c, Market market, double bonus) {
+	static Identifier bonusGood(ServerCtx c, Market market, double bonus) {
 		MarketUpkeep.touch(c.level(), market);
 		for (Identifier id : market.regularGoods()) {
 			GoodsDefinition def = GoodsCatalog.get(id);
@@ -420,7 +421,7 @@ public final class ServerCases {
 	}
 
 	/** A good of {@code market} that costs at most {@code maxPrice} for one (unit 1, no components). */
-	private static Identifier cheapGood(ServerCtx c, ServerPlayer player, Market market, long maxPrice) {
+	static Identifier cheapGood(ServerCtx c, ServerPlayer player, Market market, long maxPrice) {
 		for (Identifier id : market.regularGoods()) {
 			GoodsDefinition def = GoodsCatalog.get(id);
 			GoodState state = market.good(id);

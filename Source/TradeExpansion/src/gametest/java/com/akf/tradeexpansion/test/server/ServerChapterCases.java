@@ -813,7 +813,7 @@ final class ServerChapterCases {
 	}
 
 	/** Moves the player to the {@code index}-th market of {@link #markets} and opens its stall. */
-	private static void openAt(ServerCtx c, ServerPlayer player, List<Market> markets, int index) {
+	static void openAt(ServerCtx c, ServerPlayer player, List<Market> markets, int index) {
 		BlockPos stall = STALLS.get(c).get(index);
 		player.closeContainer();
 		player.teleportTo(stall.getX() + 0.5, stall.getY(), stall.getZ() + 2.5);
@@ -821,7 +821,7 @@ final class ServerChapterCases {
 	}
 
 	/** A good every given market deals in (unit 1, plain item) that {@code first} can sell {@code buyQty} of and take {@code sellQty} of. */
-	private static Identifier shared(ServerCtx c, Market first, int buyQty, int sellQty, Market... others) {
+	static Identifier shared(ServerCtx c, Market first, int buyQty, int sellQty, Market... others) {
 		long now = MarketUpkeep.touch(c.level(), first);
 		for (Market o : others) MarketUpkeep.touch(c.level(), o);
 		Optional<Identifier> best = first.regularGoods().stream().filter(id -> {
@@ -891,11 +891,11 @@ final class ServerChapterCases {
 	}
 
 	/** Market clock = the overworld day clock, so that {@link #addDays} can move it (set before the markets exist). */
-	private static void dayClock(ServerCtx ctx) {
+	static void dayClock(ServerCtx ctx) {
 		ctx.config(cfg -> cfg.recovery.clock = TradeExpansionConfig.RecoveryClock.DAY_TIME);
 	}
 
-	private static void addDays(ServerCtx c, ServerPlayer player, double days) {
+	static void addDays(ServerCtx c, ServerPlayer player, double days) {
 		long before = c.now();
 		c.command(player, "time add " + Math.round(days * DAY));
 		that(c.now() - before >= Math.round(days * DAY) - 1, "\"time add\" moved the market clock by %d ticks, not %d", c.now() - before,
@@ -903,7 +903,7 @@ final class ServerChapterCases {
 	}
 
 	/** What a real client reports once its world is shown (ServerboundPlayerLoadedPacket); until then a player cannot be hurt. */
-	private static void clientLoaded(ServerPlayer player) throws ReflectiveOperationException {
+	static void clientLoaded(ServerPlayer player) throws ReflectiveOperationException {
 		var method = player.connection.getClass().getDeclaredMethod("markClientLoaded");
 		method.setAccessible(true);
 		method.invoke(player.connection);
