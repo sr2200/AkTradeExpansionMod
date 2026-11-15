@@ -17,7 +17,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.2.14（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.2.15（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -141,7 +141,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 - 同じ市場で売ってすぐ買い戻しても儲からないように、買値と売値には差があります。
 - ずれた相場は、ゲーム内2日で半分元に戻ります。在庫も時間で補充されます。
 - 売りすぎて在庫が上限に届くと「買取停止」になりますが、市場が在庫を少しずつ使うので、時間がたつとまた買い取ってもらえます。
-- 食料・松明・燃料・原木・木材・丸石・砂・ガラス・花などの**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります（どの品が消耗品かは「[商品一覧](#商品一覧)」。増やす・外す方法は「[設定](#設定)」と「[コマンド](#コマンド)」）。
+- 食料・作物・松明・燃料・原木・木材・丸石や砂などの建材・花・矢などの安い**消耗品**は早く使われます。上限まで売っても1日（現実の20分）で元の在庫に戻り、値段も1日で半分戻ります高級な品（金のニンジン・トーチフラワーなど）とモブの素材は消耗品ではありません（どの品が消耗品かは「[商品一覧](#商品一覧)」。増やす・外す方法は「[設定](#設定)」と「[コマンド](#コマンド)」）。
 - 取引の影響は近くの市場にも伝わります（128 ブロック以内は100%、1,536 ブロックで0%。在庫は伝わりません）。ネザーの市場は、座標を8倍してオーバーワールドの市場とも連動します。
 
 自分の売り買いのほかに、次の3つが相場を動かします。
@@ -333,11 +333,11 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 
 | 名前 | ID | 基準 | 買値 / 売値 | 在庫 | 消耗品 | 並ぶ市場 |
 |---|---|---|---|---|---|---|
-| サボテン | `minecraft:cactus` | 4c | 5c / 3c | 64 |  | 砂漠 |
+| サボテン | `minecraft:cactus` | 4c | 5c / 3c | 64 | ○ | 砂漠 |
 | スイートベリー | `minecraft:sweet_berries` | 6c | 8c / 4c | 32 | ○ | 雪原・タイガ |
 | カカオ豆 | `minecraft:cocoa_beans` | 8c | 10c / 6c | 32 | ○ | ジャングル |
-| スイレンの葉 | `minecraft:lily_pad` | 5c | 6c / 4c | 32 |  | 沼地 |
-| 氷 | `minecraft:ice` | 6c | 8c / 4c | 32 |  | 雪原 |
+| スイレンの葉 | `minecraft:lily_pad` | 5c | 6c / 4c | 32 | ○ | 沼地 |
+| 氷 | `minecraft:ice` | 6c | 8c / 4c | 32 | ○ | 雪原 |
 | サトウキビ | `minecraft:sugar_cane` | 5c | 6c / 4c | 64 | ○ | オーバーワールドの全市場 |
 | 氷塊 | `minecraft:packed_ice` | 55c | 66c / 44c | 16 |  | 雪原 |
 
@@ -362,10 +362,10 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 |---|---|---|---|---|---|---|
 | 丸石 | `minecraft:cobblestone` | 2c | 3c / 1c | 128 | ○ | オーバーワールドの全市場 |
 | 砂 | `minecraft:sand` | 4c | 5c / 3c | 64 | ○ | 砂漠・海辺 |
-| 砂岩 | `minecraft:sandstone` | 16c | 20c / 12c | 32 |  | 砂漠 |
+| 砂岩 | `minecraft:sandstone` | 16c | 20c / 12c | 32 | ○ | 砂漠 |
 | ガラス | `minecraft:glass` | 4c | 5c / 3c | 64 | ○ | 砂漠・開拓地 |
-| 粘土玉 | `minecraft:clay_ball` | 5c | 6c / 4c | 64 |  | 沼地・開拓地 |
-| 砂利 | `minecraft:gravel` | 3c | 4c / 2c | 128 |  | 開拓地・既定 |
+| 粘土玉 | `minecraft:clay_ball` | 5c | 6c / 4c | 64 | ○ | 沼地・開拓地 |
+| 砂利 | `minecraft:gravel` | 3c | 4c / 2c | 128 | ○ | 開拓地・既定 |
 
 ### 鉱物（9種）
 
@@ -444,7 +444,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 |---|---|---|---|---|---|---|
 | ネザークォーツ | `minecraft:quartz` | 12c | 15c / 9c | 32 |  | ネザー |
 | グロウストーンダスト | `minecraft:glowstone_dust` | 10c | 12c / 8c | 32 |  | ネザー |
-| ネザーウォート | `minecraft:nether_wart` | 8c | 10c / 6c | 32 |  | ネザー |
+| ネザーウォート | `minecraft:nether_wart` | 8c | 10c / 6c | 32 | ○ | ネザー |
 | マグマクリーム | `minecraft:magma_cream` | 25c | 30c / 20c | 16 |  | ネザー（レベル2〜） |
 | ブレイズロッド | `minecraft:blaze_rod` | 60c | 72c / 48c | 8 |  | ネザー（レベル2〜）・エンド（レベル2〜） |
 | ガストの涙 | `minecraft:ghast_tear` | 150c | 180c / 120c | 4 |  | ネザー（レベル3〜） |
@@ -452,9 +452,9 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | ネザライトの欠片 | `minecraft:netherite_scrap` | 1,600c | 1,920c / 1,280c | 2 |  | ネザー（レベル5〜） |
 | 真紅の幹 | `minecraft:crimson_stem` | 8c | 10c / 6c | 64 | ○ | ネザー |
 | 歪んだ幹 | `minecraft:warped_stem` | 8c | 10c / 6c | 64 | ○ | ネザー |
-| ソウルサンド | `minecraft:soul_sand` | 4c | 5c / 3c | 64 |  | ネザー |
-| ブラックストーン | `minecraft:blackstone` | 3c | 4c / 2c | 64 |  | ネザー |
-| 玄武岩 | `minecraft:basalt` | 3c | 4c / 2c | 64 |  | ネザー |
+| ソウルサンド | `minecraft:soul_sand` | 4c | 5c / 3c | 64 | ○ | ネザー |
+| ブラックストーン | `minecraft:blackstone` | 3c | 4c / 2c | 64 | ○ | ネザー |
+| 玄武岩 | `minecraft:basalt` | 3c | 4c / 2c | 64 | ○ | ネザー |
 | マグマブロック | `minecraft:magma_block` | 20c | 24c / 16c | 32 |  | ネザー |
 | シュルームライト | `minecraft:shroomlight` | 20c | 24c / 16c | 16 |  | ネザー（レベル2〜） |
 
@@ -466,7 +466,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | シュルカーの殻 | `minecraft:shulker_shell` | 400c | 480c / 320c | 4 |  | エンド（レベル3〜） |
 | コーラスフルーツ | `minecraft:chorus_fruit` | 5c | 6c / 4c | 32 | ○ | エンド |
 | エンダーアイ | `minecraft:ender_eye` | 80c | 96c / 64c | 8 |  | エンド（レベル2〜） |
-| エンドストーン | `minecraft:end_stone` | 4c | 5c / 3c | 64 |  | エンド |
+| エンドストーン | `minecraft:end_stone` | 4c | 5c / 3c | 64 | ○ | エンド |
 | コーラスフラワー | `minecraft:chorus_flower` | 30c | 36c / 24c | 8 |  | エンド（レベル2〜） |
 | エンドロッド | `minecraft:end_rod` | 15c | 18c / 12c | 16 |  | エンド（レベル2〜） |
 | ドラゴンブレス | `minecraft:dragon_breath` | 150c | 180c / 120c | 4 |  | エンド（レベル4〜） |
@@ -493,9 +493,9 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | ライラック | `minecraft:lilac` | 6c | 8c / 4c | 32 | ○ | 平原（レベル2〜）・サバンナ（レベル2〜） |
 | バラの低木 | `minecraft:rose_bush` | 6c | 8c / 4c | 32 | ○ | 平原（レベル2〜）・サバンナ（レベル2〜） |
 | ボタン | `minecraft:peony` | 6c | 8c / 4c | 32 | ○ | 平原（レベル2〜）・サバンナ（レベル2〜） |
-| トーチフラワー | `minecraft:torchflower` | 40c | 48c / 32c | 8 | ○ | オーバーワールドの全市場（レベル3〜） |
-| ウツボカズラ | `minecraft:pitcher_plant` | 40c | 48c / 32c | 8 | ○ | オーバーワールドの全市場（レベル3〜） |
-| ウィザーローズ | `minecraft:wither_rose` | 60c | 72c / 48c | 4 | ○ | オーバーワールドの全市場（レベル4〜）・ネザー（レベル2〜） |
+| トーチフラワー | `minecraft:torchflower` | 40c | 48c / 32c | 8 |  | オーバーワールドの全市場（レベル3〜） |
+| ウツボカズラ | `minecraft:pitcher_plant` | 40c | 48c / 32c | 8 |  | オーバーワールドの全市場（レベル3〜） |
+| ウィザーローズ | `minecraft:wither_rose` | 60c | 72c / 48c | 4 |  | オーバーワールドの全市場（レベル4〜）・ネザー（レベル2〜） |
 
 ### 海の品（6種）
 
@@ -666,7 +666,7 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 | キー | 既定値 | 範囲 | 説明 | 設定例 |
 |---|---|---|---|---|
-| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#ak_trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/aktradeex consumable add` や設定画面の「追加の商品と消耗品」でも追加できる | `"add": ["minecraft:sandstone", "minecraft:white_wool"]` |
+| `consumables.add` | `[]` | アイテムIDの一覧 | タグ `#ak_trade_expansion:consumables` に無くても消耗品として扱うアイテム。`/aktradeex consumable add` や設定画面の「追加の商品と消耗品」でも追加できる | `"add": ["minecraft:white_wool", "minecraft:string"]` |
 | `consumables.remove` | `[]` | アイテムIDの一覧 | タグや `add` にあっても消耗品として扱わないアイテム。`/aktradeex consumable remove` でも指定できる | `"remove": ["minecraft:cobblestone"]` |
 
 #### 商品ごとの値（goods）

@@ -71,6 +71,22 @@ final class ServerGoodsCases {
 								goods, p.consumePerDay());
 					}
 				}));
+		cases.add(partial("consumables_review", List.of("36-1"),
+				"砂利・粘土玉・砂岩・氷・サボテン・スイレンの葉・ネザーウォート・ソウルサンド・ブラックストーン・玄武岩・エンドストーンが消耗品で、トーチフラワー・ウツボカズラ・ウィザーローズ・金のニンジン・腐った肉は消耗品でないこと（コマンドの表示は見ていない）",
+				ctx -> {
+					TradeExpansionConfig config = TradeExpansionConfig.get();
+					for (String goods : List.of("gravel", "clay_ball", "sandstone", "ice", "cactus", "lily_pad", "nether_wart", "soul_sand", "blackstone",
+							"basalt", "end_stone")) {
+						that(def(goods).consumable(config), "%s is not a consumable", goods);
+					}
+					for (String goods : List.of("torchflower", "pitcher_plant", "wither_rose", "golden_carrot", "rotten_flesh")) {
+						GoodsDefinition def = def(goods);
+						that(!def.consumable(config), "%s is a consumable", goods);
+						GoodParams p = def.params(1.0, 1.0, config);
+						that(Math.abs(p.halfLifeDays() - config.recovery.halfLifeDays) < 1e-9, "%s: the price gap halves in %.2f days, not the usual %.2f",
+								goods, p.halfLifeDays(), config.recovery.halfLifeDays);
+					}
+				}));
 		cases.add(partial("brown_and_blue_eggs", List.of("32-1"),
 				"茶色の卵・青い卵の値段が卵と同じ 6c／4c で、茶色の卵は砂漠・サバンナの村とジャングル、青い卵は雪原・タイガの村の品揃えの候補にあること（実際の村での並び方とアイコンは見ていない）",
 				ctx -> {

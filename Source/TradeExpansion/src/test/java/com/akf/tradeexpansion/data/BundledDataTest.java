@@ -208,6 +208,48 @@ class BundledDataTest {
 	}
 
 	/**
+	 * B-3 (v0.63): the consumables tag lists existing items, and the goods it covers are cheap everyday goods (grade 1-2:
+	 * food, fuel and light, basic blocks, crops and plants, flowers, arrows). Premium goods and mob materials stay out.
+	 */
+	@Test
+	void consumablesTagFollowsTheRule() throws IOException {
+		java.util.Set<String> items = new java.util.HashSet<>();
+		resolveItemTag(Files.readString(Path.of("src/main/resources/data/ak_trade_expansion/tags/item/consumables.json")), items);
+		for (String id : items) {
+			assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(net.minecraft.resources.Identifier.parse(id)), id + " is not an item");
+		}
+		for (Map.Entry<String, GoodsDefinition> e : decodeAll("goods", GoodsDefinition.CODEC).entrySet()) {
+			if (items.contains(e.getValue().item().toString())) {
+				assertTrue(e.getValue().grade() <= 2, e.getKey() + " is a consumable of grade " + e.getValue().grade());
+			}
+		}
+		for (String id : List.of("wheat", "bread", "oak_log", "poplar_log", "crimson_stem", "torch", "coal", "cobblestone", "gravel", "sandstone",
+				"clay_ball", "ice", "basalt", "blackstone", "soul_sand", "end_stone", "cactus", "lily_pad", "nether_wart", "dandelion", "arrow")) {
+			assertTrue(items.contains("minecraft:" + id), id + " should be a consumable");
+		}
+		for (String id : List.of("golden_carrot", "golden_apple", "rotten_flesh", "torchflower", "pitcher_plant", "wither_rose", "packed_ice",
+				"string", "bone", "leather", "iron_ingot")) {
+			assertFalse(items.contains("minecraft:" + id), id + " should not be a consumable");
+		}
+	}
+
+	private static void resolveItemTag(String json, java.util.Set<String> items) throws IOException {
+		for (JsonElement value : JsonParser.parseString(json).getAsJsonObject().getAsJsonArray("values")) {
+			String id = value.isJsonObject() ? value.getAsJsonObject().get("id").getAsString() : value.getAsString();
+			if (!id.startsWith("#")) {
+				items.add(id);
+				continue;
+			}
+			net.minecraft.resources.Identifier tag = net.minecraft.resources.Identifier.parse(id.substring(1));
+			String resource = "data/" + tag.getNamespace() + "/tags/item/" + tag.getPath() + ".json";
+			try (java.io.InputStream in = BundledDataTest.class.getClassLoader().getResourceAsStream(resource)) {
+				assertNotNull(in, "tag " + id + " does not exist");
+				resolveItemTag(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8), items);
+			}
+		}
+	}
+
+	/**
 	 * Both language files have the same keys. A few descriptions are left empty on purpose (the later entries of a list
 	 * setting share the first one's text); a text empty in only one of the files is a missing translation.
 	 */
