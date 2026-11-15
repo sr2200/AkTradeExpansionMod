@@ -561,7 +561,9 @@ final class ClientStaffCases {
 		}
 		check(index >= 0, "%s is not in the clerk's goods", good);
 		StaffS2C.ClerkHint h = hints.stream().filter(x -> x.goods().equals(good)).findFirst().orElseThrow(() -> new AssertionError("no recommendation of " + good));
-		String right = text(K + "hint.clerk.row", coins(h.revenue()), 20);
+		// 20 given, and maybe more left by earlier cases.
+		int held = serverCount(s, good);
+		String right = text(K + "hint.clerk.row", coins(h.revenue()), held);
 		List<String> row = rowStrings(context, screen, staff, index);
 		check(row.contains(right), "the row of %s does not say \"%s\": %s", good, right, row);
 		String tip = rowTooltip(context, screen, staff, index);
@@ -573,7 +575,8 @@ final class ClientStaffCases {
 		long sellLimit = context.computeOnClient(c -> (Long) get(tab, "sellLimit"));
 		int quantity = context.computeOnClient(c -> (Integer) get(tab, "quantity"));
 		check(sellLimit == h.limit(), "the lowest price starts at %d, the recommendation is %d", sellLimit, h.limit());
-		check(quantity == 20, "the clerk would take %d, the player carries 20", quantity);
+		int expected = Math.min(held, data(context, staff).info().clerkCapacity());
+		check(quantity == expected, "the clerk would take %d, not %d (the player carries %d)", quantity, expected, held);
 		// A lowest price it never reaches: the clerk keeps the goods (and owes its wage every day).
 		context.runOnClient(c -> {
 			set(tab, "sellLimit", 1_000_000_000L);
@@ -586,7 +589,7 @@ final class ClientStaffCases {
 		check(waitClient(context, c -> ((StaffS2C) get(tab, "data")).staff().stream().anyMatch(v -> v.role() == 1), 60), "the clerk is not listed");
 		context.waitTicks(2);
 		check(before - serverMoney(s) == fee, "hiring the clerk took %dc", before - serverMoney(s));
-		check(serverCount(s, good) == 0, "%d of the goods are still carried", serverCount(s, good));
+		check(serverCount(s, good) == held - expected, "%d of the goods are carried after hiring (%d expected)", serverCount(s, good), held - expected);
 		int id = data(context, staff).staff().stream().filter(v -> v.role() == 1).findFirst().orElseThrow().id();
 
 		select(context, staff, id);

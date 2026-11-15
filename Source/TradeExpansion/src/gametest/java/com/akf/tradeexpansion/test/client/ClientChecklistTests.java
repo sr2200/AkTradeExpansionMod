@@ -140,6 +140,17 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("special_settings", List.of("33-3"), "設定画面の「市場」タブに2つの設定があり、変えて保存するとすぐ設定とファイルに入ること（次の日の掘り出し物は見ていない）",
 				true, ClientConfigCases::specialSettings));
 		cases.add(new ClientCase("goods_manager", List.of("13-6", "13-8", "13-9"), null, true, ClientConfigCases::goodsManager));
+		cases.add(new ClientCase("bank_tab_by_level", List.of("5-4"), null, true, ClientBankQuestCases::bankTabByLevel,
+				List.of("22-30"), "銀行の建物があればレベル1でも銀行タブが出て、そこで預けると利息の行が「200,000c まで・〇〇の銀行に登録」になること（カード払いの手数料は見ていない）"));
+		cases.add(new ClientCase("bank_tab", List.of("7-7"), "銀行タブのボタン（預け入れ 1,000c・引き出し 100c・全額）で残高と現金が増減し、残高の行が変わること（死んだ時は見ていない）",
+				true, ClientBankQuestCases::bankTab, List.of("16-13"), "銀行タブの利息の行「利息：1日 0.03%（100,000c まで）」（利息が付くことは見ていない）"));
+		cases.add(new ClientCase("quest_tab", List.of("9-2"), null, true, ClientBankQuestCases::requests,
+				List.of("16-5"), "「依頼を受ける」で「受付済み」になり、一覧に ✔ が出ること（評判の増え方は見ていない）"));
+		cases.add(new ClientCase("quest_locked", List.of("16-4"), null, true, ClientBankQuestCases::lockedRequest, List.of("16-7"), null));
+		cases.add(new ClientCase("transport_request", List.of("21-1", "21-5", "21-7"), null, true, ClientBankQuestCases::transport,
+				List.of("21-2"), "「荷箱を受け取る」で保証金が引かれて荷箱が手に入り、ボタンが「受け取り済み」になること（荷箱の説明は見ていない）"));
+		cases.add(new ClientCase("transport_taken_by_other", List.of("21-4"), "ほかの人が受け取った輸送依頼（受けた人をサーバーで足したもの）が一覧で灰色の「運送中」になり、受け取るボタンが出ないこと（本物の2人では見ていない）",
+				true, ClientBankQuestCases::transportTaken));
 		// The staff cases share their employees (in this order); staff_layout lets them go.
 		cases.add(new ClientCase("staff_hire_carrier", List.of("26-4"), null, true, ClientStaffCases::hireCarrier,
 				List.of("26-3"), "品の一覧の先頭が「おまかせ（売れる品を何種類も）」で、各行に「見込み +○c/往復」か「今は利益なし」が出て見込みの大きい順に並び、ツールチップにおすすめの行き先と数が出ること（宝箱のアイコンは画像で見る）"));
