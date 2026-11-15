@@ -216,11 +216,11 @@ final class ServerAdvancementCases {
 		return player.getAdvancements().getOrStartProgress(advancement(c, name)).isDone();
 	}
 
-	private static void done(ServerCtx c, ServerPlayer player, String name, String when) {
+	static void done(ServerCtx c, ServerPlayer player, String name, String when) {
 		that(isDone(c, player, name), "the advancement %s is not granted %s", name, when);
 	}
 
-	private static void notYet(ServerCtx c, ServerPlayer player, String name) {
+	static void notYet(ServerCtx c, ServerPlayer player, String name) {
 		that(!isDone(c, player, name), "the advancement %s is granted too early", name);
 	}
 

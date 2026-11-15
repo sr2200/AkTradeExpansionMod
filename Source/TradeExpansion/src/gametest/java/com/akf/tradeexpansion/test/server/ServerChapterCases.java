@@ -826,8 +826,8 @@ final class ServerChapterCases {
 
 	/** A good every given market deals in (unit 1, plain item) that {@code first} can sell {@code buyQty} of and take {@code sellQty} of. */
 	static Identifier shared(ServerCtx c, Market first, int buyQty, int sellQty, Market... others) {
-		long now = MarketUpkeep.touch(c.level(), first);
-		for (Market o : others) MarketUpkeep.touch(c.level(), o);
+		long now = MarketUpkeep.touch(c.levelOf(first), first);
+		for (Market o : others) MarketUpkeep.touch(c.levelOf(o), o);
 		Optional<Identifier> best = first.regularGoods().stream().filter(id -> {
 			GoodsDefinition def = GoodsCatalog.get(id);
 			if (def == null || !def.buy() || !def.sell() || def.unit() != 1 || def.components().isPresent()) return false;

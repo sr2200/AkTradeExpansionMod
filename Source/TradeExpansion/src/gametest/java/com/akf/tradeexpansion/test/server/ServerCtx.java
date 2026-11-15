@@ -66,8 +66,14 @@ public final class ServerCtx {
 	private final TradeExpansionConfig defaults;
 	final List<Step> steps = new ArrayList<>();
 	private final List<ServerPlayer> players = new ArrayList<>();
-	private final List<BlockPos> floors = new ArrayList<>();
-	private final List<net.minecraft.world.level.ChunkPos> forced = new ArrayList<>();
+	private final List<Floor> floors = new ArrayList<>();
+	private final List<Forced> forced = new ArrayList<>();
+
+	private record Floor(ServerLevel level, BlockPos pos) {
+	}
+
+	private record Forced(ServerLevel level, net.minecraft.world.level.ChunkPos chunk) {
+	}
 
 	record Step(int delay, ServerCase.Body action) {
 	}
@@ -94,6 +100,12 @@ public final class ServerCtx {
 		return MarketRegistry.get(server());
 	}
 
+	/** The level a market is in (markets of the Nether and the End too). */
+	public ServerLevel levelOf(Market market) {
+		ServerLevel level = server().getLevel(market.dimension());
+		return level != null ? level : level();
+	}
+
 	/** Middle of the test structure, one block above the floor. */
 	public BlockPos center() {
 		return helper.absolutePos(new BlockPos(4, 1, 4));
@@ -115,19 +127,44 @@ public final class ServerCtx {
 
 	/** Lays a stone floor around {@code pos} (one block below it); cleared again after the case. */
 	public void floor(BlockPos pos) {
+		floor(level(), pos);
+	}
+
+	/**
+	 * A stone floor around {@code pos} in {@code level}. Outside the test level (the Nether, the End) the floor is part
+	 * of a closed stone room (the terrain there is not empty: netherrack, lava, the void).
+	 */
+	public void floor(ServerLevel level, BlockPos pos) {
 		// Away from the test structure chunks are not kept loaded: villagers spawned there would not be found.
 		for (int cx = (pos.getX() - FLOOR - 16) >> 4; cx <= (pos.getX() + FLOOR + 16) >> 4; cx++) {
 			for (int cz = (pos.getZ() - FLOOR - 16) >> 4; cz <= (pos.getZ() + FLOOR + 16) >> 4; cz++) {
-				if (level().setChunkForced(cx, cz, true)) forced.add(new net.minecraft.world.level.ChunkPos(cx, cz));
+				if (level.setChunkForced(cx, cz, true)) forced.add(new Forced(level, new net.minecraft.world.level.ChunkPos(cx, cz)));
 			}
 		}
 		BlockPos base = pos.below();
-		for (int dx = -FLOOR; dx <= FLOOR; dx++) {
-			for (int dz = -FLOOR; dz <= FLOOR; dz++) {
-				level().setBlock(base.offset(dx, 0, dz), Blocks.STONE.defaultBlockState(), 3);
+		boolean room = level != level();
+		int top = room ? ROOM_HEIGHT : 0;
+		for (int dx = -FLOOR - 1; dx <= FLOOR + 1; dx++) {
+			for (int dz = -FLOOR - 1; dz <= FLOOR + 1; dz++) {
+				boolean edge = Math.abs(dx) > FLOOR || Math.abs(dz) > FLOOR;
+				if (edge && !room) continue;
+				for (int dy = 0; dy <= top; dy++) {
+					boolean solid = dy == 0 || dy == top || edge;
+					level.setBlock(base.offset(dx, dy, dz), solid ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), room ? 2 | 16 : 3);
+				}
 			}
 		}
-		floors.add(pos.immutable());
+		floors.add(new Floor(level, pos.immutable()));
+	}
+
+	/** Height of the stone room {@link #floor(ServerLevel, BlockPos)} builds outside the test level (floor to ceiling). */
+	static final int ROOM_HEIGHT = 7;
+
+	/** A level of the test server (the Nether, the End). */
+	public ServerLevel dimension(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> key) {
+		ServerLevel level = server().getLevel(key);
+		AutotestCheck.that(level != null, "the test server has no %s", key.identifier());
+		return level;
 	}
 
 	/** A bed (both halves) with its head at {@code pos}, facing north. */
@@ -146,15 +183,29 @@ public final class ServerCtx {
 		}
 	}
 
+	/** {@code n} villagers (without AI) around {@code center} in {@code level}: Nether and End markets count villagers only (D-4). */
+	public void villagers(ServerLevel level, BlockPos center, int n) {
+		for (int i = 0; i < n; i++) {
+			BlockPos p = center.offset(-6 + 2 * (i % 7), 0, 4 + 2 * (i / 7));
+			var v = net.minecraft.world.entity.EntityTypes.VILLAGER.spawn(level, p, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			if (v != null) v.setNoAi(true);
+		}
+	}
+
 	// ---- players
 
 	/** A survival player at {@code pos} (the vanilla mock player is always creative, and creative cannot trade). */
 	public ServerPlayer player(BlockPos pos) {
-		return player(pos, new GameProfile(UUID.randomUUID(), "test" + players.size()));
+		return player(level(), pos);
+	}
+
+	/** A survival player at {@code pos} in {@code level}. */
+	public ServerPlayer player(ServerLevel level, BlockPos pos) {
+		return player(level, pos, new GameProfile(UUID.randomUUID(), "test" + players.size()));
 	}
 
 	/** A survival player with the given profile (the same profile again = the same player joining again). */
-	private ServerPlayer player(BlockPos pos, GameProfile profile) {
+	private ServerPlayer player(ServerLevel level, BlockPos pos, GameProfile profile) {
 		CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
 		ServerPlayer player = new ServerPlayer(server(), level(), profile, cookie.clientInformation());
 		Connection connection = new Connection(PacketFlow.SERVERBOUND);
@@ -162,7 +213,7 @@ public final class ServerCtx {
 		channels.put(player, new EmbeddedChannel(connection));
 		server().getPlayerList().placeNewPlayer(connection, player, cookie);
 		player.setGameMode(GameType.SURVIVAL);
-		player.teleportTo(level(), pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
+		player.teleportTo(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
 		players.add(player);
 		return player;
 	}
@@ -170,12 +221,13 @@ public final class ServerCtx {
 	/** {@code player} leaves the server and joins again (as after a restart); returns the new player object. */
 	public ServerPlayer rejoin(ServerPlayer player) {
 		BlockPos pos = player.blockPosition();
+		ServerLevel level = player.level();
 		player.closeContainer();
 		server().getPlayerList().remove(player);
 		players.remove(player);
 		channels.remove(player);
 		received.remove(player);
-		return player(pos, player.getGameProfile());
+		return player(level, pos, player.getGameProfile());
 	}
 
 	/** A dead {@code player} respawns (the respawn button); returns the new player object. */
@@ -258,7 +310,7 @@ public final class ServerCtx {
 	public String fingerprint(ServerPlayer player) {
 		// Markets catch up with time when touched (lazy recovery, new requests): do that first, so that only what a
 		// request itself changes shows (touching again in the same tick changes nothing).
-		for (Market m : registry().all()) MarketUpkeep.touch(level(), m);
+		for (Market m : registry().all()) MarketUpkeep.touch(levelOf(m), m);
 		StringBuilder sb = new StringBuilder();
 		sb.append("money=").append(balance(player));
 		sb.append(" bank=").append(com.akf.tradeexpansion.bank.BankService.accounts(player).balance(player.getUUID()));
@@ -332,7 +384,7 @@ public final class ServerCtx {
 	/** A right click on the {@code face} of the block at {@code pos} with the main hand, through the server's own handling. */
 	public InteractionResult click(ServerPlayer player, BlockPos pos, Direction face) {
 		Vec3 at = Vec3.atCenterOf(pos).add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
-		return player.gameMode.useItemOn(player, level(), player.getMainHandItem(), InteractionHand.MAIN_HAND, new BlockHitResult(at, face, pos, false));
+		return player.gameMode.useItemOn(player, player.level(), player.getMainHandItem(), InteractionHand.MAIN_HAND, new BlockHitResult(at, face, pos, false));
 	}
 
 	public boolean isStall(BlockPos pos) {
@@ -341,7 +393,15 @@ public final class ServerCtx {
 
 	/** The market within the merge radius of {@code pos}, or {@code null}. */
 	public Market marketAt(BlockPos pos) {
-		return registry().nearestWithin(level().dimension(), pos, TradeExpansionConfig.get().distance.mergeRadius);
+		return marketAt(level(), pos);
+	}
+
+	public Market marketAt(ServerLevel level, BlockPos pos) {
+		return registry().nearestWithin(level.dimension(), pos, TradeExpansionConfig.get().distance.mergeRadius);
+	}
+
+	public boolean isStall(ServerLevel level, BlockPos pos) {
+		return level.getBlockState(pos).is(ModBlocks.MARKET_STALL);
 	}
 
 	/** Right-clicks the stall at {@code pos}: opens the trade screen (menu) on the server. */
@@ -361,7 +421,7 @@ public final class ServerCtx {
 	 * {@code buyQty} times and sold {@code sellQty} times, unit 1 and no item components.
 	 */
 	public Identifier tradableGood(Market market, int buyQty, int sellQty) {
-		long now = MarketUpkeep.touch(level(), market);
+		long now = MarketUpkeep.touch(levelOf(market), market);
 		Identifier best = null;
 		double bestPrice = -1;
 		for (Identifier id : market.regularGoods()) {
@@ -386,7 +446,7 @@ public final class ServerCtx {
 
 	/** What the trade screen would show as the total (A-4). */
 	public long previewTotal(ServerPlayer player, Market market, Identifier goodsId, boolean buy, int qty) {
-		long now = MarketUpkeep.touch(level(), market);
+		long now = MarketUpkeep.touch(levelOf(market), market);
 		var params = Reputation.params(market, player.getUUID(), goodsId, now);
 		GoodState state = market.good(goodsId);
 		return buy ? PriceModel.sumBuy(params, state.pressure(), qty, GoodsCatalog.get(goodsId).unit(), TradeExpansionConfig.get().trade.bulkDiscount())
@@ -394,12 +454,12 @@ public final class ServerCtx {
 	}
 
 	public long buyPrice(ServerPlayer player, Market market, Identifier goodsId) {
-		long now = MarketUpkeep.touch(level(), market);
+		long now = MarketUpkeep.touch(levelOf(market), market);
 		return PriceModel.buyPrice(Reputation.params(market, player.getUUID(), goodsId, now), market.good(goodsId).pressure());
 	}
 
 	public long sellPrice(ServerPlayer player, Market market, Identifier goodsId) {
-		long now = MarketUpkeep.touch(level(), market);
+		long now = MarketUpkeep.touch(levelOf(market), market);
 		return PriceModel.sellPrice(Reputation.params(market, player.getUUID(), goodsId, now), market.good(goodsId).pressure());
 	}
 
@@ -445,7 +505,7 @@ public final class ServerCtx {
 		// Facility buildings are taller than the cleared layers above the floors and may stand beyond them.
 		List<net.minecraft.world.level.levelgen.structure.BoundingBox> buildings = new ArrayList<>(extraBuildings);
 		extraBuildings.clear();
-		for (Market m : registry.all()) for (var f : m.facilities().values()) buildings.add(f.box());
+		for (Market m : registry.all()) if (m.dimension().equals(level().dimension())) for (var f : m.facilities().values()) buildings.add(f.box());
 		for (Market m : List.copyOf(registry.all())) registry.remove(m.id());
 		for (var box : buildings) {
 			for (BlockPos p : BlockPos.betweenClosed(box.minX() - 1, box.minY(), box.minZ() - 1, box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1)) {
@@ -457,21 +517,22 @@ public final class ServerCtx {
 		registry.campaigns().clear();
 		registry.employees().clear();
 		registry.setDirty();
-		for (BlockPos pos : floors) {
+		for (Floor f : floors) {
+			BlockPos pos = f.pos();
 			AABB box = new AABB(pos).inflate(FLOOR + 4, 8, FLOOR + 4);
-			for (Entity e : level().getEntities((Entity) null, box, e -> !(e instanceof Player))) e.discard();
+			for (Entity e : f.level().getEntities((Entity) null, box, e -> !(e instanceof Player))) e.discard();
 			for (int dx = -FLOOR; dx <= FLOOR; dx++) {
 				for (int dz = -FLOOR; dz <= FLOOR; dz++) {
-					for (int dy = 0; dy <= 4; dy++) level().setBlock(pos.offset(dx, dy, dz), Blocks.AIR.defaultBlockState(), 2 | 16);
+					for (int dy = 0; dy <= 4; dy++) f.level().setBlock(pos.offset(dx, dy, dz), Blocks.AIR.defaultBlockState(), 2 | 16);
 				}
 			}
 		}
 		// The item entities dropped by the removed blocks.
-		for (BlockPos pos : floors) {
-			for (Entity e : level().getEntities((Entity) null, new AABB(pos).inflate(FLOOR + 4, 8, FLOOR + 4), e -> !(e instanceof Player))) e.discard();
+		for (Floor f : floors) {
+			for (Entity e : f.level().getEntities((Entity) null, new AABB(f.pos()).inflate(FLOOR + 4, 8, FLOOR + 4), e -> !(e instanceof Player))) e.discard();
 		}
 		floors.clear();
-		for (var chunk : forced) level().setChunkForced(chunk.x(), chunk.z(), false);
+		for (Forced f : forced) f.level().setChunkForced(f.chunk().x(), f.chunk().z(), false);
 		forced.clear();
 		ConfigManager.apply(ConfigManager.copy(defaults));
 	}

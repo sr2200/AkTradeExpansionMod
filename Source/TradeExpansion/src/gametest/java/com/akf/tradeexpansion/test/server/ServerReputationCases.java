@@ -517,7 +517,9 @@ final class ServerReputationCases {
 			dayClock(ctx);
 			ServerCases.withMarket(ctx, (c, player, market, stall) -> {
 				c.giveMoney(player, 100_000);
-				Identifier good = RivalService.eligibleGoods(market).stream().filter(g -> market.good(g).stock() >= 3).findFirst()
+				// The dearest good: a day of the campaign moves the price by about a tenth, less than 1c for a cheap good.
+				Identifier good = RivalService.eligibleGoods(market).stream().filter(g -> market.good(g).stock() >= 3)
+						.max(java.util.Comparator.comparingDouble(g -> market.params(g).basePrice()))
 						.orElseThrow(() -> new AutotestCheck.Failed("no good to buy"));
 				campaign(c, market, good, true, 0.35, 3);
 				c.forget(player);
