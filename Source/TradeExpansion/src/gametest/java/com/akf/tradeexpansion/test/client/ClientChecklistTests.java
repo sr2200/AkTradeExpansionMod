@@ -131,11 +131,19 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("map_coordinates_to_chat", List.of("20-5"), "JourneyMap なしで「この市場の座標」が掲示板の市場の一覧に出て、押すとこの市場の名前と座標が自分のチャットに出る（クリックでコピー）こと。市場を選ぶと消えること（近くに市場が無い時は見ていない）",
 				true, ClientScreenCases::coordinates, List.of("20-1"), "JourneyMap なしで、選んだ市場の「座標を表示」を押すと、市場名と座標が自分のチャットに出て、クリックで座標がコピーされること（マルチの他のプレイヤーは見ていない）"));
 		cases.add(new ClientCase("list_scrollbars", List.of("19-4"), null, true, ClientScreenCases::scrollbars));
+		cases.add(new ClientCase("board_market_list", List.of("9-1"), null, true, ClientBoardCases::marketList,
+				List.of("10-1"), "サーバーで付けた市場の名前（名札と同じ処理）が、ほかの村の掲示板の市場の行と、選んだ市場の題に出ること（名札を使う操作・チャット・名札が減ることはサーバーのテストで見ている）"));
+		cases.add(new ClientCase("board_theater_trends", List.of("29-11"), "野外劇場の村の流行の倍率（人気は 1+(m−1)×1.5、余り気味は 1−(1−m)÷1.5）が、ほかの村の掲示板の市場の行のツールチップと、その村の交易画面の「流行」のツールチップに出ること（値段への効きはサーバーのテストで見ている）",
+				true, ClientBoardCases::theaterTrends));
+		cases.add(new ClientCase("board_no_markets", List.of("20-5"), "近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし）",
+				true, ClientBoardCases::noMarkets, List.of("35-2"), "1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない）"));
 		cases.add(new ClientCase("goods_names", List.of("30-1"), "交易画面と掲示板に並ぶ品（このワールドの市場の品）の名前が翻訳されていて、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は見ていない）",
 				true, ClientScreenCases::goodsNames));
 		cases.add(new ClientCase("staff_needs_reputation", List.of("26-2"), null, true, ClientScreenCases::staffNeedsReputation));
 		cases.add(new ClientCase("sell_all_box", List.of("18-1", "31-2"), null, true, ClientDisplayCases::sellAll,
 				List.of("18-2"), "行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る）"));
+		cases.add(new ClientCase("sell_all_tools_and_sale", List.of("18-2", "18-3"), null, true, ClientSellAllCases::toolsAndSale));
+		cases.add(new ClientCase("sell_all_limits_and_other_player", List.of("18-4", "18-5"), null, true, ClientSellAllCases::limitsAndOtherPlayer));
 		cases.add(new ClientCase("goods_order", List.of("31-1"), null, true, ClientDisplayCases::goodsOrder));
 		cases.add(new ClientCase("town_tab", List.of("22-20", "22-21", "31-3"), null, true, ClientDisplayCases::townTab,
 				List.of("28-1", "29-1", "34-1", "34-2"), "噴水広場・公園を含む14種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る）"));

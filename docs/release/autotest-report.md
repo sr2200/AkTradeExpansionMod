@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.26、2026-11-16 19:04、88 件中 0 件失敗
+- クライアント：バージョン 0.2.27、2026-11-16 19:39、95 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 142・一部を確認 120・失敗 0
+- チェックリスト 326 項目のうち、今回 自動で完了 147・一部を確認 116・失敗 0
 
 ## すべての項目
 
@@ -215,10 +215,17 @@
 | 20-5 | `map_coordinates_to_chat` | クライアント | ✔ | JourneyMap なしで「この市場の座標」が掲示板の市場の一覧に出て、押すとこの市場の名前と座標が自分のチャットに出る（クリックでコピー）こと。市場を選ぶと消えること（近くに市場が無い時は見ていない） |
 | 20-1 | `map_coordinates_to_chat` | クライアント | ✔ | JourneyMap なしで、選んだ市場の「座標を表示」を押すと、市場名と座標が自分のチャットに出て、クリックで座標がコピーされること（マルチの他のプレイヤーは見ていない） |
 | 19-4 | `list_scrollbars` | クライアント | ✔ | 全部 |
+| 9-1 | `board_market_list` | クライアント | ✔ | 全部 |
+| 10-1 | `board_market_list` | クライアント | ✔ | サーバーで付けた市場の名前（名札と同じ処理）が、ほかの村の掲示板の市場の行と、選んだ市場の題に出ること（名札を使う操作・チャット・名札が減ることはサーバーのテストで見ている） |
+| 29-11 | `board_theater_trends` | クライアント | ✔ | 野外劇場の村の流行の倍率（人気は 1+(m−1)×1.5、余り気味は 1−(1−m)÷1.5）が、ほかの村の掲示板の市場の行のツールチップと、その村の交易画面の「流行」のツールチップに出ること（値段への効きはサーバーのテストで見ている） |
+| 20-5 | `board_no_markets` | クライアント | ✔ | 近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし） |
+| 35-2 | `board_no_markets` | クライアント | ✔ | 1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない） |
 | 30-1 | `goods_names` | クライアント | ✔ | 交易画面と掲示板に並ぶ品（このワールドの市場の品）の名前が翻訳されていて、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は見ていない） |
 | 26-2 | `staff_needs_reputation` | クライアント | ✔ | 全部 |
 | 18-1・31-2 | `sell_all_box` | クライアント | ✔ | 全部 |
 | 18-2 | `sell_all_box` | クライアント | ✔ | 行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る） |
+| 18-2・18-3 | `sell_all_tools_and_sale` | クライアント | ✔ | 全部 |
+| 18-4・18-5 | `sell_all_limits_and_other_player` | クライアント | ✔ | 全部 |
 | 31-1 | `goods_order` | クライアント | ✔ | 全部 |
 | 22-20・22-21・31-3 | `town_tab` | クライアント | ✔ | 全部 |
 | 28-1・29-1・34-1・34-2 | `town_tab` | クライアント | ✔ | 噴水広場・公園を含む14種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る） |
@@ -343,10 +350,23 @@
 - 19-4 `list_scrollbars`：[19-4_buy_list.png](../../Source/TradeExpansion/build/autotest/screenshots/19-4_buy_list.png)
 - 19-4 `list_scrollbars`：[19-4_board_market.png](../../Source/TradeExpansion/build/autotest/screenshots/19-4_board_market.png)
 - 19-4 `list_scrollbars`：[19-4_sell_all.png](../../Source/TradeExpansion/build/autotest/screenshots/19-4_sell_all.png)
+- 9-1 `board_market_list`：[9-1_board_nearest_first.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1_board_nearest_first.png)
+- 9-1 `board_market_list`：[9-1_board_selected_scrolled.png](../../Source/TradeExpansion/build/autotest/screenshots/9-1_board_selected_scrolled.png)
+- 10-1 `board_market_list`：[10-1_board_renamed.png](../../Source/TradeExpansion/build/autotest/screenshots/10-1_board_renamed.png)
+- 29-11 `board_theater_trends`：[29-11_board_theater_trends.png](../../Source/TradeExpansion/build/autotest/screenshots/29-11_board_theater_trends.png)
+- 29-11 `board_theater_trends`：[29-11_screen_theater_trends.png](../../Source/TradeExpansion/build/autotest/screenshots/29-11_screen_theater_trends.png)
+- 20-5 `board_no_markets`：[35-2_board_no_markets.png](../../Source/TradeExpansion/build/autotest/screenshots/35-2_board_no_markets.png)
+- 20-5 `board_no_markets`：[20-5_no_markets_coords.png](../../Source/TradeExpansion/build/autotest/screenshots/20-5_no_markets_coords.png)
+- 35-2 `board_no_markets`：[35-2_board_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/35-2_board_tavern.png)
 - 30-1 `goods_names`：[30-1_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_goods.png)
 - 26-2 `staff_needs_reputation`：[26-2_staff_needs_reputation.png](../../Source/TradeExpansion/build/autotest/screenshots/26-2_staff_needs_reputation.png)
 - 18-1・31-2 `sell_all_box`：[18-1_sell_all.png](../../Source/TradeExpansion/build/autotest/screenshots/18-1_sell_all.png)
 - 18-1・31-2 `sell_all_box`：[18-2_excluded.png](../../Source/TradeExpansion/build/autotest/screenshots/18-2_excluded.png)
+- 18-2・18-3 `sell_all_tools_and_sale`：[18-2_tool_excluded.png](../../Source/TradeExpansion/build/autotest/screenshots/18-2_tool_excluded.png)
+- 18-2・18-3 `sell_all_tools_and_sale`：[18-3_sold_all.png](../../Source/TradeExpansion/build/autotest/screenshots/18-3_sold_all.png)
+- 18-4・18-5 `sell_all_limits_and_other_player`：[18-4_partial_and_not_buying.png](../../Source/TradeExpansion/build/autotest/screenshots/18-4_partial_and_not_buying.png)
+- 18-4・18-5 `sell_all_limits_and_other_player`：[18-5_box_updated.png](../../Source/TradeExpansion/build/autotest/screenshots/18-5_box_updated.png)
+- 18-4・18-5 `sell_all_limits_and_other_player`：[18-5_price_changed.png](../../Source/TradeExpansion/build/autotest/screenshots/18-5_price_changed.png)
 - 31-1 `goods_order`：[31-1_sell_order.png](../../Source/TradeExpansion/build/autotest/screenshots/31-1_sell_order.png)
 - 22-20・22-21・31-3 `town_tab`：[22-20_town_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/22-20_town_tab.png)
 - 22-20・22-21・31-3 `town_tab`：[29-1_town_scrolled.png](../../Source/TradeExpansion/build/autotest/screenshots/29-1_town_scrolled.png)

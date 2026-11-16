@@ -103,13 +103,13 @@ final class ClientDisplayCases {
 		}
 	}
 
-	private static TextRecorder.Text find(List<TextRecorder.Text> texts, String text, String what) {
+	static TextRecorder.Text find(List<TextRecorder.Text> texts, String text, String what) {
 		return texts.stream().filter(t -> t.text().equals(text)).findFirst()
 				.orElseThrow(() -> new AssertionError("no \"" + text + "\" (" + what + ") on the screen: " + strings(texts)));
 	}
 
 	/** Texts of the screen's own layer whose top is between y0 and y1. */
-	private static List<TextRecorder.Text> band(List<TextRecorder.Text> texts, int y0, int y1) {
+	static List<TextRecorder.Text> band(List<TextRecorder.Text> texts, int y0, int y1) {
 		int base = TextRecorder.baseStratum(texts);
 		return texts.stream().filter(t -> t.stratum() == base && t.y0() >= y0 && t.y0() < y1).toList();
 	}
@@ -118,7 +118,7 @@ final class ClientDisplayCases {
 	 * Texts of any layer whose top is between y0 and y1 (with the mouse away there is no tooltip): rows with item icons
 	 * draw their texts in the layers after the icons.
 	 */
-	private static List<TextRecorder.Text> area(List<TextRecorder.Text> texts, int y0, int y1) {
+	static List<TextRecorder.Text> area(List<TextRecorder.Text> texts, int y0, int y1) {
 		return texts.stream().filter(t -> t.y0() >= y0 && t.y0() < y1).toList();
 	}
 
@@ -133,7 +133,7 @@ final class ClientDisplayCases {
 	}
 
 	/** Closes the screen and opens the stall again: a new snapshot with what the server changed. */
-	private static MarketScreen reopen(Session s) {
+	static MarketScreen reopen(Session s) {
 		s.context.setScreen(() -> null);
 		s.context.waitTicks(2);
 		return ClientChecklistTests.openStall(s);
@@ -152,12 +152,12 @@ final class ClientDisplayCases {
 		market.trends().put(group, 1.2);
 	}
 
-	private static String multiplier(double m) {
+	static String multiplier(double m) {
 		return String.format(Locale.ROOT, "×%.2f", m);
 	}
 
 	/** The tooltip of the trends: the title, one line per trend in red (popular) or green (plentiful). */
-	private static void checkTrendTooltip(List<TextRecorder.Text> tip, MarketSnapshotS2C snapshot) {
+	static void checkTrendTooltip(List<TextRecorder.Text> tip, MarketSnapshotS2C snapshot) {
 		String title = text("screen.ak_trade_expansion.trend.title");
 		check(tip.stream().anyMatch(t -> t.text().equals(title)), "the trends tooltip has no \"%s\": %s", title, strings(tip));
 		for (MarketSnapshotS2C.TrendView trend : snapshot.trends()) {
@@ -170,14 +170,14 @@ final class ClientDisplayCases {
 		}
 	}
 
-	private static List<TextRecorder.Text> hover(ClientGameTestContext context, TextRecorder.Text t) {
+	static List<TextRecorder.Text> hover(ClientGameTestContext context, TextRecorder.Text t) {
 		moveTo(context, (t.x0() + t.x1()) / 2.0, (t.y0() + t.y1()) / 2.0);
 		context.waitTicks(2);
 		return tip(context);
 	}
 
 	/** The tooltip shown now; every line of it inside the screen (long lines are wrapped, none runs off an edge). */
-	private static List<TextRecorder.Text> tip(ClientGameTestContext context) {
+	static List<TextRecorder.Text> tip(ClientGameTestContext context) {
 		List<TextRecorder.Text> tip = tooltip(TextRecorder.capture(context));
 		int[] size = context.computeOnClient(c -> new int[] {c.getWindow().getGuiScaledWidth(), c.getWindow().getGuiScaledHeight()});
 		List<TextRecorder.Text> outside = tip.stream().filter(t -> t.x0() < 0 || t.y0() < 0 || t.x1() > size[0] || t.y1() > size[1]).toList();
@@ -397,13 +397,13 @@ final class ClientDisplayCases {
 	// ---- 9-1 / 23-3 / 23-4 / 24-4 the board
 
 	/** The market of the shared world other than the stall's (the case placement_hint founds one 400 blocks east). */
-	private static Market other(MinecraftServer server, Market home) {
+	static Market other(MinecraftServer server, Market home) {
 		return MarketRegistry.get(server).all().stream().filter(m -> m.id() != home.id() && m.dimension().equals(home.dimension()))
 				.min(Comparator.comparingDouble(m -> m.center().distSqr(home.center())))
 				.orElseThrow(() -> new AssertionError("no other market (the case placement_hint founds one)"));
 	}
 
-	private static BoardS2C board(ClientGameTestContext context, MarketScreen screen) {
+	static BoardS2C board(ClientGameTestContext context, MarketScreen screen) {
 		check(waitClient(context, c -> get(screen, "board") != null, 60), "the board did not arrive");
 		return context.computeOnClient(c -> (BoardS2C) get(screen, "board"));
 	}
@@ -491,43 +491,7 @@ final class ClientDisplayCases {
 			check(opened == ids[0], "a click on the news opened market %d, not the center %d", opened, ids[0]);
 			screenshot(context, result, "23-4_news_opens_market");
 
-			// 9-1: the header over the goods of the market, in line with the price columns.
-			List<TextRecorder.Text> goodsTexts = TextRecorder.capture(context);
-			int headerY = listY + 1;
-			List<TextRecorder.Text> header = area(goodsTexts, headerY - 1, headerY + 3);
-			TextRecorder.Text buyHeader = find(header, text("screen.ak_trade_expansion.board.header.buy"), "buy price header");
-			TextRecorder.Text sellHeader = find(header, text("screen.ak_trade_expansion.board.header.sell"), "sell price header");
-			find(header, text("screen.ak_trade_expansion.board.header.goods"), "goods header");
-			int headerH = 10;
-			List<TextRecorder.Text> firstRow = area(goodsTexts, listY + headerH + 3, listY + headerH + rowH);
-			BoardS2C.Good firstGood = entry.goods().getFirst();
-			if (firstGood.buy() >= 0) {
-				String price = (firstGood.buyDeal() > 0 ? "↓" : "") + CoinItem.formatCopper(firstGood.buy());
-				TextRecorder.Text p = find(firstRow, price, "buy price of the first good");
-				check(Math.abs(p.x1() - buyHeader.x1()) <= COLUMN_SLACK, "the buy price %s is not under its header %s", p, buyHeader);
-			}
-			if (firstGood.sell() >= 0) {
-				String price = (firstGood.sellDeal() > 0 ? "↑" : "") + CoinItem.formatCopper(firstGood.sell());
-				TextRecorder.Text p = find(firstRow, price, "sell price of the first good");
-				check(Math.abs(p.x1() - sellHeader.x1()) <= COLUMN_SLACK, "the sell price %s is not under its header %s", p, sellHeader);
-			}
-			List<TextRecorder.Text> headerTip = hover(context, buyHeader);
-			String buyTip = text("screen.ak_trade_expansion.board.header.buy.tooltip");
-			check(headerTip.stream().anyMatch(t -> t.text().equals(buyTip)), "the header tooltip has no \"%s\": %s", buyTip, strings(headerTip));
-			// Scrolled to the end with the wheel, the last good shows.
-			moveTo(context, x0 + 40, listY + 30);
-			for (int i = 0; i < entry.goods().size() + 2; i++) {
-				context.getInput().scroll(-1);
-				context.waitTick();
-			}
-			mouseAway(context);
-			BoardS2C.Good last = entry.goods().getLast();
-			String lastPrice = last.sell() >= 0 ? (last.sellDeal() > 0 ? "↑" : "") + CoinItem.formatCopper(last.sell())
-					: (last.buyDeal() > 0 ? "↓" : "") + CoinItem.formatCopper(last.buy());
-			int lastRowY = listY + headerH + ((rows * rowH - headerH) / rowH - 1) * rowH;
-			List<TextRecorder.Text> lastRow = area(TextRecorder.capture(context), lastRowY + 3, lastRowY + rowH);
-			check(lastRow.stream().anyMatch(t -> t.text().equals(lastPrice)), "scrolled to the end, the last row is not the last good (%s): %s", lastPrice, strings(lastRow));
-			screenshot(context, result, "9-1_board_market_scrolled");
+			boardGoods(context, screen, entry, result, "9-1_board_market_scrolled");
 		} finally {
 			s.world.getServer().runOnServer(server -> {
 				MarketRegistry registry = MarketRegistry.get(server);
@@ -536,6 +500,56 @@ final class ClientDisplayCases {
 			});
 			context.setScreen(() -> null);
 		}
+	}
+
+	/**
+	 * 9-1: the goods of the market selected on the board: the header "商品／買値／売値" in line with the price columns,
+	 * the mouse over it explains both prices, and the list scrolls with the wheel to its last good.
+	 */
+	static void boardGoods(ClientGameTestContext context, MarketScreen screen, BoardS2C.Entry entry, CaseResult.Builder result, String shot) {
+		int listY = context.computeOnClient(c -> topPos(screen)) + constant(MarketScreen.class, "LIST_Y");
+		int rowH = constant(MarketScreen.class, "ROW_H");
+		int x0 = listX(context, screen);
+		int rows = context.computeOnClient(c -> (Integer) get(screen, "rows"));
+		mouseAway(context);
+		List<TextRecorder.Text> goodsTexts = TextRecorder.capture(context);
+		int headerY = listY + 1;
+		List<TextRecorder.Text> header = area(goodsTexts, headerY - 1, headerY + 3);
+		TextRecorder.Text buyHeader = find(header, text("screen.ak_trade_expansion.board.header.buy"), "buy price header");
+		TextRecorder.Text sellHeader = find(header, text("screen.ak_trade_expansion.board.header.sell"), "sell price header");
+		find(header, text("screen.ak_trade_expansion.board.header.goods"), "goods header");
+		int headerH = 10;
+		List<TextRecorder.Text> firstRow = area(goodsTexts, listY + headerH + 3, listY + headerH + rowH);
+		BoardS2C.Good firstGood = entry.goods().getFirst();
+		if (firstGood.buy() >= 0) {
+			String price = (firstGood.buyDeal() > 0 ? "↓" : "") + CoinItem.formatCopper(firstGood.buy());
+			TextRecorder.Text p = find(firstRow, price, "buy price of the first good");
+			check(Math.abs(p.x1() - buyHeader.x1()) <= COLUMN_SLACK, "the buy price %s is not under its header %s", p, buyHeader);
+		}
+		if (firstGood.sell() >= 0) {
+			String price = (firstGood.sellDeal() > 0 ? "↑" : "") + CoinItem.formatCopper(firstGood.sell());
+			TextRecorder.Text p = find(firstRow, price, "sell price of the first good");
+			check(Math.abs(p.x1() - sellHeader.x1()) <= COLUMN_SLACK, "the sell price %s is not under its header %s", p, sellHeader);
+		}
+		List<TextRecorder.Text> headerTip = hover(context, buyHeader);
+		String buyTip = text("screen.ak_trade_expansion.board.header.buy.tooltip");
+		check(headerTip.stream().anyMatch(t -> t.text().equals(buyTip)), "the header tooltip has no \"%s\": %s", buyTip, strings(headerTip));
+		String sellTip = text("screen.ak_trade_expansion.board.header.sell.tooltip");
+		check(headerTip.stream().anyMatch(t -> t.text().equals(sellTip)), "the header tooltip has no \"%s\": %s", sellTip, strings(headerTip));
+		// Scrolled to the end with the wheel, the last good shows.
+		moveTo(context, x0 + 40, listY + 30);
+		for (int i = 0; i < entry.goods().size() + 2; i++) {
+			context.getInput().scroll(-1);
+			context.waitTick();
+		}
+		mouseAway(context);
+		BoardS2C.Good last = entry.goods().getLast();
+		String lastPrice = last.sell() >= 0 ? (last.sellDeal() > 0 ? "↑" : "") + CoinItem.formatCopper(last.sell())
+				: (last.buyDeal() > 0 ? "↓" : "") + CoinItem.formatCopper(last.buy());
+		int lastRowY = listY + headerH + ((rows * rowH - headerH) / rowH - 1) * rowH;
+		List<TextRecorder.Text> lastRow = area(TextRecorder.capture(context), lastRowY + 3, lastRowY + rowH);
+		check(lastRow.stream().anyMatch(t -> t.text().equals(lastPrice)), "scrolled to the end, the last row is not the last good (%s): %s", lastPrice, strings(lastRow));
+		screenshot(context, result, shot);
 	}
 
 	// ---- 9-1b deals on the board

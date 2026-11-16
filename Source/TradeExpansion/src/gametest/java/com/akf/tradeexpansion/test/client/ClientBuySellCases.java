@@ -392,7 +392,7 @@ final class ClientBuySellCases {
 	}
 
 	/** A second (survival) player next to the stall, with a connection that only keeps what the server sends. */
-	private static ServerPlayer secondPlayer(MinecraftServer server, BlockPos stall) {
+	static ServerPlayer secondPlayer(MinecraftServer server, BlockPos stall) {
 		GameProfile profile = new GameProfile(UUID.randomUUID(), "other");
 		CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
 		ServerLevel level = server.overworld();

@@ -340,14 +340,14 @@ final class ClientScreenCases {
 
 	// ---- 20-1 / 20-5 the coordinates in the chat
 
-	private static List<GuiMessage> chat(Minecraft client) {
+	static List<GuiMessage> chat(Minecraft client) {
 		@SuppressWarnings("unchecked")
 		List<GuiMessage> messages = (List<GuiMessage>) get(client.gui.hud.getChat(), "allMessages");
 		return new ArrayList<>(messages);
 	}
 
 	/** The chat line with the market's name and coordinates (click: copy "x y z"). */
-	private static void checkCoordsInChat(ClientGameTestContext context, Component name, BlockPos pos, String what) {
+	static void checkCoordsInChat(ClientGameTestContext context, Component name, BlockPos pos, String what) {
 		boolean found = waitClient(context, c -> chat(c).stream().anyMatch(m -> isCoords(m.content(), pos)), 40);
 		List<String> lines = context.computeOnClient(c -> chat(c).stream().map(m -> m.content().getString()).toList());
 		check(found, "the chat has no coordinates of %s (%s): %s", what, pos.toShortString(), lines);
@@ -365,7 +365,7 @@ final class ClientScreenCases {
 				&& String.valueOf(t.getArgs()[3]).equals(String.valueOf(pos.getZ()));
 	}
 
-	private static boolean visible(ClientGameTestContext context, String key) {
+	static boolean visible(ClientGameTestContext context, String key) {
 		return context.computeOnClient(c -> c.gui.screen().children().stream().anyMatch(ch -> ch instanceof AbstractWidget w && w.visible
 				&& w.getMessage().getContents() instanceof TranslatableContents t && t.getKey().equals(key)));
 	}
