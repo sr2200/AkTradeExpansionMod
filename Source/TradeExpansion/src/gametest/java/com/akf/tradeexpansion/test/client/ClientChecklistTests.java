@@ -202,6 +202,13 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("staff_limit_and_other_market", List.of("26-15", "26-17"), null, true, ClientStaffCases::limitAndOtherMarket,
 				List.of("26-5"), "おまかせを選ぶと設定が「1回に運ぶ数」だけになり、画面から雇えること"));
 		cases.add(new ClientCase("staff_layout", List.of("26-25"), null, true, ClientStaffCases::layout));
+		// Each starts without employees; staff_accident puts the settings back.
+		cases.add(new ClientCase("staff_carrier_change", List.of("26-23"), null, true, ClientStaffMoreCases::carrierChange,
+				List.of("26-27", "26-28", "26-16"), "売れ残りと帰り荷を持って戻った運び屋の右パネルが「荷 ×○個・帰り荷 ×○個」になり、ツールチップのログに帰り荷の仕入れが出ること。「変更」でおまかせに変えると、設定の画面に「今持っている荷 ×○個は手元に戻ります」が出て、売れ残りと帰り荷が手元に戻ること。画面の「解雇する」で所持金が戻り、一覧から消えること（帰り荷の売れた文・「引取」での帰り荷は見ていない）"));
+		cases.add(new ClientCase("staff_clerk_change", List.of("26-24", "26-12"), null, true, ClientStaffMoreCases::clerkChange,
+				List.of("26-16"), "番頭を画面の「解雇する」で解雇すると所持金が戻り、一覧から消えること（運び屋の売れ残りは staff_carrier_change で見る）"));
+		cases.add(new ClientCase("staff_accident", List.of("26-10"), null, true, ClientStaffMoreCases::accident,
+				List.of("26-6"), "行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと"));
 		cases.add(new ClientCase("reopen_world_keeps_market",List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
 		// Breaks the stall: the last case of the world.
 		cases.add(new ClientCase("screen_closes_when_away", List.of("2-16"), null, true, ClientTradeCases::closesWhenAway));

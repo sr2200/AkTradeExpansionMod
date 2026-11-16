@@ -48,40 +48,40 @@ final class ClientStaffCases {
 	private ClientStaffCases() {
 	}
 
-	private static final String NS = "ak_trade_expansion";
-	private static final String K = "screen." + NS + ".staff.";
+	static final String NS = "ak_trade_expansion";
+	static final String K = "screen." + NS + ".staff.";
 
 	/** Set up once by {@link #prepare}: the settings and reputation to put back, the goods of the cases. */
-	private static TradeExpansionConfig oldConfig;
-	private static Market.Standing oldStanding;
-	private static boolean prepared;
-	private static Identifier carrierGood;
+	static TradeExpansionConfig oldConfig;
+	static Market.Standing oldStanding;
+	static boolean prepared;
+	static Identifier carrierGood;
 
-	private static String text(String key, Object... args) {
+	static String text(String key, Object... args) {
 		return Component.translatable(key, args).getString();
 	}
 
 	/** The fixed part of a translation between its first and second %s. */
-	private static String middle(String key) {
+	static String middle(String key) {
 		String[] parts = Language.getInstance().getOrDefault(key).split("%s", -1);
 		return parts.length > 1 ? parts[1] : parts[0];
 	}
 
-	private static String prefix(String key) {
+	static String prefix(String key) {
 		return Language.getInstance().getOrDefault(key).split("%s", -1)[0];
 	}
 
-	private static String squeeze(String s) {
+	static String squeeze(String s) {
 		return s.replaceAll("\\s", "").replace("…", "");
 	}
 
-	private static String coins(long amount) {
+	static String coins(long amount) {
 		return CoinItem.formatCopper(amount);
 	}
 
 	// ---- set-up
 
-	private static Market other(MinecraftServer server, Market home) {
+	static Market other(MinecraftServer server, Market home) {
 		return MarketRegistry.get(server).all().stream().filter(m -> m.id() != home.id() && m.dimension().equals(home.dimension()))
 				.min(Comparator.comparingDouble(m -> m.center().distSqr(home.center())))
 				.orElseThrow(() -> new AssertionError("no other market (the case placement_hint founds one: run it too)"));
@@ -91,7 +91,7 @@ final class ClientStaffCases {
 	 * Once for the cases: no accidents and no return cargo (the trips go as planned), the reputation "常連" (300 points: 150 would decay below it at once) at the stall's
 	 * market, plenty of money, and one good cheap here and dear at the other market (worth carrying).
 	 */
-	private static void prepare(Session s) {
+	static void prepare(Session s) {
 		if (prepared) return;
 		BlockPos stall = s.stall;
 		carrierGood = s.world.getServer().computeOnServer(server -> {
@@ -128,7 +128,7 @@ final class ClientStaffCases {
 	}
 
 	/** Lets the player's employees go, puts the settings and the reputation back. */
-	private static void cleanUp(Session s) {
+	static void cleanUp(Session s) {
 		if (!prepared) return;
 		prepared = false;
 		BlockPos stall = s.stall;
@@ -146,7 +146,7 @@ final class ClientStaffCases {
 	// ---- the tab
 
 	/** Opens the stall again and the staff tab; waits for the tab's first list. @return the tab */
-	private static Object openTab(Session s) {
+	static Object openTab(Session s) {
 		ClientGameTestContext context = s.context;
 		context.setScreen(() -> null);
 		context.waitTicks(2);
@@ -154,7 +154,7 @@ final class ClientStaffCases {
 		return staffTabOf(context, screen);
 	}
 
-	private static Object staffTabOf(ClientGameTestContext context, MarketScreen screen) {
+	static Object staffTabOf(ClientGameTestContext context, MarketScreen screen) {
 		context.clickScreenButton("screen." + NS + ".tab.staff");
 		Object staff = context.computeOnClient(c -> get(screen, "staffTab"));
 		check(waitClient(context, c -> get(staff, "data") != null, 100), "the staff tab got no list");
@@ -162,15 +162,15 @@ final class ClientStaffCases {
 		return staff;
 	}
 
-	private static StaffS2C data(ClientGameTestContext context, Object staff) {
+	static StaffS2C data(ClientGameTestContext context, Object staff) {
 		return context.computeOnClient(c -> (StaffS2C) get(staff, "data"));
 	}
 
-	private static String mode(ClientGameTestContext context, Object staff) {
+	static String mode(ClientGameTestContext context, Object staff) {
 		return context.computeOnClient(c -> ((Enum<?>) get(staff, "mode")).name());
 	}
 
-	private static void refresh(ClientGameTestContext context, Object staff) {
+	static void refresh(ClientGameTestContext context, Object staff) {
 		context.runOnClient(c -> {
 			call(staff, "requestList");
 			call(c.gui.screen(), "updateButtons");
@@ -178,7 +178,7 @@ final class ClientStaffCases {
 	}
 
 	/** Waits (asking for the list every second, at most {@code ticks}) until the employee matches. */
-	private static StaffS2C.View waitView(ClientGameTestContext context, Object staff, int id, Predicate<StaffS2C.View> condition, int ticks, String what) {
+	static StaffS2C.View waitView(ClientGameTestContext context, Object staff, int id, Predicate<StaffS2C.View> condition, int ticks, String what) {
 		StaffS2C.View view = null;
 		for (int i = 0; i <= ticks; i++) {
 			view = view(context, staff, id);
@@ -192,23 +192,23 @@ final class ClientStaffCases {
 		throw new AssertionError("the employee #" + id + " did not get " + what + " (now " + describe(view) + ")");
 	}
 
-	private static String describe(StaffS2C.View v) {
+	static String describe(StaffS2C.View v) {
 		if (v == null) return "not listed";
 		return "phase " + v.phase() + ", status " + v.status() + ", paused " + v.paused() + ", purse " + v.purse() + ", stock " + v.stock();
 	}
 
-	private static StaffS2C.View view(ClientGameTestContext context, Object staff, int id) {
+	static StaffS2C.View view(ClientGameTestContext context, Object staff, int id) {
 		StaffS2C data = data(context, staff);
 		return data == null ? null : data.staff().stream().filter(v -> v.id() == id).findFirst().orElse(null);
 	}
 
-	private static int rowIndex(ClientGameTestContext context, Object staff, int id) {
+	static int rowIndex(ClientGameTestContext context, Object staff, int id) {
 		List<StaffS2C.View> list = data(context, staff).staff();
 		for (int i = 0; i < list.size(); i++) if (list.get(i).id() == id) return i;
 		throw new AssertionError("the employee #" + id + " is not listed");
 	}
 
-	private static void select(ClientGameTestContext context, Object staff, int id) {
+	static void select(ClientGameTestContext context, Object staff, int id) {
 		context.runOnClient(c -> {
 			set(staff, "selected", id);
 			call(c.gui.screen(), "updateButtons");
@@ -217,7 +217,7 @@ final class ClientStaffCases {
 	}
 
 	/** Scrolls the tab's list so row {@code index} shows; returns the top of the row in GUI pixels. */
-	private static int showRow(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
+	static int showRow(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
 		int total = context.computeOnClient(c -> (Integer) call(staff, "rowCount"));
 		int rows = context.computeOnClient(c -> (Integer) get(screen, "rows"));
 		check(index < total, "row %d of %d rows", index, total);
@@ -227,21 +227,21 @@ final class ClientStaffCases {
 		return context.computeOnClient(c -> topPos(screen)) + constant(MarketScreen.class, "LIST_Y") + (index - scroll) * constant(MarketScreen.class, "ROW_H");
 	}
 
-	private static void clickRow(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
+	static void clickRow(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
 		int y = showRow(context, screen, staff, index);
 		clickAt(context, listX(context, screen) + 60, y + 8);
 		mouseAway(context);
 	}
 
 	/** The texts of the row (with the mouse away). */
-	private static List<String> rowStrings(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
+	static List<String> rowStrings(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
 		int y = showRow(context, screen, staff, index);
 		mouseAway(context);
 		return strings(rowTexts(TextRecorder.capture(context), y));
 	}
 
 	/** The tooltip over the row, every line inside the screen, joined without spaces. */
-	private static String rowTooltip(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
+	static String rowTooltip(ClientGameTestContext context, MarketScreen screen, Object staff, int index) {
 		int y = showRow(context, screen, staff, index);
 		moveTo(context, listX(context, screen) + 60, y + 8);
 		context.waitTicks(2);
@@ -254,33 +254,33 @@ final class ClientStaffCases {
 	}
 
 	/** The texts of the right panel. */
-	private static String panel(ClientGameTestContext context, MarketScreen screen) {
+	static String panel(ClientGameTestContext context, MarketScreen screen) {
 		mouseAway(context);
 		int px = context.computeOnClient(c -> leftPos(screen) + (Integer) get(screen, "panelX"));
 		return squeeze(String.join("", strings(TextRecorder.capture(context).stream().filter(t -> t.x0() >= px).toList())));
 	}
 
 	/** All texts of the screen in drawing order, joined without spaces. */
-	private static String all(ClientGameTestContext context) {
+	static String all(ClientGameTestContext context) {
 		mouseAway(context);
 		return squeeze(String.join("", strings(TextRecorder.capture(context))));
 	}
 
-	private static Button button(Object staff, String field) {
+	static Button button(Object staff, String field) {
 		return (Button) get(staff, field);
 	}
 
-	private static boolean shownWithText(ClientGameTestContext context, String label) {
+	static boolean shownWithText(ClientGameTestContext context, String label) {
 		return context.computeOnClient(c -> c.gui.screen().children().stream()
 				.anyMatch(ch -> ch instanceof AbstractWidget w && w.visible && w.getMessage().getString().equals(label)));
 	}
 
-	private static void hurry(Session s) {
+	static void hurry(Session s) {
 		s.world.getServer().runCommand("aktradeex staff hurry");
 		s.context.waitTicks(2);
 	}
 
-	private static List<GuiMessage> chat(Minecraft client) {
+	static List<GuiMessage> chat(Minecraft client) {
 		@SuppressWarnings("unchecked")
 		List<GuiMessage> messages = (List<GuiMessage>) get(client.gui.hud.getChat(), "allMessages");
 		return new ArrayList<>(messages);
@@ -401,12 +401,12 @@ final class ClientStaffCases {
 		screenshot(context, result, "26-4_hired");
 	}
 
-	private static StaffS2C.CarrierHint hint(List<StaffS2C.CarrierHint> hints, Identifier good) {
+	static StaffS2C.CarrierHint hint(List<StaffS2C.CarrierHint> hints, Identifier good) {
 		return hints.stream().filter(h -> h.goods().equals(good)).findFirst()
 				.orElse(new StaffS2C.CarrierHint(good, -1, Component.empty(), 0, 0));
 	}
 
-	private static int carrierId(ClientGameTestContext context, Object staff) {
+	static int carrierId(ClientGameTestContext context, Object staff) {
 		return data(context, staff).staff().stream().filter(v -> v.role() == 0 && v.goods().equals(carrierGood)).findFirst()
 				.orElseThrow(() -> new AssertionError("no carrier of " + carrierGood + " (the case staff_hire_carrier hires it)")).id();
 	}
@@ -711,7 +711,7 @@ final class ClientStaffCases {
 
 	// ---- 26-25 the layout with employees
 
-	private static final int[][] SIZES = {{854, 480, 0}, {1920, 1080, 2}};
+	static final int[][] SIZES = {{854, 480, 0}, {1920, 1080, 2}};
 
 	/**
 	 * 26-25: the staff tab with every employee selected in turn (and none): no texts on top of each other or outside the

@@ -1045,7 +1045,8 @@ final class StaffTab {
 		}
 		StaffS2C.View old = changedView();
 		if (old != null && (old.stock() > 0 || old.returnItems() > 0)) {
-			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.change", old.stock() * (old.auto() ? 1 : old.unit()) + old.returnItems())
+			// Right after the first line: the page is cut at the bottom of the list on small screens.
+			lines.add(Math.min(1, lines.size()), Component.translatable("screen.ak_trade_expansion.staff.summary.change", old.stock() * (old.auto() ? 1 : old.unit()) + old.returnItems())
 					.withColor(COLOR_GOLD));
 		}
 		if (editing < 0 && changing < 0) {
