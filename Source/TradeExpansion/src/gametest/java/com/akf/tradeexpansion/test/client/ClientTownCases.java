@@ -77,7 +77,7 @@ final class ClientTownCases {
 		return String.format(Locale.ROOT, "%,d", (long) Math.floor(value + 1e-9));
 	}
 
-	private static Identifier id(String name) {
+	static Identifier id(String name) {
 		return Identifier.fromNamespaceAndPath(NS, name);
 	}
 
@@ -136,13 +136,13 @@ final class ClientTownCases {
 		});
 	}
 
-	private enum State { CONSTRUCTING, COMPLETE, DESTROYED }
+	enum State { CONSTRUCTING, COMPLETE, DESTROYED }
 
 	/**
 	 * A facility of the stall's market without its blocks. A completed one gets its sign at {@code core} (without it the
 	 * next touch of the market counts it as destroyed).
 	 */
-	private static void facility(MinecraftServer server, BlockPos stall, String name, FacilityKind kind, State state, BlockPos core) {
+	static void facility(MinecraftServer server, BlockPos stall, String name, FacilityKind kind, State state, BlockPos core) {
 		ServerLevel level = server.overworld();
 		Market market = market(server, stall);
 		long now = MarketClock.now(level);

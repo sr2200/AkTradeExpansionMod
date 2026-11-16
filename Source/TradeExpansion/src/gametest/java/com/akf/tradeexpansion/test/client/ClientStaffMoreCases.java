@@ -4,8 +4,10 @@ import com.akf.tradeexpansion.client.MarketScreen;
 import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.GoodState;
+import com.akf.tradeexpansion.core.StaffMath;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.development.FacilityKind;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
@@ -18,12 +20,21 @@ import com.akf.tradeexpansion.test.CaseResult;
 import com.akf.tradeexpansion.test.client.ClientChecklistTests.Session;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.BlockPos;
 import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Blocks;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.akf.tradeexpansion.test.client.ClientStaffCases.*;
 import static com.akf.tradeexpansion.test.client.ClientUtil.*;
@@ -168,15 +179,15 @@ final class ClientStaffMoreCases {
 		context.waitTicks(3);
 	}
 
-	/** A good of both markets other than {@code not} (added to the other market when they share none, as {@link ClientStaffCases#prepare}). */
-	private static Identifier sharedGood(Session s, Identifier not) {
+	/** A good of both markets, none of {@code not} (added to the other market when they share none, as {@link ClientStaffCases#prepare}). */
+	private static Identifier sharedGood(Session s, Identifier... not) {
 		return s.world.getServer().computeOnServer(server -> {
 			Market home = market(server, s.stall);
 			Market other = other(server, home);
 			long now = MarketUpkeep.touch(server.overworld(), other);
 			java.util.function.Predicate<Identifier> usable = g -> {
 				GoodsDefinition def = GoodsCatalog.get(g);
-				return def != null && def.buy() && def.sell() && def.unit() == 1 && def.components().isEmpty() && !g.equals(not) && !home.isSpecial(g)
+				return def != null && def.buy() && def.sell() && def.unit() == 1 && def.components().isEmpty() && !List.of(not).contains(g) && !home.isSpecial(g)
 						&& !other.isSpecial(g) && home.good(g).stock() >= 20;
 			};
 			Identifier good = home.regularGoods().stream().filter(usable).filter(g -> other.regularGoods().contains(g) && other.good(g).stock() >= 20)
@@ -498,6 +509,304 @@ final class ClientStaffMoreCases {
 		} finally {
 			context.setScreen(() -> null);
 			cleanUp(s);
+		}
+	}
+
+	// ---- 26-8 / 26-27 / 26-28 an automatic carrier with return cargo
+
+	/**
+	 * The first log line (newest first) matching the translation of {@code key} (each %s any text): the line, then its
+	 * arguments; null when none matches.
+	 */
+	private static List<String> logLine(StaffS2C.View v, String key) {
+		String[] parts = Language.getInstance().getOrDefault(key).split("%s", -1);
+		StringBuilder regex = new StringBuilder();
+		for (int i = 0; i < parts.length; i++) {
+			if (i > 0) regex.append("(.+?)");
+			regex.append(Pattern.quote(parts[i]));
+		}
+		Pattern pattern = Pattern.compile(regex.toString());
+		for (Component line : v.log()) {
+			Matcher m = pattern.matcher(line.getString());
+			if (!m.matches()) continue;
+			List<String> found = new ArrayList<>();
+			found.add(line.getString());
+			for (int i = 1; i <= m.groupCount(); i++) found.add(m.group(i));
+			return found;
+		}
+		return null;
+	}
+
+	private static String logs(StaffS2C.View v) {
+		return v.log().stream().map(Component::getString).toList().toString();
+	}
+
+	/** Items of the employee's cargo ({@code "cargo"}) or return cargo ({@code "returnCargo"}) by good, read on the server. */
+	private static Map<Identifier, Integer> lines(Session s, int id, String field) {
+		return s.world.getServer().computeOnServer(server -> {
+			Employee e = MarketRegistry.get(server).employees().stream().filter(x -> x.id() == id).findFirst().orElseThrow();
+			Map<Identifier, Integer> items = new LinkedHashMap<>();
+			for (Object line : (List<?>) get(e, Employee.class, field)) {
+				Identifier good = (Identifier) get(line, "goods");
+				items.merge(good, (Integer) get(line, "units") * Math.max(1, GoodsCatalog.get(good).unit()), Integer::sum);
+			}
+			return items;
+		});
+	}
+
+	/** Makes every good of the employee's {@code field} cheap ({@code cheap}) or dear at the stall's market or the other one. */
+	private static void pressureOf(Session s, int id, String field, boolean home, boolean cheap) {
+		Set<Identifier> goods = lines(s, id, field).keySet();
+		s.world.getServer().runOnServer(server -> {
+			Market here = market(server, s.stall);
+			Market m = home ? here : other(server, here);
+			MarketUpkeep.touch(server.overworld(), m);
+			for (Identifier g : goods) {
+				if (!m.regularGoods().contains(g)) continue;
+				m.good(g).setPressure(cheap ? m.params(g).maxPressure() : m.params(g).minPressure() * 0.8);
+			}
+			MarketRegistry.get(server).setDirty();
+		});
+	}
+
+	/**
+	 * 26-8: an automatic carrier (hired through the server) buys several goods: on the way the row's tooltip says "品は
+	 * おまかせ（今の荷 N種類）" and the log "N種類 ×M を ○c で仕入れ、「…」へ出発"; it sells them there ("「…」でN種類 ×M を
+	 * ○c で売った"). 26-27: it buys return cargo there ("「…」で帰り荷 …") and sells it at home ("「（雇った村）」で…売った").
+	 * The second trip it cannot sell (cheap there) and its return cargo does not sell at home: "引取" gives every good
+	 * back by kind (26-8 / 26-28). Then "出金" gives the purse back and cannot be pressed with an empty purse.
+	 */
+	static void autoCarrier(Session s, CaseResult.Builder result, CaseResult.Builder also) {
+		ClientGameTestContext context = s.context;
+		fresh(s, c -> {
+			c.carrierBackhaul = true;
+			c.carrierMaxWaitDays = 0;
+		});
+		Identifier good = carrierGood;
+		Identifier second = sharedGood(s, good);
+		long otherId = otherId(s);
+		prices(s, good, true, true);
+		prices(s, second, true, true);
+		Object staff = ClientStaffCases.openTab(s);
+		MarketScreen screen = screen(context);
+		request(s, StaffRequestC2S.Action.HIRE_CARRIER, -1, Employee.AUTO, otherId, 8, 1, 1, 0);
+		int id = hired(context, staff, 0);
+		check(view(context, staff, id).auto(), "the carrier is not おまかせ");
+		request(s, StaffRequestC2S.Action.DEPOSIT_MONEY, id, Employee.AUTO, otherId, 0, 0, 0, 20_000);
+		StaffS2C.View v = hurryUntil(s, staff, id, x -> x.phase() == 1, 3, "on the way");
+		request(s, StaffRequestC2S.Action.PAUSE, id, Employee.AUTO, otherId, 0, 0, 0, 0); // stays home when it is back
+		refresh(context, staff);
+		context.waitTicks(4);
+		v = view(context, staff, id);
+		check(v.kinds() > 0 && v.stock() > 0, "the carrier left with nothing (%s)", describe(v));
+		String destination = v.destinationName().getString();
+		String route = squeeze(text(K + "tooltip.route.auto", v.destinationName(), v.distance(), v.quantity(), v.kinds()));
+		String tip = rowTooltip(context, screen, staff, rowIndex(context, staff, id));
+		check(tip.contains(route), "the tooltip does not say \"%s\": %s", route, tip);
+		List<String> bought = logLine(v, LOG + "bought_mix");
+		check(bought != null, "no log line \"%s\": %s", Language.getInstance().getOrDefault(LOG + "bought_mix"), logs(v));
+		check(bought.get(1).equals(String.valueOf(v.kinds())) && bought.get(2).equals(String.valueOf(v.stock())) && bought.get(4).equals(destination),
+				"the log says \"%s\", the carrier has %d kinds, %d items for %s", bought.get(0), v.kinds(), v.stock(), destination);
+		check(tip.contains(squeeze(bought.get(0))), "the tooltip's log has no \"%s\": %s", bought.get(0), tip);
+		screenshot(context, result, "26-8_auto_outbound");
+
+		// Sold there, return cargo bought there and sold at home.
+		Identifier back = sharedGood(s, good, second);
+		prices(s, back, false, false);
+		v = hurryUntil(s, staff, id, x -> x.phase() == 3, 3, "on the way back");
+		List<String> soldThere = logLine(v, LOG + "sold_mix");
+		check(soldThere != null && soldThere.get(1).equals(destination), "no log line \"「%s」で…売った\": %s", destination, logs(v));
+		check(v.returnItems() > 0, "the carrier bought no return cargo: %s", logs(v));
+		List<String> backBought = logLine(v, LOG + "bought_return");
+		check(backBought != null && backBought.get(1).equals(destination) && backBought.get(3).equals(String.valueOf(v.returnItems())),
+				"no log line \"「%s」で帰り荷 …×%d…\": %s", destination, v.returnItems(), logs(v));
+		v = hurryUntil(s, staff, id, x -> x.phase() == 0, 3, "home");
+		String home = v.homeName().getString();
+		List<String> soldHome = logLine(v, LOG + "sold_mix");
+		check(soldHome != null && soldHome.get(1).equals(home), "no log line \"「%s」で…売った\" (the return cargo at home): %s", home, logs(v));
+		check(logLine(v, LOG + "returned") != null, "no log line of the round trip: %s", logs(v));
+		tip = rowTooltip(context, screen, staff, rowIndex(context, staff, id));
+		for (String line : List.of(soldThere.get(0), backBought.get(0), soldHome.get(0))) {
+			check(tip.contains(squeeze(line)), "the tooltip's log has no \"%s\": %s", line, tip);
+		}
+		screenshot(context, result, "26-27_auto_back");
+
+		// The second trip: nothing sells there, the return cargo does not sell at home.
+		prices(s, good, true, true);
+		prices(s, second, true, true);
+		prices(s, back, false, false);
+		request(s, StaffRequestC2S.Action.PAUSE, id, Employee.AUTO, otherId, 0, 0, 0, 0);
+		hurryUntil(s, staff, id, x -> x.phase() == 1, 3, "on the way again");
+		request(s, StaffRequestC2S.Action.PAUSE, id, Employee.AUTO, otherId, 0, 0, 0, 0);
+		request(s, StaffRequestC2S.Action.CONFIGURE, id, Employee.AUTO, otherId, 40, 1, 1, 0); // room for return cargo
+		pressureOf(s, id, "cargo", false, true);
+		v = hurryUntil(s, staff, id, x -> x.phase() == 3, 3, "on the way back again");
+		check(v.stock() > 0 && v.returnItems() > 0, "the carrier comes back without goods or return cargo (%s, return %d): %s", describe(v), v.returnItems(),
+				logs(v));
+		pressureOf(s, id, "returnCargo", true, true);
+		v = hurryUntil(s, staff, id, x -> x.phase() == 0, 3, "home again");
+		Map<Identifier, Integer> expected = new LinkedHashMap<>(lines(s, id, "cargo"));
+		lines(s, id, "returnCargo").forEach((g, n) -> expected.merge(g, n, Integer::sum));
+		check(expected.size() >= 2, "the carrier holds only %s (two kinds or more expected)", expected);
+		long total = expected.values().stream().mapToLong(Integer::longValue).sum();
+		check(total == (long) v.stock() + v.returnItems(), "the server holds %d items, the tab shows %d + %d", total, v.stock(), v.returnItems());
+		Map<Identifier, Integer> before = new LinkedHashMap<>();
+		for (Identifier g : expected.keySet()) before.put(g, serverCount(s, g));
+		select(context, staff, id);
+		String cargo = squeeze(text(K + "cargo.return", v.stock(), v.returnItems()));
+		String p = panel(context, screen);
+		check(p.contains(cargo), "the panel does not say \"%s\": %s", cargo, p);
+		screenshot(context, result, "26-28_before_withdraw");
+		check(button(staff, "withdrawItemsButton").active, "\"%s\" cannot be pressed with goods", text(K + "withdraw_items"));
+		clickWidget(context, text(K + "withdraw_items"));
+		mouseAway(context);
+		waitView(context, staff, id, x -> x.stock() == 0 && x.returnItems() == 0, 60, "its goods taken back");
+		for (var entry : expected.entrySet()) {
+			int now = serverCount(s, entry.getKey());
+			check(now - before.get(entry.getKey()) == entry.getValue(), "\"%s\" gave %d of %s, the carrier held %d", text(K + "withdraw_items"),
+					now - before.get(entry.getKey()), entry.getKey(), entry.getValue());
+		}
+		String done = squeeze(text(K + "done.withdraw_items", total));
+		check(all(context).contains(done), "the status line does not say \"%s\"", done);
+		check(!button(staff, "withdrawItemsButton").active, "\"%s\" can still be pressed with nothing held", text(K + "withdraw_items"));
+
+		// "出金".
+		long purse = view(context, staff, id).purse();
+		check(purse > 0 && button(staff, "withdrawButton").active, "\"%s\" cannot be pressed with %dc", text(K + "withdraw"), purse);
+		long money = serverMoney(s);
+		clickWidget(context, text(K + "withdraw"));
+		mouseAway(context);
+		waitView(context, staff, id, x -> x.purse() == 0, 60, "an empty purse");
+		check(serverMoney(s) - money == purse, "\"%s\" gave %dc, the purse was %dc", text(K + "withdraw"), serverMoney(s) - money, purse);
+		check(!button(staff, "withdrawButton").active, "\"%s\" can be pressed with an empty purse", text(K + "withdraw"));
+		screenshot(context, result, "26-12_withdrawn");
+	}
+
+	// ---- 35-3 a harbor and a watchtower
+
+	/** Opens the destinations of {@code good} for a new carrier; the other market's entry. */
+	private static StaffS2C.Destination destinationOf(ClientGameTestContext context, MarketScreen screen, Object staff, Identifier good, long otherId) {
+		select(context, staff, -1);
+		clickWidget(context, text(K + "hire.carrier"));
+		mouseAway(context);
+		pickGood(context, screen, staff, good, true);
+		check(mode(context, staff).equals("PICK_DESTINATION"), "the good opened %s, not the destinations", mode(context, staff));
+		@SuppressWarnings("unchecked")
+		boolean listed = waitClient(context, c -> !((List<StaffS2C.Destination>) call(staff, "sortedDestinations")).isEmpty(), 100);
+		check(listed, "no destinations arrived");
+		return destinations(context, staff).stream().filter(d -> d.id() == otherId).findFirst()
+				.orElseThrow(() -> new AssertionError("the other market is not a destination"));
+	}
+
+	@SuppressWarnings("unchecked")
+	private static List<StaffS2C.Destination> destinations(ClientGameTestContext context, Object staff) {
+		return context.computeOnClient(c -> (List<StaffS2C.Destination>) call(staff, "sortedDestinations"));
+	}
+
+	private static int destinationRow(ClientGameTestContext context, Object staff, long otherId) {
+		List<StaffS2C.Destination> list = destinations(context, staff);
+		for (int i = 0; i < list.size(); i++) if (list.get(i).id() == otherId) return i;
+		throw new AssertionError("the other market is not a destination");
+	}
+
+	/** The tab's own "片道 約N分・事故の確率 N%" line. */
+	private static String travel(ClientGameTestContext context, Object staff, int distance, double travel, double accident) {
+		return squeeze(context.computeOnClient(c -> ((Component) call(staff, "travelLine", distance, travel, accident)).getString()));
+	}
+
+	/**
+	 * 35-3: with a harbor at the stall's market the other market's tooltip and the setup page say "片道 約N分" for the
+	 * shorter trip ({@code development.harborTravelMultiplier}), and a carrier hired there really takes that long; with a
+	 * watchtower instead the chance of an accident ({@code staff.accidentBase} 0.1 here) is halved
+	 * ({@code watchtowerAccidentMultiplier}). The buildings are made on the server without their blocks (as
+	 * {@link ClientTownCases}).
+	 */
+	static void harborWatchtower(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		BlockPos stall = s.stall;
+		BlockPos core = stall.above(6);
+		fresh(s, c -> {
+			c.accidentBase = 0.1;
+			c.accidentMax = 1;
+		});
+		try {
+			Identifier good = carrierGood;
+			long otherId = otherId(s);
+			prices(s, good, true, true);
+			TradeExpansionConfig.Development dev = TradeExpansionConfig.get().development;
+			double harbor = dev.harborTravelMultiplier, watchtower = dev.watchtowerAccidentMultiplier;
+
+			Object staff = ClientStaffCases.openTab(s);
+			MarketScreen screen = screen(context);
+			StaffS2C.Destination plain = destinationOf(context, screen, staff, good, otherId);
+			check(plain.travelMultiplier() == 1.0 && plain.accidentMultiplier() == 1.0, "without buildings the route has the multipliers %s / %s",
+					plain.travelMultiplier(), plain.accidentMultiplier());
+			String plainLine = travel(context, staff, plain.distance(), 1.0, 1.0);
+			String tip = rowTooltip(context, screen, staff, destinationRow(context, staff, otherId));
+			check(tip.contains(plainLine), "the destination's tooltip does not say \"%s\": %s", plainLine, tip);
+			double blocksPerDay = data(context, staff).info().blocksPerDay();
+
+			// A harbor.
+			s.world.getServer().runOnServer(server -> ClientTownCases.facility(server, stall, "harbor", FacilityKind.HARBOR, ClientTownCases.State.COMPLETE, core));
+			staff = ClientStaffCases.openTab(s);
+			Object tab = staff;
+			screen = screen(context);
+			StaffS2C.Destination d = destinationOf(context, screen, staff, good, otherId);
+			check(d.travelMultiplier() == harbor && d.accidentMultiplier() == 1.0, "with a harbor the route has the multipliers %s / %s (%s / 1 expected)",
+					d.travelMultiplier(), d.accidentMultiplier(), harbor);
+			check(StaffMath.travelTicks(d.distance(), blocksPerDay, harbor) < StaffMath.travelTicks(d.distance(), blocksPerDay),
+					"a harbor does not make the trip of %dm shorter", d.distance());
+			String harborLine = travel(context, staff, d.distance(), harbor, 1.0);
+			int row = destinationRow(context, staff, otherId);
+			tip = rowTooltip(context, screen, staff, row);
+			check(tip.contains(harborLine), "with a harbor the destination's tooltip does not say \"%s\": %s", harborLine, tip);
+			screenshot(context, result, "35-3_harbor_destination");
+			clickRow(context, screen, staff, row);
+			check(mode(context, staff).equals("SETUP"), "the destination opened %s, not the setup", mode(context, staff));
+			String page = all(context);
+			check(page.contains(harborLine), "with a harbor the setup page does not say \"%s\": %s", harborLine, page);
+			long fee = data(context, staff).info().carrierFee();
+			clickWidget(context, text(K + "confirm", coins(fee)));
+			mouseAway(context);
+			check(waitClient(context, c -> ((StaffS2C) get(tab, "data")).staff().stream().anyMatch(v -> v.role() == 0), 60), "the carrier is not listed");
+			int id = hired(context, staff, 0);
+			request(s, StaffRequestC2S.Action.DEPOSIT_MONEY, id, good, otherId, 0, 0, 0, 20_000);
+			StaffS2C.View v = waitView(context, staff, id, x -> x.phase() == 1, 200, "on the way");
+			long[] ticks = s.world.getServer().computeOnServer(server -> {
+				Market home = market(server, stall);
+				double distance = MarketRegistry.linkedDistance(home, other(server, home));
+				double perDay = TradeExpansionConfig.get().staff.carrierBlocksPerDay;
+				return new long[] {StaffMath.travelTicks(distance, perDay, harbor), StaffMath.travelTicks(distance, perDay)};
+			});
+			check(v.nextTime() - v.phaseStart() == ticks[0], "the carrier takes %d ticks with a harbor, not %d (%d without)", v.nextTime() - v.phaseStart(),
+					ticks[0], ticks[1]);
+
+			// A watchtower instead.
+			s.world.getServer().runOnServer(server -> {
+				market(server, stall).facilities().remove(ClientTownCases.id("harbor"));
+				ClientTownCases.facility(server, stall, "watchtower", FacilityKind.WATCHTOWER, ClientTownCases.State.COMPLETE, core);
+			});
+			staff = ClientStaffCases.openTab(s);
+			screen = screen(context);
+			d = destinationOf(context, screen, staff, good, otherId);
+			check(d.travelMultiplier() == 1.0 && d.accidentMultiplier() == watchtower, "with a watchtower the route has the multipliers %s / %s (1 / %s expected)",
+					d.travelMultiplier(), d.accidentMultiplier(), watchtower);
+			String towerLine = travel(context, staff, d.distance(), 1.0, watchtower);
+			check(!towerLine.equals(plainLine), "a watchtower does not change \"%s\"", plainLine);
+			tip = rowTooltip(context, screen, staff, destinationRow(context, staff, otherId));
+			check(tip.contains(towerLine), "with a watchtower the destination's tooltip does not say \"%s\": %s", towerLine, tip);
+			screenshot(context, result, "35-3_watchtower_destination");
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				Market home = market(server, stall);
+				home.facilities().remove(ClientTownCases.id("harbor"));
+				home.facilities().remove(ClientTownCases.id("watchtower"));
+				server.overworld().setBlock(core, Blocks.AIR.defaultBlockState(), 2);
+				UUID id = player(server).getUUID();
+				MarketRegistry.get(server).employees().removeIf(e -> e.owner().equals(id));
+				MarketRegistry.get(server).setDirty();
+			});
 		}
 	}
 }
