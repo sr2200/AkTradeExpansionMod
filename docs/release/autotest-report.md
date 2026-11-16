@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.25、2026-11-15 21:09、84 件中 0 件失敗
+- クライアント：バージョン 0.2.26、2026-11-16 19:04、88 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 139・一部を確認 121・失敗 0
+- チェックリスト 326 項目のうち、今回 自動で完了 142・一部を確認 120・失敗 0
 
 ## すべての項目
 
@@ -182,10 +182,14 @@
 | — | `request_board` | サーバー | ✔ | 全部 |
 | — | `request_wallet_withdraw` | サーバー | ✔ | 全部 |
 | 14-4 | `log_has_no_mod_errors` | サーバー | ✔ | テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ |
-| 1-2 | `startup_with_modmenu_yacl` | クライアント | ✔ | Mod Menu・YACL ありで起動してタイトル画面が出ることのみ（Mod 一覧のアイコンは見ていない） |
+| 1-2 | `startup_with_modmenu_yacl` | クライアント | ✔ | 全部 |
 | 1-3 | `config_screen_tabs` | クライアント | ✔ | 設定画面が開き、各タブに切り替えられることのみ（表示は画像で確認） |
 | 1-3 | `layout_config_screen` | クライアント | ✔ | タイトル画面から開いた設定画面の各タブの文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（日本語と英語、854×480 と 1920×1080）。タイトル画面では「追加の商品と消耗品」が押せないこと |
 | 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
+| 1-4 | `creative_tab` | クライアント | ✔ | 全部 |
+| 1-5 | `item_tooltips` | クライアント | ✔ | 全部 |
+| 21-2 | `cargo_tooltip` | クライアント | ✔ | 荷箱の説明に中身・届け先・場所（ネザーなら「（ネザー）」）・報酬と保証金・依頼元・残り時間が出ること |
+| 21-8 | `cargo_tooltip` | クライアント | ✔ | 期限を過ぎた荷箱の説明が赤い「期限切れ（届けられません）」になり、残り時間が消えること |
 | 2-2 | `placement_hint` | クライアント | ✔ | 全部 |
 | 3-10 | `buy_with_screen_buttons` | クライアント | ✔ | 全部 |
 | 2-9・2-10 | `buy_with_screen_buttons` | クライアント | ✔ | 交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない） |
@@ -274,6 +278,7 @@
 見た目（文字の重なり・はみ出し・色）は人が判断します。画像は `Source/TradeExpansion/build/autotest/screenshots/` にあります（リポジトリには入れない）。
 
 - 1-2 `startup_with_modmenu_yacl`：[1-2_title.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_title.png)
+- 1-2 `startup_with_modmenu_yacl`：[1-2_mod_list.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_mod_list.png)
 - 1-3 `config_screen_tabs`：[1-3_config_01.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_01.png)
 - 1-3 `config_screen_tabs`：[1-3_config_02.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_02.png)
 - 1-3 `config_screen_tabs`：[1-3_config_03.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_03.png)
@@ -290,6 +295,13 @@
 - 1-3 `config_screen_tabs`：[1-3_config_14.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_14.png)
 - 1-3 `config_screen_tabs`：[1-3_config_15.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_15.png)
 - 2-8 `stall_place_and_open`：[2-8_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/2-8_trade_screen.png)
+- 1-4 `creative_tab`：[1-4_creative_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/1-4_creative_tab.png)
+- 1-5 `item_tooltips`：[1-5_copper_coin.png](../../Source/TradeExpansion/build/autotest/screenshots/1-5_copper_coin.png)
+- 1-5 `item_tooltips`：[1-5_gold_coins.png](../../Source/TradeExpansion/build/autotest/screenshots/1-5_gold_coins.png)
+- 1-5 `item_tooltips`：[1-5_wallet.png](../../Source/TradeExpansion/build/autotest/screenshots/1-5_wallet.png)
+- 1-5 `item_tooltips`：[1-5_card.png](../../Source/TradeExpansion/build/autotest/screenshots/1-5_card.png)
+- 21-2 `cargo_tooltip`：[21-2_cargo_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/21-2_cargo_tooltip.png)
+- 21-8 `cargo_tooltip`：[21-8_cargo_expired.png](../../Source/TradeExpansion/build/autotest/screenshots/21-8_cargo_expired.png)
 - 2-2 `placement_hint`：[2-2_hint_join.png](../../Source/TradeExpansion/build/autotest/screenshots/2-2_hint_join.png)
 - 2-2 `placement_hint`：[2-2_hint_refused.png](../../Source/TradeExpansion/build/autotest/screenshots/2-2_hint_refused.png)
 - 2-2 `placement_hint`：[2-2_hint_new.png](../../Source/TradeExpansion/build/autotest/screenshots/2-2_hint_new.png)

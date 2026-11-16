@@ -123,7 +123,7 @@ final class ClientBuySellCases {
 	}
 
 	/** A copy of the player's inventory (coins, wallets and what the case buys would fill the hotbar for later cases). */
-	private static List<ItemStack> saveInventory(Session s) {
+	static List<ItemStack> saveInventory(Session s) {
 		return s.world.getServer().computeOnServer(server -> {
 			Inventory inventory = player(server).getInventory();
 			List<ItemStack> copy = new java.util.ArrayList<>();
@@ -132,7 +132,7 @@ final class ClientBuySellCases {
 		});
 	}
 
-	private static void restoreInventory(Session s, List<ItemStack> saved) {
+	static void restoreInventory(Session s, List<ItemStack> saved) {
 		s.world.getServer().runOnServer(server -> {
 			Inventory inventory = player(server).getInventory();
 			for (int slot = 0; slot < saved.size(); slot++) inventory.setItem(slot, saved.get(slot).copy());

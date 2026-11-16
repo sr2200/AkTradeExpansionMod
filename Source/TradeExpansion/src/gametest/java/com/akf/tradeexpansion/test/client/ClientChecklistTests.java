@@ -39,7 +39,7 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * every case itself, records each result (build/autotest/client-results.json) and fails at the end if any case failed.
  * Cases that need a world share one singleplayer world with a small village and a stall placed with the use key.
  * Screenshots go to build/autotest/screenshots for a person to look at. The cases are in this class,
- * {@link ClientTradeCases}, {@link ClientDisplayCases} and {@link ClientConfigCases}.
+ * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientItemCases} and {@link ClientConfigCases}.
  * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.minimal} (the run without
  * Mod Menu and YACL, runClientGameTestMinimal): only the startup case, results in client-minimal-results.json.
  */
@@ -91,13 +91,19 @@ public class ClientChecklistTests implements FabricClientGameTest {
 
 	private static List<ClientCase> cases() {
 		List<ClientCase> cases = new ArrayList<>();
-		cases.add(new ClientCase("startup_with_modmenu_yacl", List.of("1-2"), "Mod Menu・YACL ありで起動してタイトル画面が出ることのみ（Mod 一覧のアイコンは見ていない）",
-				false, ClientChecklistTests::startup));
+		cases.add(new ClientCase("startup_with_modmenu_yacl", List.of("1-2"), null, false, (ses, r) -> {
+			startup(ses, r);
+			ClientItemCases.modList(ses, r);
+		}));
 		cases.add(new ClientCase("config_screen_tabs", List.of("1-3"), "設定画面が開き、各タブに切り替えられることのみ（表示は画像で確認）",
 				false, ClientChecklistTests::configScreen));
 		cases.add(new ClientCase("layout_config_screen", List.of("1-3"), "タイトル画面から開いた設定画面の各タブの文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（日本語と英語、854×480 と 1920×1080）。タイトル画面では「追加の商品と消耗品」が押せないこと",
 				false, ClientConfigCases::layout));
 		cases.add(new ClientCase("stall_place_and_open", List.of("2-8"), null, true, ClientChecklistTests::stallScreen));
+		cases.add(new ClientCase("creative_tab", List.of("1-4"), null, true, ClientItemCases::creativeTab));
+		cases.add(new ClientCase("item_tooltips", List.of("1-5"), null, true, ClientItemCases::tooltips));
+		cases.add(new ClientCase("cargo_tooltip", List.of("21-2"), "荷箱の説明に中身・届け先・場所（ネザーなら「（ネザー）」）・報酬と保証金・依頼元・残り時間が出ること",
+				true, ClientItemCases::cargoTooltip, List.of("21-8"), "期限を過ぎた荷箱の説明が赤い「期限切れ（届けられません）」になり、残り時間が消えること"));
 		cases.add(new ClientCase("placement_hint", List.of("2-2"), null, true, ClientTradeCases::placementHint));
 		cases.add(new ClientCase("buy_with_screen_buttons", List.of("3-10"), null, true, ClientChecklistTests::buyWithButtons,
 				List.of("2-9", "2-10"), "交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない）"));
