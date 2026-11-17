@@ -498,6 +498,171 @@ final class ClientTownCases {
 		}
 	}
 
+	// ---- 22-23 / 22-23b the cap of the materials and their multiplier
+
+	/** The warehouse's wanted materials of the data, by donation key. */
+	private static java.util.Map<String, Integer> warehouseCounts() {
+		java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+		for (var w : com.akf.tradeexpansion.data.FacilityCatalog.get(id("warehouse")).wanted()) counts.put(w.key(), w.count());
+		return counts;
+	}
+
+	private static String key(MarketSnapshotS2C.WantedView w) {
+		return w.tag().isEmpty() ? w.item().toString() : "#" + w.tag();
+	}
+
+	private static void takeItems(ServerPlayer player, net.minecraft.world.item.Item item, int count) {
+		int left = count;
+		for (int i = 0; i < player.getInventory().getContainerSize() && left > 0; i++) {
+			var stack = player.getInventory().getItem(i);
+			if (!stack.is(item)) continue;
+			int n = Math.min(left, stack.getCount());
+			stack.shrink(n);
+			left -= n;
+		}
+	}
+
+	/**
+	 * 22-23: with only a few of a material still wanted, "資材を寄付（N）" counts those few, not all carried; after they
+	 * are donated it says (0) and cannot be pressed although some are still carried, and nothing more is taken. 22-23b:
+	 * every material wanted is the data's count × {@code development.materialCountMultiplier} (4 by default, rounded
+	 * up); with 2 each is halved and the tooltip of "建てる" says the halved number missing; with every material donated
+	 * "建てる" can be pressed and has no tooltip.
+	 */
+	static void materialCap(Session s, CaseResult.Builder result, CaseResult.Builder also) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		TradeExpansionConfig old = saveConfig(s);
+		BlockPos stall = s.stall;
+		Identifier warehouse = id("warehouse");
+		int[] given = {0};
+		Identifier[] given_item = {null};
+		try {
+			setPoints(s, 0, 1_000_000);
+			MarketScreen screen = openTown(s);
+			int level = development(context, screen).buildLevel();
+			int threshold = TradeExpansionConfig.get().reputation.levelThresholds.get(Math.max(0, level - 1));
+			setPoints(s, threshold + 50, -1);
+			s.world.getServer().runOnServer(server -> {
+				market(server, stall).clearDonations(warehouse);
+				MarketRegistry.get(server).setDirty();
+			});
+			java.util.Map<String, Integer> counts = s.world.getServer().computeOnServer(server -> warehouseCounts());
+
+			// 22-23b: the default multiplier.
+			screen = openTown(s);
+			double multiplier = TradeExpansionConfig.get().development.materialCountMultiplier;
+			List<String> problems = new ArrayList<>();
+			for (MarketSnapshotS2C.WantedView w : view(context, screen, "warehouse").wanted()) {
+				long expected = com.akf.tradeexpansion.core.DevelopmentMath.materialCount(counts.getOrDefault(key(w), -1), multiplier);
+				if (w.required() != expected) problems.add(key(w) + " wants " + w.required() + ", not " + expected + " (×" + multiplier + ")");
+			}
+			check(problems.isEmpty(), "%s", problems);
+
+			// 22-23: the cap of one material.
+			MarketSnapshotS2C.WantedView one = view(context, screen, "warehouse").wanted().stream().filter(x -> x.tag().isEmpty()).findFirst()
+					.orElseThrow(() -> new AssertionError("the warehouse wants no single item"));
+			Identifier item = one.item();
+			String oneKey = key(one);
+			int required = one.required();
+			given_item[0] = item;
+			s.world.getServer().runOnServer(server -> {
+				market(server, stall).donations(warehouse).put(oneKey, required - 5);
+				MarketRegistry.get(server).setDirty();
+				giveItems(player(server), BuiltInRegistries.ITEM.getValue(item), 12);
+			});
+			given[0] = 12;
+			int held0 = s.world.getServer().computeOnServer(server -> count(player(server), BuiltInRegistries.ITEM.getValue(item)));
+			screen = openTown(s);
+			selectFacility(context, screen, "warehouse");
+			Button donate = button(context, screen, "donateItemsButton");
+			check(donate.active && donate.getMessage().getString().equals(text(T + "donate_items", 5)),
+					"with 5 still wanted and 12 carried the button says \"%s\" (active %s), not \"%s\"", donate.getMessage().getString(), donate.active,
+					text(T + "donate_items", 5));
+			clickWidget(context, donate);
+			mouseAway(context);
+			MarketScreen open = screen;
+			check(waitClient(context, c -> {
+				MarketSnapshotS2C now = (MarketSnapshotS2C) get(open, "snapshot");
+				return now.development().facilities().stream().filter(f -> f.kind().equals("warehouse")).findFirst().orElseThrow().wanted().stream()
+						.anyMatch(x -> x.item().equals(item) && x.donated() >= required);
+			}, 60), "the donated count of %s did not reach %d", item, required);
+			context.waitTicks(3);
+			int held = s.world.getServer().computeOnServer(server -> count(player(server), BuiltInRegistries.ITEM.getValue(item)));
+			given[0] = 7;
+			check(held == held0 - 5, "donating the last 5 took %d of %s", held0 - held, item);
+			int donated = s.world.getServer().computeOnServer(server -> market(server, stall).donations(warehouse).getOrDefault(oneKey, 0));
+			check(donated == required, "%d of %s are donated, not %d (the cap)", donated, item, required);
+			donate = button(context, screen, "donateItemsButton");
+			check(!donate.active && donate.getMessage().getString().equals(text(T + "donate_items", 0)),
+					"after the cap the button says \"%s\" (active %s) with %d still carried", donate.getMessage().getString(), donate.active, held);
+			screenshot(context, result, "22-23_material_cap");
+
+			// 22-23b: the multiplier 2 halves every count.
+			try {
+				config(s, c -> c.development.materialCountMultiplier = 2);
+				s.world.getServer().runOnServer(server -> {
+					market(server, stall).clearDonations(warehouse);
+					MarketRegistry.get(server).setDirty();
+				});
+				screen = openTown(s);
+				selectFacility(context, screen, "warehouse");
+				int missing = 0;
+				for (MarketSnapshotS2C.WantedView w : view(context, screen, "warehouse").wanted()) {
+					long full = com.akf.tradeexpansion.core.DevelopmentMath.materialCount(counts.getOrDefault(key(w), -1), multiplier);
+					long expected = com.akf.tradeexpansion.core.DevelopmentMath.materialCount(counts.getOrDefault(key(w), -1), 2);
+					if (w.required() != expected) problems.add(key(w) + " wants " + w.required() + " with the multiplier 2, not " + expected + " (" + full + " with ×" + multiplier + ")");
+					missing += w.required();
+				}
+				check(problems.isEmpty(), "%s", problems);
+				Button build = button(context, screen, "buildButton");
+				check(!build.active, "\"建てる\" can be pressed without the materials (multiplier 2)");
+				String materials = squeeze(text(T + "reason.materials", missing));
+				String tip = buttonTooltip(context, build);
+				check(tip.contains(materials), "the tooltip of \"建てる\" does not say \"%s\" with the multiplier 2: %s", materials, tip);
+				screenshot(context, also, "22-23b_multiplier_2");
+
+				// Every material donated: "建てる" can be pressed.
+				s.world.getServer().runOnServer(server -> {
+					Market market = market(server, stall);
+					for (var w : com.akf.tradeexpansion.data.FacilityCatalog.get(warehouse).wanted()) {
+						market.donations(warehouse).put(w.key(), com.akf.tradeexpansion.development.FacilityBuilder.required(market, warehouse, w));
+					}
+					MarketRegistry.get(server).setDirty();
+				});
+				screen = openTown(s);
+				selectFacility(context, screen, "warehouse");
+				check(view(context, screen, "warehouse").materialsReady(), "the warehouse is not ready with every material donated");
+				build = button(context, screen, "buildButton");
+				check(build.active, "\"建てる\" cannot be pressed with every material donated");
+				tip = buttonTooltip(context, build);
+				// Without a tooltip the capture holds the screen's texts: no reason may be among them.
+				for (String reason : List.of("materials", "points", "limit", "reputation")) {
+					String head = squeeze(prefix(T + "reason." + reason));
+					check(head.isEmpty() || !tip.contains(head), "\"建てる\" has the tooltip \"%s…\" with every material donated: %s", head, tip);
+				}
+				screenshot(context, also, "22-23b_all_donated");
+			} catch (Throwable t) {
+				throw new ClientChecklistTests.AlsoFailed(t);
+			}
+		} finally {
+			context.setScreen(() -> null);
+			restoreConfig(s, old);
+			restore(s, saved, List.of(), List.of());
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				market.clearDonations(warehouse);
+				MarketRegistry.get(server).setDirty();
+				if (given_item[0] != null) {
+					ServerPlayer player = player(server);
+					var it = BuiltInRegistries.ITEM.getValue(given_item[0]);
+					takeItems(player, it, given[0]);
+				}
+			});
+		}
+	}
+
 	private static void selectFacilityNone(ClientGameTestContext context, MarketScreen screen) {
 		context.runOnClient(c -> {
 			set(screen, "selectedFacility", null);

@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.33、2026-11-17 20:01、109 件中 0 件失敗
+- クライアント：バージョン 0.2.33、2026-11-17 20:22、114 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 161・一部を確認 111・失敗 0
+- チェックリスト 329 項目のうち、今回 自動で完了 166・一部を確認 109・失敗 0
 
 ## すべての項目
 
@@ -252,6 +252,9 @@
 | 22-30 | `bank_tab_by_level` | クライアント | ✔ | 銀行の建物があればレベル1でも銀行タブが出て、そこで預けると利息の行が「200,000c まで・〇〇の銀行に登録」になること（カード払いの手数料は見ていない） |
 | 7-7 | `bank_tab` | クライアント | ✔ | 銀行タブのボタン（預け入れ 1,000c・引き出し 100c・全額）で残高と現金が増減し、残高の行が変わること（死んだ時は見ていない） |
 | 16-13 | `bank_tab` | クライアント | ✔ | 銀行タブの利息の行「利息：1日 0.03%（100,000c まで）」（利息が付くことは見ていない） |
+| 2-18 | `trade_refused_messages` | クライアント | ✔ | 全部 |
+| 7-11 | `bank_refused_messages` | クライアント | ✔ | 全部 |
+| 8-7 | `exchange_refused_and_fee` | クライアント | ✔ | 全部 |
 | 9-2 | `quest_tab` | クライアント | ✔ | 全部 |
 | 16-5 | `quest_tab` | クライアント | ✔ | 「依頼を受ける」で「受付済み」になり、一覧に ✔ が出ること（評判の増え方は見ていない） |
 | 16-4 | `quest_locked` | クライアント | ✔ | 全部 |
@@ -265,6 +268,8 @@
 | 22-23b | `town_build_reasons` | クライアント | ✔ | 資材が足りない時に「建てる」のツールチップが「資材があと N 個必要です」になり、development.requireMaterials を OFF にすると押せること（資材の数の倍率は見ていない） |
 | 22-23 | `town_materials_and_stake` | クライアント | ✔ | 「資材を寄付（N）」の数が持っている資材の数で、押すと資材が減り、発展度が増え、残りの数が減ること（上限まで寄付した後は見ていない） |
 | 22-35 | `town_materials_and_stake` | クライアント | ✔ | 「杭をもらう」で杭が手に入り、持っている時はもらえないこと（置いた時は見ていない） |
+| 22-23 | `town_material_cap` | クライアント | ✔ | 全部 |
+| 22-23b | `town_material_cap` | クライアント | ✔ | 全部 |
 | 22-24・22-26・22-33・29-13 | `town_row_states` | クライアント | ✔ | 発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない） |
 | 22-32 | `facility_sign_opens_tab` | クライアント | ✔ | 全部 |
 | 22-9・26-20・24-7 | `tabs_turned_off` | クライアント | ✔ | 設定を OFF にすると画面を開き直した時に「発展」タブが消え、雇い人がいない人には「雇い人」タブが無く、いる人には出ること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないこと・雇い人の操作は見ていない） |
@@ -431,6 +436,12 @@
 - 22-30 `bank_tab_by_level`：[22-30_bank_building.png](../../Source/TradeExpansion/build/autotest/screenshots/22-30_bank_building.png)
 - 7-7 `bank_tab`：[7-7_bank_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/7-7_bank_tab.png)
 - 7-7 `bank_tab`：[7-7_bank_after.png](../../Source/TradeExpansion/build/autotest/screenshots/7-7_bank_after.png)
+- 2-18 `trade_refused_messages`：[2-18_insufficient_funds.png](../../Source/TradeExpansion/build/autotest/screenshots/2-18_insufficient_funds.png)
+- 2-18 `trade_refused_messages`：[2-18_stock_full.png](../../Source/TradeExpansion/build/autotest/screenshots/2-18_stock_full.png)
+- 7-11 `bank_refused_messages`：[7-11_withdraw_too_much.png](../../Source/TradeExpansion/build/autotest/screenshots/7-11_withdraw_too_much.png)
+- 7-11 `bank_refused_messages`：[7-11_deposit_too_much.png](../../Source/TradeExpansion/build/autotest/screenshots/7-11_deposit_too_much.png)
+- 8-7 `exchange_refused_and_fee`：[8-7_exchange_refused.png](../../Source/TradeExpansion/build/autotest/screenshots/8-7_exchange_refused.png)
+- 8-7 `exchange_refused_and_fee`：[8-7_exchange_fee.png](../../Source/TradeExpansion/build/autotest/screenshots/8-7_exchange_fee.png)
 - 9-2 `quest_tab`：[9-2_request_selected.png](../../Source/TradeExpansion/build/autotest/screenshots/9-2_request_selected.png)
 - 9-2 `quest_tab`：[9-2_delivered.png](../../Source/TradeExpansion/build/autotest/screenshots/9-2_delivered.png)
 - 16-5 `quest_tab`：[16-5_accepted.png](../../Source/TradeExpansion/build/autotest/screenshots/16-5_accepted.png)
@@ -449,6 +460,9 @@
 - 22-22・22-25 `town_build_reasons`：[22-25_limit.png](../../Source/TradeExpansion/build/autotest/screenshots/22-25_limit.png)
 - 22-23 `town_materials_and_stake`：[22-23_materials_donated.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23_materials_donated.png)
 - 22-35 `town_materials_and_stake`：[22-35_stake.png](../../Source/TradeExpansion/build/autotest/screenshots/22-35_stake.png)
+- 22-23 `town_material_cap`：[22-23_material_cap.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23_material_cap.png)
+- 22-23b `town_material_cap`：[22-23b_multiplier_2.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23b_multiplier_2.png)
+- 22-23b `town_material_cap`：[22-23b_all_donated.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23b_all_donated.png)
 - 22-24・22-26・22-33・29-13 `town_row_states`：[22-24_rows.png](../../Source/TradeExpansion/build/autotest/screenshots/22-24_rows.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_quest_hall.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_bank.png)

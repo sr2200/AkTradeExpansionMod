@@ -711,12 +711,12 @@ final class ClientStaffCases {
 
 	// ---- 26-25 the layout with employees
 
-	static final int[][] SIZES = {{854, 480, 0}, {1920, 1080, 2}};
+	static final int[][] SIZES = {{854, 480, 0}, {854, 480, 1}, {1920, 1080, 1}, {1920, 1080, 2}, {1920, 1080, 3}, {1920, 1080, 0}};
 
 	/**
 	 * 26-25: the staff tab with every employee selected in turn (and none): no texts on top of each other or outside the
 	 * screen and panel, and the labels of the panel's buttons ("休止／再開", "変更", "解雇する", …) fit their buttons. In
-	 * Japanese and English, at 854×480 and 1920×1080. Lets the employees go at the end.
+	 * Japanese and English, at 854×480 (GUI auto and 1) and 1920×1080 (GUI 1 to 3 and auto, i.e. 4). Lets the employees go at the end.
 	 */
 	static void layout(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;

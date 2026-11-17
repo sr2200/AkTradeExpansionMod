@@ -176,6 +176,9 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("22-30"), "銀行の建物があればレベル1でも銀行タブが出て、そこで預けると利息の行が「200,000c まで・〇〇の銀行に登録」になること（カード払いの手数料は見ていない）"));
 		cases.add(new ClientCase("bank_tab", List.of("7-7"), "銀行タブのボタン（預け入れ 1,000c・引き出し 100c・全額）で残高と現金が増減し、残高の行が変わること（死んだ時は見ていない）",
 				true, ClientBankQuestCases::bankTab, List.of("16-13"), "銀行タブの利息の行「利息：1日 0.03%（100,000c まで）」（利息が付くことは見ていない）"));
+		cases.add(new ClientCase("trade_refused_messages", List.of("2-18"), null, true, ClientRefusalCases::trades));
+		cases.add(new ClientCase("bank_refused_messages", List.of("7-11"), null, true, ClientRefusalCases::bank));
+		cases.add(new ClientCase("exchange_refused_and_fee", List.of("8-7"), null, true, ClientRefusalCases::exchange));
 		cases.add(new ClientCase("quest_tab", List.of("9-2"), null, true, ClientBankQuestCases::requests,
 				List.of("16-5"), "「依頼を受ける」で「受付済み」になり、一覧に ✔ が出ること（評判の増え方は見ていない）"));
 		cases.add(new ClientCase("quest_locked", List.of("16-4"), null, true, ClientBankQuestCases::lockedRequest, List.of("16-7"), null));
@@ -188,6 +191,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("22-23b"), "資材が足りない時に「建てる」のツールチップが「資材があと N 個必要です」になり、development.requireMaterials を OFF にすると押せること（資材の数の倍率は見ていない）"));
 		cases.add(new ClientCase("town_materials_and_stake", List.of("22-23"), "「資材を寄付（N）」の数が持っている資材の数で、押すと資材が減り、発展度が増え、残りの数が減ること（上限まで寄付した後は見ていない）",
 				true, ClientTownCases::materialsAndStake, List.of("22-35"), "「杭をもらう」で杭が手に入り、持っている時はもらえないこと（置いた時は見ていない）"));
+		cases.add(new ClientCase("town_material_cap", List.of("22-23"), null, true, ClientTownCases::materialCap,
+				List.of("22-23b"), null));
 		cases.add(new ClientCase("town_row_states", List.of("22-24", "22-26", "22-33", "29-13"),
 				"発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない）",
 				true, ClientTownCases::rowStates));
