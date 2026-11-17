@@ -3,7 +3,7 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.29、2026-11-16 20:36、104 件中 0 件失敗
+- クライアント：バージョン 0.2.31、2026-11-17 19:38、105 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
 - チェックリスト 326 項目のうち、今回 自動で完了 153・一部を確認 116・失敗 0
 
@@ -234,7 +234,7 @@
 | 6-3 | `trader_opens_market` | クライアント | ✔ | 全部 |
 | 27-1 | `advancements_screen` | クライアント | ✔ | 全部 |
 | 27-11 | `advancements_screen` | クライアント | ✔ | 全部 |
-| 13-10 | `clock_advance_updates_open_screen` | クライアント | ✔ | 開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない） |
+| 13-10 | `clock_advance_updates_open_screen` | クライアント | ✔ | 開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は clock_advance_staff_and_town で見る） |
 | 12-1 | `villager_coin_prices` | クライアント | ✔ | 全部 |
 | 12-4 | `villager_coin_prices` | クライアント | ✔ | 支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている） |
 | 7-8・7-9 | `bank_card_buttons` | クライアント | ✔ | 全部 |
@@ -273,12 +273,13 @@
 | 26-5 | `staff_limit_and_other_market` | クライアント | ✔ | おまかせを選ぶと設定が「1回に運ぶ数」だけになり、画面から雇えること |
 | 26-25 | `staff_layout` | クライアント | ✔ | 全部 |
 | 26-23 | `staff_carrier_change` | クライアント | ✔ | 全部 |
-| 26-27・26-28・26-16 | `staff_carrier_change` | クライアント | ✔ | 売れ残りと帰り荷を持って戻った運び屋の右パネルが「荷 ×○個・帰り荷 ×○個」になり、ツールチップのログに帰り荷の仕入れが出ること。「変更」でおまかせに変えると、設定の画面に「今持っている荷 ×○個は手元に戻ります」が出て、売れ残りと帰り荷が手元に戻ること。画面の「解雇する」で所持金が戻り、一覧から消えること（帰り荷の売れた文・「引取」での帰り荷は見ていない） |
+| 26-27・26-28・26-16 | `staff_carrier_change` | クライアント | ✔ | 売れ残りと帰り荷を持って戻った運び屋の右パネルが「荷 ×○個・帰り荷 ×○個」になり、ツールチップのログに帰り荷の仕入れが出ること。「変更」でおまかせに変えると、設定の画面に「今持っている荷 ×○個は手元に戻ります」が出て、売れ残りと帰り荷が手元に戻ること。画面の「解雇する」で、所持金と、売れ残りと2種類の帰り荷（サーバーで持たせる）が種類ごとに数どおり戻り、一覧から消えること（帰り荷の売れた文・「引取」での帰り荷は見ていない） |
 | 26-24・26-12 | `staff_clerk_change` | クライアント | ✔ | 全部 |
 | 26-16 | `staff_clerk_change` | クライアント | ✔ | 番頭を画面の「解雇する」で解雇すると所持金が戻り、一覧から消えること（運び屋の売れ残りは staff_carrier_change で見る） |
 | 26-8・26-27 | `staff_auto_carrier` | クライアント | ✔ | 全部 |
-| 26-28 | `staff_auto_carrier` | クライアント | ✔ | 売れ残りと帰り荷を持って戻った運び屋の「引取」で、荷と帰り荷の品が種類ごとに数どおり手元に戻ること（「変更」は staff_carrier_change で見る。「解雇する」で帰り荷が戻るのは見ていない） |
+| 26-28 | `staff_auto_carrier` | クライアント | ✔ | 売れ残りと帰り荷を持って戻った運び屋の「引取」で、荷と帰り荷の品が種類ごとに数どおり手元に戻ること（「変更」「解雇する」は staff_carrier_change で見る） |
 | 35-3 | `staff_harbor_watchtower` | クライアント | ✔ | 港のある村では行き先のツールチップと設定の画面の「片道 約◯分」が harborTravelMultiplier の分だけ短く、雇った運び屋の出発時に決まる着く時刻もその時間になること。見張り塔のある村では行き先のツールチップの「事故の確率」が watchtowerAccidentMultiplier 倍になること（建物はサーバーで直接作る。着いたところまでは見ていない） |
+| 13-10 | `clock_advance_staff_and_town` | クライアント | ✔ | 交易画面を開いたまま clock advance すると、雇い人タブの運び屋の「→運送 N分」と発展タブの「建設中 約N分」が開き直さずにすぐ減ること（建物はサーバーで直接作る） |
 | 26-10 | `staff_accident` | クライアント | ✔ | 全部 |
 | 26-6 | `staff_accident` | クライアント | ✔ | 行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと |
 | 4-3 | `reopen_world_keeps_market` | クライアント | ✔ | 全部 |
@@ -473,6 +474,8 @@
 - 26-8・26-27 `staff_auto_carrier`：[26-12_withdrawn.png](../../Source/TradeExpansion/build/autotest/screenshots/26-12_withdrawn.png)
 - 35-3 `staff_harbor_watchtower`：[35-3_harbor_destination.png](../../Source/TradeExpansion/build/autotest/screenshots/35-3_harbor_destination.png)
 - 35-3 `staff_harbor_watchtower`：[35-3_watchtower_destination.png](../../Source/TradeExpansion/build/autotest/screenshots/35-3_watchtower_destination.png)
+- 13-10 `clock_advance_staff_and_town`：[13-10_staff_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_staff_after_clock_advance.png)
+- 13-10 `clock_advance_staff_and_town`：[13-10_town_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_town_after_clock_advance.png)
 - 26-10 `staff_accident`：[26-6_no_margin.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_no_margin.png)
 - 26-10 `staff_accident`：[26-10_resting.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_resting.png)
 - 26-10 `staff_accident`：[26-10_quit.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_quit.png)

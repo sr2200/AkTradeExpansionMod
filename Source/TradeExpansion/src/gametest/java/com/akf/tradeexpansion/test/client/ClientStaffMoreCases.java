@@ -200,6 +200,38 @@ final class ClientStaffMoreCases {
 		});
 	}
 
+	/**
+	 * Puts {@code stock} units of its own good and return cargo ({@code items} by good) on the player's carrier at home,
+	 * paused (so it does not set out), on the server. @return the items it holds by good
+	 */
+	private static Map<Identifier, Integer> load(Session s, int id, int stock, Map<Identifier, Integer> items) {
+		return s.world.getServer().computeOnServer(server -> {
+			Employee e = MarketRegistry.get(server).employees().stream().filter(x -> x.id() == id).findFirst().orElseThrow();
+			check(e.phase() == Employee.Phase.HOME, "the carrier is not at home (%s)", e.phase());
+			set(e, "stock", stock);
+			set(e, "paused", true);
+			@SuppressWarnings("unchecked")
+			List<Object> lines = (List<Object>) get(e, Employee.class, "returnCargo");
+			lines.clear();
+			Map<Identifier, Integer> held = new LinkedHashMap<>();
+			held.put(e.goods(), stock * Math.max(1, GoodsCatalog.get(e.goods()).unit()));
+			try {
+				var make = Employee.CargoLine.class.getDeclaredConstructor(Identifier.class, int.class, long.class);
+				make.setAccessible(true);
+				for (var entry : items.entrySet()) {
+					int unit = Math.max(1, GoodsCatalog.get(entry.getKey()).unit());
+					check(entry.getValue() % unit == 0, "%d of %s is not whole units", entry.getValue(), entry.getKey());
+					lines.add(make.newInstance(entry.getKey(), entry.getValue() / unit, 0L));
+					held.merge(entry.getKey(), entry.getValue(), Integer::sum);
+				}
+			} catch (ReflectiveOperationException ex) {
+				throw new AssertionError("cannot make a cargo line", ex);
+			}
+			MarketRegistry.get(server).setDirty();
+			return held;
+		});
+	}
+
 	// ---- 26-23 / 26-27 / 26-28 / 26-16 a carrier changed and dismissed
 
 	/**
@@ -290,8 +322,17 @@ final class ClientStaffMoreCases {
 		check(!v.auto() && v.goods().equals(good) && v.destination() == otherId, "after the second change the carrier carries %s to #%d", v.goods(), v.destination());
 		screenshot(context, result, "26-23_changed");
 
-		// 26-16: dismissed with the mouse.
+		// 26-28 / 26-16: dismissed with the mouse, holding goods and return cargo of two kinds (put on the server: a third
+		// trip is slow); everything comes back by kind.
+		Identifier third = sharedGood(s, good, back);
+		Map<Identifier, Integer> held = load(s, id, 3, Map.of(back, 5, third, 4));
+		Map<Identifier, Integer> counts = new LinkedHashMap<>();
+		for (Identifier g : held.keySet()) counts.put(g, serverCount(s, g));
+		v = waitView(context, staff, id, x -> x.stock() == 3 && x.returnItems() == 9, 100, "the goods put on the server");
 		select(context, staff, id);
+		cargo = squeeze(text(K + "cargo.return", v.stock() * v.unit(), v.returnItems()));
+		p = panel(context, screen);
+		check(p.contains(cargo), "the panel does not say \"%s\": %s", cargo, p);
 		long purse = view(context, staff, id).purse();
 		long before = serverMoney(s);
 		clickWidget(context, text(K + "dismiss"));
@@ -300,6 +341,11 @@ final class ClientStaffMoreCases {
 				text(K + "dismiss"));
 		context.waitTicks(2);
 		check(serverMoney(s) - before == purse, "dismissing gave back %dc, the purse was %dc", serverMoney(s) - before, purse);
+		for (var entry : held.entrySet()) {
+			int now = serverCount(s, entry.getKey());
+			check(now - counts.get(entry.getKey()) == entry.getValue(), "dismissing gave %d of %s, the carrier held %d", now - counts.get(entry.getKey()),
+					entry.getKey(), entry.getValue());
+		}
 		String dismissed = squeeze(text(K + "done.dismiss", coins(purse)));
 		check(all(context).contains(dismissed), "the status line does not say \"%s\"", dismissed);
 		check(shownWithText(context, text(K + "hire.carrier")), "the hire buttons do not show after dismissing");
@@ -680,6 +726,87 @@ final class ClientStaffMoreCases {
 		check(serverMoney(s) - money == purse, "\"%s\" gave %dc, the purse was %dc", text(K + "withdraw"), serverMoney(s) - money, purse);
 		check(!button(staff, "withdrawButton").active, "\"%s\" can be pressed with an empty purse", text(K + "withdraw"));
 		screenshot(context, result, "26-12_withdrawn");
+	}
+
+	// ---- 13-10 the market clock with the screen open
+
+	/** The number in a squeezed text where {@code key}'s %s is (the first match), or -1. */
+	private static int number(String squeezed, String key) {
+		String[] parts = Language.getInstance().getOrDefault(key).split("%s", -1);
+		Matcher m = Pattern.compile(Pattern.quote(squeeze(parts[0])) + "(\\d+)" + Pattern.quote(squeeze(parts[1]))).matcher(squeezed);
+		return m.find() ? Integer.parseInt(m.group(1)) : -1;
+	}
+
+	/** {@code /aktradeex clock advance <days>}; waits until the client has the new offset. */
+	private static void advance(Session s, String days) {
+		long old = s.world.getServer().computeOnServer(server -> MarketRegistry.get(server).clockOffset());
+		s.world.getServer().runCommand("aktradeex clock advance " + days);
+		long now = s.world.getServer().computeOnServer(server -> MarketRegistry.get(server).clockOffset());
+		check(now > old, "\"clock advance %s\" did not move the clock", days);
+		check(waitClient(s.context, c -> com.akf.tradeexpansion.market.MarketClock.offset(c.level) == now, 100), "the client did not get the new clock offset");
+		s.context.waitTicks(3);
+	}
+
+	/**
+	 * 13-10: {@code /aktradeex clock advance 0.1} (2 minutes of the shown times) while the trade screen is open: the
+	 * carrier's "→運送 N分" on the staff tab and "建設中 約N分" on the development tab go down by 2 at once, without
+	 * opening the screen again. The building is made on the server without its blocks (as {@link ClientTownCases}).
+	 */
+	static void clockAdvance(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		BlockPos stall = s.stall;
+		fresh(s, c -> {
+		});
+		try {
+			Identifier good = carrierGood;
+			long otherId = otherId(s);
+			prices(s, good, true, true);
+			s.world.getServer().runOnServer(server -> ClientTownCases.facility(server, stall, "inn", FacilityKind.INN, ClientTownCases.State.CONSTRUCTING,
+					stall.above(5)));
+			Object staff = ClientStaffCases.openTab(s);
+			MarketScreen screen = screen(context);
+			request(s, StaffRequestC2S.Action.HIRE_CARRIER, -1, good, otherId, 8, 1_000_000, 1, 0);
+			int id = hired(context, staff, 0);
+			request(s, StaffRequestC2S.Action.DEPOSIT_MONEY, id, good, otherId, 0, 0, 0, 20_000);
+			hurryUntil(s, staff, id, x -> x.phase() == 1, 3, "on the way");
+			String key = K + "phase.outbound";
+			int m0 = number(squeeze(status(context, screen, staff, id)), key);
+			check(m0 >= 4, "the carrier's row says %d minutes on the way (\"%s\", 4 or more needed): %s", m0, text(key, "N"), status(context, screen, staff, id));
+
+			advance(s, "0.1");
+			StaffS2C.View v = view(context, staff, id);
+			check(v.phase() == 1, "the carrier is no longer on the way after the clock moved (%s)", describe(v));
+			int m1 = number(squeeze(status(context, screen, staff, id)), key);
+			check(m0 - m1 == 2, "the carrier's row went from %d to %d minutes (2 less expected)", m0, m1);
+			screenshot(context, result, "13-10_staff_after_clock_advance");
+
+			// The development tab of the same screen.
+			context.clickScreenButton("screen." + NS + ".tab.town");
+			context.waitTicks(3);
+			mouseAway(context);
+			MarketScreen town = screen;
+			long due = ClientTownCases.view(context, town, "inn").due();
+			int c0 = context.computeOnClient(c -> (Integer) call(town, "minutesUntil", due));
+			String t0 = text("screen." + NS + ".town.state.constructing", c0);
+			check(c0 >= 4 && ClientTownCases.row(context, town, "inn").contains(t0), "the inn's row does not say \"%s\": %s", t0,
+					ClientTownCases.row(context, town, "inn"));
+			advance(s, "0.1");
+			check(context.computeOnClient(c -> c.gui.screen() == town), "the trade screen closed");
+			int c1 = context.computeOnClient(c -> (Integer) call(town, "minutesUntil", due));
+			String t1 = text("screen." + NS + ".town.state.constructing", c1);
+			check(c0 - c1 == 2, "the inn is due in %d minutes after %d (2 less expected)", c1, c0);
+			check(ClientTownCases.row(context, town, "inn").contains(t1), "after the clock moved the inn's row does not say \"%s\": %s", t1,
+					ClientTownCases.row(context, town, "inn"));
+			screenshot(context, result, "13-10_town_after_clock_advance");
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				market(server, stall).facilities().remove(ClientTownCases.id("inn"));
+				UUID owner = player(server).getUUID();
+				MarketRegistry.get(server).employees().removeIf(e -> e.owner().equals(owner));
+				MarketRegistry.get(server).setDirty();
+			});
+		}
 	}
 
 	// ---- 35-3 a harbor and a watchtower

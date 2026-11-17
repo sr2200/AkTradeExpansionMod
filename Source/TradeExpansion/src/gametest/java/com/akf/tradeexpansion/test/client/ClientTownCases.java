@@ -176,7 +176,7 @@ final class ClientTownCases {
 		return snapshot(context, screen).development();
 	}
 
-	private static FacilityView view(ClientGameTestContext context, MarketScreen screen, String name) {
+	static FacilityView view(ClientGameTestContext context, MarketScreen screen, String name) {
 		return development(context, screen).facilities().stream().filter(f -> f.kind().equals(name)).findFirst()
 				.orElseThrow(() -> new AssertionError("the development tab has no " + name));
 	}
@@ -191,7 +191,7 @@ final class ClientTownCases {
 	}
 
 	/** The texts of a building's row (scrolled into view). */
-	private static List<String> row(ClientGameTestContext context, MarketScreen screen, String name) {
+	static List<String> row(ClientGameTestContext context, MarketScreen screen, String name) {
 		List<FacilityView> facilities = development(context, screen).facilities();
 		int index = facilities.stream().map(FacilityView::kind).toList().indexOf(name);
 		check(index >= 0, "the development tab has no %s", name);

@@ -153,7 +153,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("advancements_screen", List.of("27-1"), null, true, (ses, r, a) -> ClientScreenCases.advancements(ses, r, a),
 				List.of("27-11"), null));
 		cases.add(new ClientCase("clock_advance_updates_open_screen", List.of("13-10"),
-				"開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は見ていない）", true, ClientChecklistTests::clockAdvance));
+				"開いたままの交易画面に新しい時計が届き、依頼の残り時間の表示がすぐ減ること（建設・雇い人の残り時間は clock_advance_staff_and_town で見る）", true, ClientChecklistTests::clockAdvance));
 		cases.add(new ClientCase("villager_coin_prices", List.of("12-1"), null, true, ClientScreenCases::villagerPrices,
 				List.of("12-4"), "支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている）"));
 		cases.add(new ClientCase("bank_card_buttons", List.of("7-8", "7-9"), null, true, ClientBankQuestCases::cardButtons));
@@ -204,14 +204,17 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("staff_layout", List.of("26-25"), null, true, ClientStaffCases::layout));
 		// Each starts without employees; staff_accident puts the settings back.
 		cases.add(new ClientCase("staff_carrier_change", List.of("26-23"), null, true, ClientStaffMoreCases::carrierChange,
-				List.of("26-27", "26-28", "26-16"), "売れ残りと帰り荷を持って戻った運び屋の右パネルが「荷 ×○個・帰り荷 ×○個」になり、ツールチップのログに帰り荷の仕入れが出ること。「変更」でおまかせに変えると、設定の画面に「今持っている荷 ×○個は手元に戻ります」が出て、売れ残りと帰り荷が手元に戻ること。画面の「解雇する」で所持金が戻り、一覧から消えること（帰り荷の売れた文・「引取」での帰り荷は見ていない）"));
+				List.of("26-27", "26-28", "26-16"), "売れ残りと帰り荷を持って戻った運び屋の右パネルが「荷 ×○個・帰り荷 ×○個」になり、ツールチップのログに帰り荷の仕入れが出ること。「変更」でおまかせに変えると、設定の画面に「今持っている荷 ×○個は手元に戻ります」が出て、売れ残りと帰り荷が手元に戻ること。画面の「解雇する」で、所持金と、売れ残りと2種類の帰り荷（サーバーで持たせる）が種類ごとに数どおり戻り、一覧から消えること（帰り荷の売れた文・「引取」での帰り荷は見ていない）"));
 		cases.add(new ClientCase("staff_clerk_change", List.of("26-24", "26-12"), null, true, ClientStaffMoreCases::clerkChange,
 				List.of("26-16"), "番頭を画面の「解雇する」で解雇すると所持金が戻り、一覧から消えること（運び屋の売れ残りは staff_carrier_change で見る）"));
 		cases.add(new ClientCase("staff_auto_carrier", List.of("26-8", "26-27"), null, true, ClientStaffMoreCases::autoCarrier,
-				List.of("26-28"), "売れ残りと帰り荷を持って戻った運び屋の「引取」で、荷と帰り荷の品が種類ごとに数どおり手元に戻ること（「変更」は staff_carrier_change で見る。「解雇する」で帰り荷が戻るのは見ていない）"));
+				List.of("26-28"), "売れ残りと帰り荷を持って戻った運び屋の「引取」で、荷と帰り荷の品が種類ごとに数どおり手元に戻ること（「変更」「解雇する」は staff_carrier_change で見る）"));
 		cases.add(new ClientCase("staff_harbor_watchtower", List.of("35-3"),
 				"港のある村では行き先のツールチップと設定の画面の「片道 約◯分」が harborTravelMultiplier の分だけ短く、雇った運び屋の出発時に決まる着く時刻もその時間になること。見張り塔のある村では行き先のツールチップの「事故の確率」が watchtowerAccidentMultiplier 倍になること（建物はサーバーで直接作る。着いたところまでは見ていない）",
 				true, ClientStaffMoreCases::harborWatchtower));
+		cases.add(new ClientCase("clock_advance_staff_and_town", List.of("13-10"),
+				"交易画面を開いたまま clock advance すると、雇い人タブの運び屋の「→運送 N分」と発展タブの「建設中 約N分」が開き直さずにすぐ減ること（建物はサーバーで直接作る）",
+				true, ClientStaffMoreCases::clockAdvance));
 		cases.add(new ClientCase("staff_accident", List.of("26-10"), null, true, ClientStaffMoreCases::accident,
 				List.of("26-6"), "行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと"));
 		cases.add(new ClientCase("reopen_world_keeps_market",List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
