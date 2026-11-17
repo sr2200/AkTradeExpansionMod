@@ -145,7 +145,7 @@ final class ClientDisplayCases {
 		s.world.getServer().runOnServer(server -> ensureTrend(market(server, stall)));
 	}
 
-	private static void ensureTrend(Market market) {
+	static void ensureTrend(Market market) {
 		if (market.trends().values().stream().anyMatch(m -> m > 1)) return;
 		Identifier group = market.regularGoods().stream().flatMap(g -> GoodsGroups.groupsOf(g).stream()).findFirst()
 				.orElseThrow(() -> new AssertionError("no goods group in the market"));

@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.31、2026-11-17 19:38、105 件中 0 件失敗
+- クライアント：バージョン 0.2.33、2026-11-17 20:01、109 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 326 項目のうち、今回 自動で完了 153・一部を確認 116・失敗 0
+- チェックリスト 326 項目のうち、今回 自動で完了 161・一部を確認 111・失敗 0
 
 ## すべての項目
 
@@ -195,8 +195,11 @@
 | 2-9・2-10 | `buy_with_screen_buttons` | クライアント | ✔ | 交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない） |
 | 3-1 | `price_arrows` | クライアント | ✔ | 全部 |
 | 3-4 | `balance_display` | クライアント | ✔ | 全部 |
+| 3-5 | `balance_position_setting` | クライアント | ✔ | 全部 |
 | 3-8・3-9 | `row_states` | クライアント | ✔ | 全部 |
-| 3-7 | `row_states` | クライアント | ✔ | 全部 |
+| 3-7・23-11 | `row_states` | クライアント | ✔ | 全部 |
+| 3-2・3-3 | `row_meter_and_graph` | クライアント | ✔ | 全部 |
+| 23-2・24-2 | `row_rival_and_trend_tooltips` | クライアント | ✔ | 全部 |
 | 3-11 | `max_with_exact_money` | クライアント | ✔ | 全部 |
 | 2-9・2-10 | `max_and_change` | クライアント | ✔ | 全部 |
 | 2-14 | `shift_confirm_all` | クライアント | ✔ | 全部 |
@@ -238,6 +241,7 @@
 | 12-1 | `villager_coin_prices` | クライアント | ✔ | 全部 |
 | 12-4 | `villager_coin_prices` | クライアント | ✔ | 支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている） |
 | 7-8・7-9 | `bank_card_buttons` | クライアント | ✔ | 全部 |
+| 19-1・19-2 | `screen_size_by_gui_scale` | クライアント | ✔ | 全部 |
 | 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
 | 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブ（日本語と同じ状態）の文字が重ならず、はみ出さず、翻訳キーがそのまま出ないこと |
 | 13-1 | `config_save_applies` | クライアント | ✔ | 全部 |
@@ -326,11 +330,18 @@
 - 3-1 `price_arrows`：[3-1_price_up.png](../../Source/TradeExpansion/build/autotest/screenshots/3-1_price_up.png)
 - 3-1 `price_arrows`：[3-1_price_down.png](../../Source/TradeExpansion/build/autotest/screenshots/3-1_price_down.png)
 - 3-4 `balance_display`：[3-4_balance_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-4_balance_tooltip.png)
+- 3-5 `balance_position_setting`：[3-5_below_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/3-5_below_sell_slot.png)
+- 3-5 `balance_position_setting`：[3-5_top_right.png](../../Source/TradeExpansion/build/autotest/screenshots/3-5_top_right.png)
+- 3-5 `balance_position_setting`：[3-5_top_right_long_name.png](../../Source/TradeExpansion/build/autotest/screenshots/3-5_top_right_long_name.png)
 - 3-8・3-9 `row_states`：[3-7_shortage_orange.png](../../Source/TradeExpansion/build/autotest/screenshots/3-7_shortage_orange.png)
 - 3-8・3-9 `row_states`：[3-7_shortage_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-7_shortage_tooltip.png)
 - 3-8・3-9 `row_states`：[3-8_sold_out_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-8_sold_out_tooltip.png)
 - 3-8・3-9 `row_states`：[3-8_not_buying_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/3-8_not_buying_tooltip.png)
 - 3-8・3-9 `row_states`：[3-9_not_buying_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/3-9_not_buying_sell_slot.png)
+- 3-2・3-3 `row_meter_and_graph`：[3-2_meters.png](../../Source/TradeExpansion/build/autotest/screenshots/3-2_meters.png)
+- 3-2・3-3 `row_meter_and_graph`：[3-3_price_graph_line.png](../../Source/TradeExpansion/build/autotest/screenshots/3-3_price_graph_line.png)
+- 23-2・24-2 `row_rival_and_trend_tooltips`：[23-2_rival_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/23-2_rival_tooltip.png)
+- 23-2・24-2 `row_rival_and_trend_tooltips`：[24-2_trend_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/24-2_trend_tooltip.png)
 - 3-11 `max_with_exact_money`：[3-11_max_exact_money.png](../../Source/TradeExpansion/build/autotest/screenshots/3-11_max_exact_money.png)
 - 2-9・2-10 `max_and_change`：[2-9_max.png](../../Source/TradeExpansion/build/autotest/screenshots/2-9_max.png)
 - 2-14 `shift_confirm_all`：[2-14_shift.png](../../Source/TradeExpansion/build/autotest/screenshots/2-14_shift.png)
@@ -392,6 +403,11 @@
 - 7-8・7-9 `bank_card_buttons`：[7-8_card_issued.png](../../Source/TradeExpansion/build/autotest/screenshots/7-8_card_issued.png)
 - 7-8・7-9 `bank_card_buttons`：[7-9_pay_by_card.png](../../Source/TradeExpansion/build/autotest/screenshots/7-9_pay_by_card.png)
 - 7-8・7-9 `bank_card_buttons`：[7-9_pay_by_cash.png](../../Source/TradeExpansion/build/autotest/screenshots/7-9_pay_by_cash.png)
+- 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_1920x1080_scale_1.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_1920x1080_scale_1.png)
+- 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_1920x1080_scale_2.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_1920x1080_scale_2.png)
+- 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_1920x1080_scale_3.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_1920x1080_scale_3.png)
+- 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_1920x1080_scale_4.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_1920x1080_scale_4.png)
+- 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_854x480_scale_2.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_854x480_scale_2.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png)

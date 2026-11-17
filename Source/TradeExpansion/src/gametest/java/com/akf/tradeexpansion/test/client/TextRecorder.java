@@ -3,6 +3,7 @@ package com.akf.tradeexpansion.test.client;
 import com.akf.tradeexpansion.test.mixin.client.GuiTextRenderStateAccessor;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.renderer.state.gui.ColoredRectangleRenderState;
 import net.minecraft.client.renderer.state.gui.GuiTextRenderState;
 
 import java.util.ArrayList;
@@ -10,8 +11,8 @@ import java.util.List;
 
 /**
  * Records the texts of one rendered frame: what they say, the screen area they cover (after scaling and clipping) and
- * their color, so a test can find texts that overlap or leave the screen. Fed by GuiRenderStateMixin on the render
- * thread.
+ * their color, so a test can find texts that overlap or leave the screen; and the frame's filled rectangles (meters,
+ * graph lines). Fed by GuiRenderStateMixin on the render thread.
  */
 public final class TextRecorder {
 	private TextRecorder() {
@@ -43,11 +44,32 @@ public final class TextRecorder {
 		}
 	}
 
+	/**
+	 * One filled rectangle of the frame (GuiGraphicsExtractor.fill), in screen GUI pixels after the pose and clipping.
+	 * {@code color}: its ARGB color (the top color of a gradient).
+	 */
+	public record Fill(int x0, int y0, int x1, int y1, int stratum, int color) {
+		public int width() {
+			return x1 - x0;
+		}
+
+		public int height() {
+			return y1 - y0;
+		}
+
+		@Override
+		public String toString() {
+			return String.format("#%08X@%d,%d-%d,%d", color, x0, y0, x1, y1);
+		}
+	}
+
 	private enum State { IDLE, ARMED, RECORDING }
 
 	private static volatile State state = State.IDLE;
 	private static final List<Text> current = new ArrayList<>();
 	private static volatile List<Text> captured;
+	private static final List<Fill> currentFills = new ArrayList<>();
+	private static volatile List<Fill> capturedFills = List.of();
 	private static int stratum;
 	private static int mark = -1;
 
@@ -57,6 +79,7 @@ public final class TextRecorder {
 		switch (state) {
 			case ARMED -> {
 				current.clear();
+				currentFills.clear();
 				mark = -1;
 				state = State.RECORDING;
 			}
@@ -68,6 +91,7 @@ public final class TextRecorder {
 						frame.set(i, new Text(t.text(), t.x0(), t.y0(), t.x1(), t.y1(), t.stratum(), t.color(), true, t.styleColor()));
 					}
 				}
+				capturedFills = List.copyOf(currentFills);
 				captured = List.copyOf(frame);
 				state = State.IDLE;
 			}
@@ -100,6 +124,18 @@ public final class TextRecorder {
 		String s = sb.toString();
 		if (s.isBlank()) return;
 		current.add(new Text(s, bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), stratum, access.ak_trade_expansion_test$color(), false, styleColor[0]));
+	}
+
+	public static void onElement(Object element) {
+		if (state != State.RECORDING || !(element instanceof ColoredRectangleRenderState rect)) return;
+		ScreenRectangle bounds = rect.bounds();
+		if (bounds == null || bounds.width() <= 0 || bounds.height() <= 0) return;
+		currentFills.add(new Fill(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), stratum, rect.col1()));
+	}
+
+	/** The filled rectangles of the frame last returned by {@link #capture}. */
+	public static List<Fill> fills() {
+		return capturedFills;
 	}
 
 	/**

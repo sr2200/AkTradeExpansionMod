@@ -39,7 +39,7 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * every case itself, records each result (build/autotest/client-results.json) and fails at the end if any case failed.
  * Cases that need a world share one singleplayer world with a small village and a stall placed with the use key.
  * Screenshots go to build/autotest/screenshots for a person to look at. The cases are in this class,
- * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientItemCases} and {@link ClientConfigCases}.
+ * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientListCases}, {@link ClientItemCases} and {@link ClientConfigCases}.
  * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.minimal} (the run without
  * Mod Menu and YACL, runClientGameTestMinimal): only the startup case, results in client-minimal-results.json.
  */
@@ -109,8 +109,11 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("2-9", "2-10"), "交易画面のボタン（数量 1・8＋・64、購入する）で、合計が数量で変わり、表示どおりの額で買えること（「最大」・財布へのお釣りは見ていない）"));
 		cases.add(new ClientCase("price_arrows", List.of("3-1"), null, true, ClientTradeCases::priceArrows));
 		cases.add(new ClientCase("balance_display", List.of("3-4"), null, true, ClientTradeCases::balance));
+		cases.add(new ClientCase("balance_position_setting", List.of("3-5"), null, true, ClientListCases::balancePosition));
 		cases.add(new ClientCase("row_states", List.of("3-8", "3-9"), null, true, ClientTradeCases::rowStates,
-				List.of("3-7"), null));
+				List.of("3-7", "23-11"), null));
+		cases.add(new ClientCase("row_meter_and_graph", List.of("3-2", "3-3"), null, true, ClientListCases::meterAndGraph));
+		cases.add(new ClientCase("row_rival_and_trend_tooltips", List.of("23-2", "24-2"), null, true, ClientListCases::rivalAndTrendTooltips));
 		cases.add(new ClientCase("max_with_exact_money", List.of("3-11"), null, true, ClientTradeCases::maxWithExactMoney));
 		cases.add(new ClientCase("max_and_change", List.of("2-9", "2-10"), null, true, ClientBuySellCases::maxAndChange));
 		cases.add(new ClientCase("shift_confirm_all", List.of("2-14"), null, true, ClientBuySellCases::shiftConfirm));
@@ -157,6 +160,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("villager_coin_prices", List.of("12-1"), null, true, ClientScreenCases::villagerPrices,
 				List.of("12-4"), "支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている）"));
 		cases.add(new ClientCase("bank_card_buttons", List.of("7-8", "7-9"), null, true, ClientBankQuestCases::cardButtons));
+		cases.add(new ClientCase("screen_size_by_gui_scale", List.of("19-1", "19-2"), null, true, ClientListCases::sizeByGuiScale));
 		cases.add(new ClientCase("layout_market_screen_ja", List.of("3-6", "19-1", "19-2", "19-3", "22-1", "26-1"),
 				"交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない",
 				true, (s, r) -> layout(s, r, LANGUAGE)));
