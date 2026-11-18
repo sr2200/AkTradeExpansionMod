@@ -715,6 +715,114 @@ final class ClientTownCases {
 		if (!row.contains(status)) problems.add("the row of " + name + " does not say \"" + status + "\": " + row);
 	}
 
+	// ---- 34-2 the size by the village style
+
+	/** A template's size as the snapshot sends it (x, height, z), or zero without one. */
+	private static BlockPos templateSize(MinecraftServer server, com.akf.tradeexpansion.data.FacilityDefinition def, String style) {
+		return com.akf.tradeexpansion.development.FacilityBuilder.template(server, def, style)
+				.map(t -> new BlockPos(t.getSize().getX(), t.getSize().getY(), t.getSize().getZ())).orElse(BlockPos.ZERO);
+	}
+
+	private static void fillBiome(MinecraftServer server, BlockPos center, String biome) {
+		ServerLevel level = server.overworld();
+		// Within the world's height (the flat world's ground is 4 above its bottom).
+		BlockPos a = new BlockPos(center.getX() - 8, Math.max(level.getMinY(), center.getY() - 8), center.getZ() - 8);
+		BlockPos b = new BlockPos(center.getX() + 8, Math.min(level.getMaxY(), center.getY() + 8), center.getZ() + 8);
+		String command = String.format(Locale.ROOT, "fillbiome %d %d %d %d %d %d %s", a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ(), biome);
+		try {
+			int n = server.getCommands().getDispatcher().execute(command, server.createCommandSourceStack().withSuppressedOutput());
+			check(n > 0, "/%s changed nothing", command);
+		} catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+			throw new AssertionError("/" + command + " failed: " + e.getMessage(), e);
+		}
+	}
+
+	/** The tooltip of a building's row (scrolled into view, the mouse over its name). */
+	private static List<String> rowTooltip(ClientGameTestContext context, MarketScreen screen, String name) {
+		List<FacilityView> facilities = development(context, screen).facilities();
+		int index = facilities.stream().map(FacilityView::kind).toList().indexOf(name);
+		check(index >= 0, "the development tab has no %s", name);
+		int n = facilities.size();
+		int rowH = context.computeOnClient(c -> (Integer) call(screen, "townRowH", n));
+		int visible = context.computeOnClient(c -> (Integer) call(screen, "townVisible", n));
+		int scroll = Math.clamp(index, 0, Math.max(0, n - visible));
+		context.runOnClient(c -> set(screen, "townScroll", scroll));
+		int top = context.computeOnClient(c -> topPos(screen)) + constant(MarketScreen.class, "LIST_Y") + TOWN_HEADER_H + (index - scroll) * rowH;
+		moveTo(context, listX(context, screen) + 40, top + rowH / 2.0);
+		context.waitTicks(2);
+		List<String> tip = strings(ClientDisplayCases.tip(context));
+		mouseAway(context);
+		return tip;
+	}
+
+	/**
+	 * 34-2: some buildings have another height in a desert village than in a plains one. With the market's center made a
+	 * desert (/fillbiome) the rows' tooltips show the desert look's size of every building, and a building under
+	 * construction in the plains look keeps the plains size (v0.58: the size of the look it has).
+	 */
+	static void sizeByStyle(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		record Sizes(String kind, BlockPos plains, BlockPos desert) {
+		}
+		record Before(BlockPos center, String biome, List<Sizes> sizes) {
+		}
+		Before before = s.world.getServer().computeOnServer(server -> {
+			BlockPos center = market(server, stall).center();
+			String biome = server.overworld().getBiome(center).unwrapKey().map(k -> k.identifier().toString()).orElse("minecraft:plains");
+			List<Sizes> sizes = new ArrayList<>();
+			for (var def : com.akf.tradeexpansion.data.FacilityCatalog.all().values()) {
+				sizes.add(new Sizes(def.kind().getSerializedName(), templateSize(server, def, "plains"), templateSize(server, def, "desert")));
+			}
+			return new Before(center, biome, sizes);
+		});
+		List<Sizes> differ = before.sizes().stream().filter(z -> !z.plains().equals(z.desert())).toList();
+		check(!differ.isEmpty(), "no building has another size in a desert village: %s", before.sizes());
+		check(differ.stream().anyMatch(z -> z.plains().getY() != z.desert().getY()), "no building has another height in a desert village: %s", differ);
+		check(!before.biome().equals("minecraft:desert"), "the test market is already in a desert");
+		try {
+			// The plains place first: the snapshot's sizes are the plains ones.
+			MarketScreen screen = openTown(s);
+			List<String> problems = new ArrayList<>();
+			for (Sizes z : before.sizes()) {
+				BlockPos got = view(context, screen, z.kind()).size();
+				if (!got.equals(z.plains())) problems.add(z.kind() + " in the plains is " + got.toShortString() + ", not " + z.plains().toShortString());
+			}
+			check(problems.isEmpty(), "%s", problems);
+
+			// A desert: every row with its desert size; one under construction in the plains look keeps its size.
+			Sizes kept = differ.getFirst();
+			s.world.getServer().runOnServer(server -> {
+				fillBiome(server, before.center(), "minecraft:desert");
+				facility(server, stall, kept.kind(), FacilityKind.valueOf(kept.kind().toUpperCase(Locale.ROOT)), State.CONSTRUCTING, stall.above(7));
+			});
+			String style = s.world.getServer().computeOnServer(server -> com.akf.tradeexpansion.development.FacilityBuilder.style(server.overworld(), before.center()));
+			check(style.equals("desert"), "the market's center is %s after /fillbiome desert", style);
+			screen = openTown(s);
+			for (Sizes z : before.sizes()) {
+				BlockPos want = z.kind().equals(kept.kind()) ? z.plains() : z.desert();
+				BlockPos got = view(context, screen, z.kind()).size();
+				if (!got.equals(want)) problems.add(z.kind() + " in a desert is " + got.toShortString() + ", not " + want.toShortString());
+			}
+			for (Sizes z : differ) {
+				BlockPos want = z.kind().equals(kept.kind()) ? z.plains() : z.desert();
+				String line = text(T + "size", want.getX(), want.getZ(), want.getY());
+				List<String> tip = rowTooltip(context, screen, z.kind());
+				if (!tip.contains(line)) problems.add("the tooltip of " + z.kind() + " in a desert has no \"" + line + "\": " + tip);
+			}
+			check(problems.isEmpty(), "%s", problems);
+			row(context, screen, differ.size() > 1 ? differ.get(1).kind() : kept.kind());
+			screenshot(context, result, "34-2_desert_sizes");
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> fillBiome(server, before.center(), before.biome()));
+			List<String> kinds = differ.isEmpty() ? List.of() : List.of(differ.getFirst().kind());
+			restore(s, saved, kinds, List.of());
+		}
+	}
+
 	// ---- 22-32 the sign of a completed building
 
 	/** 22-32: right-clicking the sign of a completed building opens the trade screen on its tab. */

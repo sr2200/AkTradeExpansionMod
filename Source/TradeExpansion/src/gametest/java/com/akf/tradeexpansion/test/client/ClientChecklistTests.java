@@ -196,6 +196,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("town_row_states", List.of("22-24", "22-26", "22-33", "29-13"),
 				"発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない）",
 				true, ClientTownCases::rowStates));
+		cases.add(new ClientCase("town_size_by_style", List.of("34-2"), null, true, ClientTownCases::sizeByStyle));
 		cases.add(new ClientCase("facility_sign_opens_tab", List.of("22-32"), null, true, ClientTownCases::signOpensTab));
 		cases.add(new ClientCase("tabs_turned_off", List.of("22-9", "26-20", "24-7"),
 				"設定を OFF にすると画面を開き直した時に「発展」タブが消え、雇い人がいない人には「雇い人」タブが無く、いる人には出ること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないこと・雇い人の操作は見ていない）",

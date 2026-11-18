@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.33、2026-11-17 20:22、114 件中 0 件失敗
+- クライアント：バージョン 0.2.34、2026-11-18 18:46、115 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 329 項目のうち、今回 自動で完了 166・一部を確認 109・失敗 0
+- チェックリスト 329 項目のうち、今回 自動で完了 167・一部を確認 108・失敗 0
 
 ## すべての項目
 
@@ -271,6 +271,7 @@
 | 22-23 | `town_material_cap` | クライアント | ✔ | 全部 |
 | 22-23b | `town_material_cap` | クライアント | ✔ | 全部 |
 | 22-24・22-26・22-33・29-13 | `town_row_states` | クライアント | ✔ | 発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない） |
+| 34-2 | `town_size_by_style` | クライアント | ✔ | 全部 |
 | 22-32 | `facility_sign_opens_tab` | クライアント | ✔ | 全部 |
 | 22-9・26-20・24-7 | `tabs_turned_off` | クライアント | ✔ | 設定を OFF にすると画面を開き直した時に「発展」タブが消え、雇い人がいない人には「雇い人」タブが無く、いる人には出ること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないこと・雇い人の操作は見ていない） |
 | 26-4 | `staff_hire_carrier` | クライアント | ✔ | 全部 |
@@ -464,6 +465,7 @@
 - 22-23b `town_material_cap`：[22-23b_multiplier_2.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23b_multiplier_2.png)
 - 22-23b `town_material_cap`：[22-23b_all_donated.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23b_all_donated.png)
 - 22-24・22-26・22-33・29-13 `town_row_states`：[22-24_rows.png](../../Source/TradeExpansion/build/autotest/screenshots/22-24_rows.png)
+- 34-2 `town_size_by_style`：[34-2_desert_sizes.png](../../Source/TradeExpansion/build/autotest/screenshots/34-2_desert_sizes.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_quest_hall.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_bank.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_warehouse.png)
