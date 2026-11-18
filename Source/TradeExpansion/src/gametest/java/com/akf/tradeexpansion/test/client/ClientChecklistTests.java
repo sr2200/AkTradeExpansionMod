@@ -39,7 +39,7 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * every case itself, records each result (build/autotest/client-results.json) and fails at the end if any case failed.
  * Cases that need a world share one singleplayer world with a small village and a stall placed with the use key.
  * Screenshots go to build/autotest/screenshots for a person to look at. The cases are in this class,
- * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientListCases}, {@link ClientItemCases} and {@link ClientConfigCases}.
+ * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientListCases}, {@link ClientItemCases}, {@link ClientWindowCases} and {@link ClientConfigCases}.
  * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.minimal} (the run without
  * Mod Menu and YACL, runClientGameTestMinimal): only the startup case, results in client-minimal-results.json.
  */
@@ -125,6 +125,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("price_changed_message", List.of("23-10"), "選んだ品の値段をサーバーで変えてから（日をまたいで商会や流行が動いた時の代わり）表示どおりの額で買うと、赤い「価格が変動しました…」が出て、品もお金も動かず、画面が最新の値段になること",
 				true, ClientBuySellCases::priceChanged));
 		cases.add(new ClientCase("sell_slot_selects_good", List.of("2-13"), null, true, ClientTradeCases::sellSlot));
+		cases.add(new ClientCase("shift_click_sell_slot", List.of("2-19"), null, true, ClientWindowCases::shiftClick));
 		cases.add(new ClientCase("title_reputation_trends", List.of("16-1", "24-1"), null, true, ClientDisplayCases::titleRow));
 		cases.add(new ClientCase("trend_position_setting", List.of("24-1b"), null, true, ClientDisplayCases::trendPosition));
 		cases.add(new ClientCase("debug_tooltip", List.of("16-11"), null, true, ClientDisplayCases::debugTooltip));
@@ -152,6 +153,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("28-1", "29-1", "34-1", "34-2"), "噴水広場・公園を含む14種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る）"));
 		cases.add(new ClientCase("exchange_tab", List.of("8-6"), null, true, ClientDisplayCases::exchange));
 		cases.add(new ClientCase("wallet_screen", List.of("7-4"), null, true, ClientDisplayCases::wallet));
+		cases.add(new ClientCase("wallet_offhand_and_limits", List.of("7-12"), null, true, ClientWindowCases::wallet));
 		cases.add(new ClientCase("trader_opens_market", List.of("6-3"), null, true, ClientDisplayCases::traderOpens));
 		cases.add(new ClientCase("advancements_screen", List.of("27-1"), null, true, (ses, r, a) -> ClientScreenCases.advancements(ses, r, a),
 				List.of("27-11"), null));
@@ -161,6 +163,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("12-4"), "支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている）"));
 		cases.add(new ClientCase("bank_card_buttons", List.of("7-8", "7-9"), null, true, ClientBankQuestCases::cardButtons));
 		cases.add(new ClientCase("screen_size_by_gui_scale", List.of("19-1", "19-2"), null, true, ClientListCases::sizeByGuiScale));
+		cases.add(new ClientCase("resize_open_screen", List.of("19-5"), null, true, ClientWindowCases::resizeOpen));
 		cases.add(new ClientCase("layout_market_screen_ja", List.of("3-6", "19-1", "19-2", "19-3", "22-1", "26-1"),
 				"交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない",
 				true, (s, r) -> layout(s, r, LANGUAGE)));
@@ -227,6 +230,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				true, ClientStaffMoreCases::clockAdvance));
 		cases.add(new ClientCase("staff_accident", List.of("26-10"), null, true, ClientStaffMoreCases::accident,
 				List.of("26-6"), "行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと"));
+		cases.add(new ClientCase("market_gone_while_open", List.of("2-20"), null, true, ClientWindowCases::marketGone));
 		cases.add(new ClientCase("reopen_world_keeps_market",List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
 		cases.add(new ClientCase("reopen_world_keeps_town_and_staff", List.of("22-11", "22-40", "23-8", "24-8"), null, true, ClientReopenCases::townAndStaff,
 				List.of("26-18"), "運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない）"));

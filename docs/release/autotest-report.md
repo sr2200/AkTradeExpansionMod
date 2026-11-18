@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.35、2026-11-18 19:05、117 件中 0 件失敗
+- クライアント：バージョン 0.2.36、2026-11-18 19:47、121 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 329 項目のうち、今回 自動で完了 171・一部を確認 105・失敗 0
+- チェックリスト 333 項目のうち、今回 自動で完了 175・一部を確認 105・失敗 0
 
 ## すべての項目
 
@@ -209,6 +209,7 @@
 | 16-3 | `regular_customer_prices` | クライアント | ✔ | 全部 |
 | 23-10 | `price_changed_message` | クライアント | ✔ | 選んだ品の値段をサーバーで変えてから（日をまたいで商会や流行が動いた時の代わり）表示どおりの額で買うと、赤い「価格が変動しました…」が出て、品もお金も動かず、画面が最新の値段になること |
 | 2-13 | `sell_slot_selects_good` | クライアント | ✔ | 全部 |
+| 2-19 | `shift_click_sell_slot` | クライアント | ✔ | 全部 |
 | 16-1・24-1 | `title_reputation_trends` | クライアント | ✔ | 全部 |
 | 24-1b | `trend_position_setting` | クライアント | ✔ | 全部 |
 | 16-11 | `debug_tooltip` | クライアント | ✔ | 全部 |
@@ -234,6 +235,7 @@
 | 28-1・29-1・34-1・34-2 | `town_tab` | クライアント | ✔ | 噴水広場・公園を含む14種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る） |
 | 8-6 | `exchange_tab` | クライアント | ✔ | 全部 |
 | 7-4 | `wallet_screen` | クライアント | ✔ | 全部 |
+| 7-12 | `wallet_offhand_and_limits` | クライアント | ✔ | 全部 |
 | 6-3 | `trader_opens_market` | クライアント | ✔ | 全部 |
 | 27-1 | `advancements_screen` | クライアント | ✔ | 全部 |
 | 27-11 | `advancements_screen` | クライアント | ✔ | 全部 |
@@ -242,6 +244,7 @@
 | 12-4 | `villager_coin_prices` | クライアント | ✔ | 支払い欄の下の「代金（所持）」が、所持金が足りない時は赤、足りる時は灰色になること（品物が出ない・取れないはサーバーのテストで見ている） |
 | 7-8・7-9 | `bank_card_buttons` | クライアント | ✔ | 全部 |
 | 19-1・19-2 | `screen_size_by_gui_scale` | クライアント | ✔ | 全部 |
+| 19-5 | `resize_open_screen` | クライアント | ✔ | 全部 |
 | 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
 | 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブ（日本語と同じ状態）の文字が重ならず、はみ出さず、翻訳キーがそのまま出ないこと |
 | 13-1 | `config_save_applies` | クライアント | ✔ | 全部 |
@@ -292,6 +295,7 @@
 | 13-10 | `clock_advance_staff_and_town` | クライアント | ✔ | 交易画面を開いたまま clock advance すると、雇い人タブの運び屋の「→運送 N分」と発展タブの「建設中 約N分」が開き直さずにすぐ減ること（建物はサーバーで直接作る） |
 | 26-10 | `staff_accident` | クライアント | ✔ | 全部 |
 | 26-6 | `staff_accident` | クライアント | ✔ | 行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと |
+| 2-20 | `market_gone_while_open` | クライアント | ✔ | 全部 |
 | 4-3 | `reopen_world_keeps_market` | クライアント | ✔ | 全部 |
 | 22-11・22-40・23-8・24-8 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 全部 |
 | 26-18 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない） |
@@ -359,6 +363,7 @@
 - 16-3 `regular_customer_prices`：[16-3_regular_customer.png](../../Source/TradeExpansion/build/autotest/screenshots/16-3_regular_customer.png)
 - 23-10 `price_changed_message`：[23-10_price_changed.png](../../Source/TradeExpansion/build/autotest/screenshots/23-10_price_changed.png)
 - 2-13 `sell_slot_selects_good`：[2-13_sell_slot.png](../../Source/TradeExpansion/build/autotest/screenshots/2-13_sell_slot.png)
+- 2-19 `shift_click_sell_slot`：[2-19_shift_click_in.png](../../Source/TradeExpansion/build/autotest/screenshots/2-19_shift_click_in.png)
 - 16-1・24-1 `title_reputation_trends`：[24-1_title_row.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1_title_row.png)
 - 16-1・24-1 `title_reputation_trends`：[16-1_reputation_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/16-1_reputation_tooltip.png)
 - 16-1・24-1 `title_reputation_trends`：[24-1_trends_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/24-1_trends_tooltip.png)
@@ -402,6 +407,7 @@
 - 22-20・22-21・31-3 `town_tab`：[22-21_warehouse_selected.png](../../Source/TradeExpansion/build/autotest/screenshots/22-21_warehouse_selected.png)
 - 8-6 `exchange_tab`：[8-6_exchange_down.png](../../Source/TradeExpansion/build/autotest/screenshots/8-6_exchange_down.png)
 - 7-4 `wallet_screen`：[7-4_wallet_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/7-4_wallet_screen.png)
+- 7-12 `wallet_offhand_and_limits`：[7-12_wallet_offhand.png](../../Source/TradeExpansion/build/autotest/screenshots/7-12_wallet_offhand.png)
 - 6-3 `trader_opens_market`：[6-3_trader_opens.png](../../Source/TradeExpansion/build/autotest/screenshots/6-3_trader_opens.png)
 - 27-1 `advancements_screen`：[27-1_advancements_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/27-1_advancements_tab.png)
 - 27-11 `advancements_screen`：[27-11_advancements_en.png](../../Source/TradeExpansion/build/autotest/screenshots/27-11_advancements_en.png)
@@ -416,6 +422,8 @@
 - 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_1920x1080_scale_3.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_1920x1080_scale_3.png)
 - 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_1920x1080_scale_4.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_1920x1080_scale_4.png)
 - 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_854x480_scale_2.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_854x480_scale_2.png)
+- 19-5 `resize_open_screen`：[19-5_back_854x480.png](../../Source/TradeExpansion/build/autotest/screenshots/19-5_back_854x480.png)
+- 19-5 `resize_open_screen`：[19-5_back_1920x1080.png](../../Source/TradeExpansion/build/autotest/screenshots/19-5_back_1920x1080.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png)
@@ -513,6 +521,8 @@
 - 26-10 `staff_accident`：[26-6_no_margin.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_no_margin.png)
 - 26-10 `staff_accident`：[26-10_resting.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_resting.png)
 - 26-10 `staff_accident`：[26-10_quit.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_quit.png)
+- 2-20 `market_gone_while_open`：[2-20_good_left.png](../../Source/TradeExpansion/build/autotest/screenshots/2-20_good_left.png)
+- 2-20 `market_gone_while_open`：[2-20_market_deleted.png](../../Source/TradeExpansion/build/autotest/screenshots/2-20_market_deleted.png)
 - 4-3 `reopen_world_keeps_market`：[4-3_reopened.png](../../Source/TradeExpansion/build/autotest/screenshots/4-3_reopened.png)
 - 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[22-40_reopened_town.png](../../Source/TradeExpansion/build/autotest/screenshots/22-40_reopened_town.png)
 - 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[26-18_reopened_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/26-18_reopened_staff.png)
