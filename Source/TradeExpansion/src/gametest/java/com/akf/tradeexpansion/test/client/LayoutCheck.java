@@ -19,6 +19,10 @@ public final class LayoutCheck {
 	public record Panel(int x0, int y0, int x1, int y1) {
 	}
 
+	/** A visible widget (button, box) of the screen in GUI pixels, with its label. */
+	public record Widget(int x0, int y0, int x1, int y1, String label) {
+	}
+
 	private static final int MIN_OVERLAP = 2;
 
 	/** A translation key of this mod (missing in both language files) or a placeholder left in a translated text. */
@@ -58,5 +62,31 @@ public final class LayoutCheck {
 			}
 		}
 		return problems;
+	}
+
+	/**
+	 * Texts of the screen's layer drawn under a widget: a text that covers a widget by at least 2 x 2 GUI pixels and
+	 * is not the widget's own label (the label may be cut to fit, with or without "…").
+	 */
+	public static List<String> underWidgets(String where, List<Text> texts, List<Widget> widgets) {
+		List<String> problems = new ArrayList<>();
+		int base = TextRecorder.baseStratum(texts);
+		for (Text t : texts) {
+			if (t.stratum() != base || t.text().isBlank()) continue;
+			for (Widget w : widgets) {
+				int dx = Math.min(t.x1(), w.x1()) - Math.max(t.x0(), w.x0());
+				int dy = Math.min(t.y1(), w.y1()) - Math.max(t.y0(), w.y0());
+				if (dx < MIN_OVERLAP || dy < MIN_OVERLAP) continue;
+				if (ownLabel(t.text(), w.label())) continue;
+				problems.add(where + ": " + t + " is under the widget \"" + w.label() + "\" " + w.x0() + "," + w.y0() + "-" + w.x1() + "," + w.y1());
+			}
+		}
+		return problems;
+	}
+
+	private static boolean ownLabel(String text, String label) {
+		String t = text.replace("…", "").replace("...", "").strip();
+		String l = label.strip();
+		return !t.isEmpty() && (l.contains(t) || t.contains(l));
 	}
 }

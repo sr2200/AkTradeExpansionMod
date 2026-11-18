@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.36、2026-11-18 19:47、121 件中 0 件失敗
+- クライアント：バージョン 0.2.37、2026-11-18 20:26、122 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 333 項目のうち、今回 自動で完了 175・一部を確認 105・失敗 0
+- チェックリスト 334 項目のうち、今回 自動で完了 176・一部を確認 105・失敗 0
 
 ## すべての項目
 
@@ -245,6 +245,7 @@
 | 7-8・7-9 | `bank_card_buttons` | クライアント | ✔ | 全部 |
 | 19-1・19-2 | `screen_size_by_gui_scale` | クライアント | ✔ | 全部 |
 | 19-5 | `resize_open_screen` | クライアント | ✔ | 全部 |
+| 19-6 | `long_names_big_numbers` | クライアント | ✔ | 全部 |
 | 3-6・19-1・19-2・19-3・22-1・26-1 | `layout_market_screen_ja` | クライアント | ✔ | 交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない |
 | 26-1 | `layout_market_screen_en` | クライアント | ✔ | 英語でも交易画面の各タブ（日本語と同じ状態）の文字が重ならず、はみ出さず、翻訳キーがそのまま出ないこと |
 | 13-1 | `config_save_applies` | クライアント | ✔ | 全部 |
@@ -424,6 +425,28 @@
 - 19-1・19-2 `screen_size_by_gui_scale`：[19-1_gui_854x480_scale_2.png](../../Source/TradeExpansion/build/autotest/screenshots/19-1_gui_854x480_scale_2.png)
 - 19-5 `resize_open_screen`：[19-5_back_854x480.png](../../Source/TradeExpansion/build/autotest/screenshots/19-5_back_854x480.png)
 - 19-5 `resize_open_screen`：[19-5_back_1920x1080.png](../../Source/TradeExpansion/build/autotest/screenshots/19-5_back_1920x1080.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_buy.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_sell.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_bank.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_board.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_board.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_board_market_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_board_market_.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_quest.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_quest.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_exchange.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_exchange.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_town.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_town.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_town_building_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_town_building_.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_staff.png)
+- 19-6 `long_names_big_numbers`：[layout_long_ja_jp_854x480_GUI_auto_wallet.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_ja_jp_854x480_GUI_auto_wallet.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_buy.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_sell.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_bank.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_board.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_board.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_board_market_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_board_market_.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_quest.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_quest.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_exchange.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_exchange.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_town.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_town.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_town_building_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_town_building_.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_staff.png)
+- 19-6 `long_names_big_numbers`：[layout_long_en_us_854x480_GUI_auto_wallet.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_long_en_us_854x480_GUI_auto_wallet.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_buy.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_buy.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell.png)
 - 3-6・19-1・19-2・19-3・22-1・26-1 `layout_market_screen_ja`：[layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_sell_sell_all_.png)

@@ -39,7 +39,7 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * every case itself, records each result (build/autotest/client-results.json) and fails at the end if any case failed.
  * Cases that need a world share one singleplayer world with a small village and a stall placed with the use key.
  * Screenshots go to build/autotest/screenshots for a person to look at. The cases are in this class,
- * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientListCases}, {@link ClientItemCases}, {@link ClientWindowCases} and {@link ClientConfigCases}.
+ * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientListCases}, {@link ClientItemCases}, {@link ClientWindowCases}, {@link ClientLongTextCases} and {@link ClientConfigCases}.
  * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.minimal} (the run without
  * Mod Menu and YACL, runClientGameTestMinimal): only the startup case, results in client-minimal-results.json.
  */
@@ -164,6 +164,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("bank_card_buttons", List.of("7-8", "7-9"), null, true, ClientBankQuestCases::cardButtons));
 		cases.add(new ClientCase("screen_size_by_gui_scale", List.of("19-1", "19-2"), null, true, ClientListCases::sizeByGuiScale));
 		cases.add(new ClientCase("resize_open_screen", List.of("19-5"), null, true, ClientWindowCases::resizeOpen));
+		cases.add(new ClientCase("long_names_big_numbers", List.of("19-6"), null, true, ClientLongTextCases::longTexts));
 		cases.add(new ClientCase("layout_market_screen_ja", List.of("3-6", "19-1", "19-2", "19-3", "22-1", "26-1"),
 				"交易画面の各タブ（掲示板で市場を選んだ状態・依頼と輸送依頼を選んだ状態・発展タブで建物を選んだ状態・「まとめて売る」の枠・カードを持っていて支払いのボタンがある状態も）の文字が重ならず、画面と枠からはみ出さず、翻訳キーがそのまま出ないこと（日本語、854×480 と 1920×1080、GUIの大きさ 1〜4）。一覧の行数・スクロールバーは見ていない",
 				true, (s, r) -> layout(s, r, LANGUAGE)));
@@ -680,7 +681,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 	 * Checks the texts of the screen as it is now. {@code box}: the "sell all" box drawn over the list (x0, y0, x1,
 	 * y1): the list texts under it are left out.
 	 */
-	private static void checkLayout(ClientGameTestContext context, CaseResult.Builder result, String where, boolean screenshotAlways,
+	static void checkLayout(ClientGameTestContext context, CaseResult.Builder result, String where, boolean screenshotAlways,
 			List<String> problems, int[] box) {
 		mouseAway(context);
 		// Toasts (advancements) slide in from outside the screen: not part of the screen's layout.
@@ -689,8 +690,12 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		List<TextRecorder.Text> all = TextRecorder.capture(context);
 		List<TextRecorder.Text> texts = box == null ? all
 				: all.stream().filter(t -> t.afterMark() || !t.inside(box[0], box[1], box[2], box[3])).toList();
-		List<String> found = context.computeOnClient(client -> LayoutCheck.check(where, texts,
-				client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), panel(client.gui.screen())));
+		List<String> found = context.computeOnClient(client -> {
+			List<String> p = new ArrayList<>(LayoutCheck.check(where, texts,
+					client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), panel(client.gui.screen())));
+			p.addAll(LayoutCheck.underWidgets(where, texts, widgets(client.gui.screen())));
+			return p;
+		});
 		String size = where.substring(0, where.lastIndexOf(' '));
 		if (screenshotAlways || !found.isEmpty() && problems.stream().noneMatch(p -> p.startsWith(size))) {
 			screenshot(context, result, "layout_" + where);
@@ -698,7 +703,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		problems.addAll(found);
 	}
 
-	private static List<String> visibleTabs(Screen screen) {
+	static List<String> visibleTabs(Screen screen) {
 		List<String> keys = new ArrayList<>();
 		for (var child : screen.children()) {
 			if (child instanceof AbstractWidget w && w.visible && w.getMessage().getContents() instanceof TranslatableContents t
@@ -707,6 +712,17 @@ public class ClientChecklistTests implements FabricClientGameTest {
 			}
 		}
 		return keys;
+	}
+
+	/** The visible widgets of the screen with their labels. */
+	static List<LayoutCheck.Widget> widgets(Screen screen) {
+		List<LayoutCheck.Widget> widgets = new ArrayList<>();
+		for (var child : screen.children()) {
+			if (child instanceof AbstractWidget w && w.visible) {
+				widgets.add(new LayoutCheck.Widget(w.getX(), w.getY(), w.getX() + w.getWidth(), w.getY() + w.getHeight(), w.getMessage().getString()));
+			}
+		}
+		return widgets;
 	}
 
 	static LayoutCheck.Panel panel(Screen screen) {

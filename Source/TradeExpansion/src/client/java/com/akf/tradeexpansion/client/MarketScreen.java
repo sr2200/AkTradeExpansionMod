@@ -295,7 +295,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		cargoButton = addRenderableWidget(Button.builder(Component.empty(), b -> deliverCargo())
 				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		mapButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map"), b -> addToMap())
-				.bounds(x + panelX, y + 104, PANEL_W, 14).build());
+				.bounds(x + panelX, y + BOARD_MAP_BUTTON_Y, PANEL_W, 14).build());
 		mapHereButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.board.map.here"), b -> addHereToMap())
 				.bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		staffTab.init(b -> addRenderableWidget(b), x, y, panelX);
@@ -1942,7 +1942,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				g.text(font, titleLines.get(i), leftPos + panelX, lineY, COLOR_TEXT, false);
 			}
 		}
-		g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.columns"), leftPos + panelX, topPos + 62, PANEL_W, COLOR_DARK, false);
+		extractBoardLegend(g, mouseX, mouseY);
 		// Header line: goods / buy price (the player pays) / sell price (the player gets).
 		g.fill(bx, by, bx + listW, by + BOARD_HEADER_H, COLOR_DARK);
 		int headerY = by + 1;
@@ -1974,6 +1974,41 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				if (good.sellDeal() > 0) lines.add(Component.translatable("screen.ak_trade_expansion.board.deal_sell", good.sellDeal()));
 				g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 			}
+		}
+	}
+
+	/** Top of the board's legend and of the map button below it (relative to the panel). */
+	private static final int BOARD_LEGEND_Y = 57;
+	private static final int BOARD_MAP_BUTTON_Y = 104;
+
+	/**
+	 * The legend of the board's colors, in the lines above the map button: what does not fit (a narrow font, a long
+	 * translation) ends with "…" and shows whole under the mouse.
+	 */
+	private void extractBoardLegend(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		Component legend = Component.translatable("screen.ak_trade_expansion.board.columns");
+		List<net.minecraft.util.FormattedCharSequence> lines = font.split(legend, PANEL_W);
+		int maxLines = Math.max(1, (BOARD_MAP_BUTTON_Y - 2 - BOARD_LEGEND_Y) / font.lineHeight);
+		int x = leftPos + panelX;
+		int y = topPos + BOARD_LEGEND_Y;
+		if (lines.size() <= maxLines) {
+			for (int i = 0; i < lines.size(); i++) g.text(font, lines.get(i), x, y + i * font.lineHeight, COLOR_DARK, false);
+			return;
+		}
+		String rest = legend.getString();
+		for (int i = 0; i < maxLines - 1; i++) {
+			StringBuilder line = new StringBuilder();
+			lines.get(i).accept((index, style, codePoint) -> {
+				line.appendCodePoint(codePoint);
+				return true;
+			});
+			g.text(font, lines.get(i), x, y + i * font.lineHeight, COLOR_DARK, false);
+			int at = rest.indexOf(line.toString().strip());
+			if (at >= 0) rest = rest.substring(at + line.toString().strip().length()).strip();
+		}
+		g.text(font, font.plainSubstrByWidth(rest, PANEL_W - font.width("…")) + "…", x, y + (maxLines - 1) * font.lineHeight, COLOR_DARK, false);
+		if (mouseX >= x && mouseX < x + PANEL_W && mouseY >= y && mouseY < y + maxLines * font.lineHeight) {
+			g.setTooltipForNextFrame(font, wrap(List.of(legend)), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 	}
 

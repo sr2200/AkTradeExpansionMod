@@ -362,7 +362,7 @@
   "screen.ak_trade_expansion.board.map.chat": "「%s」の座標をチャットに出しました（クリックでコピー）",
   "screen.ak_trade_expansion.board.none": "半径 %s ブロック以内にほかの市場はありません",
   "screen.ak_trade_expansion.board.where": "%s %sm",
-  "screen.ak_trade_expansion.board.columns": "水色↓はここより安く買える、桃色↑はここより高く売れる。オレンジの名前は品不足",
+  "screen.ak_trade_expansion.board.columns": "水色↓はここより安い、桃色↑はここより高く売れる。オレンジは品不足",
   "screen.ak_trade_expansion.board.header.goods": "商品",
   "screen.ak_trade_expansion.board.header.buy": "買値",
   "screen.ak_trade_expansion.board.header.sell": "売値",

@@ -362,7 +362,7 @@
   "screen.ak_trade_expansion.board.map.chat": "Coordinates of \"%s\" are in the chat (click to copy)",
   "screen.ak_trade_expansion.board.none": "No other markets within %s blocks",
   "screen.ak_trade_expansion.board.where": "%s %sm",
-  "screen.ak_trade_expansion.board.columns": "Cyan ↓ = cheaper than here, pink ↑ = pays more than here. Orange name = shortage",
+  "screen.ak_trade_expansion.board.columns": "Cyan ↓ cheaper, pink ↑ pays more than here. Orange: shortage",
   "screen.ak_trade_expansion.board.header.goods": "Goods",
   "screen.ak_trade_expansion.board.header.buy": "Buy",
   "screen.ak_trade_expansion.board.header.sell": "Sell",
