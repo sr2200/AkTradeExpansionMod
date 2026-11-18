@@ -3,9 +3,9 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.34、2026-11-18 18:46、115 件中 0 件失敗
+- クライアント：バージョン 0.2.35、2026-11-18 19:05、117 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 329 項目のうち、今回 自動で完了 167・一部を確認 108・失敗 0
+- チェックリスト 329 項目のうち、今回 自動で完了 171・一部を確認 105・失敗 0
 
 ## すべての項目
 
@@ -293,6 +293,8 @@
 | 26-10 | `staff_accident` | クライアント | ✔ | 全部 |
 | 26-6 | `staff_accident` | クライアント | ✔ | 行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと |
 | 4-3 | `reopen_world_keeps_market` | クライアント | ✔ | 全部 |
+| 22-11・22-40・23-8・24-8 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 全部 |
+| 26-18 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない） |
 | 2-16 | `screen_closes_when_away` | クライアント | ✔ | 全部 |
 | 14-1 | `dedicated_server_one_player` | クライアント | ✔ | 専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開けることのみ（2人は見ていない） |
 | 13-2 | `dedicated_server_one_player` | クライアント | ✔ | 全部 |
@@ -512,6 +514,9 @@
 - 26-10 `staff_accident`：[26-10_resting.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_resting.png)
 - 26-10 `staff_accident`：[26-10_quit.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_quit.png)
 - 4-3 `reopen_world_keeps_market`：[4-3_reopened.png](../../Source/TradeExpansion/build/autotest/screenshots/4-3_reopened.png)
+- 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[22-40_reopened_town.png](../../Source/TradeExpansion/build/autotest/screenshots/22-40_reopened_town.png)
+- 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[26-18_reopened_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/26-18_reopened_staff.png)
+- 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[22-40_completed_after_reopen.png](../../Source/TradeExpansion/build/autotest/screenshots/22-40_completed_after_reopen.png)
 - 14-1 `dedicated_server_one_player`：[14-1_dedicated_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/14-1_dedicated_trade_screen.png)
 - 13-2 `dedicated_server_one_player`：[13-2_settings_on_server.png](../../Source/TradeExpansion/build/autotest/screenshots/13-2_settings_on_server.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)

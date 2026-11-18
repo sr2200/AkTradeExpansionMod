@@ -62,7 +62,7 @@ final class ClientStaffMoreCases {
 	// ---- set-up
 
 	/** {@link ClientStaffCases#prepare} (once), the settings changed by {@code change}, and no employees of the player. */
-	private static void fresh(Session s, Consumer<TradeExpansionConfig.Staff> change) {
+	static void fresh(Session s, Consumer<TradeExpansionConfig.Staff> change) {
 		prepare(s);
 		s.context.setScreen(() -> null);
 		s.world.getServer().runOnServer(server -> {
@@ -93,7 +93,7 @@ final class ClientStaffMoreCases {
 	 * A staff request of the player at the stall's market, sent on the server (the trade screen must be open: the server
 	 * checks the menu). The answer goes to the open tab as for a button.
 	 */
-	private static void request(Session s, StaffRequestC2S.Action action, int id, Identifier goods, long destination, int quantity, long buyLimit,
+	static void request(Session s, StaffRequestC2S.Action action, int id, Identifier goods, long destination, int quantity, long buyLimit,
 			long sellLimit, long amount) {
 		long market = s.world.getServer().computeOnServer(server -> market(server, s.stall).id());
 		s.world.getServer().runOnServer(server -> StaffService.handle(player(server),
@@ -102,17 +102,17 @@ final class ClientStaffMoreCases {
 	}
 
 	/** The id of the player's only employee of {@code role} (0 carrier, 1 clerk), asking for the list until it shows. */
-	private static int hired(ClientGameTestContext context, Object staff, int role) {
+	static int hired(ClientGameTestContext context, Object staff, int role) {
 		check(waitClient(context, c -> ((StaffS2C) get(staff, "data")).staff().stream().anyMatch(v -> v.role() == role), 60), "no employee was hired");
 		return data(context, staff).staff().stream().filter(v -> v.role() == role).findFirst().orElseThrow().id();
 	}
 
-	private static long otherId(Session s) {
+	static long otherId(Session s) {
 		return s.world.getServer().computeOnServer(server -> other(server, market(server, s.stall)).id());
 	}
 
 	/** Sets the pressure of a good at the stall's market and the other market (fractions of the lowest / highest pressure). */
-	private static void prices(Session s, Identifier good, boolean cheapHere, boolean dearThere) {
+	static void prices(Session s, Identifier good, boolean cheapHere, boolean dearThere) {
 		s.world.getServer().runOnServer(server -> {
 			Market home = market(server, s.stall);
 			Market other = other(server, home);
@@ -123,7 +123,7 @@ final class ClientStaffMoreCases {
 		});
 	}
 
-	private static StaffS2C.View hurryUntil(Session s, Object staff, int id, java.util.function.Predicate<StaffS2C.View> condition, int times, String what) {
+	static StaffS2C.View hurryUntil(Session s, Object staff, int id, java.util.function.Predicate<StaffS2C.View> condition, int times, String what) {
 		ClientGameTestContext context = s.context;
 		refresh(context, staff);
 		context.waitTicks(4);
@@ -139,7 +139,7 @@ final class ClientStaffMoreCases {
 		throw new AssertionError("the employee #" + id + " did not get " + what + " (now " + describe(v) + ")");
 	}
 
-	private static String status(ClientGameTestContext context, MarketScreen screen, Object staff, int id) {
+	static String status(ClientGameTestContext context, MarketScreen screen, Object staff, int id) {
 		List<String> row = rowStrings(context, screen, staff, rowIndex(context, staff, id));
 		return String.join("|", row);
 	}
@@ -583,7 +583,7 @@ final class ClientStaffMoreCases {
 		return null;
 	}
 
-	private static String logs(StaffS2C.View v) {
+	static String logs(StaffS2C.View v) {
 		return v.log().stream().map(Component::getString).toList().toString();
 	}
 
@@ -731,14 +731,14 @@ final class ClientStaffMoreCases {
 	// ---- 13-10 the market clock with the screen open
 
 	/** The number in a squeezed text where {@code key}'s %s is (the first match), or -1. */
-	private static int number(String squeezed, String key) {
+	static int number(String squeezed, String key) {
 		String[] parts = Language.getInstance().getOrDefault(key).split("%s", -1);
 		Matcher m = Pattern.compile(Pattern.quote(squeeze(parts[0])) + "(\\d+)" + Pattern.quote(squeeze(parts[1]))).matcher(squeezed);
 		return m.find() ? Integer.parseInt(m.group(1)) : -1;
 	}
 
 	/** {@code /aktradeex clock advance <days>}; waits until the client has the new offset. */
-	private static void advance(Session s, String days) {
+	static void advance(Session s, String days) {
 		long old = s.world.getServer().computeOnServer(server -> MarketRegistry.get(server).clockOffset());
 		s.world.getServer().runCommand("aktradeex clock advance " + days);
 		long now = s.world.getServer().computeOnServer(server -> MarketRegistry.get(server).clockOffset());

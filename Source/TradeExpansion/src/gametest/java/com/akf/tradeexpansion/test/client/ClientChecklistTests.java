@@ -228,6 +228,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("staff_accident", List.of("26-10"), null, true, ClientStaffMoreCases::accident,
 				List.of("26-6"), "行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと"));
 		cases.add(new ClientCase("reopen_world_keeps_market",List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
+		cases.add(new ClientCase("reopen_world_keeps_town_and_staff", List.of("22-11", "22-40", "23-8", "24-8"), null, true, ClientReopenCases::townAndStaff,
+				List.of("26-18"), "運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない）"));
 		// Breaks the stall: the last case of the world.
 		cases.add(new ClientCase("screen_closes_when_away", List.of("2-16"), null, true, ClientTradeCases::closesWhenAway));
 		cases.add(new ClientCase("dedicated_server_one_player", List.of("14-1"),

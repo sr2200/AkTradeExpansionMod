@@ -111,10 +111,10 @@ final class ClientTownCases {
 		});
 	}
 
-	private record Saved(Market.Standing standing, double development) {
+	record Saved(Market.Standing standing, double development) {
 	}
 
-	private static Saved save(Session s) {
+	static Saved save(Session s) {
 		BlockPos stall = s.stall;
 		return s.world.getServer().computeOnServer(server -> {
 			Market market = market(server, stall);
@@ -122,7 +122,7 @@ final class ClientTownCases {
 		});
 	}
 
-	private static void restore(Session s, Saved saved, List<String> facilities, List<BlockPos> signs) {
+	static void restore(Session s, Saved saved, List<String> facilities, List<BlockPos> signs) {
 		BlockPos stall = s.stall;
 		s.world.getServer().runOnServer(server -> {
 			Market market = market(server, stall);
@@ -161,7 +161,7 @@ final class ClientTownCases {
 
 	// ---- the screen
 
-	private static MarketScreen openTown(Session s) {
+	static MarketScreen openTown(Session s) {
 		ClientGameTestContext context = s.context;
 		context.setScreen(() -> null);
 		context.waitTicks(2);
@@ -172,7 +172,7 @@ final class ClientTownCases {
 		return screen;
 	}
 
-	private static MarketSnapshotS2C.DevelopmentView development(ClientGameTestContext context, MarketScreen screen) {
+	static MarketSnapshotS2C.DevelopmentView development(ClientGameTestContext context, MarketScreen screen) {
 		return snapshot(context, screen).development();
 	}
 
@@ -718,7 +718,7 @@ final class ClientTownCases {
 	// ---- 34-2 the size by the village style
 
 	/** A template's size as the snapshot sends it (x, height, z), or zero without one. */
-	private static BlockPos templateSize(MinecraftServer server, com.akf.tradeexpansion.data.FacilityDefinition def, String style) {
+	static BlockPos templateSize(MinecraftServer server, com.akf.tradeexpansion.data.FacilityDefinition def, String style) {
 		return com.akf.tradeexpansion.development.FacilityBuilder.template(server, def, style)
 				.map(t -> new BlockPos(t.getSize().getX(), t.getSize().getY(), t.getSize().getZ())).orElse(BlockPos.ZERO);
 	}
