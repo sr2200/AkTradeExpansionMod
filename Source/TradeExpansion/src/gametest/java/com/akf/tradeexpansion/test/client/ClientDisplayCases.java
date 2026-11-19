@@ -295,8 +295,7 @@ final class ClientDisplayCases {
 			TextRecorder.Text line = status.stream().filter(t -> t != bottom).findFirst()
 					.orElseThrow(() -> new AssertionError("STATUS_ROW: no status text left of the trends: " + strings(status)));
 			check(line.x1() <= bottom.x0(), "STATUS_ROW: the status %s runs into the trends %s", line, bottom);
-			List<String> problems = context.computeOnClient(c -> LayoutCheck.check("24-1b status row", all,
-					c.getWindow().getGuiScaledWidth(), c.getWindow().getGuiScaledHeight(), null));
+			List<String> problems = context.computeOnClient(c -> ClientChecklistTests.layoutProblems(c, "24-1b status row", all, null));
 			check(problems.isEmpty(), "STATUS_ROW: %s", problems);
 			checkTrendTooltip(hover(context, bottom), snapshot);
 			screenshot(context, result, "24-1b_status_row");
@@ -688,8 +687,7 @@ final class ClientDisplayCases {
 
 	/** No texts on top of each other, none outside the screen or the panel. */
 	private static void layoutOk(ClientGameTestContext context, String where, List<TextRecorder.Text> texts) {
-		List<String> problems = context.computeOnClient(c -> LayoutCheck.check(where, texts, c.getWindow().getGuiScaledWidth(),
-				c.getWindow().getGuiScaledHeight(), null));
+		List<String> problems = context.computeOnClient(c -> ClientChecklistTests.layoutProblems(c, where, texts, null));
 		check(problems.isEmpty(), "%s", problems);
 	}
 

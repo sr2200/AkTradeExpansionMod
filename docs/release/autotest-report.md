@@ -3,9 +3,11 @@
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
 - サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.37、2026-11-18 20:26、122 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.12、2026-11-15 10:32、2 件中 0 件失敗
-- チェックリスト 334 項目のうち、今回 自動で完了 176・一部を確認 105・失敗 0
+- クライアント：バージョン 0.2.38、2026-11-19 20:15、129 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.38、2026-11-19 20:03、3 件中 0 件失敗
+- クライアント（Mod Menu だけ）：バージョン 0.2.38、2026-11-19 20:03、2 件中 0 件失敗
+- クライアント（YACL だけ）：バージョン 0.2.38、2026-11-19 20:03、2 件中 0 件失敗
+- チェックリスト 337 項目のうち、今回 自動で完了 178・一部を確認 114・失敗 0
 
 ## すべての項目
 
@@ -300,12 +302,24 @@
 | 4-3 | `reopen_world_keeps_market` | クライアント | ✔ | 全部 |
 | 22-11・22-40・23-8・24-8 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 全部 |
 | 26-18 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない） |
+| 11-2 | `where_show_lines` | クライアント | ✔ | where show で、黄（同じ市場の範囲）・赤（新しい市場を作れない範囲）・青（数える範囲）の点がそれぞれの円の上に、地面（いちばん上のブロック＋0.3）に届き、where hide と30秒で止まること（緑の村の範囲は、テストの世界に村の構造物が無いので見ていない。見やすさは画像で確認） |
+| 22-24b | `construction_effects` | クライアント | ✔ | 建設中の場所（サーバーで直接作った 7×7 の建物）に、床の高さのオレンジの点が枠の上に、木くず（オークの板）が範囲の中に、工事の音が範囲の中で届き、音の字幕が「工事の音」であること。48 ブロックより離れた時・constructionEffects を OFF にして reload した時・完成した後は届かないこと（見え方と、字幕が画面に出るところは見ていない） |
+| 2-6 | `stall_facing_and_shape` | クライアント | ✔ | 使うキーでプレイヤーの東西南北に置いた交易所が、それぞれプレイヤーの方を向くこと（見た目は画像で確認） |
+| 2-7 | `stall_facing_and_shape` | クライアント | ✔ | 交易所が隣のブロックの面を隠さず（透けたり黒くなったりしない）、当たり判定が1ブロックいっぱいでも空でもないこと（形どおりかは画像で確認） |
+| 6-10b | `trader_robe_colours` | クライアント | ✔ | /summon で出した24人の商人の服の色がばらばら（8色のうち6色以上）で、クライアントにも同じ色が届き、遠くへ行ってチャンクごと保存・読み込みし直しても、リソースの再読み込み（F3+T）の後も色が変わらず、色を変えたテクスチャが残ること（スポーンエッグ・ワールドの入り直し・肌と縁取りの色は見ていない。見た目は画像で確認） |
+| 22-36b | `stake_outlines` | クライアント | ✔ | 杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない） |
+| 28-10 | `stake_outlines` | クライアント | ✔ | 杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと |
 | 2-16 | `screen_closes_when_away` | クライアント | ✔ | 全部 |
-| 14-1 | `dedicated_server_one_player` | クライアント | ✔ | 専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開けることのみ（2人は見ていない） |
+| 14-1・14-5 | `dedicated_server_one_player` | クライアント | ✔ | 専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開け、買う・売るが1往復できること。サーバーで clock advance と設定（同じプロセスなので設定は共有）を変えた後に切断すると、設定が自分の設定ファイルの値に、市場の時計のずれが 0 に戻ること（2人と、切断の後に1人用の世界に入るところは見ていない） |
 | 13-2 | `dedicated_server_one_player` | クライアント | ✔ | 全部 |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 | 1-1 | `startup_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | 全部 |
+| 15-3 | `trade_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | Mod Menu・YACL を外した開発用の起動構成（テスト用の Mod は入っている）で、新しいワールドに入って村に交易所を置き、交易画面で1つ買い1つ売れることのみ（配布 jar だけの起動構成では見ていない） |
 | 1-1 | `log_has_no_mod_errors` | クライアント（Mod Menu・YACL なし） | ✔ | 全部 |
+| 1-6 | `startup_modmenu_without_yacl` | クライアント（Mod Menu だけ） | ✔ | 全部 |
+| 1-6 | `log_has_no_mod_errors` | クライアント（Mod Menu だけ） | ✔ | 全部 |
+| 1-7 | `startup_yacl_without_modmenu` | クライアント（YACL だけ） | ✔ | 全部 |
+| 1-7 | `log_has_no_mod_errors` | クライアント（YACL だけ） | ✔ | 全部 |
 
 ## 見て確かめる画像
 
@@ -550,6 +564,21 @@
 - 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[22-40_reopened_town.png](../../Source/TradeExpansion/build/autotest/screenshots/22-40_reopened_town.png)
 - 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[26-18_reopened_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/26-18_reopened_staff.png)
 - 22-11・22-40・23-8・24-8 `reopen_world_keeps_town_and_staff`：[22-40_completed_after_reopen.png](../../Source/TradeExpansion/build/autotest/screenshots/22-40_completed_after_reopen.png)
-- 14-1 `dedicated_server_one_player`：[14-1_dedicated_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/14-1_dedicated_trade_screen.png)
+- 11-2 `where_show_lines`：[11-2_where_show_at_stall.png](../../Source/TradeExpansion/build/autotest/screenshots/11-2_where_show_at_stall.png)
+- 11-2 `where_show_lines`：[11-2_where_show_red.png](../../Source/TradeExpansion/build/autotest/screenshots/11-2_where_show_red.png)
+- 22-24b `construction_effects`：[22-24b_site_under_construction.png](../../Source/TradeExpansion/build/autotest/screenshots/22-24b_site_under_construction.png)
+- 2-6 `stall_facing_and_shape`：[2-6_stall_facing_north.png](../../Source/TradeExpansion/build/autotest/screenshots/2-6_stall_facing_north.png)
+- 2-6 `stall_facing_and_shape`：[2-6_stall_facing_east.png](../../Source/TradeExpansion/build/autotest/screenshots/2-6_stall_facing_east.png)
+- 2-6 `stall_facing_and_shape`：[2-6_stall_facing_south.png](../../Source/TradeExpansion/build/autotest/screenshots/2-6_stall_facing_south.png)
+- 2-6 `stall_facing_and_shape`：[2-6_stall_facing_west.png](../../Source/TradeExpansion/build/autotest/screenshots/2-6_stall_facing_west.png)
+- 6-10b `trader_robe_colours`：[6-10b_robe_colours.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10b_robe_colours.png)
+- 6-10b `trader_robe_colours`：[6-10b_robe_colours_after_reload.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10b_robe_colours_after_reload.png)
+- 22-36b `stake_outlines`：[22-36b_stake_outlines.png](../../Source/TradeExpansion/build/autotest/screenshots/22-36b_stake_outlines.png)
+- 14-1・14-5 `dedicated_server_one_player`：[14-1_dedicated_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/14-1_dedicated_trade_screen.png)
 - 13-2 `dedicated_server_one_player`：[13-2_settings_on_server.png](../../Source/TradeExpansion/build/autotest/screenshots/13-2_settings_on_server.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)
+- 15-3 `trade_without_modmenu_yacl`：[15-3_bought_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/15-3_bought_without_modmenu_yacl.png)
+- 1-6 `startup_modmenu_without_yacl`：[1-2_mod_list.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_mod_list.png)
+- 1-6 `startup_modmenu_without_yacl`：[1-6_mod_list_without_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-6_mod_list_without_yacl.png)
+- 1-7 `startup_yacl_without_modmenu`：[1-7_title_without_modmenu.png](../../Source/TradeExpansion/build/autotest/screenshots/1-7_title_without_modmenu.png)
+- 1-7 `startup_yacl_without_modmenu`：[1-7_settings_without_modmenu.png](../../Source/TradeExpansion/build/autotest/screenshots/1-7_settings_without_modmenu.png)

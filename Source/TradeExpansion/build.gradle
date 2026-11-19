@@ -73,15 +73,30 @@ loom {
 		named("gameTest") {
 			vmArg "-Dfabric-api.gametest.report-file=${layout.buildDirectory.file("autotest/server-junit.xml").get().asFile.absolutePath}"
 		}
-		// Checklist 1-1: the client with Fabric API only. Mod Menu and YACL stay on the classpath (localRuntime) but Fabric
+		// Checklist 1-1 / 15-3: the client with Fabric API only. Mod Menu and YACL stay on the classpath (localRuntime) but Fabric
 		// Loader leaves them out (fabric.debug.disableModIds), as when they are not installed. The test mod then runs only
-		// its startup case (ak.autotest.minimal) and writes build/autotest/client-minimal-results.json.
+		// its startup and trade cases (ak.autotest.variant) and writes build/autotest/client-minimal-results.json.
 		register("clientGameTestMinimal") {
 			inherit(getByName("clientGameTest"))
 			configName = "Client Game Test (Fabric API only)"
 			getRunDirectory().set(file("build/run/clientGameTestMinimal"))
 			vmArg "-Dfabric.debug.disableModIds=modmenu,yet_another_config_lib_v3"
-			vmArg "-Dak.autotest.minimal=true"
+			vmArg "-Dak.autotest.variant=minimal"
+		}
+		// Checklist 1-6 / 1-7: only one of Mod Menu and YACL (the other one left out the same way).
+		register("clientGameTestModMenuOnly") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (Mod Menu without YACL)"
+			getRunDirectory().set(file("build/run/clientGameTestModMenuOnly"))
+			vmArg "-Dfabric.debug.disableModIds=yet_another_config_lib_v3"
+			vmArg "-Dak.autotest.variant=modmenu-only"
+		}
+		register("clientGameTestYaclOnly") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (YACL without Mod Menu)"
+			getRunDirectory().set(file("build/run/clientGameTestYaclOnly"))
+			vmArg "-Dfabric.debug.disableModIds=modmenu"
+			vmArg "-Dak.autotest.variant=yacl-only"
 		}
 		// Screenshots for the download page (shots.bat, called by release.bat): PostScreenshots in the test mod writes
 		// docs/release/Screenshot/auto/*.png. A run directory of its own, emptied first (a new world every time).
@@ -103,12 +118,15 @@ tasks.matching { it.name == "runClientGameTestShots" }.configureEach {
 	dependsOn deleteShotsRunDir
 }
 
-def deleteMinimalRunDir = tasks.register("deleteClientGameTestMinimalRunDir", Delete) {
-	group = "fabric"
-	delete file("build/run/clientGameTestMinimal")
-}
-tasks.matching { it.name == "runClientGameTestMinimal" }.configureEach {
-	dependsOn deleteMinimalRunDir
+// The runs with other mods left out start from an empty run directory (a new world every time).
+["Minimal", "ModMenuOnly", "YaclOnly"].each { variant ->
+	def deleteRunDir = tasks.register("deleteClientGameTest${variant}RunDir", Delete) {
+		group = "fabric"
+		delete file("build/run/clientGameTest${variant}")
+	}
+	tasks.matching { it.name == "runClientGameTest${variant}" }.configureEach {
+		dependsOn deleteRunDir
+	}
 }
 
 dependencies {

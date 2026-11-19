@@ -40,8 +40,10 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * Cases that need a world share one singleplayer world with a small village and a stall placed with the use key.
  * Screenshots go to build/autotest/screenshots for a person to look at. The cases are in this class,
  * {@link ClientTradeCases}, {@link ClientDisplayCases}, {@link ClientListCases}, {@link ClientItemCases}, {@link ClientWindowCases}, {@link ClientLongTextCases} and {@link ClientConfigCases}.
- * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.minimal} (the run without
- * Mod Menu and YACL, runClientGameTestMinimal): only the startup case, results in client-minimal-results.json.
+ * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.variant} for the runs with
+ * other mods left out: {@code minimal} (without Mod Menu and YACL, runClientGameTestMinimal: the startup and trade
+ * cases), {@code modmenu-only} (runClientGameTestModMenuOnly) and {@code yacl-only} (runClientGameTestYaclOnly), each
+ * with results in client-<variant>-results.json.
  */
 public class ClientChecklistTests implements FabricClientGameTest {
 	/** The language the screens are checked in; English is checked once more for the layout only. */
@@ -235,22 +237,50 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("reopen_world_keeps_market",List.of("4-3"), null, true, ClientTradeCases::reopenWorld));
 		cases.add(new ClientCase("reopen_world_keeps_town_and_staff", List.of("22-11", "22-40", "23-8", "24-8"), null, true, ClientReopenCases::townAndStaff,
 				List.of("26-18"), "運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない）"));
+		cases.add(new ClientCase("where_show_lines", List.of("11-2"),
+				"where show で、黄（同じ市場の範囲）・赤（新しい市場を作れない範囲）・青（数える範囲）の点がそれぞれの円の上に、地面（いちばん上のブロック＋0.3）に届き、where hide と30秒で止まること（緑の村の範囲は、テストの世界に村の構造物が無いので見ていない。見やすさは画像で確認）",
+				true, ClientParticleCases::whereShow));
+		cases.add(new ClientCase("construction_effects", List.of("22-24b"),
+				"建設中の場所（サーバーで直接作った 7×7 の建物）に、床の高さのオレンジの点が枠の上に、木くず（オークの板）が範囲の中に、工事の音が範囲の中で届き、音の字幕が「工事の音」であること。48 ブロックより離れた時・constructionEffects を OFF にして reload した時・完成した後は届かないこと（見え方と、字幕が画面に出るところは見ていない）",
+				true, ClientParticleCases::constructionEffects));
+		cases.add(new ClientCase("stall_facing_and_shape", List.of("2-6"),
+				"使うキーでプレイヤーの東西南北に置いた交易所が、それぞれプレイヤーの方を向くこと（見た目は画像で確認）", true, ClientTraderCases::stallFacing,
+				List.of("2-7"), "交易所が隣のブロックの面を隠さず（透けたり黒くなったりしない）、当たり判定が1ブロックいっぱいでも空でもないこと（形どおりかは画像で確認）"));
+		cases.add(new ClientCase("trader_robe_colours", List.of("6-10b"),
+				"/summon で出した24人の商人の服の色がばらばら（8色のうち6色以上）で、クライアントにも同じ色が届き、遠くへ行ってチャンクごと保存・読み込みし直しても、リソースの再読み込み（F3+T）の後も色が変わらず、色を変えたテクスチャが残ること（スポーンエッグ・ワールドの入り直し・肌と縁取りの色は見ていない。見た目は画像で確認）",
+				true, ClientTraderCases::robeColours));
+		cases.add(new ClientCase("stake_outlines", List.of("22-36b"),
+				"杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない）",
+				true, ClientParticleCases::stakeOutlines, List.of("28-10"), "杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと"));
 		// Breaks the stall: the last case of the world.
 		cases.add(new ClientCase("screen_closes_when_away", List.of("2-16"), null, true, ClientTradeCases::closesWhenAway));
-		cases.add(new ClientCase("dedicated_server_one_player", List.of("14-1"),
-				"専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開けることのみ（2人は見ていない）", false,
+		cases.add(new ClientCase("dedicated_server_one_player", List.of("14-1", "14-5"),
+				"専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開け、買う・売るが1往復できること。サーバーで clock advance と設定（同じプロセスなので設定は共有）を変えた後に切断すると、設定が自分の設定ファイルの値に、市場の時計のずれが 0 に戻ること（2人と、切断の後に1人用の世界に入るところは見ていない）", false,
 				ClientConfigCases::dedicatedServer, List.of("13-2"), null));
 		return cases;
 	}
 
 	/** The run without Mod Menu and YACL (checklist 1-1). */
+	/** The run with Mod Menu but without YACL (checklist 1-6). */
+	private static List<ClientCase> modMenuOnlyCases() {
+		return List.of(new ClientCase("startup_modmenu_without_yacl", List.of("1-6"), null, false, ClientItemCases::modMenuWithoutYacl));
+	}
+
+	/** The run with YACL but without Mod Menu (checklist 1-7). */
+	private static List<ClientCase> yaclOnlyCases() {
+		return List.of(new ClientCase("startup_yacl_without_modmenu", List.of("1-7"), null, false, ClientConfigCases::yaclWithoutModMenu));
+	}
+
 	private static List<ClientCase> minimalCases() {
-		return List.of(new ClientCase("startup_without_modmenu_yacl", List.of("1-1"), null, false, ClientChecklistTests::startupMinimal));
+		return List.of(new ClientCase("startup_without_modmenu_yacl", List.of("1-1"), null, false, ClientChecklistTests::startupMinimal),
+				new ClientCase("trade_without_modmenu_yacl", List.of("15-3"),
+						"Mod Menu・YACL を外した開発用の起動構成（テスト用の Mod は入っている）で、新しいワールドに入って村に交易所を置き、交易画面で1つ買い1つ売れることのみ（配布 jar だけの起動構成では見ていない）",
+						true, ClientChecklistTests::tradeMinimal));
 	}
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		boolean minimal = Boolean.getBoolean("ak.autotest.minimal");
+		String variant = System.getProperty("ak.autotest.variant", "");
 		setLanguage(context, LANGUAGE);
 		if (Boolean.getBoolean("ak.autotest.shots")) {
 			// shots.bat (runClientGameTestShots): only the screenshots for the download page, no checklist results.
@@ -260,7 +290,13 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		}
 		Session session = new Session(context);
 		List<CaseResult> results = new ArrayList<>();
-		for (ClientCase c : minimal ? minimalCases() : filter(cases())) {
+		List<ClientCase> run = switch (variant) {
+			case "minimal" -> minimalCases();
+			case "modmenu-only" -> modMenuOnlyCases();
+			case "yacl-only" -> yaclOnlyCases();
+			default -> filter(cases());
+		};
+		for (ClientCase c : run) {
 			CaseResult.Builder result = new CaseResult.Builder(c.name(), c.checklist(), c.partial());
 			CaseResult.Builder also = new CaseResult.Builder(c.name(), c.alsoChecklist(), c.alsoPartial());
 			try {
@@ -288,7 +324,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		}
 		if (session.world != null) closeWorld(session);
 		backToTitle(context);
-		AutotestReport.write(minimal ? "client-minimal" : "client", results);
+		AutotestReport.write(variant.isEmpty() ? "client" : "client-" + variant, results);
 		long failed = results.stream().filter(r -> !r.ok()).count();
 		if (failed > 0) throw new AssertionError(failed + " of " + results.size() + " client checklist results failed (see build/autotest/client-results.json)");
 	}
@@ -389,6 +425,45 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		check(!FabricLoader.getInstance().isModLoaded("yet_another_config_lib_v3"), "YACL is loaded (the run should leave it out)");
 		s.context.waitForScreen(TitleScreen.class);
 		screenshot(s.context, result, "1-1_title_without_modmenu_yacl");
+	}
+
+	/** 15-3 (part) without Mod Menu and YACL: into a new world, place a stall, buy one and sell one with the screen's buttons. */
+	private static void tradeMinimal(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ensureStall(s);
+		s.world.getServer().runOnServer(server -> WalletService.give(player(server), 100_000));
+		context.waitTicks(3);
+		MarketScreen screen = openStall(s);
+		MarketSnapshotS2C snapshot = snapshot(context, screen);
+		check(snapshot != null, "the trade screen got no snapshot");
+		MarketSnapshotS2C.GoodView buy = snapshot.goods().stream()
+				.filter(v -> v.buy() && v.unit() == 1 && v.patch().isEmpty() && !v.special() && v.stock() >= 2)
+				.findFirst().orElseThrow(() -> new AssertionError("no good to buy"));
+		int had = serverCount(s, buy.goods());
+		ClientUtil.buyWithButtons(s, screen, buy.goods(), "1");
+		check(serverCount(s, buy.goods()) == had + 1, "buying one %s gave %d items", buy.goods(), serverCount(s, buy.goods()) - had);
+		screenshot(context, result, "15-3_bought_without_modmenu_yacl");
+
+		MarketSnapshotS2C.GoodView sell = snapshot(context, screen).goods().stream()
+				.filter(v -> v.sell() && v.unit() == 1 && v.patch().isEmpty() && !v.special() && !v.goods().equals(buy.goods())
+						&& context.computeOnClient(client -> client.player.getInventory().countItem(itemOf(v))) == 0)
+				.findFirst().orElseThrow(() -> new AssertionError("no good to sell"));
+		net.minecraft.world.item.Item item = itemOf(sell);
+		context.setScreen(() -> null);
+		s.world.getServer().runOnServer(server -> giveItems(player(server), item, 1));
+		check(waitClient(context, client -> client.player.getInventory().countItem(item) == 1, 40), "the item to sell did not reach the client");
+		screen = openStall(s);
+		putInSellSlot(context, screen, item);
+		context.waitTicks(3);
+		long money = serverMoney(s);
+		context.clickScreenButton("screen.ak_trade_expansion.confirm.sell");
+		long after = money;
+		for (int i = 0; i < 40 && after == money; i++) {
+			context.waitTick();
+			after = serverMoney(s);
+		}
+		check(after > money, "selling one %s paid nothing", sell.goods());
+		check(serverCount(s, sell.goods()) == 0, "the sold %s is still in the inventory", sell.goods());
 	}
 
 	private static final List<String> CONFIG_TABS = List.of("currency", "price", "goods", "recovery", "distance", "market", "wallet",
@@ -690,12 +765,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		List<TextRecorder.Text> all = TextRecorder.capture(context);
 		List<TextRecorder.Text> texts = box == null ? all
 				: all.stream().filter(t -> t.afterMark() || !t.inside(box[0], box[1], box[2], box[3])).toList();
-		List<String> found = context.computeOnClient(client -> {
-			List<String> p = new ArrayList<>(LayoutCheck.check(where, texts,
-					client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), panel(client.gui.screen())));
-			p.addAll(LayoutCheck.underWidgets(where, texts, widgets(client.gui.screen())));
-			return p;
-		});
+		List<String> found = context.computeOnClient(client -> layoutProblems(client, where, texts, panel(client.gui.screen())));
 		String size = where.substring(0, where.lastIndexOf(' '));
 		if (screenshotAlways || !found.isEmpty() && problems.stream().noneMatch(p -> p.startsWith(size))) {
 			screenshot(context, result, "layout_" + where);
@@ -714,15 +784,37 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		return keys;
 	}
 
-	/** The visible widgets of the screen with their labels. */
+	/**
+	 * The layout problems of the texts of the screen open now (on the client thread): {@link LayoutCheck#check} and
+	 * the texts under a widget ({@link LayoutCheck#underWidgets}).
+	 */
+	static List<String> layoutProblems(net.minecraft.client.Minecraft client, String where, List<TextRecorder.Text> texts, LayoutCheck.Panel panel) {
+		List<String> p = new ArrayList<>(LayoutCheck.check(where, texts,
+				client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), panel));
+		if (client.gui.screen() != null) p.addAll(LayoutCheck.underWidgets(where, texts, widgets(client.gui.screen())));
+		return p;
+	}
+
+	/**
+	 * The visible widgets of the screen with their labels. A widget that holds others (a list, a tab bar) is not one:
+	 * the widgets in it are. An edit box's label is its value too.
+	 */
 	static List<LayoutCheck.Widget> widgets(Screen screen) {
 		List<LayoutCheck.Widget> widgets = new ArrayList<>();
-		for (var child : screen.children()) {
-			if (child instanceof AbstractWidget w && w.visible) {
-				widgets.add(new LayoutCheck.Widget(w.getX(), w.getY(), w.getX() + w.getWidth(), w.getY() + w.getHeight(), w.getMessage().getString()));
+		addWidgets(screen.children(), widgets);
+		return widgets;
+	}
+
+	private static void addWidgets(List<? extends net.minecraft.client.gui.components.events.GuiEventListener> children, List<LayoutCheck.Widget> widgets) {
+		for (var child : children) {
+			if (child instanceof net.minecraft.client.gui.components.events.ContainerEventHandler holder) {
+				if (!(child instanceof AbstractWidget w) || w.visible) addWidgets(holder.children(), widgets);
+			} else if (child instanceof AbstractWidget w && w.visible && w.getWidth() > 0 && w.getHeight() > 0) {
+				String label = w.getMessage().getString();
+				if (w instanceof net.minecraft.client.gui.components.EditBox box) label = box.getValue() + " " + label;
+				widgets.add(new LayoutCheck.Widget(w.getX(), w.getY(), w.getX() + w.getWidth(), w.getY() + w.getHeight(), label));
 			}
 		}
-		return widgets;
 	}
 
 	static LayoutCheck.Panel panel(Screen screen) {

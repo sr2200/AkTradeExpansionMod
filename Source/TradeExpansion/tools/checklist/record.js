@@ -2,8 +2,9 @@
 //
 //   node tools/checklist/record.js        (run in Source/TradeExpansion; autotest.bat runs it)
 //
-// Reads build/autotest/server-results.json, client-results.json and client-minimal-results.json (the client without
-// Mod Menu and YACL; all written by the game tests in src/gametest) and
+// Reads build/autotest/server-results.json, client-results.json and the results of the clients with other mods left
+// out (client-minimal-results.json without Mod Menu and YACL, client-modmenu-only-results.json and
+// client-yacl-only-results.json; all written by the game tests in src/gametest) and
 //   1. marks the items of docs/release/ingame-checklist.md the tests covered:
 //        all cases passed and one covers the whole item -> "- [x] ... 〔自動 ✔ 0.2.1 26-11-14〕"
 //        all cases passed but only partly                -> "- [ ] ... 〔一部自動 ✔ 0.2.1 26-11-14：<what was checked>〕"
@@ -22,7 +23,10 @@ const resultsDir = path.join(project, 'build', 'autotest');
 const checklistFile = path.join(root, 'docs', 'release', 'ingame-checklist.md');
 const reportFile = path.join(root, 'docs', 'release', 'autotest-report.md');
 
-const SIDES = { server: 'サーバー', client: 'クライアント', 'client-minimal': 'クライアント（Mod Menu・YACL なし）' };
+const SIDES = {
+	server: 'サーバー', client: 'クライアント', 'client-minimal': 'クライアント（Mod Menu・YACL なし）',
+	'client-modmenu-only': 'クライアント（Mod Menu だけ）', 'client-yacl-only': 'クライアント（YACL だけ）',
+};
 
 function readResults() {
 	const runs = [];
@@ -42,16 +46,31 @@ const LOGS = {
 	server: path.join(resultsDir, 'server.log'),
 	client: path.join(resultsDir, 'client.log'),
 	'client-minimal': path.join(resultsDir, 'client-minimal.log'),
+	'client-modmenu-only': path.join(resultsDir, 'client-modmenu-only.log'),
+	'client-yacl-only': path.join(resultsDir, 'client-yacl-only.log'),
 };
 const LOG_CASES = {
 	server: { name: 'log_has_no_mod_errors', checklist: ['14-4'], partial: 'テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ' },
 	client: { name: 'log_has_no_mod_errors', checklist: ['20-4', '25-1'], partial: null },
 	'client-minimal': { name: 'log_has_no_mod_errors', checklist: ['1-1'], partial: null },
+	'client-modmenu-only': { name: 'log_has_no_mod_errors', checklist: ['1-6'], partial: null },
+	'client-yacl-only': { name: 'log_has_no_mod_errors', checklist: ['1-7'], partial: null },
 };
 const OURS = /tradeexpansion|ak_trade_expansion|TradeExpansion/i;
 const LOG_LINE = /^\[[\d:]+\] \[([^\]]*)\/(ERROR|FATAL|WARN)\] \(([^)]*)\) (.*)$/;
 
-/** Errors (and the mod's own warnings) of a run's log that concern this mod, with their stack traces. */
+/** This mod's resources named in a warning of another logger: a missing model, texture or sound of the mod names its id. */
+const OUR_RESOURCE = /ak_trade_expansion(?!_test)/;
+
+/**
+ * A warning that is a problem: the mod's own, a missing translation of the mod (logged by the test mod, which watches
+ * the lookups) or another logger's warning naming one of the mod's resources (Minecraft's model and texture loaders).
+ */
+function warned(logger, message) {
+	return logger === 'TradeExpansion' || logger === 'AKTradeExpansion/missing' || OUR_RESOURCE.test(message);
+}
+
+/** Errors (and the warnings of warned()) of a run's log that concern this mod, with their stack traces. */
 function modProblems(file) {
 	if (!fs.existsSync(file)) return [`ログがありません: ${file}`];
 	const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
@@ -67,7 +86,7 @@ function modProblems(file) {
 		// case's own result, already recorded, not an error of the mod.
 		if (/checklist (cases|results) failed/.test(message + stack)) continue;
 		const ours = logger === 'TradeExpansion' || OURS.test(message) || OURS.test(stack);
-		if (level === 'WARN' ? logger === 'TradeExpansion' : ours) problems.push(`${level} (${logger}) ${message}`.slice(0, 300));
+		if (level === 'WARN' ? warned(logger, message) : ours) problems.push(`${level} (${logger}) ${message}`.slice(0, 300));
 	}
 	return problems;
 }

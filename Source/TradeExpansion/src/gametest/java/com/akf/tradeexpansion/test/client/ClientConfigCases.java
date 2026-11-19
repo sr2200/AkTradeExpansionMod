@@ -9,6 +9,7 @@ import com.akf.tradeexpansion.config.ServerConfig;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.registry.ModBlocks;
 import com.akf.tradeexpansion.test.AutotestReport;
 import com.akf.tradeexpansion.test.CaseResult;
@@ -152,8 +153,7 @@ final class ClientConfigCases {
 		context.runOnClient(client -> client.gui.toastManager().clear());
 		context.waitTicks(3);
 		List<TextRecorder.Text> texts = TextRecorder.capture(context).stream().filter(checked).toList();
-		List<String> found = context.computeOnClient(client -> LayoutCheck.check(where, texts,
-				client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), panel));
+		List<String> found = context.computeOnClient(client -> ClientChecklistTests.layoutProblems(client, where, texts, panel));
 		if (!found.isEmpty()) screenshot(context, result, "layout_" + where);
 		problems.addAll(found);
 	}
@@ -442,15 +442,36 @@ final class ClientConfigCases {
 	// ---- 13-2 / 14-1 the dedicated server
 
 	/**
-	 * 14-1 / 13-2 with a dedicated server (started in this process): one player connects, places a stall in a village
-	 * and opens the trade screen. On the settings screen the server options are grayed out, a display (client) option
-	 * can be changed, and saving writes only that.
+	 * 14-1 / 14-5 / 13-2 with a dedicated server (started in this process): one player connects, places a stall in a
+	 * village, opens the trade screen, buys one and sells one. On the settings screen the server options are grayed out,
+	 * a display (client) option can be changed, and saving writes only that. Then the server moves the market clock and
+	 * changes a setting (the server shares this process, so its settings are this client's too): after disconnecting,
+	 * the settings are those of the client's own file again and the client's market clock offset is 0.
 	 */
 	static void dedicatedServer(Session s, CaseResult.Builder result, CaseResult.Builder settings) throws IOException {
 		ClientGameTestContext context = s.context;
 		byte[] file = Files.readAllBytes(ConfigManager.path());
-		try (TestDedicatedServerContext server = context.worldBuilder().createServer();
-				TestDedicatedServerConnection connection = server.connect()) {
+		try (TestDedicatedServerContext server = context.worldBuilder().createServer()) {
+			int own;
+			try (TestDedicatedServerConnection connection = server.connect()) {
+				own = connected(context, server, connection, result, settings);
+			}
+			// Disconnected (the server still runs).
+			context.waitTicks(5);
+			int now = TradeExpansionConfig.get().trade.maxPerTransaction;
+			check(now == own, "after disconnecting, trade.maxPerTransaction is %d, not the client's own %d", now, own);
+			long offset = context.computeOnClient(client -> (Long) staticField(com.akf.tradeexpansion.market.MarketClock.class, "clientOffset"));
+			check(offset == 0, "after disconnecting, the client's market clock is still %d ticks ahead", offset);
+		} finally {
+			Files.write(ConfigManager.path(), file);
+			ConfigManager.load();
+		}
+	}
+
+	/** The part of {@link #dedicatedServer} while connected. Returns trade.maxPerTransaction of the client's own file. */
+	private static int connected(ClientGameTestContext context, TestDedicatedServerContext server, TestDedicatedServerConnection connection,
+			CaseResult.Builder result, CaseResult.Builder settings) {
+		{
 			connection.waitForChunksRender();
 			server.runCommand("gamemode survival @a");
 			int players = server.computeOnServer(srv -> srv.getPlayerList().getPlayerCount());
@@ -470,6 +491,7 @@ final class ClientConfigCases {
 			check(waitClient(context, client -> get(market, "snapshot") != null, 40), "the trade screen got no snapshot from the dedicated server");
 			mouseAway(context);
 			screenshot(context, result, "14-1_dedicated_trade_screen");
+			buyAndSell(context, server, market);
 			context.setScreen(() -> null);
 
 			// 13-2: the settings screen while connected.
@@ -496,10 +518,96 @@ final class ClientConfigCases {
 			} catch (Throwable t) {
 				throw new SettingsFailed(t);
 			}
-		} finally {
-			Files.write(ConfigManager.path(), file);
-			ConfigManager.load();
+
+			// 14-5: the server's clock and settings while connected.
+			server.runCommand("aktradeex clock advance 0.5");
+			long serverOffset = server.computeOnServer(srv -> com.akf.tradeexpansion.market.MarketRegistry.get(srv).clockOffset());
+			check(serverOffset > 0, "clock advance did not move the dedicated server's market clock");
+			check(waitClient(context, client -> client.level != null && com.akf.tradeexpansion.market.MarketClock.offset(client.level) == serverOffset, 40),
+					"the client did not get the server's clock offset %d", serverOffset);
+			int own = ConfigManager.read(ConfigManager.path()).trade.maxPerTransaction;
+			int changed = own == 48 ? 32 : 48;
+			server.runOnServer(srv -> {
+				TradeExpansionConfig c = ConfigManager.copy(TradeExpansionConfig.get());
+				c.trade.maxPerTransaction = changed;
+				ConfigManager.apply(c);
+				ServerConfig.sync(srv);
+			});
+			check(waitClient(context, client -> TradeExpansionConfig.get().trade.maxPerTransaction == changed, 40),
+					"the server's trade.maxPerTransaction %d did not reach the client", changed);
+			return own;
 		}
+	}
+
+	/** 14-5: buys one of a good and sells one of another on the dedicated server, with the screen's buttons. */
+	private static void buyAndSell(ClientGameTestContext context, TestDedicatedServerContext server, MarketScreen screen) {
+		server.runOnServer(srv -> com.akf.tradeexpansion.currency.WalletService.give(player(srv), 100_000));
+		context.waitTicks(3);
+		MarketSnapshotS2C snapshot = snapshot(context, screen);
+		MarketSnapshotS2C.GoodView buy = snapshot.goods().stream()
+				.filter(v -> v.buy() && v.unit() == 1 && v.patch().isEmpty() && !v.special() && v.stock() >= 2)
+				.findFirst().orElseThrow(() -> new AssertionError("no good to buy on the dedicated server"));
+		Item bought = itemOf(buy);
+		int had = server.computeOnServer(srv -> count(player(srv), bought));
+		long money = server.computeOnServer(srv -> com.akf.tradeexpansion.currency.WalletService.balance(player(srv)));
+		select(context, screen, buy.goods());
+		mouseAway(context);
+		context.clickScreenButton("screen.ak_trade_expansion.confirm.buy");
+		check(waitServer(context, server, srv -> count(player(srv), bought) == had + 1, 40), "buying %s on the dedicated server gave no item", buy.goods());
+		long afterBuy = server.computeOnServer(srv -> com.akf.tradeexpansion.currency.WalletService.balance(player(srv)));
+		check(afterBuy < money, "buying %s on the dedicated server took no money", buy.goods());
+		MarketSnapshotS2C next = newSnapshot(context, screen, snapshot);
+
+		MarketSnapshotS2C.GoodView sell = next.goods().stream()
+				.filter(v -> v.sell() && v.unit() == 1 && v.patch().isEmpty() && !v.special() && !v.goods().equals(buy.goods())
+						&& context.computeOnClient(client -> client.player.getInventory().countItem(itemOf(v))) == 0)
+				.findFirst().orElseThrow(() -> new AssertionError("no good to sell on the dedicated server"));
+		Item sold = itemOf(sell);
+		context.setScreen(() -> null);
+		server.runOnServer(srv -> giveItems(player(srv), sold, 1));
+		check(waitClient(context, client -> client.player.getInventory().countItem(sold) == 1, 40), "the item to sell did not reach the client");
+		context.getInput().pressKey(options -> options.keyUse); // still looking at the stall
+		context.waitForScreen(MarketScreen.class);
+		MarketScreen again = screen(context);
+		check(waitClient(context, client -> get(again, "snapshot") != null, 40), "the reopened trade screen got no snapshot");
+		putInSellSlot(context, again, sold);
+		context.waitTicks(3);
+		context.clickScreenButton("screen.ak_trade_expansion.confirm.sell");
+		check(waitServer(context, server, srv -> count(player(srv), sold) == 0
+				&& com.akf.tradeexpansion.currency.WalletService.balance(player(srv)) > afterBuy, 40), "selling %s on the dedicated server did not go through", sell.goods());
+	}
+
+	private static boolean waitServer(ClientGameTestContext context, TestDedicatedServerContext server,
+			java.util.function.Predicate<net.minecraft.server.MinecraftServer> condition, int ticks) {
+		for (int i = 0; i < ticks; i++) {
+			if (server.computeOnServer(condition::test)) return true;
+			context.waitTick();
+		}
+		return server.computeOnServer(condition::test);
+	}
+
+	private static Object staticField(Class<?> owner, String name) {
+		try {
+			java.lang.reflect.Field f = owner.getDeclaredField(name);
+			f.setAccessible(true);
+			return f.get(null);
+		} catch (ReflectiveOperationException e) {
+			throw new AssertionError(e);
+		}
+	}
+
+	/** 1-7: YACL without Mod Menu: the title screen comes up and the settings screen still opens (from code). */
+	static void yaclWithoutModMenu(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		check(net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("yet_another_config_lib_v3"), "YACL is not loaded");
+		check(!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("modmenu"), "Mod Menu is loaded (the run should leave it out)");
+		context.waitForScreen(TitleScreen.class);
+		screenshot(context, result, "1-7_title_without_modmenu");
+		YACLScreen yacl = openConfig(context);
+		check(!yacl.config.categories().isEmpty(), "the settings screen has no tabs");
+		context.waitTicks(5);
+		screenshot(context, result, "1-7_settings_without_modmenu");
+		context.setScreen(() -> null);
 	}
 
 	/** 13-2 failed (recorded on its own result) while 14-1 passed. */

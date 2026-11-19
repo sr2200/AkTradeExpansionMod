@@ -1,19 +1,21 @@
 @echo off
 rem AK Trade Expansion: automated in-game tests (docs\release\ingame-checklist.md, test code in src\gametest).
 rem   autotest.bat          server game tests (no window, about 1 minute), client game tests
-rem                         (opens a game window for a few minutes: do not touch it while it runs) and the client
-rem                         without Mod Menu and YACL (checklist 1-1, opens the window once more for a minute)
+rem                         (opens a game window for a few minutes: do not touch it while it runs) and the clients
+rem                         with other mods left out (opens the window three more times, a minute each)
 rem   autotest.bat server   server game tests only
 rem   autotest.bat client   client game tests only (with Mod Menu and YACL)
-rem   autotest.bat minimal  the client without Mod Menu and YACL only
+rem   autotest.bat minimal  the client without Mod Menu and YACL only (checklist 1-1, 15-3)
+rem   autotest.bat variants the clients with other mods left out only: without Mod Menu and YACL, Mod Menu without
+rem                         YACL (1-6) and YACL without Mod Menu (1-7)
 rem   Then records the results in docs\release\ingame-checklist.md and docs\release\autotest-report.md (needs node).
 rem   Other arguments go to Gradle, e.g. autotest.bat server --offline
 rem   Only some cases: -Pautotest.only=2-10+2-11+stall (checklist numbers or case names, joined with +)
 setlocal
 cd /d "%~dp0"
 
-set "TASKS=runGameTest runClientGameTest runClientGameTestMinimal"
-set "SIDES=server client client-minimal"
+set "TASKS=runGameTest runClientGameTest runClientGameTestMinimal runClientGameTestModMenuOnly runClientGameTestYaclOnly"
+set "SIDES=server client client-minimal client-modmenu-only client-yacl-only"
 if /i "%~1"=="server" (
   set "TASKS=runGameTest"
   set "SIDES=server"
@@ -25,6 +27,10 @@ if /i "%~1"=="server" (
 ) else if /i "%~1"=="minimal" (
   set "TASKS=runClientGameTestMinimal"
   set "SIDES=client-minimal"
+  shift
+) else if /i "%~1"=="variants" (
+  set "TASKS=runClientGameTestMinimal runClientGameTestModMenuOnly runClientGameTestYaclOnly"
+  set "SIDES=client-minimal client-modmenu-only client-yacl-only"
   shift
 )
 

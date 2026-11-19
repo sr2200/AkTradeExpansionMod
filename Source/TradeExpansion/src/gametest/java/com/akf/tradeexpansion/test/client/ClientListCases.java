@@ -468,8 +468,7 @@ final class ClientListCases {
 	}
 
 	private static void layoutOk(ClientGameTestContext context, String where, List<Text> texts) {
-		List<String> problems = context.computeOnClient(c -> LayoutCheck.check(where, texts, c.getWindow().getGuiScaledWidth(),
-				c.getWindow().getGuiScaledHeight(), ClientChecklistTests.panel(c.gui.screen())));
+		List<String> problems = context.computeOnClient(c -> ClientChecklistTests.layoutProblems(c, where, texts, ClientChecklistTests.panel(c.gui.screen())));
 		check(problems.isEmpty(), "%s", problems);
 	}
 

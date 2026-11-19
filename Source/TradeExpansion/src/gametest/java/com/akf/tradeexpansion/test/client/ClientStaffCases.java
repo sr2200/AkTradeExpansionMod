@@ -745,8 +745,7 @@ final class ClientStaffCases {
 						context.runOnClient(c -> c.gui.toastManager().clear());
 						context.waitTicks(3);
 						List<TextRecorder.Text> texts = TextRecorder.capture(context);
-						List<String> found = context.computeOnClient(c -> LayoutCheck.check(where, texts, c.getWindow().getGuiScaledWidth(),
-								c.getWindow().getGuiScaledHeight(), ClientChecklistTests.panel(c.gui.screen())));
+						List<String> found = context.computeOnClient(c -> ClientChecklistTests.layoutProblems(c, where, texts, ClientChecklistTests.panel(c.gui.screen())));
 						found.addAll(context.computeOnClient(c -> {
 							List<String> cut = new ArrayList<>();
 							for (var child : screen.children()) {

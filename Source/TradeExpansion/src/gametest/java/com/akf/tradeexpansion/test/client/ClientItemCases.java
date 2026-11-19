@@ -104,6 +104,30 @@ final class ClientItemCases {
 		screenshot(context, result, "1-2_mod_list");
 	}
 
+	/**
+	 * 1-6: Mod Menu without YACL: the title screen comes up, Mod Menu's list has the row of the mod, and the mod gives
+	 * Mod Menu no config screen (so its row has no config button) instead of touching YACL's classes.
+	 */
+	static void modMenuWithoutYacl(Session s, CaseResult.Builder result) throws Exception {
+		ClientGameTestContext context = s.context;
+		check(net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("modmenu"), "Mod Menu is not loaded");
+		check(!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("yet_another_config_lib_v3"), "YACL is loaded (the run should leave it out)");
+		context.waitForScreen(TitleScreen.class);
+		modList(s, result);
+		Class<?> modMenu = Class.forName("com.terraformersmc.modmenu.ModMenu");
+		Object config = context.computeOnClient(client -> {
+			try {
+				return modMenu.getMethod("getConfigScreen", String.class, Screen.class).invoke(null, "ak_trade_expansion", client.gui.screen());
+			} catch (ReflectiveOperationException e) {
+				throw new AssertionError("cannot ask Mod Menu for the config screen", e);
+			}
+		});
+		check(config == null, "without YACL the mod gives Mod Menu the config screen %s", config);
+		context.waitTicks(5);
+		check(context.computeOnClient(client -> client.gui.screen()) != null, "Mod Menu's list closed");
+		screenshot(context, result, "1-6_mod_list_without_yacl");
+	}
+
 	// ---- 1-4 the creative tab
 
 	/**

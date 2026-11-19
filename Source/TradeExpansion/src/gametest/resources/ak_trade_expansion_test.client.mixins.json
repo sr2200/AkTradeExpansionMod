@@ -3,6 +3,8 @@
   "package": "com.akf.tradeexpansion.test.mixin.client",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "ClientLanguageMixin",
+    "ClientPacketListenerMixin",
     "GuiRenderStateMixin",
     "GuiTextRenderStateAccessor",
     "MarketScreenMixin"

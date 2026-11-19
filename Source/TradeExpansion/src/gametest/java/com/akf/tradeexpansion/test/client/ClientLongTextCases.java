@@ -187,8 +187,7 @@ final class ClientLongTextCases {
 						List<TextRecorder.Text> texts = TextRecorder.capture(context);
 						String balance = CoinItem.formatCopper(WALLET);
 						check(strings(texts).stream().anyMatch(t -> t.contains(balance)), "%s: the balance %s is not shown whole: %s", where, balance, strings(texts));
-						List<String> found = context.computeOnClient(c -> LayoutCheck.check(where, texts,
-								c.getWindow().getGuiScaledWidth(), c.getWindow().getGuiScaledHeight(), null));
+						List<String> found = context.computeOnClient(c -> ClientChecklistTests.layoutProblems(c, where, texts, null));
 						if (first || !found.isEmpty()) screenshot(context, result, "layout_" + where);
 						problems.addAll(found);
 						seen[2] = true;

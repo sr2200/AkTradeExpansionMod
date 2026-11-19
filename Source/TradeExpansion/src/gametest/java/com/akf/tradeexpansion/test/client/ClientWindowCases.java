@@ -141,8 +141,7 @@ final class ClientWindowCases {
 					String where = String.format("wallet %s %dx%d GUI %s", language, size[0], size[1], size[2] == 0 ? "auto" : size[2]);
 					mouseAway(context);
 					List<TextRecorder.Text> now = TextRecorder.capture(context);
-					List<String> found = context.computeOnClient(c -> LayoutCheck.check(where, now,
-							c.getWindow().getGuiScaledWidth(), c.getWindow().getGuiScaledHeight(), null));
+					List<String> found = context.computeOnClient(c -> ClientChecklistTests.layoutProblems(c, where, now, null));
 					if (!found.isEmpty()) screenshot(context, result, "layout_" + where);
 					problems.addAll(found);
 				}
@@ -387,8 +386,7 @@ final class ClientWindowCases {
 					// window (not the panel) until the screen is opened again.
 					boolean fits = context.computeOnClient(client -> screen.getMenu().layout().width() <= client.getWindow().getGuiScaledWidth()
 							&& screen.getMenu().layout().height() <= client.getWindow().getGuiScaledHeight());
-					List<String> found = context.computeOnClient(client -> LayoutCheck.check(where, texts,
-							client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight(), ClientChecklistTests.panel(client.gui.screen())))
+					List<String> found = context.computeOnClient(client -> ClientChecklistTests.layoutProblems(client, where, texts, ClientChecklistTests.panel(client.gui.screen())))
 							.stream().filter(p -> fits || !p.contains(" leaves the screen ")).toList();
 					if (!fits) outgrown[0]++;
 					if (!found.isEmpty() && problems.stream().noneMatch(p -> p.startsWith(where))) screenshot(context, result, "19-5_" + where);
