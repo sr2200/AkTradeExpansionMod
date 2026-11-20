@@ -186,13 +186,16 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("bank_refused_messages", List.of("7-11"), null, true, ClientRefusalCases::bank));
 		cases.add(new ClientCase("exchange_refused_and_fee", List.of("8-7"), null, true, ClientRefusalCases::exchange));
 		cases.add(new ClientCase("quest_tab", List.of("9-2"), null, true, ClientBankQuestCases::requests,
-				List.of("16-5"), "「依頼を受ける」で「受付済み」になり、一覧に ✔ が出ること（評判の増え方は見ていない）"));
+				List.of("16-5"), null));
 		cases.add(new ClientCase("quest_locked", List.of("16-4"), null, true, ClientBankQuestCases::lockedRequest, List.of("16-7"), null));
 		cases.add(new ClientCase("transport_request", List.of("21-1", "21-5", "21-7"), null, true, ClientBankQuestCases::transport,
 				List.of("21-2"), "「荷箱を受け取る」で保証金が引かれて荷箱が手に入り、ボタンが「受け取り済み」になること（荷箱の説明は見ていない）"));
 		cases.add(new ClientCase("transport_taken_by_other", List.of("21-4"), "ほかの人が受け取った輸送依頼（受けた人をサーバーで足したもの）が一覧で灰色の「運送中」になり、受け取るボタンが出ないこと（本物の2人では見ていない）",
 				true, ClientBankQuestCases::transportTaken));
 		cases.add(new ClientCase("town_donations", List.of("22-2", "22-3", "22-4"), null, true, ClientTownCases::donations, List.of("28-8"), null));
+		cases.add(new ClientCase("town_other_player_donates", List.of("22-10"),
+				"サーバーに足した2人目のプレイヤー（同じ屋台の画面を開いている）が寄付すると、開いたままの発展タブの発展度と、寄付した人の名前の並び（多い順）がすぐ変わること（本物の2人では見ていない）",
+				true, ClientTownCases::otherPlayerDonates));
 		cases.add(new ClientCase("town_build_reasons", List.of("22-22", "22-25"), null, true, ClientTownCases::buildReasons,
 				List.of("22-23b"), "資材が足りない時に「建てる」のツールチップが「資材があと N 個必要です」になり、development.requireMaterials を OFF にすると押せること（資材の数の倍率は見ていない）"));
 		cases.add(new ClientCase("town_materials_and_stake", List.of("22-23"), "「資材を寄付（N）」の数が持っている資材の数で、押すと資材が減り、発展度が増え、残りの数が減ること（上限まで寄付した後は見ていない）",
@@ -252,6 +255,11 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("stake_outlines", List.of("22-36b"),
 				"杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない）",
 				true, ClientParticleCases::stakeOutlines, List.of("28-10"), "杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと"));
+		cases.add(new ClientCase("sold_out_and_not_buying", List.of("2-11"), null, true, ClientMoreCases::soldOutAndFull, List.of("2-12"), null));
+		cases.add(new ClientCase("debug_tooltip_warehouse_and_consumables", List.of("22-27"), null, true, ClientMoreCases::debugStorageAndConsumables,
+				List.of("30-7", "32-2"), null));
+		cases.add(new ClientCase("died_with_wallet", List.of("7-6"), null, true, ClientMoreCases::diedWithWallet,
+				List.of("7-7"), "財布を持って死んで生き返った後も、銀行タブの残高が変わらないこと（預け入れ・引き出しは bank_tab で見る）"));
 		// Breaks the stall: the last case of the world.
 		cases.add(new ClientCase("screen_closes_when_away", List.of("2-16"), null, true, ClientTradeCases::closesWhenAway));
 		cases.add(new ClientCase("dedicated_server_one_player", List.of("14-1", "14-5"),

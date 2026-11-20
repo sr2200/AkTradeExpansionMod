@@ -492,8 +492,73 @@ public final class ServerCtx {
 		extraBuildings.add(box);
 	}
 
+	private final List<Runnable> undo = new ArrayList<>();
+
+	/** Runs {@code action} first thing in {@link #cleanUp()} (latest first): puts back what the case changed outside the floors. */
+	public void atCleanUp(Runnable action) {
+		undo.addFirst(action);
+	}
+
+	/**
+	 * Keeps the config file as it is now and writes it back after the case (commands such as {@code consumable add}
+	 * and {@code goods set} edit the file itself).
+	 */
+	public void keepConfigFile() throws java.io.IOException {
+		java.nio.file.Path file = ConfigManager.path();
+		byte[] saved = java.nio.file.Files.exists(file) ? java.nio.file.Files.readAllBytes(file) : null;
+		atCleanUp(() -> {
+			try {
+				if (saved != null) java.nio.file.Files.write(file, saved);
+				else java.nio.file.Files.deleteIfExists(file);
+			} catch (java.io.IOException e) {
+				throw new java.io.UncheckedIOException(e);
+			}
+		});
+	}
+
+	/**
+	 * Changes the biome within {@code radius} blocks around {@code pos} with /fillbiome (within the world's height);
+	 * the biome there before comes back after the case.
+	 */
+	public void fillBiome(BlockPos pos, int radius, String biome) {
+		String before = level().getBiome(pos).unwrapKey().orElseThrow().identifier().toString();
+		runFillBiome(pos, radius, biome);
+		atCleanUp(() -> runFillBiome(pos, radius, before));
+	}
+
+	private void runFillBiome(BlockPos pos, int radius, String biome) {
+		int y0 = Math.max(level().getMinY(), pos.getY() - 8), y1 = Math.min(level().getMaxY(), pos.getY() + 16);
+		String command = String.format(java.util.Locale.ROOT, "fillbiome %d %d %d %d %d %d %s", pos.getX() - radius, y0, pos.getZ() - radius,
+				pos.getX() + radius, y1, pos.getZ() + radius, biome);
+		try {
+			int n = server().getCommands().getDispatcher().execute(command, server().createCommandSourceStack().withSuppressedOutput());
+			AutotestCheck.that(n > 0, "/%s changed nothing", command);
+		} catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+			throw new AutotestCheck.Failed("/" + command + " failed: " + e.getMessage());
+		}
+	}
+
+	/** Runs a command as {@code player} with full permission and returns its result (what the command returned). */
+	public int commandResult(ServerPlayer player, String command) {
+		CommandSourceStack source = player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.OWNER);
+		try {
+			return server().getCommands().getDispatcher().execute(command, source);
+		} catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+			throw new AutotestCheck.Failed("/" + command + " failed: " + e.getMessage());
+		}
+	}
+
 	/** Removes the case's markets, blocks, entities and players and restores the default config. */
 	void cleanUp() {
+		RuntimeException failed = null;
+		for (Runnable r : undo) {
+			try {
+				r.run();
+			} catch (RuntimeException e) {
+				if (failed == null) failed = e;
+			}
+		}
+		undo.clear();
 		for (ServerPlayer p : players) {
 			p.closeContainer();
 			server().getPlayerList().remove(p);
@@ -535,5 +600,6 @@ public final class ServerCtx {
 		for (Forced f : forced) f.level().setChunkForced(f.chunk().x(), f.chunk().z(), false);
 		forced.clear();
 		ConfigManager.apply(ConfigManager.copy(defaults));
+		if (failed != null) throw failed;
 	}
 }

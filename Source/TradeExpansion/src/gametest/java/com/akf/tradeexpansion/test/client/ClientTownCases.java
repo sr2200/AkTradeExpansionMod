@@ -349,6 +349,77 @@ final class ClientTownCases {
 		}
 	}
 
+	// ---- 22-10 another player's donation
+
+	/**
+	 * 22-10: the player donates 100c on the open development tab, then a second player (added on the server, its trade
+	 * screen open at the same stall) donates 1,000c: without reopening, the tab shows the new points and both names,
+	 * the larger donation first.
+	 */
+	static void otherPlayerDonates(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		ServerPlayer[] other = new ServerPlayer[1];
+		try {
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				market.contributors().clear();
+				market.setDevelopment(0, MarketClock.now(server.overworld()));
+				if (WalletService.balance(player(server)) < 1_000) WalletService.give(player(server), 1_000);
+				MarketRegistry.get(server).setDirty();
+			});
+			MarketScreen screen = openTown(s);
+			check(donate(s, screen, 0) == 100, "\"100c\" did not take 100c");
+			String name = context.computeOnClient(c -> c.player.getName().getString());
+			check(all(context).contains(squeeze("1." + name)), "the tab does not list the player after donating: %s", all(context));
+			MarketSnapshotS2C old = snapshot(context, screen);
+			String outcome = s.world.getServer().computeOnServer(server -> {
+				other[0] = ClientBuySellCases.secondPlayer(server, stall);
+				ServerPlayer p = other[0];
+				ServerLevel level = server.overworld();
+				Market market = market(server, stall);
+				com.akf.tradeexpansion.market.MarketAccess.open(p, level, market,
+						(com.akf.tradeexpansion.block.MarketStallBlockEntity) level.getBlockEntity(stall));
+				WalletService.give(p, 10_000);
+				long money = WalletService.balance(p);
+				com.akf.tradeexpansion.development.DevelopmentService.handle(p, new com.akf.tradeexpansion.network.DevelopmentRequestC2S(market.id(),
+						com.akf.tradeexpansion.network.DevelopmentRequestC2S.Action.DONATE_COINS, 1_000, "", false));
+				return WalletService.balance(p) == money - 1_000 ? null : "the second player's donation did not go through";
+			});
+			check(outcome == null, "%s", outcome);
+			newSnapshot(context, screen, old);
+			context.waitTicks(2);
+			String shown = all(context);
+			check(shown.contains(squeeze(text(T + "points", points(1_100)))), "the open tab does not show %s points: %s", points(1_100), shown);
+			// The row shows the first contributor; the mouse over it lists the top five, most first.
+			check(shown.contains(squeeze(text(T + "contributors") + "1. other " + points(1_000))), "the open tab does not show \"other\" first: %s", shown);
+			check(shown.contains(squeeze(text(T + "mine", points(100)))), "the player's own share is not 100 any more: %s", shown);
+			String contributorsLabel = text(T + "contributors");
+			TextRecorder.Text line = TextRecorder.capture(context).stream().filter(t -> t.text().startsWith(contributorsLabel)).findFirst()
+					.orElseThrow(() -> new AssertionError("no \"" + contributorsLabel + "\" line"));
+			moveTo(context, line.x0() + 10, (line.y0() + line.y1()) / 2.0);
+			context.waitTicks(2);
+			List<String> tip = strings(tooltip(TextRecorder.capture(context)));
+			int first = tip.indexOf("1. other  " + points(1_000)), second = tip.indexOf("2. " + name + "  " + points(100));
+			check(first >= 0 && second > first, "the contributors tooltip does not list \"other\" first and %s second: %s", name, tip);
+			screenshot(context, result, "22-10_other_player_donated");
+			mouseAway(context);
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				if (other[0] != null) {
+					market(server, stall).contributors().remove(other[0].getUUID());
+					other[0].closeContainer();
+					server.getPlayerList().remove(other[0]);
+				}
+			});
+			restore(s, saved, List.of(), List.of());
+			context.waitTicks(2);
+		}
+	}
+
 	// ---- 22-22 / 22-23b / 22-25 why "建てる" cannot be pressed
 
 	/**

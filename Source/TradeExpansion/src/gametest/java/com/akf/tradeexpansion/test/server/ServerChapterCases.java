@@ -496,12 +496,12 @@ final class ServerChapterCases {
 		})));
 	}
 
-	private static Request transportOf(Market a, Market b) {
+	static Request transportOf(Market a, Market b) {
 		return a.requests().stream().filter(r -> r.isTransport() && r.transport().get().destination() == b.id()).findFirst()
 				.orElseThrow(() -> new AutotestCheck.Failed("market A has no transport request to B: " + a.requests()));
 	}
 
-	private static TradeResult questResult(ServerCtx c, ServerPlayer player) {
+	static TradeResult questResult(ServerCtx c, ServerPlayer player) {
 		var list = c.payloads(player, QuestResultS2C.class);
 		return list.isEmpty() ? null : list.getLast().result();
 	}

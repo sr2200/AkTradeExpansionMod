@@ -2,12 +2,12 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.22、2026-11-15 16:31、171 件中 0 件失敗
-- クライアント：バージョン 0.2.38、2026-11-19 20:15、129 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.38、2026-11-19 20:03、3 件中 0 件失敗
-- クライアント（Mod Menu だけ）：バージョン 0.2.38、2026-11-19 20:03、2 件中 0 件失敗
-- クライアント（YACL だけ）：バージョン 0.2.38、2026-11-19 20:03、2 件中 0 件失敗
-- チェックリスト 337 項目のうち、今回 自動で完了 178・一部を確認 114・失敗 0
+- サーバー：バージョン 0.2.39、2026-11-20 19:31、180 件中 0 件失敗
+- クライアント：バージョン 0.2.39、2026-11-20 20:25、136 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.39、2026-11-20 20:27、3 件中 0 件失敗
+- クライアント（Mod Menu だけ）：バージョン 0.2.39、2026-11-20 20:26、2 件中 0 件失敗
+- クライアント（YACL だけ）：バージョン 0.2.39、2026-11-20 20:26、2 件中 0 件失敗
+- チェックリスト 337 項目のうち、今回 自動で完了 195・一部を確認 105・失敗 0
 
 ## すべての項目
 
@@ -116,11 +116,11 @@
 | 27-2 | `advancements_first_trades` | サーバー | ✔ | 全部 |
 | 27-3 | `advancements_selling` | サーバー | ✔ | 全部 |
 | 27-4 | `advancements_three_markets` | サーバー | ✔ | 3つの市場で取引すると「行商」が付くこと（ネザー・エンドの市場は見ていない） |
-| 27-5 | `advancements_requests` | サーバー | ✔ | 依頼を納めると「頼れる人」が付くこと（★3 の「腕利き」と輸送依頼の「長い旅路」は見ていない） |
-| 27-6 | `advancements_reputation_and_hiring` | サーバー | ✔ | 評判を 50・400・2500 にして交易画面を開くと「顔見知り」「お得意様」「名士」、運び屋を雇うと「人を使う身」が付くこと（運び屋の往復の「留守を任せて」は見ていない） |
+| 27-5 | `advancements_requests` | サーバー | ✔ | 全部 |
+| 27-6 | `advancements_reputation_and_hiring` | サーバー | ✔ | 全部 |
 | 27-7 | `advancements_donation` | サーバー | ✔ | 「発展」タブでコインを寄付すると「村への投資」が付くこと（建物の完成の「槌音」「村おこし」は見ていない） |
 | 27-8 | `advancements_money` | サーバー | ✔ | 全部 |
-| 27-9 | `advancements_after_joining_again` | サーバー | ✔ | 評判が高い人が入り直すと、ログインした時に評判の進捗が付くこと（建物・所持金は見ていない） |
+| 27-9 | `advancements_after_joining_again` | サーバー | ✔ | 全部 |
 | 27-10 | `advancements_survive_death` | サーバー | ✔ | 2つの市場で取引してから死んで生き返っても、取引した市場の記録（「行商」の数）が残っていること（生き返った後の取引は見ていない） |
 | 22-2 | `development_tab_view` | サーバー | ✔ | 交易画面を開くと、発展度 0・寄付した人なし・自分の値 0 と建物の一覧が送られること（画面の表示は見ていない） |
 | 22-3 | `donate_coins` | サーバー | ✔ | 100c を寄付すると所持金が 100c 減り、発展度が 100 増え、寄付した人に自分の名前が出て、評判のポイントが 3 増えること（画面の表示は見ていない） |
@@ -167,6 +167,15 @@
 | 30-5 | `snowy_ice_prices` | サーバー | ✔ | 雪原の村で氷と氷塊の両方に ×0.7 が掛かり、氷塊1個の買値が氷9個の買値より安いこと（市場ごとのばらつき ±15% の両端でも）（実際の村では見ていない） |
 | 30-6 | `savanna_saddle_price` | サーバー | ✔ | サバンナの村の鞍の基準価格が 117c（×0.9）で、革3つと鉄インゴットを買って作って売っても儲からないこと（実際の村では見ていない） |
 | 33-1 | `specials_of_a_small_market` | サーバー | ✔ | 全部 |
+| 12-9 | `audit_villagers` | サーバー | ✔ | 全部 |
+| 13-3 | `config_file_reload` | サーバー | ✔ | 全部 |
+| 13-4 | `consumable_and_goods_commands` | サーバー | ✔ | 全部 |
+| 13-5 | `audit_simulate_market_info` | サーバー | ✔ | 全部 |
+| 13-7 | `added_goods_as_special` | サーバー | ✔ | 全部 |
+| 30-2 | `damaged_goods_price` | サーバー | ✔ | 全部 |
+| 30-3 | `coast_market` | サーバー | ✔ | 浜辺のバイオーム（/fillbiome で変えた）に交易所を置くと、市場の種類が「海辺の市場」になって生鱈が並ぶこと。村の品揃えの優先度が海辺の市場より高いこと（データ。テストの世界に村の構造物が無いので、浜辺の村そのものは見ていない） |
+| 33-2 | `specials_of_a_large_market` | サーバー | ✔ | 全部 |
+| 33-3 | `special_settings_next_day` | サーバー | ✔ | 「掘り出し物を市場の規模に合わせる」を OFF にすると、その日の掘り出し物は変わらず、次の日から市場のレベルより高い品も出ること。「高い掘り出し物の出にくさ」を上げると高い品が出にくくなること（設定画面はクライアントのテストで見ている） |
 | 5-5・17-4 | `nether_market_goods` | サーバー | ✔ | 全部 |
 | 17-2・17-3 | `nether_prices_follow_overworld` | サーバー | ✔ | 全部 |
 | 27-4 | `advancements_nether_and_end` | サーバー | ✔ | 全部 |
@@ -262,7 +271,7 @@
 | 7-11 | `bank_refused_messages` | クライアント | ✔ | 全部 |
 | 8-7 | `exchange_refused_and_fee` | クライアント | ✔ | 全部 |
 | 9-2 | `quest_tab` | クライアント | ✔ | 全部 |
-| 16-5 | `quest_tab` | クライアント | ✔ | 「依頼を受ける」で「受付済み」になり、一覧に ✔ が出ること（評判の増え方は見ていない） |
+| 16-5 | `quest_tab` | クライアント | ✔ | 全部 |
 | 16-4 | `quest_locked` | クライアント | ✔ | 全部 |
 | 16-7 | `quest_locked` | クライアント | ✔ | 全部 |
 | 21-1・21-5・21-7 | `transport_request` | クライアント | ✔ | 全部 |
@@ -270,6 +279,7 @@
 | 21-4 | `transport_taken_by_other` | クライアント | ✔ | ほかの人が受け取った輸送依頼（受けた人をサーバーで足したもの）が一覧で灰色の「運送中」になり、受け取るボタンが出ないこと（本物の2人では見ていない） |
 | 22-2・22-3・22-4 | `town_donations` | クライアント | ✔ | 全部 |
 | 28-8 | `town_donations` | クライアント | ✔ | 全部 |
+| 22-10 | `town_other_player_donates` | クライアント | ✔ | サーバーに足した2人目のプレイヤー（同じ屋台の画面を開いている）が寄付すると、開いたままの発展タブの発展度と、寄付した人の名前の並び（多い順）がすぐ変わること（本物の2人では見ていない） |
 | 22-22・22-25 | `town_build_reasons` | クライアント | ✔ | 全部 |
 | 22-23b | `town_build_reasons` | クライアント | ✔ | 資材が足りない時に「建てる」のツールチップが「資材があと N 個必要です」になり、development.requireMaterials を OFF にすると押せること（資材の数の倍率は見ていない） |
 | 22-23 | `town_materials_and_stake` | クライアント | ✔ | 「資材を寄付（N）」の数が持っている資材の数で、押すと資材が減り、発展度が増え、残りの数が減ること（上限まで寄付した後は見ていない） |
@@ -309,6 +319,12 @@
 | 6-10b | `trader_robe_colours` | クライアント | ✔ | /summon で出した24人の商人の服の色がばらばら（8色のうち6色以上）で、クライアントにも同じ色が届き、遠くへ行ってチャンクごと保存・読み込みし直しても、リソースの再読み込み（F3+T）の後も色が変わらず、色を変えたテクスチャが残ること（スポーンエッグ・ワールドの入り直し・肌と縁取りの色は見ていない。見た目は画像で確認） |
 | 22-36b | `stake_outlines` | クライアント | ✔ | 杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない） |
 | 28-10 | `stake_outlines` | クライアント | ✔ | 杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと |
+| 2-11 | `sold_out_and_not_buying` | クライアント | ✔ | 全部 |
+| 2-12 | `sold_out_and_not_buying` | クライアント | ✔ | 全部 |
+| 22-27 | `debug_tooltip_warehouse_and_consumables` | クライアント | ✔ | 全部 |
+| 30-7・32-2 | `debug_tooltip_warehouse_and_consumables` | クライアント | ✔ | 全部 |
+| 7-6 | `died_with_wallet` | クライアント | ✔ | 全部 |
+| 7-7 | `died_with_wallet` | クライアント | ✔ | 財布を持って死んで生き返った後も、銀行タブの残高が変わらないこと（預け入れ・引き出しは bank_tab で見る） |
 | 2-16 | `screen_closes_when_away` | クライアント | ✔ | 全部 |
 | 14-1・14-5 | `dedicated_server_one_player` | クライアント | ✔ | 専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開け、買う・売るが1往復できること。サーバーで clock advance と設定（同じプロセスなので設定は共有）を変えた後に切断すると、設定が自分の設定ファイルの値に、市場の時計のずれが 0 に戻ること（2人と、切断の後に1人用の世界に入るところは見ていない） |
 | 13-2 | `dedicated_server_one_player` | クライアント | ✔ | 全部 |
@@ -493,6 +509,7 @@
 - 9-2 `quest_tab`：[9-2_request_selected.png](../../Source/TradeExpansion/build/autotest/screenshots/9-2_request_selected.png)
 - 9-2 `quest_tab`：[9-2_delivered.png](../../Source/TradeExpansion/build/autotest/screenshots/9-2_delivered.png)
 - 16-5 `quest_tab`：[16-5_accepted.png](../../Source/TradeExpansion/build/autotest/screenshots/16-5_accepted.png)
+- 16-5 `quest_tab`：[16-5_reputation_after_delivery.png](../../Source/TradeExpansion/build/autotest/screenshots/16-5_reputation_after_delivery.png)
 - 16-4 `quest_locked`：[16-4_locked.png](../../Source/TradeExpansion/build/autotest/screenshots/16-4_locked.png)
 - 16-7 `quest_locked`：[16-7_reward_level3.png](../../Source/TradeExpansion/build/autotest/screenshots/16-7_reward_level3.png)
 - 21-1・21-5・21-7 `transport_request`：[21-1_transport_selected.png](../../Source/TradeExpansion/build/autotest/screenshots/21-1_transport_selected.png)
@@ -503,6 +520,7 @@
 - 22-2・22-3・22-4 `town_donations`：[22-3_donated.png](../../Source/TradeExpansion/build/autotest/screenshots/22-3_donated.png)
 - 22-2・22-3・22-4 `town_donations`：[22-4_not_enough.png](../../Source/TradeExpansion/build/autotest/screenshots/22-4_not_enough.png)
 - 28-8 `town_donations`：[28-8_park_donation.png](../../Source/TradeExpansion/build/autotest/screenshots/28-8_park_donation.png)
+- 22-10 `town_other_player_donates`：[22-10_other_player_donated.png](../../Source/TradeExpansion/build/autotest/screenshots/22-10_other_player_donated.png)
 - 22-22・22-25 `town_build_reasons`：[22-22_reputation.png](../../Source/TradeExpansion/build/autotest/screenshots/22-22_reputation.png)
 - 22-22・22-25 `town_build_reasons`：[22-23b_materials.png](../../Source/TradeExpansion/build/autotest/screenshots/22-23b_materials.png)
 - 22-22・22-25 `town_build_reasons`：[22-25_limit.png](../../Source/TradeExpansion/build/autotest/screenshots/22-25_limit.png)
@@ -574,6 +592,15 @@
 - 6-10b `trader_robe_colours`：[6-10b_robe_colours.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10b_robe_colours.png)
 - 6-10b `trader_robe_colours`：[6-10b_robe_colours_after_reload.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10b_robe_colours_after_reload.png)
 - 22-36b `stake_outlines`：[22-36b_stake_outlines.png](../../Source/TradeExpansion/build/autotest/screenshots/22-36b_stake_outlines.png)
+- 2-11 `sold_out_and_not_buying`：[2-11_price_rose.png](../../Source/TradeExpansion/build/autotest/screenshots/2-11_price_rose.png)
+- 2-11 `sold_out_and_not_buying`：[2-11_sold_out.png](../../Source/TradeExpansion/build/autotest/screenshots/2-11_sold_out.png)
+- 2-12 `sold_out_and_not_buying`：[2-12_price_fell.png](../../Source/TradeExpansion/build/autotest/screenshots/2-12_price_fell.png)
+- 2-12 `sold_out_and_not_buying`：[2-12_not_buying.png](../../Source/TradeExpansion/build/autotest/screenshots/2-12_not_buying.png)
+- 22-27 `debug_tooltip_warehouse_and_consumables`：[22-27_warehouse_stock_limit.png](../../Source/TradeExpansion/build/autotest/screenshots/22-27_warehouse_stock_limit.png)
+- 30-7・32-2 `debug_tooltip_warehouse_and_consumables`：[30-7_consumable_debug_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/30-7_consumable_debug_tooltip.png)
+- 7-6 `died_with_wallet`：[7-6_cash_before_dying.png](../../Source/TradeExpansion/build/autotest/screenshots/7-6_cash_before_dying.png)
+- 7-6 `died_with_wallet`：[7-6_cash_after_dying.png](../../Source/TradeExpansion/build/autotest/screenshots/7-6_cash_after_dying.png)
+- 7-7 `died_with_wallet`：[7-7_bank_after_dying.png](../../Source/TradeExpansion/build/autotest/screenshots/7-7_bank_after_dying.png)
 - 14-1・14-5 `dedicated_server_one_player`：[14-1_dedicated_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/14-1_dedicated_trade_screen.png)
 - 13-2 `dedicated_server_one_player`：[13-2_settings_on_server.png](../../Source/TradeExpansion/build/autotest/screenshots/13-2_settings_on_server.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)

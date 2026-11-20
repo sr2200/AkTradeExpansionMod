@@ -12,6 +12,8 @@ import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.market.Reputation;
 import com.akf.tradeexpansion.network.BankRequestC2S;
+import com.akf.tradeexpansion.network.CargoDeliverC2S;
+import com.akf.tradeexpansion.network.QuestAcceptC2S;
 import com.akf.tradeexpansion.network.DevelopmentRequestC2S;
 import com.akf.tradeexpansion.network.QuestDeliverC2S;
 import com.akf.tradeexpansion.network.StaffRequestC2S;
@@ -110,35 +112,74 @@ final class ServerAdvancementCases {
 					}
 					done(c, player, "peddler", "after trading at 3 markets");
 				})));
-		cases.add(partial("advancements_requests", List.of("27-5"), "依頼を納めると「頼れる人」が付くこと（★3 の「腕利き」と輸送依頼の「長い旅路」は見ていない）",
-				ctx -> ServerCases.withMarket(ctx, (c, player, market, stall) -> {
-					c.openStall(player, stall);
-					Request request = market.requests().stream().filter(q -> !q.isTransport()).min(Comparator.comparingInt(Request::difficulty))
-							.orElseThrow(() -> new AutotestCheck.Failed("the market has no request"));
-					c.command(player, "aktradeex reputation set 1000");
-					ServerCases.giveItems(player, c.item(request.goods()), request.quantity());
-					notYet(c, player, "first_quest");
-					QuestService.deliver(player, new QuestDeliverC2S(market.id(), request.id(), false));
-					that(market.requests().stream().noneMatch(q -> q.id() == request.id()), "the request was not delivered");
-					done(c, player, "first_quest", "after delivering a request");
-				})));
-		cases.add(partial("advancements_reputation_and_hiring", List.of("27-6"),
-				"評判を 50・400・2500 にして交易画面を開くと「顔見知り」「お得意様」「名士」、運び屋を雇うと「人を使う身」が付くこと（運び屋の往復の「留守を任せて」は見ていない）",
-				ctx -> markets(ctx, new int[] {0, 600}, (c, player, m) -> {
-					Market a = m.get(0);
-					String[][] steps = {{"50", "acquaintance"}, {"400", "valued_customer"}, {"2500", "notable"}};
-					for (String[] step : steps) {
-						notYet(c, player, step[1]);
-						c.command(player, "aktradeex reputation set " + step[0]);
-						openAt(c, player, m, 0);
-						done(c, player, step[1], "after opening the screen with reputation " + step[0]);
-					}
-					c.giveMoney(player, 5_000);
-					notYet(c, player, "employer");
-					var hired = ServerChapterCases.staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, Employee.AUTO, m.get(1).id(), 64, 0, 0, 0, false);
-					that(hired == TradeResult.SUCCESS, "hiring a carrier gave %s", hired);
-					done(c, player, "employer", "after hiring a carrier");
-				})));
+		cases.add(full("advancements_requests", List.of("27-5"), ctx -> markets(ctx, new int[] {0, 600}, (c, player, m) -> {
+			Market a = m.get(0), b = m.get(1);
+			c.command(player, "aktradeex reputation set 1000"); // 3-star requests need a reputation
+			long now = c.now();
+			// One easy and one 3-star request of a good the market deals in, first in the list (the rolled ones vary).
+			Identifier good = c.tradableGood(a, 0, 0);
+			Request easy = new Request(a.takeRequestId(), good, 2, 100, now + 3 * PriceModel.TICKS_PER_DAY, 1);
+			Request hard = new Request(a.takeRequestId(), good, 2, 300, now + 3 * PriceModel.TICKS_PER_DAY, 3);
+			a.requests().add(0, hard);
+			a.requests().add(0, easy);
+			notYet(c, player, "first_quest");
+			ServerCases.giveItems(player, c.item(good), 2);
+			QuestService.deliver(player, new QuestDeliverC2S(a.id(), easy.id(), false));
+			that(a.requests().stream().noneMatch(q -> q.id() == easy.id()), "the 1-star request was not delivered");
+			done(c, player, "first_quest", "after delivering a 1-star request");
+			notYet(c, player, "hard_quest");
+			ServerCases.giveItems(player, c.item(good), 2);
+			QuestService.deliver(player, new QuestDeliverC2S(a.id(), hard.id(), false));
+			that(a.requests().stream().noneMatch(q -> q.id() == hard.id()), "the 3-star request was not delivered");
+			done(c, player, "hard_quest", "after delivering a 3-star request");
+			// A transport request taken at A and delivered at B.
+			Request transport = ServerChapterCases.transportOf(a, b);
+			c.giveMoney(player, transport.transport().orElseThrow().deposit() + 1_000);
+			c.forget(player);
+			QuestService.accept(player, new QuestAcceptC2S(a.id(), transport.id(), false));
+			that(ServerChapterCases.questResult(c, player) == TradeResult.SUCCESS, "taking the crate gave %s", ServerChapterCases.questResult(c, player));
+			notYet(c, player, "cargo");
+			openAt(c, player, m, 1);
+			c.forget(player);
+			QuestService.deliverCargo(player, new CargoDeliverC2S(b.id(), false));
+			that(ServerChapterCases.questResult(c, player) == TradeResult.SUCCESS, "delivering the crate gave %s", ServerChapterCases.questResult(c, player));
+			done(c, player, "cargo", "after delivering a transport request");
+		})));
+		cases.add(full("advancements_reputation_and_hiring", List.of("27-6"), ctx -> {
+			ctx.config(cfg -> cfg.staff.accidentBase = 0);
+			markets(ctx, new int[] {0, 600}, (c, player, m) -> {
+				Market a = m.get(0), b = m.get(1);
+				String[][] steps = {{"50", "acquaintance"}, {"400", "valued_customer"}, {"2500", "notable"}};
+				for (String[] step : steps) {
+					notYet(c, player, step[1]);
+					c.command(player, "aktradeex reputation set " + step[0]);
+					openAt(c, player, m, 0);
+					done(c, player, step[1], "after opening the screen with reputation " + step[0]);
+				}
+				c.giveMoney(player, 20_000);
+				notYet(c, player, "employer");
+				// Every good dear at A and cheap at B: the carrier goes out empty and makes its profit on the return cargo
+				// (as in carrier_return_cargo), so the round trip surely pays.
+				ServerChapterCases.shared(c, a, 0, 8, b);
+				for (Identifier g : a.goods().keySet()) a.good(g).setPressure(a.params(g).minPressure() * 0.8);
+				for (Identifier g : b.goods().keySet()) b.good(g).setPressure(b.params(g).maxPressure() * 0.8);
+				var hired = ServerChapterCases.staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, Employee.AUTO, b.id(), 64, 0, 0, 0, false);
+				that(hired == TradeResult.SUCCESS, "hiring a carrier gave %s", hired);
+				done(c, player, "employer", "after hiring a carrier");
+				var e = ServerChapterCases.only(c, player, a);
+				ServerChapterCases.staff(c, player, a, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), Employee.AUTO, 0, 0, 0, 0, 10_000, false);
+				notYet(c, player, "away_profit");
+				c.command(player, "aktradeex staff hurry"); // out (empty, for the return cargo)
+				ServerChapterCases.staff(c, player, a, StaffRequestC2S.Action.PAUSE, e.id(), Employee.AUTO, 0, 0, 0, 0, 0, false); // one trip only
+				c.command(player, "aktradeex staff hurry"); // at B: buys the return cargo
+				notYet(c, player, "away_profit");
+				c.command(player, "aktradeex staff hurry"); // home: sells it
+				e = ServerChapterCases.only(c, player, a);
+				that(e.phase() == Employee.Phase.HOME.ordinal() && e.earned() > e.spent(), "the carrier did not come back with a profit (phase %s, earned %d, spent %d)",
+						Employee.Phase.values()[e.phase()], e.earned(), e.spent());
+				done(c, player, "away_profit", "after a round trip with a profit");
+			});
+		}));
 		cases.add(partial("advancements_donation", List.of("27-7"), "「発展」タブでコインを寄付すると「村への投資」が付くこと（建物の完成の「槌音」「村おこし」は見ていない）",
 				ctx -> ServerCases.withMarket(ctx, (c, player, market, stall) -> {
 					c.openStall(player, stall);
@@ -170,16 +211,24 @@ final class ServerAdvancementCases {
 				done(c, player, "fireproof", "with a netherite coin");
 			});
 		}));
-		cases.add(partial("advancements_after_joining_again", List.of("27-9"), "評判が高い人が入り直すと、ログインした時に評判の進捗が付くこと（建物・所持金は見ていない）",
-				ctx -> ServerCases.withMarket(ctx, (c, player, market, stall) -> {
-					c.openStall(player, stall);
-					c.command(player, "aktradeex reputation set 400");
-					player.closeContainer();
-					c.command(player, "advancement revoke @s everything");
-					notYet(c, player, "valued_customer");
-					ServerPlayer again = c.rejoin(player);
-					done(c, again, "valued_customer", "after joining again with reputation 400");
-				})));
+		cases.add(full("advancements_after_joining_again", List.of("27-9"), ctx -> ServerDevelopmentCases.town(ctx, (c, player, market, stall) -> {
+			c.openStall(player, stall);
+			// A building the player helped with (a donation), a high reputation and 10,000c in the bank: what an older world
+			// may hold without the advancements.
+			ServerDevelopmentCases.builder(c, player, market);
+			c.giveMoney(player, 1_000);
+			ServerDevelopmentCases.donate(c, player, market, 100, false);
+			ServerDevelopmentCases.buildAndComplete(c, player, market, com.akf.tradeexpansion.TradeExpansion.id("warehouse"));
+			c.command(player, "aktradeex reputation set 400");
+			BankService.accounts(player).add(player.getUUID(), 10_000);
+			player.closeContainer();
+			c.command(player, "advancement revoke @s everything");
+			for (String name : List.of("valued_customer", "builder", "well_off")) notYet(c, player, name);
+			ServerPlayer again = c.rejoin(player);
+			done(c, again, "valued_customer", "after joining again with reputation 400");
+			done(c, again, "builder", "after joining again with a completed building");
+			done(c, again, "well_off", "after joining again with 10,000c in the bank");
+		})));
 		cases.add(partial("advancements_survive_death", List.of("27-10"), "2つの市場で取引してから死んで生き返っても、取引した市場の記録（「行商」の数）が残っていること（生き返った後の取引は見ていない）",
 				ctx -> markets(ctx, new int[] {0, 300}, (c, player, m) -> {
 					c.giveMoney(player, 100_000);

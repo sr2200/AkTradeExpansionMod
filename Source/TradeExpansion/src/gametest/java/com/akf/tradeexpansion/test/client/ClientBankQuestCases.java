@@ -494,6 +494,8 @@ final class ClientBankQuestCases {
 				text(S + "quest.held", held0 + quantity));
 		Button deliver = field(context, screen, "deliverButton");
 		check(deliver.active, "\"%s\" cannot be pressed with the goods", text(S + "quest.deliver"));
+		double rep0 = snapshot(context, screen).reputation().points();
+		int difficulty = request(context, screen, id).request().difficulty();
 		long before = serverMoney(s);
 		clickWidget(context, deliver);
 		mouseAway(context);
@@ -506,6 +508,31 @@ final class ClientBankQuestCases {
 		check(all(context).contains(squeeze(text(S + "quest.delivered", coins(reward)))), "the status line does not say \"%s\"",
 				text(S + "quest.delivered", coins(reward)));
 		screenshot(context, result, "9-2_delivered");
+
+		// 16-5: the accepted request gave acceptedQuestMultiplier times the usual points, and the title's reputation
+		// tooltip shows them.
+		try {
+			var rep = snapshot(context, open).reputation();
+			var config = com.akf.tradeexpansion.config.TradeExpansionConfig.get().reputation;
+			double expected = config.questPoints.get(Math.clamp(difficulty - 1, 0, config.questPoints.size() - 1)) * config.acceptedQuestMultiplier;
+			check(config.acceptedQuestMultiplier > 1, "reputation.acceptedQuestMultiplier is %.2f", config.acceptedQuestMultiplier);
+			check(Math.abs(rep.points() - rep0 - expected) < 1, "delivering the accepted request gave %.2f reputation points, not %.2f", rep.points() - rep0, expected);
+			String repLabel = prefix(S + "reputation.label");
+			mouseAway(context);
+			int top = context.computeOnClient(c -> topPos(open));
+			TextRecorder.Text repText = TextRecorder.capture(context).stream().filter(t -> t.text().startsWith(repLabel) && t.y0() >= top && t.y0() < top + 14)
+					.findFirst().orElseThrow(() -> new AssertionError("no \"" + repLabel + "…\" in the title row"));
+			moveTo(context, (repText.x0() + repText.x1()) / 2.0, (repText.y0() + repText.y1()) / 2.0);
+			context.waitTicks(2);
+			List<String> tip = strings(tooltip(TextRecorder.capture(context)));
+			String line = rep.next() < 0 ? text(S + "reputation.points_max", (long) Math.floor(rep.points()))
+					: text(S + "reputation.points", (long) Math.floor(rep.points()), rep.next());
+			check(tip.contains(line), "the reputation tooltip does not say \"%s\" after delivering: %s", line, tip);
+			screenshot(context, also, "16-5_reputation_after_delivery");
+			mouseAway(context);
+		} catch (Throwable t) {
+			throw new ClientChecklistTests.AlsoFailed(t);
+		}
 	}
 
 	// ---- 16-4 / 16-7 a 3-star request and the reputation
