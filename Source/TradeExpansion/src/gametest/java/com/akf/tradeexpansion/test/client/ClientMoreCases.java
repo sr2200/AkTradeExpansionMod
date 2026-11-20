@@ -380,6 +380,56 @@ final class ClientMoreCases {
 	}
 
 	/**
+	 * 7-2: with a wallet in the inventory, copper coins on the ground are picked up into it: the client plays the pickup
+	 * sound, no coin shows in the inventory, and the wallet's balance (its tooltip) goes up by them.
+	 */
+	static void walletPickup(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		context.setScreen(() -> null);
+		s.world.getServer().runOnServer(server -> {
+			ServerPlayer player = player(server);
+			ItemStack wallet = new ItemStack(ModItems.WALLET);
+			com.akf.tradeexpansion.item.WalletItem.setBalance(wallet, 100);
+			player.getInventory().setItem(8, wallet);
+		});
+		context.waitTicks(3);
+		int coinsBefore = context.computeOnClient(c -> coins(c.player));
+		try {
+			ParticleRecorder.start();
+			s.world.getServer().runOnServer(server -> {
+				ServerPlayer player = player(server);
+				ItemEntity coins = new ItemEntity(server.overworld(), player.getX(), player.getY() + 0.2, player.getZ(), new ItemStack(ModItems.COPPER_COIN, 7));
+				coins.setNoPickUpDelay();
+				server.overworld().addFreshEntity(coins);
+			});
+			boolean in = waitClient(context, c -> com.akf.tradeexpansion.item.WalletItem.balance(c.player.getInventory().getItem(8)) == 107, 60);
+			check(in, "the wallet's balance on the client is %d, not 107 after picking up 7c",
+					(long) context.computeOnClient(c -> com.akf.tradeexpansion.item.WalletItem.balance(c.player.getInventory().getItem(8))));
+			context.waitTicks(3);
+			int coinsAfter = context.computeOnClient(c -> coins(c.player));
+			check(coinsAfter == coinsBefore, "coins showed in the inventory after picking them up into the wallet (%d -> %d)", coinsBefore, coinsAfter);
+			check(ParticleRecorder.sounds().stream().anyMatch(x -> x.id().getPath().equals("entity.item.pickup")), "no pickup sound was played: %s",
+					ParticleRecorder.sounds());
+			List<String> tip = context.computeOnClient(c -> c.player.getInventory().getItem(8)
+					.getTooltipLines(net.minecraft.world.item.Item.TooltipContext.of(c.level), c.player, net.minecraft.world.item.TooltipFlag.NORMAL)
+					.stream().map(Component::getString).toList());
+			String balance = Component.translatable("tooltip.ak_trade_expansion.wallet_balance", CoinItem.formatCopper(107),
+					CoinItem.formatCopper(com.akf.tradeexpansion.item.WalletItem.capacity())).getString();
+			check(tip.contains(balance), "the wallet's tooltip does not say \"%s\": %s", balance, tip);
+		} finally {
+			ParticleRecorder.stop();
+			s.world.getServer().runOnServer(server -> player(server).getInventory().setItem(8, ItemStack.EMPTY));
+			context.waitTicks(2);
+		}
+	}
+
+	private static int coins(net.minecraft.world.entity.player.Player player) {
+		int n = 0;
+		for (ItemStack st : player.getInventory()) if (st.getItem() instanceof CoinItem) n += st.getCount();
+		return n;
+	}
+
+	/**
 	 * 7-6: the player holds only a wallet with 3,000c and has 2,000c more in the bank; the trade screen shows 3,000c of
 	 * cash. After dying the wallet lies on the ground (not in the inventory) and, respawned, the screen shows 0c of cash.
 	 * 7-7: the bank tab shows the same balance before and after dying.

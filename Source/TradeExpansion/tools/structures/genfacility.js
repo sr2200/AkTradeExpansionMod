@@ -528,16 +528,22 @@ function build(style, m, kind, spec) {
 				set(x + 1, 4, z + 1, block('minecraft:shroomlight'));
 				set(x - 1, 4, z - 1, block('minecraft:shroomlight'));
 				break;
-			case 'chorus': { // a chorus plant with two branches and (grown-out) flowers
-				for (let y = 1; y <= 4; y++) set(x, y, z, block('minecraft:chorus_plant'));
+			case 'chorus': { // a chorus plant with three branches and (grown-out) flowers
+				// A stem with a side branch must have air above or below it (vanilla ChorusPlantBlock.canSurvive), or the
+				// block updates of the completion break it: the branches leave the top of the trunk, which ends there.
+				const plant = (sides) => state('minecraft:chorus_plant', Object.fromEntries(
+					['north', 'east', 'south', 'west', 'up', 'down'].map((d) => [d, String(sides.includes(d))])));
 				const flowerTop = state('minecraft:chorus_flower', { age: '5' });
-				set(x, 5, z, flowerTop);
-				for (const a of [-1, 1]) {
-					set(x + a, 3, z, block('minecraft:chorus_plant'));
-					set(x + a, 4, z, flowerTop);
+				set(x, 1, z, plant(['up', 'down']));
+				set(x, 2, z, plant(['up', 'down']));
+				set(x, 3, z, plant(['down', 'east', 'west', 'south']));
+				for (const [a, toTrunk] of [[-1, 'east'], [1, 'west']]) {
+					set(x + a, 3, z, plant([toTrunk, 'up']));
+					set(x + a, 4, z, plant(['up', 'down']));
+					set(x + a, 5, z, flowerTop);
 				}
-				set(x, 2, z + 1, block('minecraft:chorus_plant'));
-				set(x, 3, z + 1, flowerTop);
+				set(x, 3, z + 1, plant(['north', 'up']));
+				set(x, 4, z + 1, flowerTop);
 				break;
 			}
 		}

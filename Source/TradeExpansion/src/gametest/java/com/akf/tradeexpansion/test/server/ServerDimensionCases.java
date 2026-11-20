@@ -28,6 +28,8 @@ import net.minecraft.world.phys.AABB;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import static com.akf.tradeexpansion.test.server.AutotestCheck.equal;
@@ -130,26 +132,33 @@ final class ServerDimensionCases {
 			}));
 		}));
 		cases.add(ServerCase.partial("level5_nether_and_end_goods", List.of("30-4"),
-				"村人24人（レベル5）のネザー・エンドの市場で、並ぶ商品が候補の一部だけで（すべての候補が並ぶことはない）、market reroll の後も同じであること（reroll を繰り返した時の違いは見ていない）",
+				"村人24人（レベル5）のネザー・エンドの市場で、並ぶ商品が候補の一部だけで（すべての候補が並ぶことはない）、market reroll の後も同じ数の候補の一部であること。ネザーの別の場所（400 ブロック離れた所）の村人24人の市場とは品揃えが違うこと（同じ場所で reroll を繰り返すと、場所で決まる乱数なので同じ品揃えになる）",
 				ctx -> {
 					ServerLevel nether = ctx.dimension(Level.NETHER);
 					ServerLevel end = ctx.dimension(Level.END);
 					BlockPos inNether = netherPos(ctx);
+					BlockPos inNether2 = inNether.east(400);
 					BlockPos inEnd = new BlockPos(300, ROOM_Y, 300);
-					room(ctx, nether, inNether, 24, c1 -> room(c1, end, inEnd, 24, c -> {
-						for (Object[] where : new Object[][] {{nether, inNether, "default_the_nether"}, {end, inEnd, "default_the_end"}}) {
+					room(ctx, nether, inNether, 24, c1 -> room(c1, end, inEnd, 24, c0 -> room(c0, nether, inNether2, 24, c -> {
+						Map<String, List<Identifier>> first = new HashMap<>();
+						for (Object[] where : new Object[][] {{nether, inNether, "default_the_nether"}, {end, inEnd, "default_the_end"}, {nether, inNether2, "default_the_nether"}}) {
 							ServerLevel level = (ServerLevel) where[0];
-							Market market = found(c, level, (BlockPos) where[1]);
-							equal(5, market.level(), "level of a market with 24 villagers in " + level.dimension().identifier());
+							BlockPos at = (BlockPos) where[1];
+							Market market = found(c, level, at);
+							equal(5, market.level(), "level of a market with 24 villagers in " + level.dimension().identifier() + " at " + at.toShortString());
 							Set<Identifier> candidates = goodsOf((String) where[2]);
-							for (int roll = 0; roll < 2; roll++) {
-								List<Identifier> picked = market.regularGoods().stream().filter(candidates::contains).toList();
+							for (int roll = 0; roll < 3; roll++) {
+								List<Identifier> picked = market.regularGoods().stream().filter(candidates::contains).sorted().toList();
 								that(picked.size() >= 10, "%s: only %d goods at level 5: %s", level.dimension().identifier(), picked.size(), picked);
 								that(picked.size() < candidates.size(), "%s: all %d candidates are picked at level 5", level.dimension().identifier(), candidates.size());
-								c.command(c.player(level, ((BlockPos) where[1]).south(3)), "aktradeex market reroll " + market.id());
+								first.putIfAbsent(level.dimension().identifier() + "@" + at.toShortString(), picked);
+								c.command(c.player(level, at.south(3)), "aktradeex market reroll " + market.id());
 							}
 						}
-					}));
+						List<Identifier> a = first.get(nether.dimension().identifier() + "@" + inNether.toShortString());
+						List<Identifier> b = first.get(nether.dimension().identifier() + "@" + inNether2.toShortString());
+						that(!a.equals(b), "two level 5 Nether markets 400 blocks apart picked the same goods: %s", a);
+					})));
 				}));
 		cases.add(full("nether_mobs_drop_gold_coins", List.of("8-2b"), ctx -> {
 			ServerLevel nether = ctx.dimension(Level.NETHER);

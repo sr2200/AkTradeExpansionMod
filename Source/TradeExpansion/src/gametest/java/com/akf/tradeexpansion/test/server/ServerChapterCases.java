@@ -663,6 +663,37 @@ final class ServerChapterCases {
 					that(back == TradeResult.SUCCESS, "taking the goods back gave %s", back);
 					equal(6, c.count(player, item), "items after taking them back");
 				})));
+		cases.add(partial("staff_turned_off", List.of("26-20"),
+				"staff.enabled を OFF にすると、運送中の運び屋が止まり（日が進んでも着かない）、雇う・所持金を入れる・休ませる・品を変えるは断られ、出金・引取・解雇は運送中でもでき、所持金と荷が手元に戻ること。ON に戻すと止まっていた運び屋が続きから着くこと（タブの表示は tabs_turned_off で見る）",
+				ctx -> {
+					ctx.config(cfg -> {
+						cfg.staff.accidentBase = 0;
+						cfg.staff.accidentMax = 0;
+						cfg.staff.carrierBackhaul = false;
+					});
+					markets(ctx, new int[] {0, 600}, (c, player, m) -> {
+						Market a = m.get(0), b = m.get(1);
+						c.command(player, "aktradeex reputation set 150");
+						c.giveMoney(player, 30_000);
+						Identifier good = shared(c, a, 8, 0, b);
+						Item item = c.item(good);
+						a.good(good).setPressure(a.params(good).maxPressure() * 0.8);
+						b.good(good).setPressure(b.params(good).minPressure() * 0.8);
+						that(staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, good, b.id(), 8, 1_000_000, 1, 0, false) == TradeResult.SUCCESS, "hiring failed");
+						StaffS2C.View e = only(c, player, a);
+						that(staff(c, player, a, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), good, 0, 0, 0, 0, 5_000, false) == TradeResult.SUCCESS, "depositing failed");
+						that(staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, good, b.id(), 8, 1_000_000, 1, 0, false) == TradeResult.SUCCESS, "hiring a second carrier failed");
+						c.command(player, "aktradeex staff hurry");
+						List<StaffS2C.View> both = list(c, player, a);
+						StaffS2C.View away = both.stream().filter(v -> v.phase() == Employee.Phase.OUTBOUND.ordinal()).findFirst()
+								.orElseThrow(() -> new AutotestCheck.Failed("no carrier set out: " + both));
+						StaffS2C.View home = both.stream().filter(v -> v.id() != away.id()).findFirst().orElseThrow();
+						that(away.stock() > 0, "the carrier set out with nothing");
+						c.config(cfg -> cfg.staff.enabled = false);
+						c.command(player, "aktradeex clock advance 2");
+						c.later(40, cc -> turnedOff(cc, player, a, b, good, item, away, home));
+					});
+				}));
 		cases.add(partial("staff_dismiss_and_limit", List.of("26-16", "26-17"), "解雇で所持金と品が戻って一覧から消えること、3人まで雇えて4人目は断られること",
 				ctx -> markets(ctx, new int[] {0, 600}, (c, player, m) -> {
 					Market a = m.get(0), b = m.get(1);
@@ -730,6 +761,36 @@ final class ServerChapterCases {
 			that(r == TradeResult.SUCCESS, "taking the purse at another market gave %s", r);
 			equal(money + 800, c.balance(player), "money after taking the purse");
 		})));
+	}
+
+	/** 26-20, staff turned off two days ago: the carrier on the road stands still; only taking back and dismissing work. */
+	private static void turnedOff(ServerCtx c, ServerPlayer player, Market a, Market b, Identifier good, Item item, StaffS2C.View away, StaffS2C.View home) {
+		StaffS2C.View still = list(c, player, a).stream().filter(v -> v.id() == away.id()).findFirst().orElseThrow();
+		equal(Employee.Phase.OUTBOUND.ordinal(), still.phase(), "phase of a carrier on the road 2 days after staff was turned off");
+		equal(away.stock(), still.stock(), "goods of the stopped carrier");
+		for (StaffRequestC2S.Action refused : List.of(StaffRequestC2S.Action.DEPOSIT_MONEY, StaffRequestC2S.Action.PAUSE, StaffRequestC2S.Action.CONFIGURE)) {
+			var r = staff(c, player, a, refused, home.id(), good, b.id(), 8, 0, 0, 100, false);
+			that(r == TradeResult.NOT_AVAILABLE, "%s with staff off gave %s", refused, r);
+		}
+		var hire = staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, good, b.id(), 8, 0, 0, 0, false);
+		that(hire == TradeResult.NOT_AVAILABLE, "hiring with staff off gave %s", hire);
+		long money = c.balance(player);
+		var out = staff(c, player, a, StaffRequestC2S.Action.WITHDRAW_MONEY, away.id(), good, 0, 0, 0, 0, 0, false);
+		that(out == TradeResult.SUCCESS, "taking the purse of a carrier on the road with staff off gave %s", out);
+		equal(money + still.purse(), c.balance(player), "money after taking the stopped carrier's purse (" + still.purse() + "c)");
+		int items = c.count(player, item);
+		var goods = staff(c, player, a, StaffRequestC2S.Action.WITHDRAW_ITEMS, away.id(), good, 0, 0, 0, 0, 0, false);
+		that(goods == TradeResult.SUCCESS, "taking the goods of a carrier on the road with staff off gave %s", goods);
+		equal(items + still.stock(), c.count(player, item), "items after taking the stopped carrier's goods");
+		var gone = staff(c, player, a, StaffRequestC2S.Action.DISMISS, home.id(), good, 0, 0, 0, 0, 0, false);
+		that(gone == TradeResult.SUCCESS, "dismissing with staff off gave %s", gone);
+		equal(1, list(c, player, a).size(), "employees after dismissing one with staff off");
+		// On again: the stopped carrier goes on (with nothing left to sell) and arrives.
+		c.config(cfg -> cfg.staff.enabled = true);
+		c.command(player, "aktradeex staff hurry");
+		StaffS2C.View after = only(c, player, a);
+		that(after.phase() != Employee.Phase.OUTBOUND.ordinal(), "the carrier did not go on after staff was turned on again (phase %s)",
+				Employee.Phase.values()[after.phase()]);
 	}
 
 	/** Sends a staff request; returns its result (null when the server sent none). */

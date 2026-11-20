@@ -2,12 +2,12 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.39、2026-11-20 19:31、180 件中 0 件失敗
-- クライアント：バージョン 0.2.39、2026-11-20 20:25、136 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.39、2026-11-20 20:27、3 件中 0 件失敗
-- クライアント（Mod Menu だけ）：バージョン 0.2.39、2026-11-20 20:26、2 件中 0 件失敗
-- クライアント（YACL だけ）：バージョン 0.2.39、2026-11-20 20:26、2 件中 0 件失敗
-- チェックリスト 337 項目のうち、今回 自動で完了 195・一部を確認 105・失敗 0
+- サーバー：バージョン 0.2.40、2026-11-20 21:35、191 件中 0 件失敗
+- クライアント：バージョン 0.2.40、2026-11-20 22:42、144 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.40、2026-11-20 21:35、3 件中 0 件失敗
+- クライアント（Mod Menu だけ）：バージョン 0.2.40、2026-11-20 21:35、2 件中 0 件失敗
+- クライアント（YACL だけ）：バージョン 0.2.40、2026-11-20 21:35、2 件中 0 件失敗
+- チェックリスト 337 項目のうち、今回 自動で完了 202・一部を確認 114・失敗 0
 
 ## すべての項目
 
@@ -60,6 +60,7 @@
 | 26-27・26-29 | `carrier_return_cargo` | サーバー | ✔ | 行きに儲からなくても帰り荷の見込みで空荷で出かけ、行き先で帰り荷を仕入れ、戻って売ると歩合に帰り荷の利益も入ること（ログの文と右パネルは見ていない） |
 | 26-30 | `carrier_backhaul_off_no_empty_trip` | サーバー | ✔ | 帰り荷 OFF では、行きに儲からない時に空荷で出かけないこと（見込みの表示は見ていない） |
 | 26-11・26-12 | `clerk_sells_and_sold_out` | サーバー | ✔ | 番頭を雇うと品が預けられ、売れて「売り切れ」になり、預けると再開し、引取で品が戻ること（一覧の見込みの表示は見ていない） |
+| 26-20 | `staff_turned_off` | サーバー | ✔ | staff.enabled を OFF にすると、運送中の運び屋が止まり（日が進んでも着かない）、雇う・所持金を入れる・休ませる・品を変えるは断られ、出金・引取・解雇は運送中でもでき、所持金と荷が手元に戻ること。ON に戻すと止まっていた運び屋が続きから着くこと（タブの表示は tabs_turned_off で見る） |
 | 26-16・26-17 | `staff_dismiss_and_limit` | サーバー | ✔ | 解雇で所持金と品が戻って一覧から消えること、3人まで雇えて4人目は断られること |
 | 26-19 | `staff_pay_by_card` | サーバー | ✔ | カード払いで雇う・所持金を入れると口座から引かれ（手数料つき）、カードで出金すると口座に入ること |
 | 26-21 | `staff_home_market_deleted` | サーバー | ✔ | 全部 |
@@ -121,7 +122,7 @@
 | 27-7 | `advancements_donation` | サーバー | ✔ | 「発展」タブでコインを寄付すると「村への投資」が付くこと（建物の完成の「槌音」「村おこし」は見ていない） |
 | 27-8 | `advancements_money` | サーバー | ✔ | 全部 |
 | 27-9 | `advancements_after_joining_again` | サーバー | ✔ | 全部 |
-| 27-10 | `advancements_survive_death` | サーバー | ✔ | 2つの市場で取引してから死んで生き返っても、取引した市場の記録（「行商」の数）が残っていること（生き返った後の取引は見ていない） |
+| 27-10 | `advancements_survive_death` | サーバー | ✔ | 全部 |
 | 22-2 | `development_tab_view` | サーバー | ✔ | 交易画面を開くと、発展度 0・寄付した人なし・自分の値 0 と建物の一覧が送られること（画面の表示は見ていない） |
 | 22-3 | `donate_coins` | サーバー | ✔ | 100c を寄付すると所持金が 100c 減り、発展度が 100 増え、寄付した人に自分の名前が出て、評判のポイントが 3 増えること（画面の表示は見ていない） |
 | 22-4 | `donate_without_money` | サーバー | ✔ | 所持金より多い額の寄付は「所持金が足りない」で断られ、何も変わらないこと（画面の文は見ていない） |
@@ -159,8 +160,18 @@
 | 29-9 | `market_hall_goods` | サーバー | ✔ | 全部 |
 | 29-11 | `theater_trends` | サーバー | ✔ | 野外劇場の村では、人気の分野の倍率が 1+(m−1)×1.5、余り気味の分野が 1−(1−m)÷1.5 になって商品の値段に効き、交易画面にもその倍率が送られること（掲示板の流行の表示は見ていない） |
 | 29-13 | `festival_days` | サーバー | ✔ | 祭りの間隔 2日で、祭りの日に交易画面を開くと「今日は〇〇の祭りの日です」が届き、寄付の発展度と評判が2倍（公園があればさらに1.25倍）、発展のタブに「今日は祭り」（0日）、次の日は「祭りまで1日」で普通に戻ること（タブの文は見ていない） |
-| 29-4・29-10 | `harbor_effects` | サーバー | ✔ | 自動の場所探しで岸が見つかって港が建つこと。港のある村の新しい輸送依頼の報酬が 1.25 倍になり、そこを行き来する運び屋の移動時間の倍率が 0.75 になること（運び屋が実際に早く着くかは数えていない。倍率で確かめる） |
+| 29-4・29-10 | `harbor_effects` | サーバー | ✔ | 自動の場所探しで岸が見つかって港が建つこと。港のある村の新しい輸送依頼の報酬が 1.25 倍になり、そこを行き来する運び屋の移動時間の倍率が 0.75 になり、実際に出かけた運び屋が、距離の時間の 0.75 倍で着くこと（その200ティック前はまだ運送中、200ティック後には着いている） |
 | 29-12 | `hot_spring_rest` | サーバー | ✔ | 温泉のある村で雇った運び屋が事故に遭うと、療養の時間が半分（0.25日）になること（辞める確率は見ていない。既定では辞めない） |
+| 28-2 | `fountain_water_stays` | サーバー | ✔ | 平原の村で噴水広場を建てると、水盤と柱の上に水（水源と流れ）が張り、水盤の底に明るさ10以上の光るブロックがあり、ランダムティックを速めて600ティック進めても、水が建物の外に出ず、建物のブロックが変わらないこと（ブロックの下の草が土になるのは除く。4本の流れの形・夜の見え方は画像で見る） |
+| 28-4 | `park_stays` | サーバー | ✔ | 公園を建てると、生け垣と木の葉・池・サトウキビ・スイレンの葉・柵・ベンチ（階段）があり、ランダムティックを速めて600ティック進めても、葉が消えず、池の水が外に流れ出ず、サトウキビ・スイレンの葉も含めて建物のブロックが変わらないこと（ブロックの下の草が土になる・サトウキビが伸びるのは除く。池の下が低い地面の時は見ていない。見た目は画像で見る） |
+| 29-5 | `hot_spring_and_festival_water_stay` | サーバー | ✔ | 温泉の湯船の底にソウルサンドがあって泡（泡の柱）が上がり、温泉と祭りの広場をランダムティックを速めて600ティック進めても、水が建物の外に出ず、建物のブロックが変わらないこと（ブロックの下の草が土になるのは除く。見た目は画像で見る） |
+| 28-3 | `snow_does_not_freeze` | サーバー | ✔ | 全部 |
+| 29-5 | `snow_hot_spring_does_not_freeze` | サーバー | ✔ | 雪原の村の温泉（雪原の見た目）の水が、ゲームの凍らせる処理（雪の降る時と同じく、どの列にも降水の処理を何度も呼ぶ）でも凍らず、同じ場所の村の外の水は凍ること |
+| 28-5 | `snow_park_pond_may_freeze` | サーバー | ✔ | 雪原の村の公園は雪原の見た目（トウヒ）で建ち、池が凍ってもスイレンの葉が残ること（ほかの見た目と材料は画像で見る） |
+| 29-2・22-50 | `buildings_stand_every_way` | サーバー | ✔ | 14種類の建物を7種類の見た目（平原・砂漠・サバンナ・雪原・タイガ・ネザー・エンド）と4つの向きで、完成の時と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品（ボタン・旗・松明・はしご・吊り看板・ろうそく・ケーキなど）が無く、ランダムティックを速めて30ティック進めてもブロックが変わらず（火が付かない。銅の避雷針が錆びる・ブロックの下の草と菌糸が土とネザーラックになる・つる・サトウキビ・竹が伸びるのは除く）、水と溶岩が建物の外に流れ出ないこと（材料と形の見た目は画像で見る。村の家や木の近くでは見ていない） |
+| 29-14・22-52・22-53・22-55・22-56・28-6 | `building_parts_by_style` | サーバー | ✔ | 7種類の見た目それぞれに14種類の建物の構造物があり（平原に代わらない）、看板（建物の目印）が1つずつあること。宿屋は村の見た目でベッド4つ・ネザーとエンドはベッドなしでカーペット、煙突に火の付いた焚き火（エンドはエンドロッド）。依頼所と時計塔に鐘、時計塔にボタンと避雷針、見張り塔にはしご・旗・松明、酒場に吊り看板とろうそく、市場にハチの巣（bee_nest）と飾り壺、劇場と祭りの広場に旗、祭りの広場にろうそくのケーキ、銀行に鉄格子、温泉にソウルサンド。噴水広場はネザーで溶岩・ほかは水、公園はネザーで真紅のキノコと溶岩・エンドでコーラスとエンドロッド・村で葉（材料の見た目、鐘を鳴らせる・寝られる・村人が来るは見ていない） |
+| 22-51 | `look_by_biome` | サーバー | ✔ | 全部 |
+| — | `goods_with_components` | サーバー | ✔ | 全部 |
 | 30-7・32-2 | `consumable_goods` | サーバー | ✔ | 真紅の幹・歪んだ幹・ハチミツ入りの瓶・サトウキビ・矢・茶色の卵・青い卵が消耗品で、相場の戻り（半減期）と在庫の減りが消耗品の速さになること（画面の表示は見ていない） |
 | 36-1 | `consumables_review` | サーバー | ✔ | 砂利・粘土玉・砂岩・氷・サボテン・スイレンの葉・ネザーウォート・ソウルサンド・ブラックストーン・玄武岩・エンドストーンが消耗品で、トーチフラワー・ウツボカズラ・ウィザーローズ・金のニンジン・腐った肉は消耗品でないこと（コマンドの表示は見ていない） |
 | 32-1 | `brown_and_blue_eggs` | サーバー | ✔ | 茶色の卵・青い卵の値段が卵と同じ 6c／4c で、茶色の卵は砂漠・サバンナの村とジャングル、青い卵は雪原・タイガの村の品揃えの候補にあること（実際の村での並び方とアイコンは見ていない） |
@@ -179,7 +190,7 @@
 | 5-5・17-4 | `nether_market_goods` | サーバー | ✔ | 全部 |
 | 17-2・17-3 | `nether_prices_follow_overworld` | サーバー | ✔ | 全部 |
 | 27-4 | `advancements_nether_and_end` | サーバー | ✔ | 全部 |
-| 30-4 | `level5_nether_and_end_goods` | サーバー | ✔ | 村人24人（レベル5）のネザー・エンドの市場で、並ぶ商品が候補の一部だけで（すべての候補が並ぶことはない）、market reroll の後も同じであること（reroll を繰り返した時の違いは見ていない） |
+| 30-4 | `level5_nether_and_end_goods` | サーバー | ✔ | 村人24人（レベル5）のネザー・エンドの市場で、並ぶ商品が候補の一部だけで（すべての候補が並ぶことはない）、market reroll の後も同じ数の候補の一部であること。ネザーの別の場所（400 ブロック離れた所）の村人24人の市場とは品揃えが違うこと（同じ場所で reroll を繰り返すと、場所で決まる乱数なので同じ品揃えになる） |
 | 8-2b | `nether_mobs_drop_gold_coins` | サーバー | ✔ | 全部 |
 | — | `request_trade` | サーバー | ✔ | 全部 |
 | — | `request_sell_all` | サーバー | ✔ | 全部 |
@@ -306,6 +317,10 @@
 | 26-28 | `staff_auto_carrier` | クライアント | ✔ | 売れ残りと帰り荷を持って戻った運び屋の「引取」で、荷と帰り荷の品が種類ごとに数どおり手元に戻ること（「変更」「解雇する」は staff_carrier_change で見る） |
 | 35-3 | `staff_harbor_watchtower` | クライアント | ✔ | 港のある村では行き先のツールチップと設定の画面の「片道 約◯分」が harborTravelMultiplier の分だけ短く、雇った運び屋の出発時に決まる着く時刻もその時間になること。見張り塔のある村では行き先のツールチップの「事故の確率」が watchtowerAccidentMultiplier 倍になること（建物はサーバーで直接作る。着いたところまでは見ていない） |
 | 13-10 | `clock_advance_staff_and_town` | クライアント | ✔ | 交易画面を開いたまま clock advance すると、雇い人タブの運び屋の「→運送 N分」と発展タブの「建設中 約N分」が開き直さずにすぐ減ること（建物はサーバーで直接作る） |
+| 26-26 | `staff_backhaul_hint` | クライアント | ✔ | 全部 |
+| 26-30 | `staff_backhaul_hint` | クライアント | ✔ | staff.carrierBackhaul を OFF にすると、雇う画面の行き先の見込みに帰り荷の分が入らず、ツールチップと設定の画面に帰り荷の説明が出ないこと（帰り荷を仕入れない・空荷で出かけないはサーバーのテストで見ている） |
+| 26-29 | `staff_empty_trip` | クライアント | ✔ | 全部 |
+| 26-22 | `staff_carrier_moves_price` | クライアント | ✔ | 全部 |
 | 26-10 | `staff_accident` | クライアント | ✔ | 全部 |
 | 26-6 | `staff_accident` | クライアント | ✔ | 行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと |
 | 2-20 | `market_gone_while_open` | クライアント | ✔ | 全部 |
@@ -317,8 +332,12 @@
 | 2-6 | `stall_facing_and_shape` | クライアント | ✔ | 使うキーでプレイヤーの東西南北に置いた交易所が、それぞれプレイヤーの方を向くこと（見た目は画像で確認） |
 | 2-7 | `stall_facing_and_shape` | クライアント | ✔ | 交易所が隣のブロックの面を隠さず（透けたり黒くなったりしない）、当たり判定が1ブロックいっぱいでも空でもないこと（形どおりかは画像で確認） |
 | 6-10b | `trader_robe_colours` | クライアント | ✔ | /summon で出した24人の商人の服の色がばらばら（8色のうち6色以上）で、クライアントにも同じ色が届き、遠くへ行ってチャンクごと保存・読み込みし直しても、リソースの再読み込み（F3+T）の後も色が変わらず、色を変えたテクスチャが残ること（スポーンエッグ・ワールドの入り直し・肌と縁取りの色は見ていない。見た目は画像で確認） |
+| 6-10 | `trader_name_tag_and_eggs` | クライアント | ✔ | 名札を使うと商人に名前が付き、クライアントにも名前が見えること（村人の形と行商人の服は画像で見る） |
+| 6-10b | `trader_name_tag_and_eggs` | クライアント | ✔ | スポーンエッグを地面に使って出した12人の商人の服の色がばらばら（4色以上）で、クライアントにも同じ色が届き、ワールドを閉じて開き直しても色と名札の名前が変わらないこと（肌と縁取りの色は画像で見る） |
+| 7-2 | `wallet_picks_up_coins` | クライアント | ✔ | 全部 |
 | 22-36b | `stake_outlines` | クライアント | ✔ | 杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない） |
 | 28-10 | `stake_outlines` | クライアント | ✔ | 杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと |
+| 22-36b | `stake_placed` | クライアント | ✔ | 杭を置くと（使うキーと同じくサーバーで杭を使う。setPlacedBy）、置いた場所の文と建物の一覧がチャットに出て、すぐ枠が届き、完成した建物（依頼所）は一覧に出ないこと。もう1本置くと「先に置いた杭（先の杭の座標）がある間は、そちらに建ちます」と出ること（杭の右クリックと枠の形・色・30秒は stake_outlines で見る） |
 | 2-11 | `sold_out_and_not_buying` | クライアント | ✔ | 全部 |
 | 2-12 | `sold_out_and_not_buying` | クライアント | ✔ | 全部 |
 | 22-27 | `debug_tooltip_warehouse_and_consumables` | クライアント | ✔ | 全部 |
@@ -573,6 +592,10 @@
 - 35-3 `staff_harbor_watchtower`：[35-3_watchtower_destination.png](../../Source/TradeExpansion/build/autotest/screenshots/35-3_watchtower_destination.png)
 - 13-10 `clock_advance_staff_and_town`：[13-10_staff_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_staff_after_clock_advance.png)
 - 13-10 `clock_advance_staff_and_town`：[13-10_town_after_clock_advance.png](../../Source/TradeExpansion/build/autotest/screenshots/13-10_town_after_clock_advance.png)
+- 26-26 `staff_backhaul_hint`：[26-26_return_cargo_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/26-26_return_cargo_tooltip.png)
+- 26-26 `staff_backhaul_hint`：[26-26_return_cargo_setup.png](../../Source/TradeExpansion/build/autotest/screenshots/26-26_return_cargo_setup.png)
+- 26-29 `staff_empty_trip`：[26-29_empty_trip_return_cargo.png](../../Source/TradeExpansion/build/autotest/screenshots/26-29_empty_trip_return_cargo.png)
+- 26-22 `staff_carrier_moves_price`：[26-22_carrier_moved_price.png](../../Source/TradeExpansion/build/autotest/screenshots/26-22_carrier_moved_price.png)
 - 26-10 `staff_accident`：[26-6_no_margin.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_no_margin.png)
 - 26-10 `staff_accident`：[26-10_resting.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_resting.png)
 - 26-10 `staff_accident`：[26-10_quit.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_quit.png)
@@ -591,7 +614,9 @@
 - 2-6 `stall_facing_and_shape`：[2-6_stall_facing_west.png](../../Source/TradeExpansion/build/autotest/screenshots/2-6_stall_facing_west.png)
 - 6-10b `trader_robe_colours`：[6-10b_robe_colours.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10b_robe_colours.png)
 - 6-10b `trader_robe_colours`：[6-10b_robe_colours_after_reload.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10b_robe_colours_after_reload.png)
+- 6-10 `trader_name_tag_and_eggs`：[6-10_spawn_eggs_and_name.png](../../Source/TradeExpansion/build/autotest/screenshots/6-10_spawn_eggs_and_name.png)
 - 22-36b `stake_outlines`：[22-36b_stake_outlines.png](../../Source/TradeExpansion/build/autotest/screenshots/22-36b_stake_outlines.png)
+- 22-36b `stake_placed`：[22-36b_stake_placed.png](../../Source/TradeExpansion/build/autotest/screenshots/22-36b_stake_placed.png)
 - 2-11 `sold_out_and_not_buying`：[2-11_price_rose.png](../../Source/TradeExpansion/build/autotest/screenshots/2-11_price_rose.png)
 - 2-11 `sold_out_and_not_buying`：[2-11_sold_out.png](../../Source/TradeExpansion/build/autotest/screenshots/2-11_sold_out.png)
 - 2-12 `sold_out_and_not_buying`：[2-12_price_fell.png](../../Source/TradeExpansion/build/autotest/screenshots/2-12_price_fell.png)

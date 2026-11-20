@@ -51,7 +51,7 @@ final class ClientStaffMoreCases {
 	}
 
 	private static final String NS = "ak_trade_expansion";
-	private static final String LOG = "staff." + NS + ".log.";
+	static final String LOG = "staff." + NS + ".log.";
 
 	/** The fixed part of a translation after its last %s. */
 	private static String suffix(String key) {
@@ -145,7 +145,7 @@ final class ClientStaffMoreCases {
 	}
 
 	/** Clicks the tab's row of a good on the pick-goods page ({@code auto}: the おまかせ row is first). */
-	private static void pickGood(ClientGameTestContext context, MarketScreen screen, Object staff, Identifier good, boolean auto) {
+	static void pickGood(ClientGameTestContext context, MarketScreen screen, Object staff, Identifier good, boolean auto) {
 		check(waitClient(context, c -> get(staff, auto ? "carrierHints" : "clerkHints") != null, 100), "no recommendations of the goods arrived");
 		context.waitTicks(2);
 		check(mode(context, staff).equals("PICK_GOODS"), "the goods are not shown (%s)", mode(context, staff));
@@ -158,7 +158,7 @@ final class ClientStaffMoreCases {
 	}
 
 	/** On the destinations page, clicks the other market; the setup page opens. */
-	private static void pickOther(ClientGameTestContext context, MarketScreen screen, Object staff, long otherId) {
+	static void pickOther(ClientGameTestContext context, MarketScreen screen, Object staff, long otherId) {
 		check(mode(context, staff).equals("PICK_DESTINATION"), "the destinations are not shown (%s)", mode(context, staff));
 		@SuppressWarnings("unchecked")
 		boolean listed = waitClient(context, c -> !((List<StaffS2C.Destination>) call(staff, "sortedDestinations")).isEmpty(), 100);
@@ -180,7 +180,7 @@ final class ClientStaffMoreCases {
 	}
 
 	/** A good of both markets, none of {@code not} (added to the other market when they share none, as {@link ClientStaffCases#prepare}). */
-	private static Identifier sharedGood(Session s, Identifier... not) {
+	static Identifier sharedGood(Session s, Identifier... not) {
 		return s.world.getServer().computeOnServer(server -> {
 			Market home = market(server, s.stall);
 			Market other = other(server, home);
@@ -812,7 +812,7 @@ final class ClientStaffMoreCases {
 	// ---- 35-3 a harbor and a watchtower
 
 	/** Opens the destinations of {@code good} for a new carrier; the other market's entry. */
-	private static StaffS2C.Destination destinationOf(ClientGameTestContext context, MarketScreen screen, Object staff, Identifier good, long otherId) {
+	static StaffS2C.Destination destinationOf(ClientGameTestContext context, MarketScreen screen, Object staff, Identifier good, long otherId) {
 		select(context, staff, -1);
 		clickWidget(context, text(K + "hire.carrier"));
 		mouseAway(context);
@@ -826,11 +826,11 @@ final class ClientStaffMoreCases {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static List<StaffS2C.Destination> destinations(ClientGameTestContext context, Object staff) {
+	static List<StaffS2C.Destination> destinations(ClientGameTestContext context, Object staff) {
 		return context.computeOnClient(c -> (List<StaffS2C.Destination>) call(staff, "sortedDestinations"));
 	}
 
-	private static int destinationRow(ClientGameTestContext context, Object staff, long otherId) {
+	static int destinationRow(ClientGameTestContext context, Object staff, long otherId) {
 		List<StaffS2C.Destination> list = destinations(context, staff);
 		for (int i = 0; i < list.size(); i++) if (list.get(i).id() == otherId) return i;
 		throw new AssertionError("the other market is not a destination");

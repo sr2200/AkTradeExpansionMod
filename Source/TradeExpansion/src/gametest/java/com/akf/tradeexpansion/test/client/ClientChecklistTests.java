@@ -234,6 +234,10 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("clock_advance_staff_and_town", List.of("13-10"),
 				"交易画面を開いたまま clock advance すると、雇い人タブの運び屋の「→運送 N分」と発展タブの「建設中 約N分」が開き直さずにすぐ減ること（建物はサーバーで直接作る）",
 				true, ClientStaffMoreCases::clockAdvance));
+		cases.add(new ClientCase("staff_backhaul_hint", List.of("26-26"), null, true, ClientBackhaulCases::hint,
+				List.of("26-30"), "staff.carrierBackhaul を OFF にすると、雇う画面の行き先の見込みに帰り荷の分が入らず、ツールチップと設定の画面に帰り荷の説明が出ないこと（帰り荷を仕入れない・空荷で出かけないはサーバーのテストで見ている）"));
+		cases.add(new ClientCase("staff_empty_trip", List.of("26-29"), null, true, ClientBackhaulCases::emptyTrip));
+		cases.add(new ClientCase("staff_carrier_moves_price", List.of("26-22"), null, true, ClientBackhaulCases::carrierMovesPrice));
 		cases.add(new ClientCase("staff_accident", List.of("26-10"), null, true, ClientStaffMoreCases::accident,
 				List.of("26-6"), "行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと"));
 		cases.add(new ClientCase("market_gone_while_open", List.of("2-20"), null, true, ClientWindowCases::marketGone));
@@ -252,9 +256,16 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("trader_robe_colours", List.of("6-10b"),
 				"/summon で出した24人の商人の服の色がばらばら（8色のうち6色以上）で、クライアントにも同じ色が届き、遠くへ行ってチャンクごと保存・読み込みし直しても、リソースの再読み込み（F3+T）の後も色が変わらず、色を変えたテクスチャが残ること（スポーンエッグ・ワールドの入り直し・肌と縁取りの色は見ていない。見た目は画像で確認）",
 				true, ClientTraderCases::robeColours));
+		cases.add(new ClientCase("trader_name_tag_and_eggs", List.of("6-10"),
+				"名札を使うと商人に名前が付き、クライアントにも名前が見えること（村人の形と行商人の服は画像で見る）", true, ClientTraderCases::nameTagAndEggs,
+				List.of("6-10b"), "スポーンエッグを地面に使って出した12人の商人の服の色がばらばら（4色以上）で、クライアントにも同じ色が届き、ワールドを閉じて開き直しても色と名札の名前が変わらないこと（肌と縁取りの色は画像で見る）"));
+		cases.add(new ClientCase("wallet_picks_up_coins", List.of("7-2"), null, true, ClientMoreCases::walletPickup));
 		cases.add(new ClientCase("stake_outlines", List.of("22-36b"),
 				"杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない）",
 				true, ClientParticleCases::stakeOutlines, List.of("28-10"), "杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと"));
+		cases.add(new ClientCase("stake_placed", List.of("22-36b"),
+				"杭を置くと（使うキーと同じくサーバーで杭を使う。setPlacedBy）、置いた場所の文と建物の一覧がチャットに出て、すぐ枠が届き、完成した建物（依頼所）は一覧に出ないこと。もう1本置くと「先に置いた杭（先の杭の座標）がある間は、そちらに建ちます」と出ること（杭の右クリックと枠の形・色・30秒は stake_outlines で見る）",
+				true, ClientParticleCases::stakePlaced));
 		cases.add(new ClientCase("sold_out_and_not_buying", List.of("2-11"), null, true, ClientMoreCases::soldOutAndFull, List.of("2-12"), null));
 		cases.add(new ClientCase("debug_tooltip_warehouse_and_consumables", List.of("22-27"), null, true, ClientMoreCases::debugStorageAndConsumables,
 				List.of("30-7", "32-2"), null));

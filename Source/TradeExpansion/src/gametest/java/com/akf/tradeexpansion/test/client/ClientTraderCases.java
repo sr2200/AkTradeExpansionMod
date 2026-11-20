@@ -159,6 +159,109 @@ final class ClientTraderCases {
 		}
 	}
 
+	/**
+	 * 6-10: a name tag used on a trader names it (the client sees the name). 6-10b: traders from the spawn egg (used on
+	 * the ground, as the use key does) get different robe colours, and after the world is closed and opened again they
+	 * keep their colours and the name.
+	 */
+	static void nameTagAndEggs(Session s, CaseResult.Builder result, CaseResult.Builder also) {
+		ClientGameTestContext context = s.context;
+		context.setScreen(() -> null);
+		BlockPos stall = s.stall;
+		double[] home = s.world.getServer().computeOnServer(server -> {
+			var p = player(server);
+			return new double[] {p.getX(), p.getY(), p.getZ()};
+		});
+		BlockPos at = s.world.getServer().computeOnServer(server -> ground(server, stall.getX() - 140, stall.getZ() - 40));
+		String name = "テスト商人";
+		try {
+			teleport(s, at.getX() + 0.5, at.getY(), at.getZ() - 6.5);
+			context.waitTicks(10);
+			int eggs = 12;
+			s.world.getServer().runOnServer(server -> {
+				var player = player(server);
+				for (int i = 0; i < eggs; i++) {
+					BlockPos ground = at.offset(i % 4 * 2, -1, i / 4 * 2);
+					player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(
+							com.akf.tradeexpansion.registry.ModEntities.TRADER_SPAWN_EGG));
+					var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(ground).add(0, 0.5, 0),
+							net.minecraft.core.Direction.UP, ground, false);
+					player.gameMode.useItemOn(player, server.overworld(), player.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+				}
+				player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+			});
+			context.waitTicks(10);
+			Map<UUID, Integer> variants = eggVariants(s, at);
+			check(variants.size() == eggs, "%d traders came from %d spawn eggs", variants.size(), eggs);
+			long colours = variants.values().stream().distinct().count();
+			check(colours >= 4, "the %d traders from spawn eggs have only %d robe colours: %s", eggs, colours, variants.values());
+			check(waitClient(context, c -> clientVariants(c, at).entrySet().containsAll(variants.entrySet()), 60),
+					"the client's robe colours of the spawn egg traders differ: %s / %s", clientVariantsNow(context, at), variants);
+
+			// 6-10: a name tag.
+			UUID named = variants.keySet().iterator().next();
+			boolean tagged = s.world.getServer().computeOnServer(server -> {
+				var player = player(server);
+				var tag = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NAME_TAG);
+				tag.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal(name));
+				player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, tag);
+				var trader = server.overworld().getEntity(named);
+				player.interactOn(trader, net.minecraft.world.InteractionHand.MAIN_HAND, trader.position());
+				player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+				return trader.hasCustomName() && trader.getCustomName().getString().equals(name);
+			});
+			check(tagged, "the name tag did not name the trader");
+			check(waitClient(context, c -> {
+				return c.level.getEntitiesOfClass(TraderEntity.class, area(at), e -> e.getUUID().equals(named)).stream()
+						.anyMatch(e -> e.hasCustomName() && e.getCustomName().getString().equals(name));
+			}, 40), "the client does not see the trader's name \"%s\"", name);
+			context.getInput().lookAt(at.offset(3, 0, 2));
+			context.waitTicks(5);
+			screenshot(context, result, "6-10_spawn_eggs_and_name");
+
+			// 6-10b: the world closed and opened again.
+			try {
+				var save = s.world.getWorldSave();
+				s.world.close();
+				s.world = save.open();
+				s.world.getConnection().waitForChunksRender();
+				applyTestConfig(s.world.getServer());
+				context.waitTicks(10);
+				boolean back = false;
+				for (int i = 0; i < 60 && !back; i++) {
+					context.waitTicks(5);
+					back = eggVariants(s, at).size() == eggs;
+				}
+				check(back, "%d of the %d spawn egg traders are there after opening the world again", eggVariants(s, at).size(), eggs);
+				check(eggVariants(s, at).equals(variants), "the robe colours changed after opening the world again: %s / %s", eggVariants(s, at), variants);
+				check(waitClient(context, c -> clientVariants(c, at).entrySet().containsAll(variants.entrySet()), 60),
+						"the client's robe colours after opening the world again differ: %s / %s", clientVariantsNow(context, at), variants);
+				boolean keeps = s.world.getServer().computeOnServer(server -> {
+					var trader = server.overworld().getEntity(named);
+					return trader != null && trader.hasCustomName() && trader.getCustomName().getString().equals(name);
+				});
+				check(keeps, "the trader lost its name after opening the world again");
+			} catch (Throwable t) {
+				throw new ClientChecklistTests.AlsoFailed(t);
+			}
+		} finally {
+			s.world.getServer().runOnServer(server -> server.overworld().getEntitiesOfClass(TraderEntity.class, area(at), e -> !e.entityTags().contains(TAG))
+					.forEach(net.minecraft.world.entity.Entity::discard));
+			teleport(s, home[0], home[1], home[2]);
+		}
+	}
+
+	/** The robe colours of the traders around {@code at} not summoned by {@link #robeColours}. */
+	private static Map<UUID, Integer> eggVariants(Session s, BlockPos at) {
+		return s.world.getServer().computeOnServer(server -> {
+			Map<UUID, Integer> map = new HashMap<>();
+			for (TraderEntity t : server.overworld().getEntitiesOfClass(TraderEntity.class, area(at), e -> !e.entityTags().contains(TAG))) {
+				map.put(t.getUUID(), t.variant());
+			}
+			return map;
+		});
+	}
+
 	private static AABB area(BlockPos at) {
 		return new AABB(at).inflate(16);
 	}

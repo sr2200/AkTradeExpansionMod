@@ -193,6 +193,7 @@ public final class FacilityBuilder {
 		Holder<Biome> biome = level.getBiome(center);
 		ResourceKey<VillagerType> type = biome.unwrapKey().map(VillagerType.BY_BIOME::get).orElse(null);
 		String name = type == null ? "plains" : type.identifier().getPath();
+		if (name.equals("snow")) name = "snowy"; // the villager type of snowy biomes is "snow"; its village (and our look) "snowy"
 		for (String style : VILLAGE_STYLES) {
 			if (style.equals(name)) return style;
 		}

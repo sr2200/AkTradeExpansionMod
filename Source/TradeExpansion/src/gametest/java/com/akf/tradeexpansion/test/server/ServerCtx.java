@@ -528,14 +528,19 @@ public final class ServerCtx {
 
 	private void runFillBiome(BlockPos pos, int radius, String biome) {
 		int y0 = Math.max(level().getMinY(), pos.getY() - 8), y1 = Math.min(level().getMaxY(), pos.getY() + 16);
-		String command = String.format(java.util.Locale.ROOT, "fillbiome %d %d %d %d %d %d %s", pos.getX() - radius, y0, pos.getZ() - radius,
-				pos.getX() + radius, y1, pos.getZ() + radius, biome);
-		try {
-			int n = server().getCommands().getDispatcher().execute(command, server().createCommandSourceStack().withSuppressedOutput());
-			AutotestCheck.that(n > 0, "/%s changed nothing", command);
-		} catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
-			throw new AutotestCheck.Failed("/" + command + " failed: " + e.getMessage());
+		// /fillbiome takes at most 32,768 blocks: in tiles of 32×32 columns.
+		for (int x0 = pos.getX() - radius; x0 <= pos.getX() + radius; x0 += 32) {
+			for (int z0 = pos.getZ() - radius; z0 <= pos.getZ() + radius; z0 += 32) {
+				int x1 = Math.min(pos.getX() + radius, x0 + 31), z1 = Math.min(pos.getZ() + radius, z0 + 31);
+				String command = String.format(java.util.Locale.ROOT, "fillbiome %d %d %d %d %d %d %s", x0, y0, z0, x1, y1, z1, biome);
+				try {
+					server().getCommands().getDispatcher().execute(command, server().createCommandSourceStack().withSuppressedOutput());
+				} catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+					throw new AutotestCheck.Failed("/" + command + " failed: " + e.getMessage());
+				}
+			}
 		}
+		AutotestCheck.that(level().getBiome(pos).is(net.minecraft.resources.Identifier.parse(biome)), "/fillbiome did not make %s %s", pos.toShortString(), biome);
 	}
 
 	/** Runs a command as {@code player} with full permission and returns its result (what the command returned). */
@@ -584,7 +589,8 @@ public final class ServerCtx {
 		registry.setDirty();
 		for (Floor f : floors) {
 			BlockPos pos = f.pos();
-			AABB box = new AABB(pos).inflate(FLOOR + 4, 8, FLOOR + 4);
+			// Wider than the floor: villagers may have walked off it while the case waited.
+			AABB box = new AABB(pos).inflate(FLOOR + 24, 12, FLOOR + 24);
 			for (Entity e : f.level().getEntities((Entity) null, box, e -> !(e instanceof Player))) e.discard();
 			for (int dx = -FLOOR; dx <= FLOOR; dx++) {
 				for (int dz = -FLOOR; dz <= FLOOR; dz++) {
@@ -594,7 +600,7 @@ public final class ServerCtx {
 		}
 		// The item entities dropped by the removed blocks.
 		for (Floor f : floors) {
-			for (Entity e : f.level().getEntities((Entity) null, new AABB(f.pos()).inflate(FLOOR + 4, 8, FLOOR + 4), e -> !(e instanceof Player))) e.discard();
+			for (Entity e : f.level().getEntities((Entity) null, new AABB(f.pos()).inflate(FLOOR + 24, 12, FLOOR + 24), e -> !(e instanceof Player))) e.discard();
 		}
 		floors.clear();
 		for (Forced f : forced) f.level().setChunkForced(f.chunk().x(), f.chunk().z(), false);

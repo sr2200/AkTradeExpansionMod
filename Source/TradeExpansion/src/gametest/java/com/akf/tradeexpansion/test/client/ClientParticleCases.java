@@ -7,6 +7,7 @@ import com.akf.tradeexpansion.test.CaseResult;
 import com.akf.tradeexpansion.test.client.ClientChecklistTests.Session;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -247,6 +248,106 @@ final class ClientParticleCases {
 				MarketRegistry.get(server).setDirty();
 			});
 		}
+	}
+
+	/**
+	 * 22-36b: placing a stake (the player's use of the stake item, on the server: setPlacedBy) says where it stands and
+	 * shows the outlines at once, without the buildings the market already has (one completed here); a second stake says
+	 * "先に置いた杭（…）がある間は、そちらに建ちます" with the first one's position.
+	 */
+	static void stakePlaced(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		context.setScreen(() -> null);
+		BlockPos stall = s.stall;
+		Identifier builtId = com.akf.tradeexpansion.TradeExpansion.id("quest_hall");
+		BlockPos[] stakes = s.world.getServer().computeOnServer(server -> new BlockPos[] {ground(server, stall.getX() + 3, stall.getZ()),
+				ground(server, stall.getX() - 4, stall.getZ() + 3)});
+		Map<Identifier, com.akf.tradeexpansion.development.Facility> saved = s.world.getServer().computeOnServer(server -> {
+			Market market = market(server, stall);
+			Map<Identifier, com.akf.tradeexpansion.development.Facility> copy = new java.util.LinkedHashMap<>(market.facilities());
+			market.facilities().clear();
+			market.markers().clear();
+			// A completed quest hall far off (made on the server, without its blocks).
+			var built = new com.akf.tradeexpansion.development.Facility(builtId, com.akf.tradeexpansion.development.FacilityKind.QUEST_HALL);
+			BlockPos o = stall.offset(200, 0, 200);
+			long now = com.akf.tradeexpansion.market.MarketClock.now(server.overworld());
+			built.start(o, net.minecraft.world.level.block.Rotation.NONE, o, BoundingBox.fromCorners(o, o.offset(4, 6, 4)), "plains", now, now);
+			built.complete(o);
+			market.facilities().put(builtId, built);
+			MarketRegistry.get(server).setDirty();
+			return copy;
+		});
+		String builtName = s.world.getServer().computeOnServer(server -> com.akf.tradeexpansion.development.FacilityBuilder
+				.name(com.akf.tradeexpansion.development.FacilityKind.QUEST_HALL).getString());
+		try {
+			context.runOnClient(c -> c.gui.hud.getChat().clearMessages(false));
+			ParticleRecorder.start();
+			place(s, stakes[0]);
+			context.waitTicks(25); // drawn every 10 ticks
+			List<TranslatableContents> chat = translated(context);
+			check(chat.stream().anyMatch(t -> t.getKey().endsWith(".facility.marker_placed")), "placing the stake did not say where it stands: %s", keys(chat));
+			List<TranslatableContents> lines = chat.stream()
+					.filter(t -> t.getKey().endsWith(".facility.preview.ok") || t.getKey().endsWith(".facility.preview.blocked")).toList();
+			int buildings = s.world.getServer().computeOnServer(server -> com.akf.tradeexpansion.data.FacilityCatalog.all().size());
+			check(lines.size() == buildings - 1, "placing the stake listed %d buildings, not the %d not built yet", lines.size(), buildings - 1);
+			check(lines.stream().noneMatch(t -> t.getArgs()[0] instanceof net.minecraft.network.chat.Component n && n.getString().equals(builtName)),
+					"the completed %s is listed for the stake", builtName);
+			check(chat.stream().noneMatch(t -> t.getKey().endsWith(".facility.preview.not_first")), "the first stake says another stake comes first");
+			long dots = ParticleRecorder.dust().stream().filter(p -> p.color() == STAKE_OK || p.color() == STAKE_BLOCKED).count();
+			check(dots > 0, "no green or red outline came after placing the stake");
+			context.getInput().lookAt(stakes[0].below(2));
+			context.waitTicks(3);
+			screenshot(context, result, "22-36b_stake_placed");
+
+			// A second stake: the first one is used.
+			context.runOnClient(c -> c.gui.hud.getChat().clearMessages(false));
+			place(s, stakes[1]);
+			context.waitTicks(5);
+			List<TranslatableContents> second = translated(context);
+			TranslatableContents notFirst = second.stream().filter(t -> t.getKey().endsWith(".facility.preview.not_first")).findFirst()
+					.orElseThrow(() -> new AssertionError("the second stake does not say the first one is used: " + keys(second)));
+			BlockPos first = stakes[0];
+			check(List.of(String.valueOf(notFirst.getArgs()[0]), String.valueOf(notFirst.getArgs()[1]), String.valueOf(notFirst.getArgs()[2]))
+					.equals(List.of(String.valueOf(first.getX()), String.valueOf(first.getY()), String.valueOf(first.getZ()))),
+					"the second stake names %s, not the first stake %s", java.util.Arrays.toString(notFirst.getArgs()), first.toShortString());
+			List<Long> markers = s.world.getServer().computeOnServer(server -> market(server, stall).markers().stream().map(BlockPos::asLong).toList());
+			check(markers.size() == 2 && markers.get(0) == first.asLong(), "the market's stakes are %s", markers);
+		} finally {
+			ParticleRecorder.stop();
+			s.world.getServer().runOnServer(server -> {
+				for (BlockPos p : stakes) server.overworld().setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+				Market market = market(server, stall);
+				market.markers().clear();
+				market.facilities().clear();
+				market.facilities().putAll(saved);
+				MarketRegistry.get(server).setDirty();
+				player(server).setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+			});
+		}
+	}
+
+	/** The player uses a stake on the top of the ground below {@code pos} (on the server, as the use key does). */
+	private static void place(Session s, BlockPos pos) {
+		boolean placed = s.world.getServer().computeOnServer(server -> {
+			var player = player(server);
+			player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(
+					com.akf.tradeexpansion.registry.ModBlocks.CONSTRUCTION_MARKER.asItem()));
+			var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos.below()).add(0, 0.5, 0),
+					net.minecraft.core.Direction.UP, pos.below(), false);
+			player.gameMode.useItemOn(player, server.overworld(), player.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+			return server.overworld().getBlockState(pos).is(com.akf.tradeexpansion.registry.ModBlocks.CONSTRUCTION_MARKER);
+		});
+		check(placed, "the stake was not placed at %s", pos.toShortString());
+	}
+
+	private static List<TranslatableContents> translated(ClientGameTestContext context) {
+		return context.computeOnClient(c -> ClientScreenCases.chat(c).stream().map(m -> m.content().getContents())
+				.filter(x -> x instanceof TranslatableContents).map(x -> (TranslatableContents) x).toList());
+	}
+
+	private static List<String> keys(List<TranslatableContents> chat) {
+		return chat.stream().map(TranslatableContents::getKey).toList();
 	}
 
 	private static String key(double x, double z) {

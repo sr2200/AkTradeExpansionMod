@@ -27,6 +27,7 @@ import com.akf.tradeexpansion.trade.TradeResult;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -229,8 +230,8 @@ final class ServerAdvancementCases {
 			done(c, again, "builder", "after joining again with a completed building");
 			done(c, again, "well_off", "after joining again with 10,000c in the bank");
 		})));
-		cases.add(partial("advancements_survive_death", List.of("27-10"), "2つの市場で取引してから死んで生き返っても、取引した市場の記録（「行商」の数）が残っていること（生き返った後の取引は見ていない）",
-				ctx -> markets(ctx, new int[] {0, 300}, (c, player, m) -> {
+		cases.add(full("advancements_survive_death", List.of("27-10"),
+				ctx -> markets(ctx, new int[] {0, 300, 600}, (c, player, m) -> {
 					c.giveMoney(player, 100_000);
 					for (int i = 0; i < 2; i++) {
 						if (i > 0) openAt(c, player, m, i);
@@ -239,19 +240,60 @@ final class ServerAdvancementCases {
 					}
 					List<Long> before = player.getAttachedOrElse(TradeAdvancements.TRADED_MARKETS, List.of());
 					that(before.size() == 2, "markets traded at before dying: %s", before);
+					notYet(c, player, "peddler");
 					player.closeContainer();
 					clientLoaded(player);
 					player.kill(c.level());
 					that(player.isDeadOrDying(), "the player did not die");
 					c.later(2, cc -> {
-						// (The test world sends a respawned test player far away, so it does not trade again here.)
 						ServerPlayer fresh = cc.respawn(player);
 						List<Long> after = fresh.getAttachedOrElse(TradeAdvancements.TRADED_MARKETS, List.of());
 						that(after.equals(before), "markets traded at after dying: %s (before %s)", after, before);
+						// The test world sends a respawned test player far away: bring it to the third market (its chunks are
+						// kept loaded) and trade there.
+						BlockPos third = m.get(2).stalls().iterator().next();
+						// The respawn's own teleport waits for the client to accept it: accept it as a client would, then move
+						// (again a few ticks later if the server sent another one meanwhile).
+						MOVE_NOTES.clear();
+						moveTo(cc, fresh, third);
+						cc.later(2, c3 -> {
+							if (!fresh.blockPosition().closerThan(third, 4)) moveTo(c3, fresh, third);
+						});
+						cc.later(5, c3 -> {
+							that(fresh.level() == c3.level(), "the respawned player is in %s", fresh.level().dimension().identifier());
+							clientLoaded(fresh);
+							openAt(c3, fresh, m, 2);
+							that(fresh.blockPosition().closerThan(third, 4), "the respawned player stands at %s, not at the stall %s (%s)", fresh.blockPosition().toShortString(),
+									third.toShortString(), MOVE_NOTES);
+							c3.giveMoney(fresh, 100_000);
+							c3.trade(fresh, m.get(2), c3.tradableGood(m.get(2), 1, 0), true, 1);
+							that(c3.lastTradeResult(fresh) == TradeResult.SUCCESS, "buying at the third market after respawning gave %s", c3.lastTradeResult(fresh));
+							List<Long> now = fresh.getAttachedOrElse(TradeAdvancements.TRADED_MARKETS, List.of());
+							that(now.size() == 3 && now.containsAll(before), "markets traded at after trading again: %s (before dying %s)", now, before);
+							done(c3, fresh, "peddler", "after trading at a third market after dying");
+						});
 					});
 				})));
 		return cases;
 	}
+
+	/** Accepts every teleport sent to {@code player} (as a client does) and teleports it next to {@code stall}. */
+	private static void moveTo(ServerCtx c, ServerPlayer player, BlockPos stall) {
+		for (Object sent : c.sent(player)) {
+			if (sent instanceof net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket pp) {
+				player.connection.handleAcceptTeleportPacket(new net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket(pp.id(), player.getX(),
+						player.getY(), player.getZ(), player.getYRot(), player.getXRot()));
+			}
+		}
+		boolean ok = player.teleportTo(c.level(), stall.getX() + 0.5, stall.getY(), stall.getZ() + 2.5, java.util.Set.of(), 0, 0, true);
+		if (!player.blockPosition().closerThan(stall, 4)) {
+			MOVE_NOTES.add("teleportTo " + ok + " left it at " + player.blockPosition().toShortString() + " (sleeping " + player.isSleeping() + ", passenger "
+					+ player.isPassenger() + ", removed " + player.isRemoved() + ")");
+			player.snapTo(stall.getX() + 0.5, stall.getY(), stall.getZ() + 2.5);
+		}
+	}
+
+	private static final List<String> MOVE_NOTES = new java.util.ArrayList<>();
 
 	// ---- helpers
 

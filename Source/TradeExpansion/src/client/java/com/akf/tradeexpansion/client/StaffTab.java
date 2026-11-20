@@ -1005,10 +1005,14 @@ final class StaffTab {
 			double travelMultiplier = destination != null ? destination.travelMultiplier() : edited != null ? edited.travelMultiplier() : 1.0;
 			double accidentMultiplier = destination != null ? destination.accidentMultiplier() : edited != null ? edited.accidentMultiplier() : 1.0;
 			StaffS2C.Destination d = setupDestination();
+			// v0.54: the return cargo's expected profit right after the trip's own (the page is cut at the bottom of the
+			// list on small screens, and the explanations below are long).
+			Component back = info.backhaul() && d != null ? returnLine(d) : null;
 			if (auto()) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto", to).withColor(COLOR_GOLD));
 				lines.add(travelLine(distance, travelMultiplier, accidentMultiplier));
 				if (d != null) lines.add(autoLine(d));
+				if (back != null) lines.add(back);
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto.how", quantity));
 			} else {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier", item, to).withColor(COLOR_GOLD));
@@ -1017,16 +1021,13 @@ final class StaffTab {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.prices", CoinItem.formatCopper(Math.max(0, d.buyPrice())),
 						d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice())));
 				lines.add(recommendLine(d, unit(view)));
+				if (back != null) lines.add(back);
 			}
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.how", quantity * unit(view), CoinItem.formatCopper(buyLimit),
 					CoinItem.formatCopper(sellLimit)));
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.auto"));
 			}
-			if (info.backhaul()) { // v0.54: return cargo
-				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.return"));
-				Component back = d == null ? null : returnLine(d);
-				if (back != null) lines.add(back);
-			}
+			if (info.backhaul()) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.return")); // v0.54: return cargo
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.wait", minutes(Math.round(info.maxWaitDays() * PriceModel.TICKS_PER_DAY))));
 			lines.add(info.quitChance() > 0 ? Component.translatable("screen.ak_trade_expansion.staff.summary.accident.quit", percent(info.quitChance()))
 					: Component.translatable("screen.ak_trade_expansion.staff.summary.accident"));

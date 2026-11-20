@@ -25,4 +25,13 @@ public class ClientPacketListenerMixin {
 	private void ak_trade_expansion_test$recordSound(ClientboundSoundPacket packet, CallbackInfo ci) {
 		ParticleRecorder.onSound(packet);
 	}
+
+	/** The pickup sound the client plays itself for an item a player picked up (checklist 7-2). */
+	@org.spongepowered.asm.mixin.injection.Redirect(method = "handleTakeItemEntity", at = @At(value = "INVOKE",
+			target = "Lnet/minecraft/client/multiplayer/ClientLevel;playLocalSound(DDDLnet/minecraft/sounds/SoundEvent;Lnet/minecraft/sounds/SoundSource;FFZ)V"))
+	private void ak_trade_expansion_test$recordPickup(net.minecraft.client.multiplayer.ClientLevel level, double x, double y, double z,
+			net.minecraft.sounds.SoundEvent sound, net.minecraft.sounds.SoundSource source, float volume, float pitch, boolean distanceDelay) {
+		ParticleRecorder.onLocalSound(sound.location(), x, y, z);
+		level.playLocalSound(x, y, z, sound, source, volume, pitch, distanceDelay);
+	}
 }

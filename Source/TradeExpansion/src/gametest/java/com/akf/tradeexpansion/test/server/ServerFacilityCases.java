@@ -376,7 +376,7 @@ final class ServerFacilityCases {
 
 	private static void carriers(List<ServerCase> cases) {
 		cases.add(partial("harbor_effects", List.of("29-4", "29-10"),
-				"自動の場所探しで岸が見つかって港が建つこと。港のある村の新しい輸送依頼の報酬が 1.25 倍になり、そこを行き来する運び屋の移動時間の倍率が 0.75 になること（運び屋が実際に早く着くかは数えていない。倍率で確かめる）",
+				"自動の場所探しで岸が見つかって港が建つこと。港のある村の新しい輸送依頼の報酬が 1.25 倍になり、そこを行き来する運び屋の移動時間の倍率が 0.75 になり、実際に出かけた運び屋が、距離の時間の 0.75 倍で着くこと（その200ティック前はまだ運送中、200ティック後には着いている）",
 				ctx -> {
 					ctx.config(cfg -> cfg.staff.accidentBase = 0);
 					townMarkets(ctx, new int[] {0, 600}, (c, player, m) -> {
@@ -384,6 +384,7 @@ final class ServerFacilityCases {
 						BlockPos center = c.center(); // the first market
 						builder(c, player, a);
 						Runnable restore = pool(c, center, -8, 8, 20, 32);
+						boolean[] restored = {false};
 						try {
 							checkTransportReward(c, a, b, 1.0);
 							buildAndComplete(c, player, a, HARBOR);
@@ -399,8 +400,36 @@ final class ServerFacilityCases {
 							StaffS2C.View e = hireCarrier(c, player, a, b);
 							that(Math.abs(e.travelMultiplier() - Development.config().harborTravelMultiplier) < 1e-9, "travel multiplier of a carrier from a harbor: %s",
 									e.travelMultiplier());
+							// The trip itself: the carrier sets out and arrives after 0.75 of the time of the distance.
+							c.giveMoney(player, 20_000);
+							Identifier good = ServerChapterCases.shared(c, a, 8, 0, b);
+							a.good(good).setPressure(a.params(good).maxPressure() * 0.8); // cheap at A
+							b.good(good).setPressure(b.params(good).minPressure() * 0.8); // dear at B: worth carrying
+							that(ServerChapterCases.staff(c, player, a, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), Employee.AUTO, 0, 0, 0, 0, 5_000, false)
+									== TradeResult.SUCCESS, "depositing 5,000c failed");
+							c.command(player, "aktradeex staff hurry"); // buys and sets out
+							e = ServerChapterCases.only(c, player, a);
+							equal(Employee.Phase.OUTBOUND.ordinal(), e.phase(), "phase after setting out from a harbor village");
+							long plain = com.akf.tradeexpansion.core.StaffMath.travelTicks(MarketRegistry.linkedDistance(a, b), TradeExpansionConfig.get().staff.carrierBlocksPerDay);
+							long expected = Math.round(plain * Development.config().harborTravelMultiplier);
+							equal(expected, e.nextTime() - e.phaseStart(), "ticks of the trip from a harbor village (" + plain + " without a harbor)");
+							// The carriers move every 20 ticks: 200 ticks before the end it is still on the road, 200 after it arrived.
+							c.command(player, String.format(java.util.Locale.ROOT, "aktradeex clock advance %.6f", (expected - 200 - 40) / (double) PriceModel.TICKS_PER_DAY));
+							long plainTicks = plain, harborTicks = expected;
+							c.later(40, c2 -> {
+								equal(Employee.Phase.OUTBOUND.ordinal(), ServerChapterCases.only(c2, player, a).phase(), "phase 200 ticks before the harbor trip ends");
+								c2.command(player, String.format(java.util.Locale.ROOT, "aktradeex clock advance %.6f", (400 - 40) / (double) PriceModel.TICKS_PER_DAY));
+							});
+							c.later(40, c2 -> {
+								StaffS2C.View v = ServerChapterCases.only(c2, player, a);
+								that(v.phase() != Employee.Phase.OUTBOUND.ordinal(), "the carrier from a harbor village has not arrived 200 ticks after %d ticks (%d without a harbor)",
+										harborTicks, plainTicks);
+								that(plainTicks - harborTicks > 400, "the harbor saves only %d ticks", plainTicks - harborTicks);
+							});
+							c.later(1, c2 -> restore.run());
+							restored[0] = true;
 						} finally {
-							restore.run();
+							if (!restored[0]) restore.run();
 						}
 					});
 				}));

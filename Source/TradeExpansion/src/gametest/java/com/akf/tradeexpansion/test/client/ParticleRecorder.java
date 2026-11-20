@@ -65,6 +65,14 @@ public final class ParticleRecorder {
 		}
 	}
 
+	/** Called on the render thread for a sound the client plays itself (an item picked up). */
+	public static void onLocalSound(Identifier id, double x, double y, double z) {
+		if (!recording || !Minecraft.getInstance().isSameThread()) return;
+		synchronized (PARTICLES) {
+			SOUNDS.add(new Sound(id, x, y, z));
+		}
+	}
+
 	/** Forgets what was recorded and records from now on. */
 	public static void start() {
 		synchronized (PARTICLES) {

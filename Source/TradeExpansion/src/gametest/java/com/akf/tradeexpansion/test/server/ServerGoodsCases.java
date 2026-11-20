@@ -57,6 +57,7 @@ final class ServerGoodsCases {
 
 	static List<ServerCase> all() {
 		List<ServerCase> cases = new ArrayList<>();
+		cases.add(full("goods_with_components", List.of(), ServerGoodsCases::components));
 		cases.add(partial("consumable_goods", List.of("30-7", "32-2"),
 				"真紅の幹・歪んだ幹・ハチミツ入りの瓶・サトウキビ・矢・茶色の卵・青い卵が消耗品で、相場の戻り（半減期）と在庫の減りが消耗品の速さになること（画面の表示は見ていない）",
 				ctx -> {
@@ -149,5 +150,107 @@ final class ServerGoodsCases {
 			that(seen.size() >= 10, "only %d different specials in 40 days: %s", seen.size(), seen);
 		})));
 		return cases;
+	}
+
+	// ---- D-2: goods with components
+
+	private static final Identifier HEALING = Identifier.fromNamespaceAndPath("ak_trade_expansion_autotest", "potion_healing");
+
+	/**
+	 * D-2: a data pack of the world with a good that has {@code components} (a potion of healing, in every market) is
+	 * read by /reload, the market deals in it, buying gives that potion, and only that potion (not a water bottle) sells.
+	 * The pack goes again after the case (and /reload).
+	 */
+	private static void components(ServerCtx ctx) throws java.io.IOException {
+		java.nio.file.Path pack = ctx.server().getWorldPath(net.minecraft.world.level.storage.LevelResource.DATAPACK_DIR).resolve("ak_autotest_components");
+		int format = net.minecraft.SharedConstants.getCurrentVersion().packVersion(net.minecraft.server.packs.PackType.SERVER_DATA).major();
+		java.nio.file.Path goods = pack.resolve("data/ak_trade_expansion_autotest/ak_trade_expansion/goods/potion_healing.json");
+		java.nio.file.Files.createDirectories(goods.getParent());
+		java.nio.file.Files.writeString(pack.resolve("pack.mcmeta"),
+				"{\"pack\": {\"description\": \"autotest: goods with components\", \"min_format\": " + format + ", \"max_format\": " + format + "}}");
+		java.nio.file.Files.writeString(goods, """
+				{
+				  "item": "minecraft:potion",
+				  "components": { "minecraft:potion_contents": { "potion": "minecraft:healing" } },
+				  "base_price": 120,
+				  "auto_add": []
+				}
+				""");
+		// Taken away again (and read again) at the end of the case; here too if the case fails before.
+		ctx.atCleanUp(() -> {
+			if (removePack(pack)) {
+				ctx.server().reloadResources(ctx.server().getPackRepository().getSelectedIds().stream().filter(id -> !id.contains("ak_autotest_components")).toList());
+			}
+		});
+		ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+			c.commandResult(player, "reload");
+			waitFor(c, 400, () -> GoodsCatalog.get(HEALING) != null, cc -> {
+				// Opening the stall adds the auto_add good to the market made before the pack.
+				player.closeContainer();
+				c.forget(player);
+				c.openStall(player, stall);
+				that(market.good(HEALING) != null, "the market does not deal in the good with components: %s", market.goods().keySet());
+				var snap = c.lastSnapshot(player);
+				that(snap != null, "no snapshot");
+				var view = snap.goods().stream().filter(g -> g.goods().equals(HEALING)).findFirst()
+						.orElseThrow(() -> new AutotestCheck.Failed("the good with components is not in the trade screen's list"));
+				that(!view.patch().isEmpty(), "the trade screen gets no components for the potion of healing");
+				c.emptyInventory(player);
+				c.giveMoney(player, 10_000);
+				c.trade(player, market, HEALING, true, 1);
+				that(c.lastTradeResult(player) == com.akf.tradeexpansion.trade.TradeResult.SUCCESS, "buying the potion of healing gave %s", c.lastTradeResult(player));
+				net.minecraft.world.item.ItemStack bought = findPotion(player);
+				that(!bought.isEmpty(), "no potion after buying the good with components");
+				var contents = bought.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS);
+				that(contents != null && contents.is(net.minecraft.world.item.alchemy.Potions.HEALING), "the bought potion is %s, not healing", contents);
+				// A water bottle is not that good; the potion of healing is.
+				player.getInventory().add(net.minecraft.world.item.alchemy.PotionContents.createItemStack(net.minecraft.world.item.Items.POTION,
+						net.minecraft.world.item.alchemy.Potions.WATER));
+				bought.shrink(1);
+				c.trade(player, market, HEALING, false, 1);
+				that(c.lastTradeResult(player) == com.akf.tradeexpansion.trade.TradeResult.INSUFFICIENT_ITEMS, "selling a water bottle as the potion of healing gave %s",
+						c.lastTradeResult(player));
+				player.getInventory().add(net.minecraft.world.item.alchemy.PotionContents.createItemStack(net.minecraft.world.item.Items.POTION,
+						net.minecraft.world.item.alchemy.Potions.HEALING));
+				long money = c.balance(player);
+				c.trade(player, market, HEALING, false, 1);
+				that(c.lastTradeResult(player) == com.akf.tradeexpansion.trade.TradeResult.SUCCESS, "selling the potion of healing gave %s", c.lastTradeResult(player));
+				that(c.balance(player) > money, "selling the potion of healing paid nothing");
+				that(!findPotion(player).isEmpty() && findPotion(player).get(net.minecraft.core.component.DataComponents.POTION_CONTENTS).is(net.minecraft.world.item.alchemy.Potions.WATER),
+						"the water bottle was taken instead of the potion of healing");
+				removePack(pack);
+				cc.commandResult(player, "reload");
+				waitFor(cc, 400, () -> GoodsCatalog.get(HEALING) == null, c3 -> {
+				});
+			});
+		});
+	}
+
+	/** Deletes the test data pack; @return whether it was there. */
+	private static boolean removePack(java.nio.file.Path pack) {
+		if (!java.nio.file.Files.exists(pack)) return false;
+		try (var files = java.nio.file.Files.walk(pack)) {
+			files.sorted(java.util.Comparator.reverseOrder()).forEach(f -> f.toFile().delete());
+		} catch (java.io.IOException e) {
+			throw new java.io.UncheckedIOException(e);
+		}
+		return true;
+	}
+
+	private static net.minecraft.world.item.ItemStack findPotion(net.minecraft.server.level.ServerPlayer player) {
+		for (net.minecraft.world.item.ItemStack stack : player.getInventory()) {
+			if (stack.is(net.minecraft.world.item.Items.POTION)) return stack;
+		}
+		return net.minecraft.world.item.ItemStack.EMPTY;
+	}
+
+	/** Runs {@code then} once {@code ready} holds (checking every tick, at most {@code ticks}). */
+	private static void waitFor(ServerCtx c, int ticks, java.util.function.BooleanSupplier ready, ServerCase.Body then) throws Exception {
+		if (ready.getAsBoolean()) {
+			then.run(c);
+			return;
+		}
+		that(ticks > 0, "the data pack was not read in time");
+		c.later(1, cc -> waitFor(cc, ticks - 1, ready, then));
 	}
 }
