@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.72（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定を反映。v0.66 で全体をソースと照らし合わせて見直した。v0.67 で建てる場所を探す範囲を市場レベルで広げた。v0.68 で見張り塔のはしごと港の桟橋の柱を直した。v0.70 で雇い人に所持金を入れた時にすぐ仕入れるようにした。v0.71 で「追加の商品と消耗品」をタイトル画面から開けなくした。v0.72 で雪原の村の建物の見た目とエンドの公園のコーラスを直した）　作成日：2026-11-02　更新日：2026-11-20（改版履歴は付録B）
+- 版：v0.73（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定を反映。v0.66 で全体をソースと照らし合わせて見直した。v0.67 で建てる場所を探す範囲を市場レベルで広げた。v0.68 で見張り塔のはしごと港の桟橋の柱を直した。v0.70 で雇い人に所持金を入れた時にすぐ仕入れるようにした。v0.71 で「追加の商品と消耗品」をタイトル画面から開けなくした。v0.72 で雪原の村の建物の見た目とエンドの公園のコーラスを直した）　作成日：2026-11-02　更新日：2026-11-20（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 と拡張機能（輸送依頼 J-2、評判 M、村の発展 N、商会 O、村の流行 P、雇い人 Q、進捗 R、他 Mod 向けの API S）を実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`。ゲーム内での確認の状況は `docs/release/ingame-checklist.md`
@@ -2440,7 +2440,7 @@ test {
 | 権限 | `Commands.hasPermission(PermissionCheck)`。定数は `LEVEL_ALL`〜`LEVEL_OWNERS` | 段階8 |
 | Mod Menu・YACL | `ModMenuApi.getModConfigScreenFactory()`、`YetAnotherConfigLib.createBuilder()`（YACL `3.9.7+26.3-fabric`、Mod Menu `21.0.0`）。一覧の編集は `ListOption` を `category.group(...)` に入れる | 段階8 |
 | ルートの追加 | `LootTableEvents.MODIFY_DROPS`（テーブルのキー・`LootContext`・結果のリスト）。倒した人は `LootContextParams.LAST_DAMAGE_PLAYER` | 段階11（E-2） |
-| 村の建物の追加 | `StructureTemplatePool` の private フィールド `templates`（重みの数だけ並ぶ）・`rawTemplates` を Accessor Mixin で書き換え。要素は `StructurePoolElement.legacy(id, processors).apply(Projection.RIGID)`。`ServerLifecycleEvents.SERVER_STARTING` でサーバーの登録情報から取る | 段階9 |
+| 村の建物の追加 | `StructureTemplatePool` の private フィールド `templates`（重みの数だけ並ぶ）・`rawTemplates` を Accessor Mixin で書き換え。要素は `StructurePoolElement.single(id, processors).apply(Projection.RIGID)`（【v0.73】`legacy` から変更。`legacy` は構造物の空気を置かないので、先に生えていた草が床の上に残った）。`ServerLifecycleEvents.SERVER_STARTING` でサーバーの登録情報から取る | 段階9 |
 | 構造物NBT | 26.3 のパレットはブロック名を `id` キーで持つ（旧 `Name`）。DataVersion 5023。村の家の入口は `minecraft:building_entrance` のジグソー | 段階9 |
 | 破壊の取り消し | `PlayerBlockBreakEvents.BEFORE` で false を返す | 段階9（A-3） |
 | 手に持った物での右クリック | `useItemOn(...)`。対象外の時は `InteractionResult.TRY_WITH_EMPTY_HAND` を返すと `useWithoutItem` に進む | v0.15（C-4） |
@@ -2566,3 +2566,4 @@ test {
 | v0.70 | 2026-11-15 | Q-3 の仕入れを直した（雇い人タブのクライアントの自動テスト `staff_carrier_trip` で見つかった）：「資金不足」の運び屋に所持金を入れても、次に試す時刻（0.1日＝2分後）まで仕入れなかった（品を預けた時はすぐ動いていた）。雇った市場にいる時に所持金を入れたら、すぐ試す（番頭も。出かけている運び屋・療養中・休ませている時は変えない）。雇い人タブの小さいボタン（「+1,000c」、英語の「Change」「Resume」など）の文字が幅に入らず流れて切れていたので、入らない時は縮めて表示する |
 | v0.71 | 2026-11-15 | G章：設定画面の「追加の商品と消耗品」をタイトル画面から開くとゲームが落ちていた（アイテムのデータがワールドを読み込むまで無いため。設定画面のクライアントの自動テスト `layout_config_screen` で見つかった）。ワールドに入っている時だけ開けるようにし、説明文にも書いた |
 | v0.72 | 2026-11-20 | N-4：雪原のバイオームの村人の種類は `snow` で、建物の見た目の名前 `snowy` と一致せず、雪原の村の建物が平原の見た目になっていた（サーバーの自動テスト `snow_does_not_freeze` で見つかった）。`snow` を `snowy` に読み替える。エンドの公園のコーラスの木は、枝のある茎の上下がどちらも茎で、完成した時のブロックの更新で壊れていた（`buildings_stand_every_way`）。枝を幹のてっぺんから出す形にした。Q-3：運び屋を雇う設定の説明で、帰り荷の見込みをおすすめのすぐ後に出す（854×480 では一覧の高さで切れて見えなかった。`staff_backhaul_hint`）。D-2：`components` つきの商品の読み込みを自動テストで確かめた |
+| v0.73 | 2026-11-21 | 村の屋台の建物を村の家のプールに足す要素を `legacy` から `single` に変えた（構造物の空気も置き、床の上に草が残らない。チェックリスト 6-1 の自動テストで見つかった） |

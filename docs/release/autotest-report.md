@@ -2,16 +2,16 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.44、2026-11-21 17:22、196 件中 0 件失敗
-- クライアント：バージョン 0.2.42、2026-11-21 11:21、148 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.42、2026-11-21 11:08、3 件中 0 件失敗
-- クライアント（Mod Menu だけ）：バージョン 0.2.42、2026-11-21 10:55、2 件中 0 件失敗
-- クライアント（YACL だけ）：バージョン 0.2.42、2026-11-21 10:55、2 件中 0 件失敗
-- クライアント（JEI）：バージョン 0.2.42、2026-11-21 10:56、8 件中 0 件失敗
-- クライアント（REI）：バージョン 0.2.42、2026-11-21 10:55、7 件中 0 件失敗
-- クライアント（JourneyMap）：バージョン 0.2.42、2026-11-21 10:55、3 件中 0 件失敗
+- サーバー：バージョン 0.2.44、2026-11-21 17:31、196 件中 0 件失敗
+- クライアント：バージョン 0.2.44、2026-11-21 17:43、149 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.44、2026-11-21 17:44、3 件中 0 件失敗
+- クライアント（Mod Menu だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
+- クライアント（YACL だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
+- クライアント（JEI）：バージョン 0.2.44、2026-11-21 17:31、8 件中 0 件失敗
+- クライアント（REI）：バージョン 0.2.44、2026-11-21 17:31、7 件中 0 件失敗
+- クライアント（JourneyMap）：バージョン 0.2.44、2026-11-21 17:31、3 件中 0 件失敗
 - クライアント（建物の画像）：バージョン 0.2.41、2026-11-21 10:28、2 件中 0 件失敗
-- チェックリスト 337 項目のうち、今回 自動で完了 208・一部を確認 120・失敗 0
+- チェックリスト 337 項目のうち、今回 自動で完了 208・一部を確認 122・失敗 0
 
 ## すべての項目
 
@@ -290,6 +290,7 @@
 | 2-18 | `trade_refused_messages` | クライアント | ✔ | 全部 |
 | 7-11 | `bank_refused_messages` | クライアント | ✔ | 全部 |
 | 8-7 | `exchange_refused_and_fee` | クライアント | ✔ | 全部 |
+| 35-1 | `exchange_fee_from_server` | クライアント | ✔ | 自分の設定の手数料が 0% の時に、サーバーから手数料 30% の設定（ConfigSyncS2C）が届くと、両替タブの「手数料 ◯%」が 30% になること（テストのサーバーとクライアントは同じプロセスで設定を共有するので、サーバーの設定ファイルを自分と違えた時は見ていない） |
 | 9-2 | `quest_tab` | クライアント | ✔ | 全部 |
 | 16-5 | `quest_tab` | クライアント | ✔ | 全部 |
 | 16-4 | `quest_locked` | クライアント | ✔ | 全部 |
@@ -359,7 +360,7 @@
 | 14-1・14-5 | `dedicated_server_one_player` | クライアント | ✔ | 専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開け、買う・売るが1往復できること。サーバーで clock advance と設定（同じプロセスなので設定は共有）を変えた後に切断すると、設定が自分の設定ファイルの値に、市場の時計のずれが 0 に戻ること（2人と、切断の後に1人用の世界に入るところは見ていない） |
 | 13-2 | `dedicated_server_one_player` | クライアント | ✔ | 全部 |
 | 11-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの普通の世界で、生成された村の中で where show をすると、緑の点（村の範囲）が村の構造物の枠の辺の上に、地面（いちばん上のブロック＋0.3）に届くこと（見やすさは画像で確認） |
-| 6-1 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があること（村の種類ごとには見ていない。見た目は画像で確認） |
+| 6-1・6-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があり、建物の床（7×7）の上に草や花が無いこと。交易所の正面が建物の入口に向き、交易所と入口の間に通れないブロックが無く、入口の外に村の道（土の道）があること（村の種類ごとには見ていない。建物が道や家と自然につながって見えるかは画像で確認） |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 | 1-1 | `startup_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | 全部 |
 | 15-3 | `trade_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | Mod Menu・YACL を外した開発用の起動構成（テスト用の Mod は入っている）で、新しいワールドに入って村に交易所を置き、交易画面で1つ買い1つ売れることのみ（配布 jar だけの起動構成では見ていない） |
@@ -559,6 +560,7 @@
 - 7-11 `bank_refused_messages`：[7-11_deposit_too_much.png](../../Source/TradeExpansion/build/autotest/screenshots/7-11_deposit_too_much.png)
 - 8-7 `exchange_refused_and_fee`：[8-7_exchange_refused.png](../../Source/TradeExpansion/build/autotest/screenshots/8-7_exchange_refused.png)
 - 8-7 `exchange_refused_and_fee`：[8-7_exchange_fee.png](../../Source/TradeExpansion/build/autotest/screenshots/8-7_exchange_fee.png)
+- 35-1 `exchange_fee_from_server`：[35-1_server_exchange_fee.png](../../Source/TradeExpansion/build/autotest/screenshots/35-1_server_exchange_fee.png)
 - 9-2 `quest_tab`：[9-2_request_selected.png](../../Source/TradeExpansion/build/autotest/screenshots/9-2_request_selected.png)
 - 9-2 `quest_tab`：[9-2_delivered.png](../../Source/TradeExpansion/build/autotest/screenshots/9-2_delivered.png)
 - 16-5 `quest_tab`：[16-5_accepted.png](../../Source/TradeExpansion/build/autotest/screenshots/16-5_accepted.png)
@@ -664,7 +666,7 @@
 - 14-1・14-5 `dedicated_server_one_player`：[14-1_dedicated_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/14-1_dedicated_trade_screen.png)
 - 13-2 `dedicated_server_one_player`：[13-2_settings_on_server.png](../../Source/TradeExpansion/build/autotest/screenshots/13-2_settings_on_server.png)
 - 11-2 `where_show_natural_village`：[11-2_where_show_village.png](../../Source/TradeExpansion/build/autotest/screenshots/11-2_where_show_village.png)
-- 6-1 `where_show_natural_village`：[6-1_generated_stall.png](../../Source/TradeExpansion/build/autotest/screenshots/6-1_generated_stall.png)
+- 6-1・6-2 `where_show_natural_village`：[6-1_generated_stall.png](../../Source/TradeExpansion/build/autotest/screenshots/6-1_generated_stall.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)
 - 15-3 `trade_without_modmenu_yacl`：[15-3_bought_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/15-3_bought_without_modmenu_yacl.png)
 - 1-6 `startup_modmenu_without_yacl`：[1-2_mod_list.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_mod_list.png)

@@ -34,7 +34,7 @@ final class ClientVillageCases {
 	}
 
 	private record Found(BlockPos center, BlockPos stand, BoundingBox box, BlockPos stall, List<String> stallBlocks, int villages,
-			List<String> street, List<String> walkway) {
+			List<String> street, List<String> walkway, List<String> plants) {
 	}
 
 	/**
@@ -93,6 +93,8 @@ final class ClientVillageCases {
 				List<String> missing = new ArrayList<>(List.of("barrel", "hay_block", "lantern", "fence"));
 				missing.removeAll(found.stallBlocks());
 				check(missing.isEmpty(), "the stall building at %s has no %s around the stall", found.stall(), missing);
+				check(found.plants().isEmpty(), "plants on the floor of the stall building at %s: %s", found.stall(),
+						found.plants().subList(0, Math.min(6, found.plants().size())));
 				check(found.walkway().isEmpty(), "blocks in the way between the stall at %s and its entrance: %s", found.stall(), found.walkway());
 				check(found.street().contains("minecraft:dirt_path"), "no street (dirt path) outside the entrance of the stall at %s, found %s",
 						found.stall(), found.street());
@@ -143,7 +145,20 @@ final class ClientVillageCases {
 		List<String> blocks = new ArrayList<>();
 		List<String> street = new ArrayList<>();
 		List<String> walkway = new ArrayList<>();
+		List<String> plants = new ArrayList<>();
 		if (stall != null) {
+			// The building is 7×7 with the stall in the middle and its floor one below the stall: nothing may grow on it.
+			for (int dx = -3; dx <= 3; dx++) {
+				for (int dz = -3; dz <= 3; dz++) {
+					for (int dy = 0; dy <= 2; dy++) {
+						BlockPos p = stall.offset(dx, dy, dz);
+						BlockState state = level.getBlockState(p);
+						if (state.is(net.minecraft.tags.BlockTags.REPLACEABLE) && !state.isAir() || state.getBlock() instanceof net.minecraft.world.level.block.VegetationBlock) {
+							plants.add(p.toShortString() + " " + state + " on " + level.getBlockState(p.below()));
+						}
+					}
+				}
+			}
 			// The stall stands 3 blocks inside the entrance and faces it (genstall.js): the walkway at its feet and head, then
 			// the street just outside the building, on the ground (1 block up or down from the floor).
 			net.minecraft.core.Direction facing = level.getBlockState(stall).getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
@@ -169,6 +184,6 @@ final class ClientVillageCases {
 			}
 		}
 		return new Found(center, stand, box, stall == null ? null : stall.immutable(), blocks.stream().distinct().toList(), seen.size(),
-				street.stream().distinct().toList(), walkway);
+				street.stream().distinct().toList(), walkway, plants);
 	}
 }

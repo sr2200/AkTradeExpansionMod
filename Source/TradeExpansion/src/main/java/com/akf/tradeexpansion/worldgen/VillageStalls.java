@@ -68,7 +68,9 @@ public final class VillageStalls {
 
 			Holder<StructureProcessorList> processor = processors.get(ResourceKey.create(Registries.PROCESSOR_LIST,
 					Identifier.withDefaultNamespace(type.equals("plains") ? "mossify_10_percent" : "empty"))).orElseThrow();
-			StructurePoolElement element = StructurePoolElement.legacy(location, processor).apply(StructureTemplatePool.Projection.RIGID);
+			// "single", not "legacy": the air of the template is placed too, so grass and flowers that grew there before the
+			// building (also from the decoration of a neighbouring chunk) do not stay on its floor.
+			StructurePoolElement element = StructurePoolElement.single(location, processor).apply(StructureTemplatePool.Projection.RIGID);
 			List<Pair<StructurePoolElement, Integer>> raw = new ArrayList<>(accessor.tradeExpansion$rawTemplates());
 			raw.add(Pair.of(element, WEIGHT));
 			accessor.tradeExpansion$setRawTemplates(raw);
