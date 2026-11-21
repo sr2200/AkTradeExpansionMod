@@ -9,6 +9,7 @@ import com.akf.tradeexpansion.data.FacilityDefinition;
 import com.akf.tradeexpansion.development.Facility;
 import com.akf.tradeexpansion.development.FacilityBuilder;
 import com.akf.tradeexpansion.development.SiteFinder;
+import com.akf.tradeexpansion.entity.TraderEntity;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketAccess;
 import com.akf.tradeexpansion.market.MarketClock;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -289,8 +291,42 @@ final class PostScreenshots {
 		double baseYaw = Math.toDegrees(Math.atan2(f.getStepZ(), f.getStepX()));
 		Vec3 eye = world.getServer().computeOnServer(server -> findView(server.overworld(), target, baseYaw, new double[] {7, 8, 6, 9, 5},
 				new double[] {2.0, 3.0, 1.2}));
-		view(context, world, eye, target);
-		save(context, dir, "stall");
+		// The trader looks around on its own (and not at a spectator): its head was caught turned down, the face hidden
+		// under the hood. Hold it still, facing the camera, while the picture is taken.
+		boolean posed = world.getServer().computeOnServer(server -> poseTrader(server.overworld(), s, eye, true));
+		if (!posed) AutotestReport.LOGGER.warn("SHOTS no trader near the stall at {}", s);
+		try {
+			view(context, world, eye, target);
+			world.getServer().runOnServer(server -> poseTrader(server.overworld(), s, eye, true));
+			context.waitTicks(10);
+			save(context, dir, "stall");
+		} finally {
+			world.getServer().runOnServer(server -> poseTrader(server.overworld(), s, eye, false));
+		}
+	}
+
+	/**
+	 * Turns the trader of the stall (body and head) to look at {@code eye} and stops its AI ({@code hold}), or lets it
+	 * move again. @return whether a trader was found
+	 */
+	private static boolean poseTrader(ServerLevel level, BlockPos stall, Vec3 eye, boolean hold) {
+		var traders = level.getEntitiesOfClass(TraderEntity.class, new AABB(stall).inflate(4));
+		for (TraderEntity trader : traders) {
+			trader.setNoAi(hold);
+			if (!hold) continue;
+			Vec3 d = eye.subtract(trader.getEyePosition());
+			float yaw = (float) (Math.toDegrees(Math.atan2(d.z, d.x)) - 90);
+			// A little less than straight at the camera: the face stays under the hood but the eyes show.
+			float pitch = (float) -Math.toDegrees(Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))) * 0.7f;
+			trader.setYRot(yaw);
+			trader.setYBodyRot(yaw);
+			trader.setYHeadRot(yaw);
+			trader.setXRot(pitch);
+			trader.yRotO = yaw;
+			trader.xRotO = pitch;
+			trader.setDeltaMovement(Vec3.ZERO);
+		}
+		return !traders.isEmpty();
 	}
 
 	private static void facilityShot(ClientGameTestContext context, TestSingleplayerContext world, Village village, List<BoundingBox> boxes, Path dir) {
