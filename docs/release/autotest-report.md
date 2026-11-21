@@ -2,12 +2,16 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.40、2026-11-20 21:35、191 件中 0 件失敗
-- クライアント：バージョン 0.2.40、2026-11-20 22:42、144 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.40、2026-11-20 21:35、3 件中 0 件失敗
-- クライアント（Mod Menu だけ）：バージョン 0.2.40、2026-11-20 21:35、2 件中 0 件失敗
-- クライアント（YACL だけ）：バージョン 0.2.40、2026-11-20 21:35、2 件中 0 件失敗
-- チェックリスト 337 項目のうち、今回 自動で完了 202・一部を確認 114・失敗 0
+- サーバー：バージョン 0.2.41、2026-11-21 10:29、194 件中 0 件失敗
+- クライアント：バージョン 0.2.41、2026-11-21 10:43、144 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.41、2026-11-21 10:29、3 件中 0 件失敗
+- クライアント（Mod Menu だけ）：バージョン 0.2.41、2026-11-21 10:29、2 件中 0 件失敗
+- クライアント（YACL だけ）：バージョン 0.2.41、2026-11-21 10:43、2 件中 0 件失敗
+- クライアント（JEI）：バージョン 0.2.41、2026-11-21 10:30、8 件中 0 件失敗
+- クライアント（REI）：バージョン 0.2.41、2026-11-21 10:29、7 件中 0 件失敗
+- クライアント（JourneyMap）：バージョン 0.2.41、2026-11-21 10:29、3 件中 0 件失敗
+- クライアント（建物の画像）：バージョン 0.2.41、2026-11-21 10:28、2 件中 0 件失敗
+- チェックリスト 337 項目のうち、今回 自動で完了 206・一部を確認 119・失敗 0
 
 ## すべての項目
 
@@ -51,6 +55,7 @@
 | 9-3 | `quests_expire_and_refill` | サーバー | ✔ | 全部 |
 | 9-4 | `shortages_pay_more_and_rotate` | サーバー | ✔ | 全部 |
 | 21-1・21-2・21-5・21-6・21-7 | `transport_take_and_deliver` | サーバー | ✔ | 輸送依頼が1件あり、受け取ると保証金が引かれ荷箱が手に入り、出した市場では届けられず、届け先で報酬＋保証金を受け取って両方の評判が上がること（一覧・荷箱の説明の表示は見ていない） |
+| 21-4 | `transport_taken_by_other_player` | サーバー | ✔ | ほかのプレイヤー（サーバーに足した2人目）が、受け取られた輸送依頼を受け取ろうとすると「受け取り済み」で断られ、保証金も引かれず荷箱も増えず、依頼は最初の人のままであること（本物の2人の画面は見ていない） |
 | 21-3 | `transport_deposit_funds_and_card` | サーバー | ✔ | 所持金が保証金より少ないと受け取れず、カード払いなら口座から引かれること |
 | 21-8 | `transport_expires` | サーバー | ✔ | 期限を過ぎると届け先で「期限が切れています」になり、出した市場の評判が下がること（荷箱の説明の表示は見ていない） |
 | 21-9 | `transport_per_market_zero` | サーバー | ✔ | 全部 |
@@ -60,6 +65,7 @@
 | 26-27・26-29 | `carrier_return_cargo` | サーバー | ✔ | 行きに儲からなくても帰り荷の見込みで空荷で出かけ、行き先で帰り荷を仕入れ、戻って売ると歩合に帰り荷の利益も入ること（ログの文と右パネルは見ていない） |
 | 26-30 | `carrier_backhaul_off_no_empty_trip` | サーバー | ✔ | 帰り荷 OFF では、行きに儲からない時に空荷で出かけないこと（見込みの表示は見ていない） |
 | 26-11・26-12 | `clerk_sells_and_sold_out` | サーバー | ✔ | 番頭を雇うと品が預けられ、売れて「売り切れ」になり、預けると再開し、引取で品が戻ること（一覧の見込みの表示は見ていない） |
+| 26-18 | `clerk_saved` | サーバー | ✔ | 番頭（品を預けて休止中、所持金入り）の所持金・預かった品・様子・ログ・設定が、保存データの書き出しと読み直しで同じこと（ワールドを実際に開き直すのは運び屋だけ見た） |
 | 26-20 | `staff_turned_off` | サーバー | ✔ | staff.enabled を OFF にすると、運送中の運び屋が止まり（日が進んでも着かない）、雇う・所持金を入れる・休ませる・品を変えるは断られ、出金・引取・解雇は運送中でもでき、所持金と荷が手元に戻ること。ON に戻すと止まっていた運び屋が続きから着くこと（タブの表示は tabs_turned_off で見る） |
 | 26-16・26-17 | `staff_dismiss_and_limit` | サーバー | ✔ | 解雇で所持金と品が戻って一覧から消えること、3人まで雇えて4人目は断られること |
 | 26-19 | `staff_pay_by_card` | サーバー | ✔ | カード払いで雇う・所持金を入れると口座から引かれ（手数料つき）、カードで出金すると口座に入ること |
@@ -156,6 +162,7 @@
 | 29-4 | `harbor_at_the_shore` | サーバー | ✔ | 陸だけの所の杭では「奥側が水の上にありません」で断られ、岸の杭では手前（6列）が陸・奥が水の上に建ち、桟橋の下が水底まで埋まること（自動の場所探しは harbor_effects で見る。形は見ていない） |
 | 29-6 | `clock_tower_recovery` | サーバー | ✔ | 全部 |
 | 29-7 | `watchtower_effects` | サーバー | ✔ | 見張り塔の村では、商会の動きの割合（重み）が半分になり、そこを行き来する運び屋の事故の倍率が 0.5 になること（事故の回数・値動きの大きさは数えていない。倍率で確かめる） |
+| 29-7 | `watchtower_accident_count` | サーバー | ✔ | staff.accidentBase を 0.5 にして、運び屋の往復の終わりの事故の判定を見張り塔の無い時とある時に 400 回ずつ行うと（運び屋の事故の処理そのものを呼ぶ）、ある時の回数がおよそ半分（確率どおり）になること。商会の動きを同じ品・同じ強さ・同じ時刻で1日分押すと、見張り塔のある市場の相場の押しが、見張り塔の効き目を設定で 1 にした時の半分になること（交易画面の値動きは見ていない） |
 | 29-8 | `tavern_board` | サーバー | ✔ | 全部 |
 | 29-9 | `market_hall_goods` | サーバー | ✔ | 全部 |
 | 29-11 | `theater_trends` | サーバー | ✔ | 野外劇場の村では、人気の分野の倍率が 1+(m−1)×1.5、余り気味の分野が 1−(1−m)÷1.5 になって商品の値段に効き、交易画面にもその倍率が送られること（掲示板の流行の表示は見ていない） |
@@ -355,6 +362,26 @@
 | 1-6 | `log_has_no_mod_errors` | クライアント（Mod Menu だけ） | ✔ | 全部 |
 | 1-7 | `startup_yacl_without_modmenu` | クライアント（YACL だけ） | ✔ | 全部 |
 | 1-7 | `log_has_no_mod_errors` | クライアント（YACL だけ） | ✔ | 全部 |
+| 25-2 | `viewer_keys` | クライアント（JEI） | ✔ | 全部 |
+| 25-6 | `viewer_keys` | クライアント（JEI） | ✔ | 全部 |
+| 25-3 | `viewer_page` | クライアント（JEI） | ✔ | 近い順に5つの市場の名前・方角と距離・買値・売値・在庫、値段が屋台の画面と同じ（評判 300 点の割引）、品不足の市場の名前がオレンジ、行のツールチップに市場名と品不足の注意が出ること（売り切れ・買い取りの上限・何個ずつの取引かの注意は見ていない） |
+| 25-4 | `viewer_page` | クライアント（JEI） | ✔ | ページを開いたまま、屋台の値段をサーバーで動かすと（相場の押しを変える。実際の売買ではない）、数秒で新しい値段になること |
+| 25-5 | `viewer_page_none` | クライアント（JEI） | ✔ | board.radius を 16 にして市場から 40 ブロック離れた所で開くと「近くにこの品を扱う市場はありません…」と出て、ヘッダーの半径が 16 になること（512 ブロックの既定では見ていない） |
+| 25-8 | `viewer_reload` | クライアント（JEI） | ✔ | 全部 |
+| 30-1 | `viewer_new_goods` | クライアント（JEI） | ✔ | JEI で、新しい商品（エリトラ・トライデント・ダイヤのツルハシとチェストプレート）に「市場の相場」のページがあり、ページの品が耐久値の減っていない新品であること（アイコンの見た目は画像で見る） |
+| 25-2 | `log_has_no_mod_errors` | クライアント（JEI） | ✔ | JEI を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ |
+| 25-7 | `viewer_keys` | クライアント（REI） | ✔ | REI で、R と U のどちらでも「市場の相場」のページが出て、岩盤には出ないこと（25-2 の分） |
+| 25-7 | `viewer_page` | クライアント（REI） | ✔ | REI で、25-3 のページの中身（近い順に5つ、屋台と同じ値段、品不足のオレンジとツールチップ）が出ること |
+| 25-7 | `viewer_page` | クライアント（REI） | ✔ | REI で、ページを開いたまま値段が変わると数秒で新しくなること（25-4 の分。サーバーで相場の押しを変える） |
+| 25-7 | `viewer_page_none` | クライアント（REI） | ✔ | REI で、近くに市場が無い時に「近くにこの品を扱う市場はありません…」が出ること（25-5 の分。board.radius を 16 にした） |
+| 25-7 | `viewer_reload` | クライアント（REI） | ✔ | REI で、/aktradeex goods で品を外す・戻す、設定ファイルで品を足して /aktradeex reload すると、ページが消える・出ること（25-8 の分） |
+| 30-1 | `viewer_new_goods` | クライアント（REI） | ✔ | REI で、新しい商品（エリトラ・トライデント・ダイヤのツルハシとチェストプレート）に「市場の相場」のページがあり、ページの品が耐久値の減っていない新品であること（アイコンの見た目は画像で見る） |
+| 25-7 | `log_has_no_mod_errors` | クライアント（REI） | ✔ | REI を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ |
+| 20-3 | `journeymap_waypoints` | クライアント（JourneyMap） | ✔ | 全部 |
+| 20-5 | `journeymap_waypoints` | クライアント（JourneyMap） | ✔ | JourneyMap がある時、掲示板の市場の一覧の「この市場を登録」で今いる市場の金色の地点が JourneyMap に追加され（チャットには出ない）、もう一度押しても増えないこと（近くに市場が無い時は JourneyMap なしでだけ見た） |
+| 20-3 | `log_has_no_mod_errors` | クライアント（JourneyMap） | ✔ | JourneyMap を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ |
+| 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 | `building_looks` | クライアント（建物の画像） | ✔ | 14種類の建物を7種類の見た目で、完成の時と同じく構造物を置いて、正面の斜め上から撮った画像（98枚、look_<見た目>_<建物>.png）があり、どの建物にも看板があること（材料と形の見た目・扉や窓や屋根の向き・水の張り方は画像で見る。向きは1つ。鐘を鳴らせる・寝られる・村人が来るは見ていない） |
+| 29-2 | `log_has_no_mod_errors` | クライアント（建物の画像） | ✔ | 建物の画像を撮ったクライアントのログに本 Mod のエラー・警告が出ないことのみ |
 
 ## 見て確かめる画像
 
@@ -634,3 +661,126 @@
 - 1-6 `startup_modmenu_without_yacl`：[1-6_mod_list_without_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-6_mod_list_without_yacl.png)
 - 1-7 `startup_yacl_without_modmenu`：[1-7_title_without_modmenu.png](../../Source/TradeExpansion/build/autotest/screenshots/1-7_title_without_modmenu.png)
 - 1-7 `startup_yacl_without_modmenu`：[1-7_settings_without_modmenu.png](../../Source/TradeExpansion/build/autotest/screenshots/1-7_settings_without_modmenu.png)
+- 25-2 `viewer_keys`：[25-2_JEI_R.png](../../Source/TradeExpansion/build/autotest/screenshots/25-2_JEI_R.png)
+- 25-2 `viewer_keys`：[25-2_JEI_U.png](../../Source/TradeExpansion/build/autotest/screenshots/25-2_JEI_U.png)
+- 25-6 `viewer_keys`：[25-6_JEI_stall_uses.png](../../Source/TradeExpansion/build/autotest/screenshots/25-6_JEI_stall_uses.png)
+- 25-3 `viewer_page`：[25-3_JEI_page.png](../../Source/TradeExpansion/build/autotest/screenshots/25-3_JEI_page.png)
+- 25-3 `viewer_page`：[25-3_JEI_shortage_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/25-3_JEI_shortage_tooltip.png)
+- 25-4 `viewer_page`：[25-4_JEI_new_price.png](../../Source/TradeExpansion/build/autotest/screenshots/25-4_JEI_new_price.png)
+- 25-5 `viewer_page_none`：[25-5_JEI_none.png](../../Source/TradeExpansion/build/autotest/screenshots/25-5_JEI_none.png)
+- 25-8 `viewer_reload`：[25-8_JEI_added_good.png](../../Source/TradeExpansion/build/autotest/screenshots/25-8_JEI_added_good.png)
+- 30-1 `viewer_new_goods`：[30-1_JEI_elytra.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_JEI_elytra.png)
+- 30-1 `viewer_new_goods`：[30-1_JEI_trident.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_JEI_trident.png)
+- 30-1 `viewer_new_goods`：[30-1_JEI_diamond_pickaxe.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_JEI_diamond_pickaxe.png)
+- 30-1 `viewer_new_goods`：[30-1_JEI_diamond_chestplate.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_JEI_diamond_chestplate.png)
+- 25-7 `viewer_keys`：[25-2_REI_R.png](../../Source/TradeExpansion/build/autotest/screenshots/25-2_REI_R.png)
+- 25-7 `viewer_keys`：[25-2_REI_U.png](../../Source/TradeExpansion/build/autotest/screenshots/25-2_REI_U.png)
+- 25-7 `viewer_page`：[25-3_REI_page.png](../../Source/TradeExpansion/build/autotest/screenshots/25-3_REI_page.png)
+- 25-7 `viewer_page`：[25-3_REI_shortage_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/25-3_REI_shortage_tooltip.png)
+- 25-7 `viewer_page`：[25-4_REI_new_price.png](../../Source/TradeExpansion/build/autotest/screenshots/25-4_REI_new_price.png)
+- 25-7 `viewer_page_none`：[25-5_REI_none.png](../../Source/TradeExpansion/build/autotest/screenshots/25-5_REI_none.png)
+- 25-7 `viewer_reload`：[25-8_REI_added_good.png](../../Source/TradeExpansion/build/autotest/screenshots/25-8_REI_added_good.png)
+- 30-1 `viewer_new_goods`：[30-1_REI_elytra.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_REI_elytra.png)
+- 30-1 `viewer_new_goods`：[30-1_REI_trident.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_REI_trident.png)
+- 30-1 `viewer_new_goods`：[30-1_REI_diamond_pickaxe.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_REI_diamond_pickaxe.png)
+- 30-1 `viewer_new_goods`：[30-1_REI_diamond_chestplate.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_REI_diamond_chestplate.png)
+- 20-3 `journeymap_waypoints`：[20-3_journeymap_board.png](../../Source/TradeExpansion/build/autotest/screenshots/20-3_journeymap_board.png)
+- 20-5 `journeymap_waypoints`：[20-5_journeymap_here.png](../../Source/TradeExpansion/build/autotest/screenshots/20-5_journeymap_here.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_quest_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_warehouse.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_inn.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_bank.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_fountain.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_fountain.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_park.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_park.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_clock_tower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_clock_tower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_watchtower.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_watchtower.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_tavern.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_market_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_market_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_harbor.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_harbor.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_theater.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_hot_spring.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_festival.png)

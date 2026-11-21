@@ -433,6 +433,31 @@ final class ServerChapterCases {
 					that(Reputation.points(a, player.getUUID(), now) > repA, "reputation at A did not rise");
 					that(Reputation.points(b, player.getUUID(), now) > repB, "reputation at B did not rise");
 				})));
+		cases.add(partial("transport_taken_by_other_player", List.of("21-4"),
+				"ほかのプレイヤー（サーバーに足した2人目）が、受け取られた輸送依頼を受け取ろうとすると「受け取り済み」で断られ、保証金も引かれず荷箱も増えず、依頼は最初の人のままであること（本物の2人の画面は見ていない）",
+				ctx -> markets(ctx, new int[] {0, 600}, (c, player, m) -> {
+					Market a = m.get(0), b = m.get(1);
+					Request transport = transportOf(a, b);
+					c.command(player, "aktradeex reputation set 1000"); // 3-star requests need a reputation
+					long deposit = transport.transport().orElseThrow().deposit();
+					c.giveMoney(player, deposit + 1_000);
+					c.forget(player);
+					QuestService.accept(player, new QuestAcceptC2S(a.id(), transport.id(), false));
+					that(questResult(c, player) == TradeResult.SUCCESS, "taking the crate gave %s", questResult(c, player));
+					// A second player at the same stall.
+					ServerPlayer other = c.player(player.blockPosition());
+					openAt(c, other, m, 0);
+					c.command(other, "aktradeex reputation set 1000");
+					c.giveMoney(other, deposit + 1_000);
+					String before = c.fingerprint(other);
+					c.forget(other);
+					QuestService.accept(other, new QuestAcceptC2S(a.id(), transport.id(), false));
+					that(questResult(c, other) == TradeResult.CARGO_TAKEN, "the second player taking the same crate gave %s", questResult(c, other));
+					that(before.equals(c.fingerprint(other)), "the refused crate changed the second player's money or items");
+					equal(0, c.count(other, ModItems.CARGO_CRATE), "crates of the second player");
+					equal(1, c.count(player, ModItems.CARGO_CRATE), "crates of the first player");
+					that(a.requests().stream().anyMatch(r -> r.id() == transport.id() && r.taken()), "the request is no longer taken");
+				})));
 		cases.add(partial("transport_deposit_funds_and_card", List.of("21-3"), "所持金が保証金より少ないと受け取れず、カード払いなら口座から引かれること",
 				ctx -> {
 					ctx.config(cfg -> cfg.bank.minMarketLevel = 1);
@@ -662,6 +687,36 @@ final class ServerChapterCases {
 					var back = staff(c, player, market, StaffRequestC2S.Action.WITHDRAW_ITEMS, e.id(), good, 0, 0, 0, 0, 0, false);
 					that(back == TradeResult.SUCCESS, "taking the goods back gave %s", back);
 					equal(6, c.count(player, item), "items after taking them back");
+				})));
+		cases.add(partial("clerk_saved", List.of("26-18"),
+				"番頭（品を預けて休止中、所持金入り）の所持金・預かった品・様子・ログ・設定が、保存データの書き出しと読み直しで同じこと（ワールドを実際に開き直すのは運び屋だけ見た）",
+				ctx -> ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+					c.openStall(player, stall);
+					c.command(player, "aktradeex reputation set 150");
+					c.giveMoney(player, 5_000);
+					Identifier good = c.tradableGood(market, 0, 20);
+					Item item = c.item(good);
+					ServerCases.giveItems(player, item, 10);
+					that(staff(c, player, market, StaffRequestC2S.Action.HIRE_CLERK, 0, good, 0, 10, 0, 1_000_000, 0, false) == TradeResult.SUCCESS,
+							"hiring a clerk failed");
+					StaffS2C.View e = only(c, player, market);
+					that(staff(c, player, market, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), good, 0, 0, 0, 0, 300, false) == TradeResult.SUCCESS, "depositing failed");
+					that(staff(c, player, market, StaffRequestC2S.Action.PAUSE, e.id(), good, 0, 0, 0, 0, 0, false) == TradeResult.SUCCESS, "pausing failed");
+					Employee clerk = c.registry().employees().stream().filter(x -> x.id() == e.id()).findFirst().orElseThrow();
+					var ops = net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, c.level().registryAccess());
+					var saved = MarketRegistry.CODEC.encodeStart(ops, c.registry()).getOrThrow();
+					Employee back = MarketRegistry.CODEC.parse(ops, saved).getOrThrow().employees().stream().filter(x -> x.id() == e.id()).findFirst().orElse(null);
+					that(back != null, "the clerk was not loaded");
+					List<String> different = new java.util.ArrayList<>();
+					for (java.lang.reflect.Field f : Employee.class.getDeclaredFields()) {
+						if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+						f.setAccessible(true);
+						if (!java.util.Objects.equals(f.get(clerk), f.get(back))) different.add(f.getName() + ": " + f.get(clerk) + " / " + f.get(back));
+					}
+					that(different.isEmpty(), "the clerk after loading differs: %s", different);
+					StaffS2C.View paused = only(c, player, market);
+					that(paused.stock() > 0 && paused.purse() >= 300 && paused.paused(), "the clerk to save: stock %d, purse %d, paused %s", paused.stock(), paused.purse(),
+							paused.paused());
 				})));
 		cases.add(partial("staff_turned_off", List.of("26-20"),
 				"staff.enabled を OFF にすると、運送中の運び屋が止まり（日が進んでも着かない）、雇う・所持金を入れる・休ませる・品を変えるは断られ、出金・引取・解雇は運送中でもでき、所持金と荷が手元に戻ること。ON に戻すと止まっていた運び屋が続きから着くこと（タブの表示は tabs_turned_off で見る）",

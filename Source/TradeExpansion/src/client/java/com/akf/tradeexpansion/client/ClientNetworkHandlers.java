@@ -72,11 +72,13 @@ public final class ClientNetworkHandlers {
 				(payload, context) -> PriceLookupCache.setTradable(payload));
 		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.PriceLookupS2C.TYPE,
 				(payload, context) -> PriceLookupCache.put(payload));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+		// The disconnect event may come on the network thread: the caches (and the recipe viewers PriceLookupCache tells,
+		// JEI refuses calls from other threads) are changed on the client thread.
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(() -> {
 			ClientMarketCache.clear();
 			PriceLookupCache.clear();
 			ConfigManager.load();
 			com.akf.tradeexpansion.market.MarketClock.setClientOffset(0);
-		});
+		}));
 	}
 }

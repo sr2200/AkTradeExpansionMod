@@ -4,7 +4,8 @@
 //
 // Reads build/autotest/server-results.json, client-results.json and the results of the clients with other mods left
 // out (client-minimal-results.json without Mod Menu and YACL, client-modmenu-only-results.json and
-// client-yacl-only-results.json; all written by the game tests in src/gametest) and
+// client-yacl-only-results.json), with one more mod (client-jei-, client-rei- and client-journeymap-results.json) and the
+// pictures of the buildings (client-looks-results.json; all written by the game tests in src/gametest) and
 //   1. marks the items of docs/release/ingame-checklist.md the tests covered:
 //        all cases passed and one covers the whole item -> "- [x] ... 〔自動 ✔ 0.2.1 26-11-14〕"
 //        all cases passed but only partly                -> "- [ ] ... 〔一部自動 ✔ 0.2.1 26-11-14：<what was checked>〕"
@@ -26,6 +27,8 @@ const reportFile = path.join(root, 'docs', 'release', 'autotest-report.md');
 const SIDES = {
 	server: 'サーバー', client: 'クライアント', 'client-minimal': 'クライアント（Mod Menu・YACL なし）',
 	'client-modmenu-only': 'クライアント（Mod Menu だけ）', 'client-yacl-only': 'クライアント（YACL だけ）',
+	'client-jei': 'クライアント（JEI）', 'client-rei': 'クライアント（REI）', 'client-journeymap': 'クライアント（JourneyMap）',
+	'client-looks': 'クライアント（建物の画像）',
 };
 
 function readResults() {
@@ -48,6 +51,10 @@ const LOGS = {
 	'client-minimal': path.join(resultsDir, 'client-minimal.log'),
 	'client-modmenu-only': path.join(resultsDir, 'client-modmenu-only.log'),
 	'client-yacl-only': path.join(resultsDir, 'client-yacl-only.log'),
+	'client-jei': path.join(resultsDir, 'client-jei.log'),
+	'client-rei': path.join(resultsDir, 'client-rei.log'),
+	'client-journeymap': path.join(resultsDir, 'client-journeymap.log'),
+	'client-looks': path.join(resultsDir, 'client-looks.log'),
 };
 const LOG_CASES = {
 	server: { name: 'log_has_no_mod_errors', checklist: ['14-4'], partial: 'テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ' },
@@ -55,6 +62,10 @@ const LOG_CASES = {
 	'client-minimal': { name: 'log_has_no_mod_errors', checklist: ['1-1'], partial: null },
 	'client-modmenu-only': { name: 'log_has_no_mod_errors', checklist: ['1-6'], partial: null },
 	'client-yacl-only': { name: 'log_has_no_mod_errors', checklist: ['1-7'], partial: null },
+	'client-jei': { name: 'log_has_no_mod_errors', checklist: ['25-2'], partial: 'JEI を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ' },
+	'client-rei': { name: 'log_has_no_mod_errors', checklist: ['25-7'], partial: 'REI を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ' },
+	'client-journeymap': { name: 'log_has_no_mod_errors', checklist: ['20-3'], partial: 'JourneyMap を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ' },
+	'client-looks': { name: 'log_has_no_mod_errors', checklist: ['29-2'], partial: '建物の画像を撮ったクライアントのログに本 Mod のエラー・警告が出ないことのみ' },
 };
 const OURS = /tradeexpansion|ak_trade_expansion|TradeExpansion/i;
 const LOG_LINE = /^\[[\d:]+\] \[([^\]]*)\/(ERROR|FATAL|WARN)\] \(([^)]*)\) (.*)$/;

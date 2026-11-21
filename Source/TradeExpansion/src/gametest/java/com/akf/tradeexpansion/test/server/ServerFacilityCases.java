@@ -269,6 +269,41 @@ final class ServerFacilityCases {
 							e.accidentMultiplier());
 					that(Math.abs(e.travelMultiplier() - 1.0) < 1e-9, "travel multiplier without a harbor: %s", e.travelMultiplier());
 				})));
+		cases.add(partial("watchtower_accident_count", List.of("29-7"),
+				"staff.accidentBase を 0.5 にして、運び屋の往復の終わりの事故の判定を見張り塔の無い時とある時に 400 回ずつ行うと（運び屋の事故の処理そのものを呼ぶ）、ある時の回数がおよそ半分（確率どおり）になること。商会の動きを同じ品・同じ強さ・同じ時刻で1日分押すと、見張り塔のある市場の相場の押しが、見張り塔の効き目を設定で 1 にした時の半分になること（交易画面の値動きは見ていない）",
+				ctx -> {
+					ctx.config(cfg -> {
+						cfg.staff.accidentBase = 0.5;
+						cfg.staff.quitChance = 0;
+					});
+					townMarkets(ctx, new int[] {0, 600}, (c, player, m) -> {
+						Market a = m.get(0), b = m.get(1);
+						builder(c, player, a);
+						StaffS2C.View view = hireCarrier(c, player, a, b);
+						Employee e = c.registry().employees().stream().filter(x -> x.id() == view.id()).findFirst().orElseThrow();
+						double distance = MarketRegistry.linkedDistance(a, b);
+						var staff = TradeExpansionConfig.get().staff;
+						double chance = com.akf.tradeexpansion.core.StaffMath.accidentChance(distance, staff.accidentBase, staff.accidentPerThousandBlocks, staff.accidentMax);
+						Identifier good = ServerChapterCases.shared(c, a, 1, 0, b);
+						int without = accidents(c, e, distance, 0);
+						buildAndComplete(c, player, a, WATCHTOWER);
+						double k = Development.config().watchtowerAccidentMultiplier;
+						int with = accidents(c, e, distance, ACCIDENT_TRIES);
+						// The same push at the same time and with the same params, the watchtower's share set to 1 (no effect) and to its default.
+						double rk = Development.config().watchtowerRivalMultiplier;
+						long pushTime = MarketUpkeep.touch(c.level(), a);
+						c.config(cfg -> cfg.development.watchtowerRivalMultiplier = 1.0);
+						double pushWithout = rivalPush(c, a, good, pushTime);
+						c.config(cfg -> cfg.development.watchtowerRivalMultiplier = rk);
+						double pushWith = rivalPush(c, a, good, pushTime);
+						expectCount(without, chance, "without a watchtower");
+						expectCount(with, chance * k, "with a watchtower");
+						that(with < without, "accidents with a watchtower: %d, without: %d", with, without);
+						that(pushWithout > 0, "the campaign did not push the price of %s", good);
+						that(Math.abs(pushWith / pushWithout - rk) < 1e-6, "push of the campaign with a watchtower: %.5f, without: %.5f (expected ×%s)", pushWith,
+								pushWithout, rk);
+					});
+				}));
 		cases.add(full("tavern_board", List.of("29-8"), ctx -> townMarkets(ctx, new int[] {0, 700}, (c, player, m) -> {
 			Market a = m.get(0), b = m.get(1);
 			int radius = TradeExpansionConfig.get().board.radius;
@@ -601,6 +636,70 @@ final class ServerFacilityCases {
 				q.transportMaxMultiplier) * factor;
 		long expected = Math.max(1, (long) Math.ceil(value * multiplier - 1e-9));
 		equal(expected, r.reward(), "reward of a transport request of " + r.quantity() + " " + r.goods() + " (x" + factor + ")");
+	}
+
+	private static final int ACCIDENT_TRIES = 400;
+
+	/**
+	 * Rolls the accident at the end of {@link #ACCIDENT_TRIES} loaded trips of the carrier (StaffService's own roll) and
+	 * counts the accidents (a new line in its log). Each trip has its own number and ends 3,600 ticks after the last, as
+	 * real round trips do: the roll is seeded with them (with the same arrival time every roll would come out the same).
+	 */
+	private static int accidents(ServerCtx c, Employee e, double distance, int firstTrip) throws ReflectiveOperationException {
+		Class<?> changes = Class.forName("com.akf.tradeexpansion.staff.StaffService$Changes");
+		java.lang.reflect.Constructor<?> newChanges = changes.getDeclaredConstructor();
+		newChanges.setAccessible(true);
+		java.lang.reflect.Method roll = com.akf.tradeexpansion.staff.StaffService.class.getDeclaredMethod("accident", net.minecraft.server.MinecraftServer.class,
+				MarketRegistry.class, Employee.class, double.class, long.class, changes);
+		roll.setAccessible(true);
+		java.lang.reflect.Field stock = Employee.class.getDeclaredField("stock");
+		java.lang.reflect.Field trips = Employee.class.getDeclaredField("trips");
+		java.lang.reflect.Field log = Employee.class.getDeclaredField("log");
+		java.lang.reflect.Field nextTime = Employee.class.getDeclaredField("nextTime");
+		nextTime.setAccessible(true);
+		stock.setAccessible(true);
+		trips.setAccessible(true);
+		log.setAccessible(true);
+		int count = 0;
+		long now = c.now();
+		for (int i = 0; i < ACCIDENT_TRIES; i++) {
+			stock.setInt(e, 10);
+			trips.setInt(e, firstTrip + i);
+			nextTime.setLong(e, now + (long) (firstTrip + i) * 3_600);
+			List<?> lines = (List<?>) log.get(e);
+			Object last = lines.isEmpty() ? null : lines.getLast();
+			boolean quit = (boolean) roll.invoke(null, c.server(), c.registry(), e, distance, now, newChanges.newInstance());
+			that(!quit, "the carrier quit with staff.quitChance 0");
+			if (!lines.isEmpty() && lines.getLast() != last) count++;
+		}
+		return count;
+	}
+
+	/** The count is within 5 standard deviations of {@link #ACCIDENT_TRIES} × chance. */
+	private static void expectCount(int count, double chance, String what) {
+		double mean = ACCIDENT_TRIES * chance;
+		double sd = Math.sqrt(ACCIDENT_TRIES * chance * (1 - chance));
+		that(Math.abs(count - mean) <= 5 * sd + 1, "accidents %s: %d of %d (chance %.3f, expected about %.0f)", what, count, ACCIDENT_TRIES, chance, mean);
+	}
+
+	/**
+	 * How far one day of a rival campaign centered on the market moves the good's pressure (put back afterwards), as of
+	 * {@code now} (the push fades during the day: compare pushes at the same time).
+	 */
+	private static double rivalPush(ServerCtx c, Market market, Identifier good, long now) {
+		long today = RivalService.day(now);
+		// A weak campaign: neither push reaches the pressure's limit.
+		Campaign strong = campaign(c, market, good);
+		Campaign camp = new Campaign(strong.id(), strong.guild(), good, market.id(), true, today, today + 3, 1);
+		var state = market.good(good);
+		double before = state.pressure();
+		state.setPressure(0);
+		RivalService.push(c.registry(), market, camp, today, today, now);
+		double moved = Math.abs(state.pressure());
+		var p = market.params(good);
+		that(state.pressure() > p.minPressure() && state.pressure() < p.maxPressure(), "the push of %s reached the pressure's limit (%.2f)", good, state.pressure());
+		state.setPressure(before);
+		return moved;
 	}
 
 	/** Hires an automatic carrier at {@code a} for trips to {@code b}; returns it as the staff tab lists it. */

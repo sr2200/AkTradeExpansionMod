@@ -43,7 +43,9 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
  * System properties: {@code ak.autotest.only} as for the server cases; {@code ak.autotest.variant} for the runs with
  * other mods left out: {@code minimal} (without Mod Menu and YACL, runClientGameTestMinimal: the startup and trade
  * cases), {@code modmenu-only} (runClientGameTestModMenuOnly) and {@code yacl-only} (runClientGameTestYaclOnly), each
- * with results in client-<variant>-results.json.
+ * with results in client-<variant>-results.json; and for the runs with one more mod: {@code jei}, {@code rei}
+ * (runClientGameTestJei / Rei: the recipe viewer pages) and {@code journeymap} (runClientGameTestJourneyMap); {@code looks}
+ * (runClientGameTestLooks) takes the pictures of the buildings.
  */
 public class ClientChecklistTests implements FabricClientGameTest {
 	/** The language the screens are checked in; English is checked once more for the layout only. */
@@ -290,6 +292,44 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		return List.of(new ClientCase("startup_yacl_without_modmenu", List.of("1-7"), null, false, ClientConfigCases::yaclWithoutModMenu));
 	}
 
+	/** The run with JEI or REI (runClientGameTestJei / Rei, checklist 25-2〜25-8, 30-1). */
+	private static List<ClientCase> viewerCases(String viewer) {
+		boolean jei = viewer.equals("JEI");
+		List<ClientCase> cases = new ArrayList<>();
+		cases.add(new ClientCase("viewer_keys", List.of(jei ? "25-2" : "25-7"), jei ? null
+				: "REI で、R と U のどちらでも「市場の相場」のページが出て、岩盤には出ないこと（25-2 の分）",
+				true, ClientViewerCases::keys, jei ? List.of("25-6") : List.of(), null));
+		cases.add(new ClientCase("viewer_page", List.of(jei ? "25-3" : "25-7"),
+				jei ? "近い順に5つの市場の名前・方角と距離・買値・売値・在庫、値段が屋台の画面と同じ（評判 300 点の割引）、品不足の市場の名前がオレンジ、行のツールチップに市場名と品不足の注意が出ること（売り切れ・買い取りの上限・何個ずつの取引かの注意は見ていない）"
+						: "REI で、25-3 のページの中身（近い順に5つ、屋台と同じ値段、品不足のオレンジとツールチップ）が出ること",
+				true, ClientViewerCases::page, List.of(jei ? "25-4" : "25-7"),
+				jei ? "ページを開いたまま、屋台の値段をサーバーで動かすと（相場の押しを変える。実際の売買ではない）、数秒で新しい値段になること"
+						: "REI で、ページを開いたまま値段が変わると数秒で新しくなること（25-4 の分。サーバーで相場の押しを変える）"));
+		cases.add(new ClientCase("viewer_page_none", List.of(jei ? "25-5" : "25-7"), jei
+				? "board.radius を 16 にして市場から 40 ブロック離れた所で開くと「近くにこの品を扱う市場はありません…」と出て、ヘッダーの半径が 16 になること（512 ブロックの既定では見ていない）"
+				: "REI で、近くに市場が無い時に「近くにこの品を扱う市場はありません…」が出ること（25-5 の分。board.radius を 16 にした）",
+				true, ClientViewerCases::none));
+		cases.add(new ClientCase("viewer_reload", List.of(jei ? "25-8" : "25-7"), jei ? null
+				: "REI で、/aktradeex goods で品を外す・戻す、設定ファイルで品を足して /aktradeex reload すると、ページが消える・出ること（25-8 の分）",
+				true, ClientViewerCases::reload));
+		cases.add(new ClientCase("viewer_new_goods", List.of("30-1"), viewer + " で、新しい商品（エリトラ・トライデント・ダイヤのツルハシとチェストプレート）に「市場の相場」のページがあり、ページの品が耐久値の減っていない新品であること（アイコンの見た目は画像で見る）",
+				true, ClientViewerCases::newGoods));
+		return cases;
+	}
+
+	/** The pictures of the buildings (runClientGameTestLooks; a person looks at them). */
+	private static List<ClientCase> looksCases() {
+		return List.of(new ClientCase("building_looks", List.of("22-50", "22-52", "22-53", "22-54", "22-55", "22-56", "28-2", "28-3", "28-4", "28-5", "28-6", "29-2", "29-14"),
+				"14種類の建物を7種類の見た目で、完成の時と同じく構造物を置いて、正面の斜め上から撮った画像（98枚、look_<見た目>_<建物>.png）があり、どの建物にも看板があること（材料と形の見た目・扉や窓や屋根の向き・水の張り方は画像で見る。向きは1つ。鐘を鳴らせる・寝られる・村人が来るは見ていない）",
+				true, ClientLookCases::buildings));
+	}
+
+	/** The run with JourneyMap (runClientGameTestJourneyMap, checklist 20-3, 20-5). */
+	private static List<ClientCase> journeyMapCases() {
+		return List.of(new ClientCase("journeymap_waypoints", List.of("20-3"), null, true, ClientJourneyMapCases::waypointButtons,
+				List.of("20-5"), "JourneyMap がある時、掲示板の市場の一覧の「この市場を登録」で今いる市場の金色の地点が JourneyMap に追加され（チャットには出ない）、もう一度押しても増えないこと（近くに市場が無い時は JourneyMap なしでだけ見た）"));
+	}
+
 	private static List<ClientCase> minimalCases() {
 		return List.of(new ClientCase("startup_without_modmenu_yacl", List.of("1-1"), null, false, ClientChecklistTests::startupMinimal),
 				new ClientCase("trade_without_modmenu_yacl", List.of("15-3"),
@@ -313,6 +353,10 @@ public class ClientChecklistTests implements FabricClientGameTest {
 			case "minimal" -> minimalCases();
 			case "modmenu-only" -> modMenuOnlyCases();
 			case "yacl-only" -> yaclOnlyCases();
+			case "jei" -> viewerCases("JEI");
+			case "rei" -> viewerCases("REI");
+			case "journeymap" -> journeyMapCases();
+			case "looks" -> looksCases();
 			default -> filter(cases());
 		};
 		for (ClientCase c : run) {

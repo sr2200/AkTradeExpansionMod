@@ -28,6 +28,13 @@ repositories {
 			includeGroup "dev.architectury"
 		}
 	}
+	// JourneyMap itself (not only its API), for the client game tests with JourneyMap (runClientGameTestJourneyMap).
+	maven {
+		url = "https://api.modrinth.com/maven"
+		content {
+			includeGroup "maven.modrinth"
+		}
+	}
 }
 
 loom {
@@ -80,7 +87,6 @@ loom {
 			inherit(getByName("clientGameTest"))
 			configName = "Client Game Test (Fabric API only)"
 			getRunDirectory().set(file("build/run/clientGameTestMinimal"))
-			vmArg "-Dfabric.debug.disableModIds=modmenu,yet_another_config_lib_v3"
 			vmArg "-Dak.autotest.variant=minimal"
 		}
 		// Checklist 1-6 / 1-7: only one of Mod Menu and YACL (the other one left out the same way).
@@ -88,15 +94,39 @@ loom {
 			inherit(getByName("clientGameTest"))
 			configName = "Client Game Test (Mod Menu without YACL)"
 			getRunDirectory().set(file("build/run/clientGameTestModMenuOnly"))
-			vmArg "-Dfabric.debug.disableModIds=yet_another_config_lib_v3"
 			vmArg "-Dak.autotest.variant=modmenu-only"
 		}
 		register("clientGameTestYaclOnly") {
 			inherit(getByName("clientGameTest"))
 			configName = "Client Game Test (YACL without Mod Menu)"
 			getRunDirectory().set(file("build/run/clientGameTestYaclOnly"))
-			vmArg "-Dfabric.debug.disableModIds=modmenu"
 			vmArg "-Dak.autotest.variant=yacl-only"
+		}
+		// Checklist 25 / 20-3: the client with one recipe viewer or JourneyMap (each left out of every other run below).
+		register("clientGameTestJei") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (JEI)"
+			getRunDirectory().set(file("build/run/clientGameTestJei"))
+			vmArg "-Dak.autotest.variant=jei"
+		}
+		register("clientGameTestRei") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (REI)"
+			getRunDirectory().set(file("build/run/clientGameTestRei"))
+			vmArg "-Dak.autotest.variant=rei"
+		}
+		register("clientGameTestJourneyMap") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (JourneyMap)"
+			getRunDirectory().set(file("build/run/clientGameTestJourneyMap"))
+			vmArg "-Dak.autotest.variant=journeymap"
+		}
+		// Checklist 22-50〜22-56, 28-2〜28-6, 29-2, 29-14: pictures of every building in every look (autotest.bat looks).
+		register("clientGameTestLooks") {
+			inherit(getByName("clientGameTest"))
+			configName = "Client Game Test (building pictures)"
+			getRunDirectory().set(file("build/run/clientGameTestLooks"))
+			vmArg "-Dak.autotest.variant=looks"
 		}
 		// Screenshots for the download page (shots.bat, called by release.bat): PostScreenshots in the test mod writes
 		// docs/release/Screenshot/auto/*.png. A run directory of its own, emptied first (a new world every time).
@@ -110,6 +140,35 @@ loom {
 	}
 }
 
+// JEI, REI (with the libraries it needs) and JourneyMap are on every run's classpath (localRuntime) but Fabric Loader
+// leaves them out (fabric.debug.disableModIds) except in the run made for each: runClient and the other runs work as
+// without them. Mod Menu and YACL are left out of the runs that check the client without them.
+def viewerMods = [
+	// With the mods nested in their jars.
+	jei: ["jei", "mezz_config"],
+	rei: ["roughlyenoughitems", "architectury", "cloth-config"],
+	journeymap: ["journeymap", "commonnetworking", "journeymap-api-fabric", "ar_com_hjg_pngj"],
+]
+def keptMods = [
+	clientGameTestJei: ["jei"],
+	clientGameTestRei: ["rei"],
+	clientGameTestJourneyMap: ["journeymap"],
+]
+def leftOutMods = [
+	clientGameTestMinimal: ["modmenu", "yet_another_config_lib_v3"],
+	clientGameTestModMenuOnly: ["yet_another_config_lib_v3"],
+	clientGameTestYaclOnly: ["modmenu"],
+]
+loom {
+	runs {
+		configureEach { run ->
+			def kept = keptMods.get(run.name, [])
+			def ids = viewerMods.findAll { !kept.contains(it.key) }.values().flatten() + leftOutMods.get(run.name, [])
+			run.vmArg "-Dfabric.debug.disableModIds=${ids.join(",")}"
+		}
+	}
+}
+
 def deleteShotsRunDir = tasks.register("deleteClientGameTestShotsRunDir", Delete) {
 	group = "fabric"
 	delete file("build/run/clientGameTestShots")
@@ -119,7 +178,7 @@ tasks.matching { it.name == "runClientGameTestShots" }.configureEach {
 }
 
 // The runs with other mods left out start from an empty run directory (a new world every time).
-["Minimal", "ModMenuOnly", "YaclOnly"].each { variant ->
+["Minimal", "ModMenuOnly", "YaclOnly", "Jei", "Rei", "JourneyMap", "Looks"].each { variant ->
 	def deleteRunDir = tasks.register("deleteClientGameTest${variant}RunDir", Delete) {
 		group = "fabric"
 		delete file("build/run/clientGameTest${variant}")
@@ -165,6 +224,32 @@ dependencies {
 		transitive = false
 	}
 	clientCompileOnly "me.shedaniel.cloth:basic-math:${project.cloth_math_version}"
+	// The full mods, for the client game tests with each of them (runClientGameTestJei / Rei / JourneyMap; left out of the
+	// other runs, see disableModIds above). The tests use their APIs.
+	localRuntime("mezz.jei:jei-${project.minecraft_version}-fabric:${project.jei_version}") {
+		transitive = false
+	}
+	localRuntime("me.shedaniel:RoughlyEnoughItems-fabric:${project.rei_version}") {
+		transitive = false
+	}
+	localRuntime("dev.architectury:architectury-fabric:${project.architectury_version}") {
+		transitive = false
+	}
+	localRuntime("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
+		transitive = false
+	}
+	localRuntime("maven.modrinth:journeymap:${project.journeymap_version}") {
+		transitive = false
+	}
+	gametestCompileOnly "mezz.jei:jei-${project.minecraft_version}-common-api:${project.jei_version}"
+	gametestCompileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:${project.rei_version}") {
+		transitive = false
+	}
+	gametestCompileOnly("dev.architectury:architectury-fabric:${project.architectury_version}") {
+		transitive = false
+	}
+	gametestCompileOnly "me.shedaniel.cloth:basic-math:${project.cloth_math_version}"
+	gametestCompileOnly "info.journeymap:journeymap-api-fabric:${project.journeymap_api_version}"
 
 	// Unit tests for the Minecraft-independent core (com.akf.tradeexpansion.core).
 	testImplementation platform("org.junit:junit-bom:5.12.2")
