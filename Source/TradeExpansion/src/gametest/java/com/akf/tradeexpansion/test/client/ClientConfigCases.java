@@ -457,7 +457,9 @@ final class ClientConfigCases {
 				own = connected(context, server, connection, result, settings);
 			}
 			// Disconnected (the server still runs).
-			context.waitTicks(5);
+			// The client reloads its own file on the disconnect event (run later on the client thread): wait for it.
+			int ownValue = own;
+			waitClient(context, client -> TradeExpansionConfig.get().trade.maxPerTransaction == ownValue, 60);
 			int now = TradeExpansionConfig.get().trade.maxPerTransaction;
 			check(now == own, "after disconnecting, trade.maxPerTransaction is %d, not the client's own %d", now, own);
 			long offset = context.computeOnClient(client -> (Long) staticField(com.akf.tradeexpansion.market.MarketClock.class, "clientOffset"));

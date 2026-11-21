@@ -130,7 +130,7 @@ final class PostScreenshots {
 		}
 	}
 
-	private static void normalWorld(WorldCreationUiState creator) {
+	static void normalWorld(WorldCreationUiState creator) {
 		var preset = creator.getSettings().worldgenLoadContext().lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.NORMAL);
 		creator.setWorldType(new WorldCreationUiState.WorldTypeEntry(preset));
 		creator.setSeed(SEED);
@@ -171,7 +171,7 @@ final class PostScreenshots {
 	}
 
 	/** A stall of a generated village building within 96 blocks of the village center (chunks generated here). */
-	private static BlockPos findStall(ServerLevel level, BlockPos center) {
+	static BlockPos findStall(ServerLevel level, BlockPos center) {
 		BlockPos best = null;
 		for (int cx = (center.getX() >> 4) - 6; cx <= (center.getX() >> 4) + 6; cx++) {
 			for (int cz = (center.getZ() >> 4) - 6; cz <= (center.getZ() >> 4) + 6; cz++) {

@@ -495,10 +495,22 @@ final class ClientStaffCases {
 		context.waitTicks(2);
 		String page = all(context);
 		check(page.contains(recommendPrefix) || page.contains(noProfit), "the setup page shows no recommendation (\"%s\"): %s", recommendPrefix, page);
-		context.runOnClient(c -> {
-			set(staff, "buyLimit", 1L);
-			call(c.gui.screen(), "updateButtons");
-		});
+		// Lower the highest buy price with the setup's "-" button (Shift: the large step) down to 1c.
+		long limitBefore = context.computeOnClient(c -> (Long) get(staff, "buyLimit"));
+		Button minus = context.computeOnClient(c -> ((Button[][]) get(staff, "spinners"))[1][0]);
+		check(context.computeOnClient(c -> minus.visible && minus.active), "the \"-\" of the highest buy price is not shown in the setup");
+		context.getInput().holdShift();
+		try {
+			for (int i = 0; i < 80 && context.computeOnClient(c -> (Long) get(staff, "buyLimit")) > 1; i++) {
+				clickWidget(context, minus);
+				context.waitTick();
+			}
+		} finally {
+			context.getInput().releaseShift();
+		}
+		long limitAfter = context.computeOnClient(c -> (Long) get(staff, "buyLimit"));
+		check(limitAfter == 1 && limitAfter < limitBefore, "the \"-\" button took the highest buy price from %dc to %dc, not 1c", limitBefore, limitAfter);
+		check(all(context).contains(squeeze(coins(1))), "the setup does not show the new highest buy price %s: %s", coins(1), all(context));
 		clickWidget(context, text(K + "apply"));
 		mouseAway(context);
 		check(waitClient(context, c -> ((Enum<?>) get(staff, "mode")).name().equals("LIST"), 60), "\"%s\" did not go back to the list", text(K + "apply"));

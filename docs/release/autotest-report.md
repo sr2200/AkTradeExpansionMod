@@ -2,16 +2,16 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.2.41、2026-11-21 10:29、194 件中 0 件失敗
-- クライアント：バージョン 0.2.41、2026-11-21 10:43、144 件中 0 件失敗
-- クライアント（Mod Menu・YACL なし）：バージョン 0.2.41、2026-11-21 10:29、3 件中 0 件失敗
-- クライアント（Mod Menu だけ）：バージョン 0.2.41、2026-11-21 10:29、2 件中 0 件失敗
-- クライアント（YACL だけ）：バージョン 0.2.41、2026-11-21 10:43、2 件中 0 件失敗
-- クライアント（JEI）：バージョン 0.2.41、2026-11-21 10:30、8 件中 0 件失敗
-- クライアント（REI）：バージョン 0.2.41、2026-11-21 10:29、7 件中 0 件失敗
-- クライアント（JourneyMap）：バージョン 0.2.41、2026-11-21 10:29、3 件中 0 件失敗
+- サーバー：バージョン 0.2.42、2026-11-21 10:55、194 件中 0 件失敗
+- クライアント：バージョン 0.2.42、2026-11-21 11:21、148 件中 0 件失敗
+- クライアント（Mod Menu・YACL なし）：バージョン 0.2.42、2026-11-21 11:08、3 件中 0 件失敗
+- クライアント（Mod Menu だけ）：バージョン 0.2.42、2026-11-21 10:55、2 件中 0 件失敗
+- クライアント（YACL だけ）：バージョン 0.2.42、2026-11-21 10:55、2 件中 0 件失敗
+- クライアント（JEI）：バージョン 0.2.42、2026-11-21 10:56、8 件中 0 件失敗
+- クライアント（REI）：バージョン 0.2.42、2026-11-21 10:55、7 件中 0 件失敗
+- クライアント（JourneyMap）：バージョン 0.2.42、2026-11-21 10:55、3 件中 0 件失敗
 - クライアント（建物の画像）：バージョン 0.2.41、2026-11-21 10:28、2 件中 0 件失敗
-- チェックリスト 337 項目のうち、今回 自動で完了 206・一部を確認 119・失敗 0
+- チェックリスト 337 項目のうち、今回 自動で完了 208・一部を確認 118・失敗 0
 
 ## すべての項目
 
@@ -253,7 +253,7 @@
 | 29-11 | `board_theater_trends` | クライアント | ✔ | 野外劇場の村の流行の倍率（人気は 1+(m−1)×1.5、余り気味は 1−(1−m)÷1.5）が、ほかの村の掲示板の市場の行のツールチップと、その村の交易画面の「流行」のツールチップに出ること（値段への効きはサーバーのテストで見ている） |
 | 20-5 | `board_no_markets` | クライアント | ✔ | 近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし） |
 | 35-2 | `board_no_markets` | クライアント | ✔ | 1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない） |
-| 30-1 | `goods_names` | クライアント | ✔ | 交易画面と掲示板に並ぶ品（このワールドの市場の品）の名前が翻訳されていて、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は見ていない） |
+| 30-1 | `goods_names` | クライアント | ✔ | 交易画面と掲示板に並ぶ品（このワールドの市場の品と、市場に足した新しい商品：エリトラ・トライデント・ダイヤのツルハシとチェストプレート）の名前が翻訳されていて、正しいアイテムで、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は viewer_new_goods で見る） |
 | 26-2 | `staff_needs_reputation` | クライアント | ✔ | 全部 |
 | 18-1・31-2 | `sell_all_box` | クライアント | ✔ | 全部 |
 | 18-2 | `sell_all_box` | クライアント | ✔ | 行のクリックで除外が切り替わって合計が変わり、開き直しても残ること（道具・防具が最初から除外なのは、市場が買い取る道具・防具がある時だけ見る） |
@@ -307,10 +307,12 @@
 | 22-24・22-26・22-33・29-13 | `town_row_states` | クライアント | ✔ | 発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない） |
 | 34-2 | `town_size_by_style` | クライアント | ✔ | 全部 |
 | 22-32 | `facility_sign_opens_tab` | クライアント | ✔ | 全部 |
-| 22-9・26-20・24-7 | `tabs_turned_off` | クライアント | ✔ | 設定を OFF にすると画面を開き直した時に「発展」タブが消え、雇い人がいない人には「雇い人」タブが無く、いる人には出ること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないこと・雇い人の操作は見ていない） |
+| 26-20 | `tabs_turned_off` | クライアント | ✔ | 全部 |
+| 22-9・24-7 | `tabs_turned_off` | クライアント | ✔ | 設定を OFF にすると画面を開き直した時に「発展」タブが消えること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないことは見ていない） |
 | 26-4 | `staff_hire_carrier` | クライアント | ✔ | 全部 |
 | 26-3 | `staff_hire_carrier` | クライアント | ✔ | 品の一覧の先頭が「おまかせ（売れる品を何種類も）」で、各行に「見込み +○c/往復」か「今は利益なし」が出て見込みの大きい順に並び、ツールチップにおすすめの行き先と数が出ること（宝箱のアイコンは画像で見る） |
-| 26-6・26-7・26-9・26-14 | `staff_carrier_trip` | クライアント | ✔ | 運び屋の行の「資金不足」「→運送 N分」「←帰路 N分」「休み」「値下がり待ち」、Shift で +1,000c／+10,000c になり10倍入ること、出かけている間は「解雇する」「変更」が押せないこと、「休止」が「再開」になること、往復の後にツールチップのログに往復が出ること、「設定」におすすめが出ること（「利益なし」は見ていない） |
+| 26-9 | `staff_carrier_trip` | クライアント | ✔ | 全部 |
+| 26-6・26-7・26-14 | `staff_carrier_trip` | クライアント | ✔ | 運び屋の行の「資金不足」「→運送 N分」「←帰路 N分」「休み」、Shift で +1,000c／+10,000c になり10倍入ること、出かけている間は「解雇する」「変更」が押せないこと、「休止」が「再開」になること、往復の後にツールチップのログに往復が出ること（「利益なし」は見ていない） |
 | 26-13 | `staff_clerk` | クライアント | ✔ | 全部 |
 | 26-11 | `staff_clerk` | クライアント | ✔ | 番頭の品の一覧（手持ちのある品が先・「1日 約○c・手持ち○」・おすすめのツールチップ）、下限の初期値がおすすめ（売値の85%）、雇うと品が預けられること（少しずつ売れ続けるのは見ていない） |
 | 26-15・26-17 | `staff_limit_and_other_market` | クライアント | ✔ | 全部 |
@@ -334,7 +336,7 @@
 | 4-3 | `reopen_world_keeps_market` | クライアント | ✔ | 全部 |
 | 22-11・22-40・23-8・24-8 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 全部 |
 | 26-18 | `reopen_world_keeps_town_and_staff` | クライアント | ✔ | 運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない） |
-| 11-2 | `where_show_lines` | クライアント | ✔ | where show で、黄（同じ市場の範囲）・赤（新しい市場を作れない範囲）・青（数える範囲）の点がそれぞれの円の上に、地面（いちばん上のブロック＋0.3）に届き、where hide と30秒で止まること（緑の村の範囲は、テストの世界に村の構造物が無いので見ていない。見やすさは画像で確認） |
+| 11-2 | `where_show_lines` | クライアント | ✔ | where show で、黄（同じ市場の範囲）・赤（新しい市場を作れない範囲）・青（数える範囲）の点がそれぞれの円の上に、地面（いちばん上のブロック＋0.3）に届き、where hide と30秒で止まること（緑の村の範囲は where_show_natural_village で見る。見やすさは画像で確認） |
 | 22-24b | `construction_effects` | クライアント | ✔ | 建設中の場所（サーバーで直接作った 7×7 の建物）に、床の高さのオレンジの点が枠の上に、木くず（オークの板）が範囲の中に、工事の音が範囲の中で届き、音の字幕が「工事の音」であること。48 ブロックより離れた時・constructionEffects を OFF にして reload した時・完成した後は届かないこと（見え方と、字幕が画面に出るところは見ていない） |
 | 2-6 | `stall_facing_and_shape` | クライアント | ✔ | 使うキーでプレイヤーの東西南北に置いた交易所が、それぞれプレイヤーの方を向くこと（見た目は画像で確認） |
 | 2-7 | `stall_facing_and_shape` | クライアント | ✔ | 交易所が隣のブロックの面を隠さず（透けたり黒くなったりしない）、当たり判定が1ブロックいっぱいでも空でもないこと（形どおりかは画像で確認） |
@@ -354,6 +356,8 @@
 | 2-16 | `screen_closes_when_away` | クライアント | ✔ | 全部 |
 | 14-1・14-5 | `dedicated_server_one_player` | クライアント | ✔ | 専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開け、買う・売るが1往復できること。サーバーで clock advance と設定（同じプロセスなので設定は共有）を変えた後に切断すると、設定が自分の設定ファイルの値に、市場の時計のずれが 0 に戻ること（2人と、切断の後に1人用の世界に入るところは見ていない） |
 | 13-2 | `dedicated_server_one_player` | クライアント | ✔ | 全部 |
+| 11-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの普通の世界で、生成された村の中で where show をすると、緑の点（村の範囲）が村の構造物の枠の辺の上に、地面（いちばん上のブロック＋0.3）に届くこと（見やすさは画像で確認） |
+| 6-1 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があること（村の種類ごとには見ていない。見た目は画像で確認） |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 | 1-1 | `startup_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | 全部 |
 | 15-3 | `trade_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | Mod Menu・YACL を外した開発用の起動構成（テスト用の Mod は入っている）で、新しいワールドに入って村に交易所を置き、交易画面で1つ買い1つ売れることのみ（配布 jar だけの起動構成では見ていない） |
@@ -470,6 +474,7 @@
 - 20-5 `board_no_markets`：[20-5_no_markets_coords.png](../../Source/TradeExpansion/build/autotest/screenshots/20-5_no_markets_coords.png)
 - 35-2 `board_no_markets`：[35-2_board_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/35-2_board_tavern.png)
 - 30-1 `goods_names`：[30-1_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_goods.png)
+- 30-1 `goods_names`：[30-1_new_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_new_goods.png)
 - 26-2 `staff_needs_reputation`：[26-2_staff_needs_reputation.png](../../Source/TradeExpansion/build/autotest/screenshots/26-2_staff_needs_reputation.png)
 - 18-1・31-2 `sell_all_box`：[18-1_sell_all.png](../../Source/TradeExpansion/build/autotest/screenshots/18-1_sell_all.png)
 - 18-1・31-2 `sell_all_box`：[18-2_excluded.png](../../Source/TradeExpansion/build/autotest/screenshots/18-2_excluded.png)
@@ -581,18 +586,19 @@
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_bank.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_bank.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_warehouse.png)
 - 22-32 `facility_sign_opens_tab`：[22-32_sign_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/22-32_sign_inn.png)
-- 22-9・26-20・24-7 `tabs_turned_off`：[22-9_no_town_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/22-9_no_town_tab.png)
-- 22-9・26-20・24-7 `tabs_turned_off`：[26-20_staff_tab_kept.png](../../Source/TradeExpansion/build/autotest/screenshots/26-20_staff_tab_kept.png)
-- 22-9・26-20・24-7 `tabs_turned_off`：[24-7_no_trends.png](../../Source/TradeExpansion/build/autotest/screenshots/24-7_no_trends.png)
+- 26-20 `tabs_turned_off`：[22-9_no_town_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/22-9_no_town_tab.png)
+- 26-20 `tabs_turned_off`：[26-20_staff_tab_kept.png](../../Source/TradeExpansion/build/autotest/screenshots/26-20_staff_tab_kept.png)
+- 26-20 `tabs_turned_off`：[26-20_staff_tab_gone.png](../../Source/TradeExpansion/build/autotest/screenshots/26-20_staff_tab_gone.png)
+- 26-20 `tabs_turned_off`：[24-7_no_trends.png](../../Source/TradeExpansion/build/autotest/screenshots/24-7_no_trends.png)
 - 26-4 `staff_hire_carrier`：[26-3_carrier_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/26-3_carrier_goods.png)
 - 26-4 `staff_hire_carrier`：[26-4_destinations.png](../../Source/TradeExpansion/build/autotest/screenshots/26-4_destinations.png)
 - 26-4 `staff_hire_carrier`：[26-4_setup.png](../../Source/TradeExpansion/build/autotest/screenshots/26-4_setup.png)
 - 26-4 `staff_hire_carrier`：[26-4_hired.png](../../Source/TradeExpansion/build/autotest/screenshots/26-4_hired.png)
-- 26-6・26-7・26-9・26-14 `staff_carrier_trip`：[26-6_wait_funds.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_wait_funds.png)
-- 26-6・26-7・26-9・26-14 `staff_carrier_trip`：[26-6_outbound.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_outbound.png)
-- 26-6・26-7・26-9・26-14 `staff_carrier_trip`：[26-7_returning.png](../../Source/TradeExpansion/build/autotest/screenshots/26-7_returning.png)
-- 26-6・26-7・26-9・26-14 `staff_carrier_trip`：[26-7_back_paused.png](../../Source/TradeExpansion/build/autotest/screenshots/26-7_back_paused.png)
-- 26-6・26-7・26-9・26-14 `staff_carrier_trip`：[26-9_wait_price.png](../../Source/TradeExpansion/build/autotest/screenshots/26-9_wait_price.png)
+- 26-9 `staff_carrier_trip`：[26-6_wait_funds.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_wait_funds.png)
+- 26-9 `staff_carrier_trip`：[26-6_outbound.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_outbound.png)
+- 26-9 `staff_carrier_trip`：[26-7_returning.png](../../Source/TradeExpansion/build/autotest/screenshots/26-7_returning.png)
+- 26-9 `staff_carrier_trip`：[26-7_back_paused.png](../../Source/TradeExpansion/build/autotest/screenshots/26-7_back_paused.png)
+- 26-9 `staff_carrier_trip`：[26-9_wait_price.png](../../Source/TradeExpansion/build/autotest/screenshots/26-9_wait_price.png)
 - 26-13 `staff_clerk`：[26-11_clerk_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/26-11_clerk_goods.png)
 - 26-13 `staff_clerk`：[26-13_unpaid.png](../../Source/TradeExpansion/build/autotest/screenshots/26-13_unpaid.png)
 - 26-15・26-17 `staff_limit_and_other_market`：[26-5_auto_setup.png](../../Source/TradeExpansion/build/autotest/screenshots/26-5_auto_setup.png)
@@ -655,6 +661,8 @@
 - 7-7 `died_with_wallet`：[7-7_bank_after_dying.png](../../Source/TradeExpansion/build/autotest/screenshots/7-7_bank_after_dying.png)
 - 14-1・14-5 `dedicated_server_one_player`：[14-1_dedicated_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/14-1_dedicated_trade_screen.png)
 - 13-2 `dedicated_server_one_player`：[13-2_settings_on_server.png](../../Source/TradeExpansion/build/autotest/screenshots/13-2_settings_on_server.png)
+- 11-2 `where_show_natural_village`：[11-2_where_show_village.png](../../Source/TradeExpansion/build/autotest/screenshots/11-2_where_show_village.png)
+- 6-1 `where_show_natural_village`：[6-1_generated_stall.png](../../Source/TradeExpansion/build/autotest/screenshots/6-1_generated_stall.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)
 - 15-3 `trade_without_modmenu_yacl`：[15-3_bought_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/15-3_bought_without_modmenu_yacl.png)
 - 1-6 `startup_modmenu_without_yacl`：[1-2_mod_list.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_mod_list.png)

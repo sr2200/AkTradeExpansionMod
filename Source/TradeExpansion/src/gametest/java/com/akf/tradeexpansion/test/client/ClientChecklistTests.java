@@ -145,7 +145,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				true, ClientBoardCases::theaterTrends));
 		cases.add(new ClientCase("board_no_markets", List.of("20-5"), "近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし）",
 				true, ClientBoardCases::noMarkets, List.of("35-2"), "1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない）"));
-		cases.add(new ClientCase("goods_names", List.of("30-1"), "交易画面と掲示板に並ぶ品（このワールドの市場の品）の名前が翻訳されていて、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は見ていない）",
+		cases.add(new ClientCase("goods_names", List.of("30-1"), "交易画面と掲示板に並ぶ品（このワールドの市場の品と、市場に足した新しい商品：エリトラ・トライデント・ダイヤのツルハシとチェストプレート）の名前が翻訳されていて、正しいアイテムで、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は viewer_new_goods で見る）",
 				true, ClientScreenCases::goodsNames));
 		cases.add(new ClientCase("staff_needs_reputation", List.of("26-2"), null, true, ClientScreenCases::staffNeedsReputation));
 		cases.add(new ClientCase("sell_all_box", List.of("18-1", "31-2"), null, true, ClientDisplayCases::sellAll,
@@ -209,15 +209,15 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				true, ClientTownCases::rowStates));
 		cases.add(new ClientCase("town_size_by_style", List.of("34-2"), null, true, ClientTownCases::sizeByStyle));
 		cases.add(new ClientCase("facility_sign_opens_tab", List.of("22-32"), null, true, ClientTownCases::signOpensTab));
-		cases.add(new ClientCase("tabs_turned_off", List.of("22-9", "26-20", "24-7"),
-				"設定を OFF にすると画面を開き直した時に「発展」タブが消え、雇い人がいない人には「雇い人」タブが無く、いる人には出ること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないこと・雇い人の操作は見ていない）",
-				true, ClientTownCases::tabsTurnedOff));
+		cases.add(new ClientCase("tabs_turned_off", List.of("26-20"), null, true, ClientTownCases::tabsTurnedOff,
+				List.of("22-9", "24-7"),
+				"設定を OFF にすると画面を開き直した時に「発展」タブが消えること。流行の数を 0 にすると次の期間に「流行」が出ないこと（取引しても発展度が増えないことは見ていない）"));
 		// The staff cases share their employees (in this order); staff_layout lets them go.
 		cases.add(new ClientCase("staff_hire_carrier", List.of("26-4"), null, true, ClientStaffCases::hireCarrier,
 				List.of("26-3"), "品の一覧の先頭が「おまかせ（売れる品を何種類も）」で、各行に「見込み +○c/往復」か「今は利益なし」が出て見込みの大きい順に並び、ツールチップにおすすめの行き先と数が出ること（宝箱のアイコンは画像で見る）"));
-		cases.add(new ClientCase("staff_carrier_trip", List.of("26-6", "26-7", "26-9", "26-14"),
-				"運び屋の行の「資金不足」「→運送 N分」「←帰路 N分」「休み」「値下がり待ち」、Shift で +1,000c／+10,000c になり10倍入ること、出かけている間は「解雇する」「変更」が押せないこと、「休止」が「再開」になること、往復の後にツールチップのログに往復が出ること、「設定」におすすめが出ること（「利益なし」は見ていない）",
-				true, ClientStaffCases::carrierTrip));
+		cases.add(new ClientCase("staff_carrier_trip", List.of("26-9"), null, true, ClientStaffCases::carrierTrip,
+				List.of("26-6", "26-7", "26-14"),
+				"運び屋の行の「資金不足」「→運送 N分」「←帰路 N分」「休み」、Shift で +1,000c／+10,000c になり10倍入ること、出かけている間は「解雇する」「変更」が押せないこと、「休止」が「再開」になること、往復の後にツールチップのログに往復が出ること（「利益なし」は見ていない）"));
 		cases.add(new ClientCase("staff_clerk", List.of("26-13"), null, true, ClientStaffCases::clerk,
 				List.of("26-11"), "番頭の品の一覧（手持ちのある品が先・「1日 約○c・手持ち○」・おすすめのツールチップ）、下限の初期値がおすすめ（売値の85%）、雇うと品が預けられること（少しずつ売れ続けるのは見ていない）"));
 		cases.add(new ClientCase("staff_limit_and_other_market", List.of("26-15", "26-17"), null, true, ClientStaffCases::limitAndOtherMarket,
@@ -247,7 +247,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("reopen_world_keeps_town_and_staff", List.of("22-11", "22-40", "23-8", "24-8"), null, true, ClientReopenCases::townAndStaff,
 				List.of("26-18"), "運び屋（運送中）と、おまかせの運び屋（2種類の荷と帰り荷、休止中）の所持金・荷（種類ごと）・様子・ログが保存データでも雇い人タブでも同じで、運送中の運び屋が続きから行き先に着くこと（番頭は見ていない）"));
 		cases.add(new ClientCase("where_show_lines", List.of("11-2"),
-				"where show で、黄（同じ市場の範囲）・赤（新しい市場を作れない範囲）・青（数える範囲）の点がそれぞれの円の上に、地面（いちばん上のブロック＋0.3）に届き、where hide と30秒で止まること（緑の村の範囲は、テストの世界に村の構造物が無いので見ていない。見やすさは画像で確認）",
+				"where show で、黄（同じ市場の範囲）・赤（新しい市場を作れない範囲）・青（数える範囲）の点がそれぞれの円の上に、地面（いちばん上のブロック＋0.3）に届き、where hide と30秒で止まること（緑の村の範囲は where_show_natural_village で見る。見やすさは画像で確認）",
 				true, ClientParticleCases::whereShow));
 		cases.add(new ClientCase("construction_effects", List.of("22-24b"),
 				"建設中の場所（サーバーで直接作った 7×7 の建物）に、床の高さのオレンジの点が枠の上に、木くず（オークの板）が範囲の中に、工事の音が範囲の中で届き、音の字幕が「工事の音」であること。48 ブロックより離れた時・constructionEffects を OFF にして reload した時・完成した後は届かないこと（見え方と、字幕が画面に出るところは見ていない）",
@@ -278,6 +278,10 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("dedicated_server_one_player", List.of("14-1", "14-5"),
 				"専用サーバー（このプロセスの中で起動）に1人で接続し、村に交易所を置いて交易画面を開け、買う・売るが1往復できること。サーバーで clock advance と設定（同じプロセスなので設定は共有）を変えた後に切断すると、設定が自分の設定ファイルの値に、市場の時計のずれが 0 に戻ること（2人と、切断の後に1人用の世界に入るところは見ていない）", false,
 				ClientConfigCases::dedicatedServer, List.of("13-2"), null));
+		cases.add(new ClientCase("where_show_natural_village", List.of("11-2"),
+				"決まったシードの普通の世界で、生成された村の中で where show をすると、緑の点（村の範囲）が村の構造物の枠の辺の上に、地面（いちばん上のブロック＋0.3）に届くこと（見やすさは画像で確認）",
+				false, ClientVillageCases::naturalVillage, List.of("6-1"),
+				"決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があること（村の種類ごとには見ていない。見た目は画像で確認）"));
 		return cases;
 	}
 

@@ -992,12 +992,32 @@ final class ClientTownCases {
 			reopen(s);
 			check(tabShown(context, "staff"), "the staff tab is gone for a player with an employee (staff.enabled off)");
 			screenshot(context, result, "26-20_staff_tab_kept");
+			// Dismissed with the button (allowed while staff.enabled is off): the last one gone, the tab goes on reopening.
+			int[] hired = new int[1];
 			s.world.getServer().runOnServer(server -> {
 				UUID id = player(server).getUUID();
-				MarketRegistry.get(server).employees().removeIf(e -> e.owner().equals(id));
+				hired[0] = MarketRegistry.get(server).employees().stream().filter(e -> e.owner().equals(id)).mapToInt(Employee::id).findFirst().orElse(-1);
+			});
+			check(hired[0] >= 0, "the hired clerk is not on the server");
+			Object staff = ClientStaffCases.staffTabOf(context, screen(context));
+			ClientStaffCases.select(context, staff, hired[0]);
+			String dismiss = ClientStaffCases.text(ClientStaffCases.K + "dismiss");
+			net.minecraft.client.gui.components.Button dismissButton = context.computeOnClient(c -> ClientStaffCases.button(staff, "dismissButton"));
+			check(context.computeOnClient(c -> dismissButton.visible && dismissButton.active), "\"%s\" cannot be pressed with staff.enabled off", dismiss);
+			clickWidget(context, dismissButton);
+			mouseAway(context);
+			check(waitClient(context, c -> ((com.akf.tradeexpansion.network.StaffS2C) get(staff, "data")).staff().isEmpty(), 60),
+					"the clerk is still listed after \"%s\" (staff.enabled off)", dismiss);
+			s.world.getServer().runOnServer(server -> {
+				UUID id = player(server).getUUID();
+				MarketRegistry.get(server).employees().removeIf(e -> e.owner().equals(id)); // nothing left, whatever happened above
 			});
 			reopen(s);
-			check(!tabShown(context, "staff"), "the staff tab stays after the last employee left (staff.enabled off)");
+			check(!tabShown(context, "staff"), "the staff tab stays after the last employee was dismissed (staff.enabled off)");
+			screenshot(context, result, "26-20_staff_tab_gone");
+			config(s, c -> c.staff.enabled = true);
+			reopen(s);
+			check(tabShown(context, "staff"), "the staff tab is missing after staff.enabled is on again");
 
 			// 24-7: the next period with no trends to choose.
 			config(s, c -> {

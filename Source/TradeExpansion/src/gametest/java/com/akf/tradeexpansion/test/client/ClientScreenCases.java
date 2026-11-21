@@ -516,8 +516,44 @@ final class ClientScreenCases {
 	 */
 	static void goodsNames(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		// New goods of goods-design v0.7 put in the stall's market for the picture (taken out again at the end).
+		List<Identifier> newGoods = List.of("elytra", "trident", "diamond_pickaxe", "diamond_chestplate").stream()
+				.map(n -> Identifier.fromNamespaceAndPath("ak_trade_expansion", n)).toList();
+		BlockPos stall = s.stall;
+		List<Identifier> added = s.world.getServer().computeOnServer(server -> {
+			Market market = market(server, stall);
+			long now = com.akf.tradeexpansion.market.MarketUpkeep.touch(server.overworld(), market);
+			List<Identifier> put = new ArrayList<>();
+			for (Identifier id : newGoods) {
+				if (market.good(id) != null) continue;
+				market.addGood(id, new com.akf.tradeexpansion.core.GoodState(1.0, 0, com.akf.tradeexpansion.data.GoodsCatalog.get(id).targetStock(), now));
+				put.add(id);
+			}
+			MarketRegistry.get(server).setDirty();
+			return put;
+		});
+		try {
+			goodsNamesWith(s, result, newGoods);
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				Market market = market(server, stall);
+				added.forEach(market.goods()::remove);
+				MarketRegistry.get(server).setDirty();
+			});
+		}
+	}
+
+	private static void goodsNamesWith(Session s, CaseResult.Builder result, List<Identifier> newGoods) {
+		ClientGameTestContext context = s.context;
 		MarketScreen screen = reopen(s);
 		MarketSnapshotS2C snapshot = snapshot(context, screen);
+		for (Identifier id : newGoods) {
+			GoodView v = snapshot.goods().stream().filter(g -> g.goods().equals(id)).findFirst().orElse(null);
+			check(v != null, "the new good %s is not in the market", id);
+			check(v.displayStack().getItem() == item(id), "%s is shown as %s", id, v.displayStack().getItem());
+		}
 		List<String> problems = new ArrayList<>();
 		for (GoodView v : snapshot.goods()) {
 			ItemStack stack = v.displayStack();
@@ -539,6 +575,9 @@ final class ClientScreenCases {
 		context.clickScreenButton("screen.ak_trade_expansion.tab.buy");
 		mouseAway(context);
 		screenshot(context, result, "30-1_goods");
+		showRow(context, screen, newGoods.getFirst());
+		mouseAway(context);
+		screenshot(context, result, "30-1_new_goods");
 	}
 
 	private static void checkName(ItemStack stack, String what, List<String> problems) {
