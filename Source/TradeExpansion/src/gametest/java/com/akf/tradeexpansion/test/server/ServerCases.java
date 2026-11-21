@@ -337,6 +337,45 @@ public final class ServerCases {
 			that(out.is(ModItems.EMERALD_COIN) && out.getCount() == 1, "the stonecutter gave %s", out);
 		}));
 
+		// ---- 14. two players
+		cases.add(partial("two_players_buy_the_last_one", List.of("14-3"),
+				"同じ屋台を開いた仮のプレイヤー2人が、残り1個の品を同じティックのうちに同じ相場（どちらも買える見込みの合計額）で買おうとすると、先の人だけが買え、後の人は断られて所持金も持ち物も変わらず、在庫が二重に減らないこと（本物の2人の画面は見ていない）",
+				ctx -> withMarket(ctx, (c, player, market, stall) -> {
+					c.openStall(player, stall);
+					c.giveMoney(player, 1_000_000);
+					Identifier good = sensitiveGood(c, market, 3);
+					// Buy down to the last unit (stock 1 .. 2).
+					int rest = (int) Math.floor(market.good(good).stock()) - 1;
+					if (rest > 0) {
+						long expected = c.previewTotal(player, market, good, true, rest);
+						equal(TradeResult.SUCCESS.ordinal(), c.tradeRaw(player, market.id(), good, true, rest, expected, false, true).ordinal(),
+								"buying all but the last unit");
+					}
+					double stock = market.good(good).stock();
+					that(stock >= 1 && stock < 2 && PriceModel.canBuy(market.good(good)), "the stock left is %.2f, not one unit", stock);
+					ServerPlayer other = c.player(player.blockPosition());
+					c.openStall(other, stall);
+					c.giveMoney(other, 100_000);
+					// Both screens show the same last unit: each request carries the total its screen showed.
+					long expectedFirst = c.previewTotal(player, market, good, true, 1);
+					long expectedSecond = c.previewTotal(other, market, good, true, 1);
+					Item item = c.item(good);
+					int held = c.count(player, item);
+					long money = c.balance(other);
+					TradeResult first = c.tradeRaw(player, market.id(), good, true, 1, expectedFirst, false, false);
+					TradeResult second = c.tradeRaw(other, market.id(), good, true, 1, expectedSecond, false, false);
+					that(first == TradeResult.SUCCESS, "the first player buying the last unit gave %s", first);
+					that(second != TradeResult.SUCCESS, "the second player also bought the last unit");
+					that(second == TradeResult.INSUFFICIENT_STOCK || second == TradeResult.PRICE_CHANGED,
+							"the second player buying the last unit gave %s (expected sold out or price changed)", second);
+					equal(held + 1, c.count(player, item), "items of the first player");
+					equal(0, c.count(other, item), "items of the second player");
+					equal(money, c.balance(other), "money of the second player after the refused purchase");
+					that(Math.abs(market.good(good).stock() - (stock - 1)) < 1e-6, "the stock went %.2f -> %.2f, not down by one", stock,
+							market.good(good).stock());
+					that(!PriceModel.canBuy(market.good(good)), "the good can still be bought with stock %.2f", market.good(good).stock());
+				})));
+
 		// ---- 17. starting money
 		cases.add(full("starting_money", List.of("17-1"), ctx -> {
 			ServerPlayer player = ctx.player(ctx.center());

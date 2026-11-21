@@ -12,6 +12,7 @@ import com.akf.tradeexpansion.item.BankCardItem;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.Reputation;
+import com.akf.tradeexpansion.network.ConfigSyncS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.TradeRequestC2S;
 import com.akf.tradeexpansion.test.CaseResult;
@@ -35,7 +36,7 @@ import java.util.function.Supplier;
 import static com.akf.tradeexpansion.test.client.ClientUtil.*;
 
 /**
- * Client cases of what the trade screen says when the server refuses (checklist 2-18, 7-11 and 8-7): the red status
+ * Client cases of what the trade screen says when the server refuses (checklist 2-18, 7-11, 8-7 and 35-1): the red status
  * line for each refused trade, deposit, withdrawal and exchange, with nothing changed, and the exchange fee. The
  * server's result codes are checked by the server tests; here only what the screen shows. The screen's own buttons do
  * not send most refused trades (they are grayed out), so those requests are sent as the screen sends them.
@@ -405,6 +406,54 @@ final class ClientRefusalCases {
 			s.world.getServer().runOnServer(server -> ConfigManager.apply(old));
 			takeMoney(s, 0); // the coins given
 			giveMoney(s, stash[0]);
+		}
+	}
+
+	/**
+	 * 35-1 (part): the fee the exchange tab shows is the one the server sends ({@code ConfigSyncS2C}), not the player's own
+	 * setting. The server and the client of the test share one config in memory, so the server's file cannot differ from
+	 * the player's; instead, with 0% in the settings, the server sends the sync of a server with 30%.
+	 */
+	static void serverFee(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		TradeExpansionConfig old = s.world.getServer().computeOnServer(server -> ConfigManager.copy(TradeExpansionConfig.get()));
+		List<String> problems = new ArrayList<>();
+		try {
+			s.world.getServer().runOnServer(server -> {
+				TradeExpansionConfig config = ConfigManager.copy(TradeExpansionConfig.get());
+				config.currency.exchangeFee = 0.0;
+				ConfigManager.apply(config);
+			});
+			context.waitTicks(3);
+			reopen(s);
+			tab(context, "exchange");
+			String own = text(S + "exchange.help", 0);
+			List<String> texts = strings(TextRecorder.capture(context));
+			if (!texts.contains(own)) problems.add("with the fee 0% the exchange tab does not say \"" + own + "\": " + texts);
+			context.setScreen(() -> null);
+
+			s.world.getServer().runOnServer(server -> {
+				ConfigSyncS2C sync = ConfigSyncS2C.fromServer(server);
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player(server), new ConfigSyncS2C(sync.ratios(),
+						sync.sneakUseExchange(), sync.halfLifeDays(), sync.restockMultiplier(), sync.clock(), sync.maxPerTransaction(),
+						sync.maxDistance(), sync.walletCapacity(), sync.bankMinMarketLevel(), sync.cardFee(), sync.cardTransactionFee(),
+						sync.allowShiftAll(), sync.interestRatePerDay(), sync.interestMaxBalance(), 0.3, sync.clockOffset()));
+			});
+			if (!waitClient(c -> Math.abs(TradeExpansionConfig.get().currency.exchangeFee - 0.3) < 1e-9, context, 40)) {
+				problems.add("the client did not take the server's fee 30% (it has " + TradeExpansionConfig.get().currency.exchangeFee + ")");
+			}
+			reopen(s);
+			tab(context, "exchange");
+			String server = text(S + "exchange.help", 30);
+			texts = strings(TextRecorder.capture(context));
+			if (!texts.contains(server)) problems.add("after the server's sync with 30% the exchange tab does not say \"" + server + "\": " + texts);
+			screenshot(context, result, "35-1_server_exchange_fee");
+			check(problems.isEmpty(), "%s", problems);
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> ConfigManager.apply(old));
+			context.waitTicks(3);
 		}
 	}
 

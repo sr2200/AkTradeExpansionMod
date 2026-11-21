@@ -187,6 +187,9 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("trade_refused_messages", List.of("2-18"), null, true, ClientRefusalCases::trades));
 		cases.add(new ClientCase("bank_refused_messages", List.of("7-11"), null, true, ClientRefusalCases::bank));
 		cases.add(new ClientCase("exchange_refused_and_fee", List.of("8-7"), null, true, ClientRefusalCases::exchange));
+		cases.add(new ClientCase("exchange_fee_from_server", List.of("35-1"),
+				"自分の設定の手数料が 0% の時に、サーバーから手数料 30% の設定（ConfigSyncS2C）が届くと、両替タブの「手数料 ◯%」が 30% になること（テストのサーバーとクライアントは同じプロセスで設定を共有するので、サーバーの設定ファイルを自分と違えた時は見ていない）",
+				true, ClientRefusalCases::serverFee));
 		cases.add(new ClientCase("quest_tab", List.of("9-2"), null, true, ClientBankQuestCases::requests,
 				List.of("16-5"), null));
 		cases.add(new ClientCase("quest_locked", List.of("16-4"), null, true, ClientBankQuestCases::lockedRequest, List.of("16-7"), null));
@@ -280,8 +283,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				ClientConfigCases::dedicatedServer, List.of("13-2"), null));
 		cases.add(new ClientCase("where_show_natural_village", List.of("11-2"),
 				"決まったシードの普通の世界で、生成された村の中で where show をすると、緑の点（村の範囲）が村の構造物の枠の辺の上に、地面（いちばん上のブロック＋0.3）に届くこと（見やすさは画像で確認）",
-				false, ClientVillageCases::naturalVillage, List.of("6-1"),
-				"決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があること（村の種類ごとには見ていない。見た目は画像で確認）"));
+				false, ClientVillageCases::naturalVillage, List.of("6-1", "6-2"),
+				"決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があること。交易所の正面が建物の入口に向き、交易所と入口の間に通れないブロックが無く、入口の外に村の道（土の道）があること（村の種類ごとには見ていない。建物が道や家と自然につながって見えるかは画像で確認）"));
 		return cases;
 	}
 

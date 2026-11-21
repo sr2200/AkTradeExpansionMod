@@ -25,7 +25,7 @@ import static com.akf.tradeexpansion.test.client.ClientUtil.*;
 /**
  * Client cases in a normal world with generated villages (the seed of {@link PostScreenshots}), which the flat world of
  * the other cases has none of: the green box of {@code where show} (checklist 11-2) and the generated stall building
- * (6-1).
+ * (6-1, 6-2).
  */
 final class ClientVillageCases {
 	private static final int VILLAGE = 0x55FF55;
@@ -33,13 +33,15 @@ final class ClientVillageCases {
 	private ClientVillageCases() {
 	}
 
-	private record Found(BlockPos center, BlockPos stand, BoundingBox box, BlockPos stall, List<String> stallBlocks, int villages) {
+	private record Found(BlockPos center, BlockPos stand, BoundingBox box, BlockPos stall, List<String> stallBlocks, int villages,
+			List<String> street, List<String> walkway) {
 	}
 
 	/**
 	 * 11-2: standing in a generated village, {@code /aktradeex where show} draws green dots on the edges of the village's
 	 * box, on the ground. 6-1 (part): one of the villages near spawn has the generated stall building (the stall with a
-	 * barrel, a hay bale, a lantern and fences around it).
+	 * barrel, a hay bale, a lantern and fences around it). 6-2 (part): the stall faces the building's entrance, and outside
+	 * the entrance (4 blocks in front of the stall) is the village street (a dirt path), with nothing in the way.
 	 */
 	static void naturalVillage(Session s, CaseResult.Builder result, CaseResult.Builder also) {
 		ClientGameTestContext context = s.context;
@@ -91,6 +93,9 @@ final class ClientVillageCases {
 				List<String> missing = new ArrayList<>(List.of("barrel", "hay_block", "lantern", "fence"));
 				missing.removeAll(found.stallBlocks());
 				check(missing.isEmpty(), "the stall building at %s has no %s around the stall", found.stall(), missing);
+				check(found.walkway().isEmpty(), "blocks in the way between the stall at %s and its entrance: %s", found.stall(), found.walkway());
+				check(found.street().contains("minecraft:dirt_path"), "no street (dirt path) outside the entrance of the stall at %s, found %s",
+						found.stall(), found.street());
 				BlockPos stall = found.stall();
 				// In front of the stall (its face), a little above.
 				BlockPos front = world.getServer().computeOnServer(server -> stall.relative(
@@ -136,7 +141,24 @@ final class ClientVillageCases {
 		BlockPos stand = ground(level.getServer(), middle.getX(), box.minZ() + 12);
 		check(SettlementRule.villageAt(level, stand) != null, "%s, 12 blocks inside the north edge of %s, is not in the village", stand, box);
 		List<String> blocks = new ArrayList<>();
+		List<String> street = new ArrayList<>();
+		List<String> walkway = new ArrayList<>();
 		if (stall != null) {
+			// The stall stands 3 blocks inside the entrance and faces it (genstall.js): the walkway at its feet and head, then
+			// the street just outside the building, on the ground (1 block up or down from the floor).
+			net.minecraft.core.Direction facing = level.getBlockState(stall).getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
+			for (int k = 1; k <= 3; k++) {
+				for (int dy = 0; dy <= 1; dy++) {
+					BlockPos p = stall.relative(facing, k).above(dy);
+					if (!level.getBlockState(p).getCollisionShape(level, p).isEmpty()) walkway.add(p.toShortString() + " " + level.getBlockState(p));
+				}
+			}
+			for (int k = 4; k <= 5; k++) {
+				for (int dy = -2; dy <= 0; dy++) {
+					BlockPos p = stall.relative(facing, k).above(dy);
+					street.add(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()).toString());
+				}
+			}
 			check(level.getBlockState(stall).is(ModBlocks.MARKET_STALL), "the stall found at %s is not a stall", stall);
 			for (BlockPos p : BlockPos.betweenClosed(stall.offset(-5, -2, -5), stall.offset(5, 5, 5))) {
 				BlockState state = level.getBlockState(p);
@@ -146,6 +168,7 @@ final class ClientVillageCases {
 				if (state.getBlock() instanceof FenceBlock) blocks.add("fence");
 			}
 		}
-		return new Found(center, stand, box, stall == null ? null : stall.immutable(), blocks.stream().distinct().toList(), seen.size());
+		return new Found(center, stand, box, stall == null ? null : stall.immutable(), blocks.stream().distinct().toList(), seen.size(),
+				street.stream().distinct().toList(), walkway);
 	}
 }

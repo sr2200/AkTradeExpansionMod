@@ -601,6 +601,38 @@ final class ServerDevelopmentCases {
 						market.setLevel(level);
 					}
 				})));
+		cases.add(partial("tall_buildings_among_trees", List.of("22-57"),
+				"屋台から7ブロックの所から14ブロックおきに木（幹5段・葉の幅5・高さ7。葉と葉の間は9ブロック）が生えた村（既定の設定、市場レベル1）でも、9×9の倉庫と宿屋、背の高い見張り塔（高さ21）と時計塔（高さ22）が「建てる場所がありません」にならずに建ち、木の幹と葉を1つも壊さないこと（本物の村の木や家の近くでは見ていない）",
+				ctx -> town(ctx, (c, player, market, stall) -> {
+					builder(c, player, market);
+					java.util.Map<BlockPos, BlockState> trees = new java.util.LinkedHashMap<>();
+					BlockPos center = c.center();
+					// Trees every 14 blocks from 7 blocks around the stall: 9 blocks between the leaves, just the width of the
+					// largest buildings (9×9), so that every building stands right next to trees.
+					for (int dx = -35; dx <= 35; dx += 14) {
+						for (int dz = -35; dz <= 35; dz += 14) tree(c, center.offset(dx, 0, dz), trees);
+					}
+					try {
+						for (Identifier id : List.of(WAREHOUSE, INN, TradeExpansion.id("watchtower"), TradeExpansion.id("clock_tower"))) {
+							TradeResult r = build(c, player, market, id);
+							that(r == TradeResult.SUCCESS, "building %s among trees every 14 blocks gave %s", id, r);
+							Facility f = market.facilities().get(id);
+							TradeExpansion.LOGGER.info("[autotest] {} ({} high) among trees: {} blocks from the stall", id, f.box().getYSpan(),
+									String.format("%.1f", market.horizontalDistanceTo(f.front())));
+							c.command(player, "aktradeex development complete"); // one building at a time
+							that(f.complete(), "%s did not complete", id);
+						}
+						List<String> broken = new ArrayList<>();
+						for (var e : trees.entrySet()) {
+							BlockState now = c.level().getBlockState(e.getKey());
+							boolean log = now.is(Blocks.OAK_LOG), leaves = now.is(Blocks.OAK_LEAVES);
+							if (!log && !leaves) broken.add(e.getKey().toShortString() + " " + now);
+						}
+						that(broken.isEmpty(), "the buildings broke %d tree blocks: %s", broken.size(), broken.subList(0, Math.min(5, broken.size())));
+					} finally {
+						trees.forEach((p, was) -> c.level().setBlock(p, was, 2 | 16));
+					}
+				})));
 		cases.add(full("protect_facilities", List.of("22-39"),ctx -> town(ctx, (c, player, market, stall) -> {
 			builder(c, player, market);
 			buildAndComplete(c, player, market, WAREHOUSE);
@@ -702,6 +734,29 @@ final class ServerDevelopmentCases {
 		}
 		ctx.config(cfg -> cfg.development.requireMaterials = false);
 		ServerCases.withMarket(ctx, body);
+	}
+
+	/**
+	 * An oak tree on the floor at {@code base}: a trunk of 5 logs, leaves 5 wide (without the corners) around the third and
+	 * fourth logs and 3 wide above them, up to 7 high. Remembers what each block was in {@code placed}.
+	 */
+	private static void tree(ServerCtx c, BlockPos base, java.util.Map<BlockPos, BlockState> placed) {
+		BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+		java.util.function.BiConsumer<BlockPos, BlockState> set = (p, state) -> {
+			placed.putIfAbsent(p.immutable(), c.level().getBlockState(p));
+			c.level().setBlock(p, state, 2 | 16);
+		};
+		for (int y = 2; y <= 6; y++) {
+			int r = y <= 3 ? 2 : 1;
+			for (int dx = -r; dx <= r; dx++) {
+				for (int dz = -r; dz <= r; dz++) {
+					if (Math.abs(dx) == r && Math.abs(dz) == r && r == 2) continue;
+					if (y == 6 && Math.abs(dx) == 1 && Math.abs(dz) == 1) continue;
+					if ((dx != 0 || dz != 0 || y > 4)) set.accept(base.offset(dx, y, dz), leaves);
+				}
+			}
+		}
+		for (int y = 0; y <= 4; y++) set.accept(base.above(y), Blocks.OAK_LOG.defaultBlockState());
 	}
 
 	/** Enough reputation and development points to build anything. */
