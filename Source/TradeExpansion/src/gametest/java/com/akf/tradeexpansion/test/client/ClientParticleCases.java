@@ -251,9 +251,10 @@ final class ClientParticleCases {
 	}
 
 	/**
-	 * 22-36b: placing a stake (the player's use of the stake item, on the server: setPlacedBy) says where it stands and
-	 * shows the outlines at once, without the buildings the market already has (one completed here); a second stake says
-	 * "先に置いた杭（…）がある間は、そちらに建ちます" with the first one's position.
+	 * 22-36b: placing a stake (the player's use of the stake item, on the server: setPlacedBy) shows the outlines at once
+	 * and writes nothing in the chat; a right-click on it then lists the buildings, without the ones the market already
+	 * has (one completed here); a right-click on a second stake says "先に置いた杭（…）がある間は、そちらに建ちます" with
+	 * the first one's position.
 	 */
 	static void stakePlaced(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
@@ -285,17 +286,21 @@ final class ClientParticleCases {
 			ParticleRecorder.start();
 			place(s, stakes[0]);
 			context.waitTicks(25); // drawn every 10 ticks
+			List<TranslatableContents> placedChat = translated(context);
+			check(placedChat.stream().noneMatch(t -> t.getKey().contains(".facility.")), "placing the stake wrote in the chat: %s", keys(placedChat));
+			long dots = ParticleRecorder.dust().stream().filter(p -> p.color() == STAKE_OK || p.color() == STAKE_BLOCKED).count();
+			check(dots > 0, "no green or red outline came after placing the stake");
+			use(s, stakes[0]);
+			context.waitTicks(5);
 			List<TranslatableContents> chat = translated(context);
-			check(chat.stream().anyMatch(t -> t.getKey().endsWith(".facility.marker_placed")), "placing the stake did not say where it stands: %s", keys(chat));
+			check(chat.stream().anyMatch(t -> t.getKey().endsWith(".facility.preview.header")), "the right-click on the stake did not list the buildings: %s", keys(chat));
 			List<TranslatableContents> lines = chat.stream()
 					.filter(t -> t.getKey().endsWith(".facility.preview.ok") || t.getKey().endsWith(".facility.preview.blocked")).toList();
 			int buildings = s.world.getServer().computeOnServer(server -> com.akf.tradeexpansion.data.FacilityCatalog.all().size());
-			check(lines.size() == buildings - 1, "placing the stake listed %d buildings, not the %d not built yet", lines.size(), buildings - 1);
+			check(lines.size() == buildings - 1, "the right-click on the stake listed %d buildings, not the %d not built yet", lines.size(), buildings - 1);
 			check(lines.stream().noneMatch(t -> t.getArgs()[0] instanceof net.minecraft.network.chat.Component n && n.getString().equals(builtName)),
 					"the completed %s is listed for the stake", builtName);
 			check(chat.stream().noneMatch(t -> t.getKey().endsWith(".facility.preview.not_first")), "the first stake says another stake comes first");
-			long dots = ParticleRecorder.dust().stream().filter(p -> p.color() == STAKE_OK || p.color() == STAKE_BLOCKED).count();
-			check(dots > 0, "no green or red outline came after placing the stake");
 			context.getInput().lookAt(stakes[0].below(2));
 			context.waitTicks(3);
 			screenshot(context, result, "22-36b_stake_placed");
@@ -303,6 +308,10 @@ final class ClientParticleCases {
 			// A second stake: the first one is used.
 			context.runOnClient(c -> c.gui.hud.getChat().clearMessages(false));
 			place(s, stakes[1]);
+			context.waitTicks(5);
+			List<TranslatableContents> secondPlaced = translated(context);
+			check(secondPlaced.stream().noneMatch(t -> t.getKey().contains(".facility.")), "placing the second stake wrote in the chat: %s", keys(secondPlaced));
+			use(s, stakes[1]);
 			context.waitTicks(5);
 			List<TranslatableContents> second = translated(context);
 			TranslatableContents notFirst = second.stream().filter(t -> t.getKey().endsWith(".facility.preview.not_first")).findFirst()
@@ -339,6 +348,17 @@ final class ClientParticleCases {
 			return server.overworld().getBlockState(pos).is(com.akf.tradeexpansion.registry.ModBlocks.CONSTRUCTION_MARKER);
 		});
 		check(placed, "the stake was not placed at %s", pos.toShortString());
+	}
+
+	/** The player's right-click with an empty hand on the stake at {@code pos} (on the server, as the use key does). */
+	private static void use(Session s, BlockPos pos) {
+		s.world.getServer().runOnServer(server -> {
+			var player = player(server);
+			player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+			var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),
+					net.minecraft.core.Direction.UP, pos, false);
+			player.gameMode.useItemOn(player, server.overworld(), player.getMainHandItem(), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+		});
 	}
 
 	private static List<TranslatableContents> translated(ClientGameTestContext context) {

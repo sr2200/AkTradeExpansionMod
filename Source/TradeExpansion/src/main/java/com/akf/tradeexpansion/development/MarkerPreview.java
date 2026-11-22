@@ -68,11 +68,14 @@ public final class MarkerPreview {
 		});
 	}
 
-	/** Shows the outlines of the stake at {@code pos} to {@code player} and lists the buildings in the chat. */
-	public static void show(ServerPlayer player, ServerLevel level, BlockPos pos) {
+	/**
+	 * Shows the outlines of the stake at {@code pos} to {@code player}; with {@code chat} also lists the buildings in the
+	 * chat (a right-click on the stake, not its placing).
+	 */
+	public static void show(ServerPlayer player, ServerLevel level, BlockPos pos, boolean chat) {
 		Market market = Development.siteMarket(level, pos);
 		if (market == null || !Development.enabled(market)) {
-			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_no_market",
+			if (chat) player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_no_market",
 					Development.siteRadiusNear(level, pos)).withStyle(ChatFormatting.YELLOW));
 			return;
 		}
@@ -104,7 +107,7 @@ public final class MarkerPreview {
 			lines.add(Component.translatable("message.ak_trade_expansion.facility.preview.not_first", first.getX(), first.getY(), first.getZ())
 					.withStyle(ChatFormatting.YELLOW));
 		}
-		lines.forEach(player::sendSystemMessage);
+		if (chat) lines.forEach(player::sendSystemMessage);
 		List<Outline> outlines = new ArrayList<>();
 		boxes.forEach((box, ok) -> outlines.add(new Outline(box, ok)));
 		DISPLAYS.put(player.getUUID(), new Display(level.dimension(), level.getServer().getTickCount() + SHOW_TICKS, outlines));

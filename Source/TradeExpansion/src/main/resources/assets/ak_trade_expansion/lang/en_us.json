@@ -840,7 +840,6 @@
   "message.ak_trade_expansion.facility.no_market": "This sign belongs to no market",
   "message.ak_trade_expansion.facility.under_construction": "Building a %s (about %s min left)",
   "message.ak_trade_expansion.facility.marker_no_market": "No market within %s blocks. Put the stake near a market",
-  "message.ak_trade_expansion.facility.marker_placed": "Building site set for %s (the front faces %s)",
   "message.ak_trade_expansion.facility.marker_blocked": "Cannot build at the building site stake: %s",
   "message.ak_trade_expansion.facility.site.unloaded": "the area is not loaded",
   "message.ak_trade_expansion.facility.site.ground": "the ground is not flat dirt or stone (no paths, water or ice)",

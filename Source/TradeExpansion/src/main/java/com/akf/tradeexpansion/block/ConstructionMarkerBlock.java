@@ -64,7 +64,7 @@ public class ConstructionMarkerBlock extends HorizontalDirectionalBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-			MarkerPreview.show(serverPlayer, serverLevel, pos);
+			MarkerPreview.show(serverPlayer, serverLevel, pos, true);
 		}
 		return InteractionResult.SUCCESS;
 	}

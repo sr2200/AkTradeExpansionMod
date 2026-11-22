@@ -536,6 +536,8 @@ final class ServerDevelopmentCases {
 				player.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() - 1.5);
 				c.forget(player);
 				placeStake(c, player, spot);
+				that(stakeChat(c, player).isEmpty(), "placing a stake wrote in the chat: %s", c.messages(player));
+				useStake(c, player, spot);
 				that(c.gotMessage(player, "message.ak_trade_expansion.facility.marker_no_market"), "no \"no market\" message for a stake outside the level 1 radius: %s", c.messages(player));
 				that(!market.markers().contains(spot), "a stake outside the level 1 radius became a building site");
 				c.level().setBlock(spot, Blocks.AIR.defaultBlockState(), 3);
@@ -543,7 +545,9 @@ final class ServerDevelopmentCases {
 				c.forget(player);
 				placeStake(c, player, spot);
 				that(market.markers().contains(spot), "a stake inside the level 3 radius did not become a building site: %s", market.markers());
-				that(c.gotMessage(player, "message.ak_trade_expansion.facility.marker_placed"), "no \"building site\" message at level 3: %s", c.messages(player));
+				that(stakeChat(c, player).isEmpty(), "placing a stake wrote in the chat at level 3: %s", c.messages(player));
+				useStake(c, player, spot);
+				that(c.gotMessage(player, "message.ak_trade_expansion.facility.preview.header"), "no building list at level 3: %s", c.messages(player));
 				c.level().setBlock(spot, Blocks.AIR.defaultBlockState(), 3);
 				market.markers().clear();
 				// The automatic search: posts every 4 blocks within 20 leave no free place inside the level 1 radius.
@@ -659,7 +663,7 @@ final class ServerDevelopmentCases {
 	// ---- 22-35, 22-36, 22-38: building site stakes
 
 	private static void stakes(List<ServerCase> cases) {
-		cases.add(partial("site_stakes", List.of("22-35"), "「杭をもらう」で杭が1本手に入り、持っている時はもらえない。市場の近くに置くと建設予定地になり、遠くに置くと「市場がありません」が届くこと（パーティクルの枠は見ていない）",
+		cases.add(partial("site_stakes", List.of("22-35"), "「杭をもらう」で杭が1本手に入り、持っている時はもらえない。市場の近くに置くと建設予定地になり、遠くに置くと建設予定地にならないこと。置いた時はチャットに何も出ず、杭を右クリックすると建物の一覧（遠い杭は「市場がありません」）が届くこと（パーティクルの枠は見ていない）",
 				ctx -> town(ctx, (c, player, market, stall) -> {
 					DevelopmentResultS2C r = dev(c, player, market, DevelopmentRequestC2S.Action.MARKER, 0, "");
 					that(r.result() == TradeResult.SUCCESS, "taking a stake gave %s", r.result());
@@ -672,7 +676,9 @@ final class ServerDevelopmentCases {
 					placeStake(c, player, spot);
 					that(c.level().getBlockState(spot).is(ModBlocks.CONSTRUCTION_MARKER), "the stake was not placed");
 					that(market.markers().contains(spot), "the stake did not become a building site: %s", market.markers());
-					that(c.gotMessage(player, "message.ak_trade_expansion.facility.marker_placed"), "no \"building site\" message: %s", c.messages(player));
+					that(stakeChat(c, player).isEmpty(), "placing a stake wrote in the chat: %s", c.messages(player));
+					useStake(c, player, spot);
+					that(c.gotMessage(player, "message.ak_trade_expansion.facility.preview.header"), "no building list on the right-click: %s", c.messages(player));
 					// Far from any market.
 					BlockPos far = c.center().east(90);
 					c.floor(far);
@@ -680,6 +686,8 @@ final class ServerDevelopmentCases {
 					player.teleportTo(far.getX() + 0.5, far.getY(), far.getZ() - 1.5);
 					c.forget(player);
 					placeStake(c, player, far);
+					that(stakeChat(c, player).isEmpty(), "placing a stake far away wrote in the chat: %s", c.messages(player));
+					useStake(c, player, far);
 					that(c.gotMessage(player, "message.ak_trade_expansion.facility.marker_no_market"), "no \"no market\" message far away: %s", c.messages(player));
 					that(c.registry().all().stream().noneMatch(m -> m.markers().contains(far)), "the far stake became a building site");
 				})));
@@ -891,5 +899,16 @@ final class ServerDevelopmentCases {
 		c.emptyHand(player);
 		player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModBlocks.CONSTRUCTION_MARKER.asItem()));
 		c.click(player, pos.below(), Direction.UP);
+	}
+
+	/** A right-click on the stake at {@code pos} with an empty hand. */
+	static void useStake(ServerCtx c, ServerPlayer player, BlockPos pos) {
+		c.emptyHand(player);
+		c.click(player, pos, Direction.UP);
+	}
+
+	/** The stake's chat lines (the building list, "no market") sent to {@code player}. */
+	static java.util.List<String> stakeChat(ServerCtx c, ServerPlayer player) {
+		return c.messages(player).stream().filter(k -> k.startsWith("message.ak_trade_expansion.facility.")).toList();
 	}
 }

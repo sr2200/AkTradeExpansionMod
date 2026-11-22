@@ -25,7 +25,6 @@ import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -430,19 +429,11 @@ public final class FacilityBuilder {
 	/** N-5: a stake registers with the nearest market whose site radius (Development.siteRadius) reaches it. */
 	public static void onMarkerPlaced(ServerLevel level, BlockPos pos, ServerPlayer player) {
 		Market market = Development.siteMarket(level, pos);
-		if (market == null || !Development.enabled(market)) {
-			if (player != null) player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_no_market",
-					Development.siteRadiusNear(level, pos)).withStyle(ChatFormatting.YELLOW));
-			return;
-		}
+		if (market == null || !Development.enabled(market)) return; // the right-click on the stake says why
 		if (!market.markers().contains(pos)) market.markers().add(pos.immutable());
 		MarketRegistry.get(level.getServer()).setDirty();
-		if (player != null) {
-			Direction facing = level.getBlockState(pos).getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING);
-			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.facility.marker_placed", MarketNames.name(market),
-					Component.translatable("direction.ak_trade_expansion." + facing.getSerializedName().charAt(0))).withStyle(ChatFormatting.GREEN));
-			MarkerPreview.show(player, level, pos); // where each building would stand
-		}
+		// Where each building would stand: only the outlines, the chat comes with a right-click on the stake.
+		if (player != null) MarkerPreview.show(player, level, pos, false);
 	}
 
 	public static void onMarkerRemoved(ServerLevel level, BlockPos pos) {

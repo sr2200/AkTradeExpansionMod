@@ -272,7 +272,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				"杭を右クリックすると（サーバーでプレイヤーの右クリックを呼ぶ）、チャットに全部の建物が大きさつきで並び、大きさごとに1つ、その大きさの枠（四隅の柱）が、建てられる大きさは緑・建てられない大きさは赤で、杭を正面の真ん中にして届き、30秒で止まること（市場の建物は一時的に外す。杭を置いた時・もう1本置いた時・完成した建物の枠が出ないことは見ていない）",
 				true, ClientParticleCases::stakeOutlines, List.of("28-10"), "杭を右クリックすると、噴水広場（11×11）・公園（13×13）もチャットに並び、その枠も緑／赤で届くこと"));
 		cases.add(new ClientCase("stake_placed", List.of("22-36b"),
-				"杭を置くと（使うキーと同じくサーバーで杭を使う。setPlacedBy）、置いた場所の文と建物の一覧がチャットに出て、すぐ枠が届き、完成した建物（依頼所）は一覧に出ないこと。もう1本置くと「先に置いた杭（先の杭の座標）がある間は、そちらに建ちます」と出ること（杭の右クリックと枠の形・色・30秒は stake_outlines で見る）",
+				"杭を置くと（使うキーと同じくサーバーで杭を使う。setPlacedBy）、チャットには何も出ずにすぐ枠が届き、その杭を右クリックすると建物の一覧がチャットに出て、完成した建物（依頼所）は一覧に出ないこと。もう1本置いて右クリックすると「先に置いた杭（先の杭の座標）がある間は、そちらに建ちます」と出ること（杭の右クリックと枠の形・色・30秒は stake_outlines で見る）",
 				true, ClientParticleCases::stakePlaced));
 		cases.add(new ClientCase("sold_out_and_not_buying", List.of("2-11"), null, true, ClientMoreCases::soldOutAndFull, List.of("2-12"), null));
 		cases.add(new ClientCase("debug_tooltip_warehouse_and_consumables", List.of("22-27"), null, true, ClientMoreCases::debugStorageAndConsumables,

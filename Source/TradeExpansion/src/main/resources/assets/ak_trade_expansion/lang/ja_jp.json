@@ -840,7 +840,6 @@
   "message.ak_trade_expansion.facility.no_market": "この看板の市場が見つかりません",
   "message.ak_trade_expansion.facility.under_construction": "%sを建設中です（あと約%s分）",
   "message.ak_trade_expansion.facility.marker_no_market": "%s ブロック以内に市場がありません。杭は市場の近くに置いてください",
-  "message.ak_trade_expansion.facility.marker_placed": "%sの建設予定地にしました（建物の正面は%s向き）",
   "message.ak_trade_expansion.facility.marker_blocked": "建設予定地の杭の場所に建てられません：%s",
   "message.ak_trade_expansion.facility.site.unloaded": "場所が読み込まれていません",
   "message.ak_trade_expansion.facility.site.ground": "地面が平らな土や石ではありません（道・水・氷の上には建てられません）",
