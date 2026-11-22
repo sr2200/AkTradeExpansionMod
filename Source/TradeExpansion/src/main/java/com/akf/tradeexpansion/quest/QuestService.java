@@ -331,6 +331,7 @@ public final class QuestService {
 				// N-2: the reward counts for both the source and this market.
 				if (source != null) Development.onRequest(source, player, cargo.reward(), now);
 				Development.onRequest(market, player, cargo.reward(), now);
+				com.akf.tradeexpansion.notebook.LedgerService.onCargoDelivered(player, cargo.reward()); // T
 				TradeAdvancements.event(player, TradeAdvancements.CARGO_DELIVERED); // R
 				if (source != null) {
 					source.requests().removeIf(r -> r.id() == cargo.requestId() && r.isTransport());
@@ -395,6 +396,7 @@ public final class QuestService {
 				}
 				Reputation.onDeliver(market, player.getUUID(), target, now);
 				Development.onRequest(market, player, reward, now); // N-2
+				com.akf.tradeexpansion.notebook.LedgerService.onRequestDelivered(player, target.goods(), target.quantity(), reward); // T
 				TradeAdvancements.event(player, TradeAdvancements.QUEST_DELIVERED, target.difficulty()); // R
 				TradeAdvancements.checkMarket(player, market, now);
 				TradeAdvancements.checkWealth(player);

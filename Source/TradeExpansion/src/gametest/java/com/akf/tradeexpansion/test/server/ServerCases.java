@@ -402,6 +402,7 @@ public final class ServerCases {
 		cases.addAll(ServerDimensionCases.all());
 		cases.addAll(ServerRequestCases.all());
 		cases.addAll(ServerRouteCases.all());
+		cases.addAll(ServerNotebookCases.all());
 		return cases;
 	}
 

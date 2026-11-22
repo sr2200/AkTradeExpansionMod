@@ -45,6 +45,8 @@ public final class ModPayloads {
 		PayloadTypeRegistry.clientboundPlay().register(StaffS2C.TYPE, StaffS2C.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(MintRequestC2S.TYPE, MintRequestC2S.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(MintResultS2C.TYPE, MintResultS2C.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(NotebookS2C.TYPE, NotebookS2C.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(NotebookRequestC2S.TYPE, NotebookRequestC2S.CODEC);
 
 		// Handlers run on the server thread, so trades never race each other (F-2).
 		ServerPlayNetworking.registerGlobalReceiver(TradeRequestC2S.TYPE,
@@ -73,5 +75,7 @@ public final class ModPayloads {
 				(payload, context) -> com.akf.tradeexpansion.staff.StaffService.handle(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(MintRequestC2S.TYPE,
 				(payload, context) -> com.akf.tradeexpansion.currency.MintService.handle(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(NotebookRequestC2S.TYPE,
+				(payload, context) -> com.akf.tradeexpansion.notebook.LedgerService.handle(context.player(), payload));
 	}
 }

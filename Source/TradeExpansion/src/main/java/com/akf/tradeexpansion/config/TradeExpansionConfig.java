@@ -52,6 +52,8 @@ public final class TradeExpansionConfig {
 	public Staff staff = new Staff();
 	/** C-5: trade routes between markets (signposts). */
 	public Route route = new Route();
+	/** T (v0.81): the merchant's notebook and the morning report. */
+	public Notebook notebook = new Notebook();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -102,7 +104,7 @@ public final class TradeExpansionConfig {
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
 			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend,
-			Staff staff, Route route) {
+			Staff staff, Route route, Notebook notebook) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -116,7 +118,8 @@ public final class TradeExpansionConfig {
 				section("rivals", Rivals.CODEC, new Rivals()).forGetter(Extra::rivals),
 				section("trend", Trend.CODEC, new Trend()).forGetter(Extra::trend),
 				section("staff", Staff.CODEC, new Staff()).forGetter(Extra::staff),
-				section("route", Route.CODEC, new Route()).forGetter(Extra::route)
+				section("route", Route.CODEC, new Route()).forGetter(Extra::route),
+				section("notebook", Notebook.CODEC, new Notebook()).forGetter(Extra::notebook)
 		).apply(i, Extra::new));
 	}
 
@@ -136,9 +139,10 @@ public final class TradeExpansionConfig {
 		c.trend = e.trend();
 		c.staff = e.staff();
 		c.route = e.route();
+		c.notebook = e.notebook();
 		return c;
 	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend,
-			c.staff, c.route))).codec();
+			c.staff, c.route, c.notebook))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -733,6 +737,34 @@ public final class TradeExpansionConfig {
 	}
 
 	/** I: bulletin board. */
+	/** T (v0.81): the merchant's notebook (ledger and price notes) and the morning report. */
+	public static final class Notebook {
+		/** Tell each player yesterday's takings in the chat in the morning (players can turn it off in the notebook). */
+		public boolean dailyReport = true;
+		/** Days of takings kept for each player (and the most days one report covers). */
+		public int keepDays = 7;
+		/** Markets whose prices a player's notebook remembers (the latest visits; 0 = no price notes). */
+		public int priceNotes = 16;
+
+		public Notebook() {
+		}
+
+		Notebook(boolean dailyReport, int keepDays, int priceNotes) {
+			this.dailyReport = dailyReport;
+			this.keepDays = keepDays;
+			this.priceNotes = priceNotes;
+		}
+
+		static final Codec<Notebook> CODEC = RecordCodecBuilder.create(i -> {
+			Notebook d = new Notebook();
+			return i.group(
+					Codec.BOOL.fieldOf("dailyReport").orElse(d.dailyReport).forGetter(c -> c.dailyReport),
+					Codec.INT.fieldOf("keepDays").orElse(d.keepDays).forGetter(c -> c.keepDays),
+					Codec.INT.fieldOf("priceNotes").orElse(d.priceNotes).forGetter(c -> c.priceNotes)
+			).apply(i, Notebook::new);
+		});
+	}
+
 	public static final class Board {
 		public int radius = 512;
 		public int maxMarkets = 20;

@@ -26,7 +26,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 - Git Bash（Bash ツール）から .bat を実行するときは、フルパスで `cmd` に渡す（`build.bat` とだけ書くと中の `gradlew.bat` が見つからず失敗する）。例：`Source/TradeExpansion` で `cmd //c "$(cygpath -w "$PWD/build.bat") --offline -q"`。`gradlew` を直接使うときも同じ形（`cmd //c "$(cygpath -w "$PWD/gradlew.bat") test --offline -q"`）。
 - バージョンの上げ方は `tools/version/bump.ps1`。手で書き換えない。
 - OneDrive の同期フォルダで `Failed to clean up stale outputs` が出たら `build` フォルダを消して再実行する。
-- README の「商品一覧」は生成物。商品データを変えたら、リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .` を実行して作り直す。村の屋台の構造物 NBT は `tools/structures/genstall.js`、進捗の JSON と言語ファイルの訳は `tools/advancements/genadv.js`（表を直して `Source/TradeExpansion` で実行）、Mod のアイコンは `tools/icon/genicon.js`、荷箱のテクスチャは `tools/icon/gencrate.js`、公開ページ用のサムネイルは `tools/thumbnail/genthumb.ps1` で生成する（pwsh で実行する。Windows PowerShell 5 では日本語が化ける。`release.bat` も最後に作り直す）。
+- README の「商品一覧」は生成物。商品データを変えたら、リポジトリ直下で `node Source/TradeExpansion/tools/docs/goodslist.js .` を実行して作り直す。村の屋台の構造物 NBT は `tools/structures/genstall.js`、進捗の JSON と言語ファイルの訳は `tools/advancements/genadv.js`（表を直して `Source/TradeExpansion` で実行）、Mod のアイコンは `tools/icon/genicon.js`、荷箱のテクスチャは `tools/icon/gencrate.js`、商人の手帳のテクスチャは `tools/icon/gennotebook.js`、公開ページ用のサムネイルは `tools/thumbnail/genthumb.ps1` で生成する（pwsh で実行する。Windows PowerShell 5 では日本語が化ける。`release.bat` も最後に作り直す）。
 - .bat ファイルは CRLF で保存する。バックスラッシュを含むスクリプトをシェルのヒアドキュメントで書くと崩れることがあるので、ファイルに書いてから実行する。
 
 ## アーキテクチャ
@@ -35,7 +35,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 - **`core/` は Minecraft に依存しない純粋な計算**（価格モデル、距離による減衰、コイン、利息、評判、依頼、市場レベル、商品の抽選）。単体テストはほぼここに対するもの（`src/test`）。新しい計算式はまずここに置いてテストを書く。
 - **サーバーが正、クライアントはプレビュー**：取引の成否と状態の変更はすべてサーバーで行う。`MarketSnapshotS2C` は価格そのものではなく計算に使うパラメータ（B・τ・X・S など）を送り、クライアントは同じ `PriceModel` で価格と時間による回復を計算して表示する。確定時にサーバーが計算し直し、期待額と違えば `PRICE_CHANGED` を返す。そのため価格の式を変えるときは、サーバーとクライアントの両方の挙動に影響する。スナップショットは見ている人ごとに作る（評判の効果が入るため）。
 - **パケット**は `network/` にまとめ、`ModPayloads` で登録する（C2S は要求、S2C は結果・スナップショット）。受け取った処理で、画面の市場 ID、屋台までの距離、数量の範囲を必ず検証する。一覧は設計書 F-2。
-- **保存**：`SavedData` は2つ。`ak_trade_expansion:markets`（`MarketRegistry`：全次元の市場、商品の状態、依頼、品不足、市場名）と `ak_trade_expansion:bank`（口座）。Codec の保存項目名は snake_case。新しく足す項目は省略可能にし、無いときは既定値にして互換を保つ（`schema_version` は簡単には上げない）。財布の残高はアイテムのデータコンポーネントに持つ。
+- **保存**：`SavedData` は3つ。`ak_trade_expansion:markets`（`MarketRegistry`：全次元の市場、商品の状態、依頼、品不足、市場名）と `ak_trade_expansion:bank`（口座）と `ak_trade_expansion:ledger`（`notebook/Ledger`：プレイヤーごとの商人の手帳の帳簿・価格メモ）。Codec の保存項目名は snake_case。新しく足す項目は省略可能にし、無いときは既定値にして互換を保つ（`schema_version` は簡単には上げない）。財布の残高はアイテムのデータコンポーネントに持つ。
 - **相場は遅延評価**：時間による回復は、市場に触れたときに経過時間からまとめて計算する。市場の時計は設定 `recovery.clock`（`MarketClock`）による。
 - **市場**：半径64ブロック以内の交易所は1つの市場になる。新しい市場の作成条件は `SettlementRule` と `MarketFactory`、相場の波及は `Propagation`。
 - **データ駆動**：商品の定義と市場プロファイル（条件、抽選プール、価格倍率）は `src/main/resources/data/ak_trade_expansion/ak_trade_expansion/{goods,market_profile}/` のデータパック。読み込みは `data/`。同梱データの読み込みは `BundledDataTest` で検証する。

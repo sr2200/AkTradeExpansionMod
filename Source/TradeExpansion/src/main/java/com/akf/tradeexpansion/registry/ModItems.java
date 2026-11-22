@@ -6,6 +6,7 @@ import com.akf.tradeexpansion.item.CoinItem;
 import com.akf.tradeexpansion.item.BankCardItem;
 import com.akf.tradeexpansion.item.CargoCrateItem;
 import com.akf.tradeexpansion.item.EmeraldCoinItem;
+import com.akf.tradeexpansion.item.MerchantNotebookItem;
 import com.akf.tradeexpansion.item.WalletItem;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -35,6 +36,9 @@ public final class ModItems {
 
 	/** J-2 (v0.35): a transport request's goods, carried from one market to another. Not craftable, cannot be opened. */
 	public static final CargoCrateItem CARGO_CRATE = register("cargo_crate", CargoCrateItem::new, 1);
+
+	/** T (v0.81): the merchant's notebook (the player's ledger and price notes). */
+	public static final MerchantNotebookItem MERCHANT_NOTEBOOK = register("merchant_notebook", MerchantNotebookItem::new, 1);
 
 	private ModItems() {
 	}

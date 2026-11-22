@@ -44,6 +44,9 @@ public final class ConfigValidator {
 		rt.signpostSpacing = clamp("route.signpostSpacing", rt.signpostSpacing, 16, 256);
 		rt.roadWeight = clamp("route.roadWeight", rt.roadWeight, 0, 1);
 		rt.maxRoutesPerMarket = clamp("route.maxRoutesPerMarket", rt.maxRoutesPerMarket, 0, 16);
+		TradeExpansionConfig.Notebook nb = c.notebook; // T
+		nb.keepDays = clamp("notebook.keepDays", nb.keepDays, 1, 30);
+		nb.priceNotes = clamp("notebook.priceNotes", nb.priceNotes, 0, 64);
 
 		TradeExpansionConfig.Market m = c.market;
 		m.minGoods = clamp("market.minGoods", m.minGoods, 1, 100);

@@ -2,8 +2,8 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.3.6、2026-11-22 19:43、210 件中 0 件失敗
-- クライアント：バージョン 0.3.1、2026-11-22 11:16、151 件中 0 件失敗
+- サーバー：バージョン 0.3.6、2026-11-22 20:52、215 件中 0 件失敗
+- クライアント：バージョン 0.3.1、2026-11-22 11:16、153 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.44、2026-11-21 17:44、3 件中 0 件失敗
 - クライアント（Mod Menu だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
 - クライアント（YACL だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
@@ -11,7 +11,7 @@
 - クライアント（REI）：バージョン 0.2.44、2026-11-21 17:31、7 件中 0 件失敗
 - クライアント（JourneyMap）：バージョン 0.2.44、2026-11-21 17:31、3 件中 0 件失敗
 - クライアント（建物の画像）：バージョン 0.2.41、2026-11-21 10:28、2 件中 0 件失敗
-- チェックリスト 365 項目のうち、今回 自動で完了 213・一部を確認 141・失敗 0
+- チェックリスト 378 項目のうち、今回 自動で完了 214・一部を確認 149・失敗 0
 
 ## すべての項目
 
@@ -226,11 +226,15 @@
 | — | `request_market_gone` | サーバー | ✔ | 全部 |
 | 37-2・37-3・37-4・37-5 | `mint_coins` | サーバー | ✔ | 鋳造所の無い村では鋳造できず（NO_MINT）、鋳造所が建つと銅ブロック9個ずつが 96c 分のコインになり（2回で 192c、ブロックが18個減る）、持っている数より多い・65回以上の鋳造は断られて何も減らず、鉄ブロックは既定では「設定で無効」・鉄の鋳造を ON にすると9個で 960c、倍率を 2 にすると銅ブロック9個で 128c になること。看板が両替タブを開く種類であること（画面のボタンと表示は見ていない） |
 | 38-2・38-3・38-4・38-5・38-6・38-7 | `signpost_route` | サーバー | ✔ | 2つの市場（600ブロック、遠い方の端を 400 にした設定で連動 0%）の間に60ブロックおきに道標を並べると、最後の1本で「交易路ができました」と出て、Aで売った相場の変化の 50% がBに伝わり、道標の右クリックで道標の数・市場・交易路が出て、market info に相手が出て、保存データを書き出して読み直しても道標が残り、上限を 0 にすると「上限を超える」と出てつながらず、途中の道標を壊すとBに伝わらなくなること（道標は1本だけ実際に置き、ほかは保存データに登録した。道の見た目・音は見ていない） |
+| 40-1 | `notebook_recipe` | サーバー | ✔ | 全部 |
+| 40-2 | `notebook_opens` | サーバー | ✔ | 手帳を使うと、サーバーから「画面を開く」の印のついた手帳の中身が届くこと（画面とタブの表示は見ていない） |
+| 40-3 | `notebook_profit` | サーバー | ✔ | 市場で4個買って、自分で集めた2個と合わせて6個売ると、手帳の「今日」の売上・仕入れが取引の額になり、利益が「売った額 − 買った4個の値段」（集めた2個は仕入れ0）になり、よく儲かった品にその品が6個で出ること（画面の表示は見ていない） |
+| 40-6・40-7・40-8 | `morning_report` | サーバー | ✔ | 売り買いした次の朝（/time add で1日進めた）にチャットに日報（見出し・売上と利益・手帳の作り方の案内）が出て、何もしなかった日の次の朝は出ないこと。手帳の「受け取らない」の要求の後は売っても次の朝に出ず、「受け取る」に戻して3日進めると「この3日間の商い」でまとめて出ること（日が昇った時・寝て起きた時の見え方と、設定 OFF の時のボタンは見ていない） |
+| 40-9・40-10 | `price_notes` | サーバー | ✔ | 交易画面を開くと、その市場の買値・売値（評判の効果込み、取引画面と同じ値）が今日の日付で手帳の価格メモの先頭に入り、同じ市場をもう一度開いても1件のままで、notebook.priceNotes を 0 にすると書き留めないこと（画面の表示・色・方角は見ていない） |
 | 14-4 | `log_has_no_mod_errors` | サーバー | ✔ | テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ |
 | 1-2 | `startup_with_modmenu_yacl` | クライアント | ✔ | 全部 |
 | 1-3 | `config_screen_tabs` | クライアント | ✔ | 設定画面が開き、各タブに切り替えられることのみ（表示は画像で確認） |
 | 1-3 | `layout_config_screen` | クライアント | ✔ | タイトル画面から開いた設定画面の各タブの文字が重ならず、画面からはみ出さず、翻訳キーがそのまま出ないこと（日本語と英語、854×480 と 1920×1080）。タイトル画面では「追加の商品と消耗品」が押せないこと |
-| 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
 | 1-4 | `creative_tab` | クライアント | ✔ | 全部 |
 | 1-5 | `item_tooltips` | クライアント | ✔ | 全部 |
 | 21-2 | `cargo_tooltip` | クライアント | ✔ | 荷箱の説明に中身・届け先・場所（ネザーなら「（ネザー）」）・報酬と保証金・依頼元・残り時間が出ること |
@@ -377,6 +381,9 @@
 | 13-2 | `dedicated_server_one_player` | クライアント | ✔ | 全部 |
 | 11-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの普通の世界で、生成された村の中で where show をすると、緑の点（村の範囲）が村の構造物の枠の辺の上に、地面（いちばん上のブロック＋0.3）に届くこと（見やすさは画像で確認） |
 | 6-1・6-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があり、建物の床（7×7）の上に草や花が無いこと。交易所の正面が建物の入口に向き、交易所と入口の間に通れないブロックが無く、入口の外に村の道（土の道）があること（村の種類ごとには見ていない。建物が道や家と自然につながって見えるかは画像で確認） |
+| 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
+| 40-12 | `notebook_screen` | クライアント | ✔ | 1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に売上が出て、3つのタブとも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない |
+| 40-2 | `notebook_screen` | クライアント | ✔ | 手帳を使うキー（右クリック）で手帳の画面が開くこと（タブの切り替えの見え方は画像で見る） |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 | 1-1 | `startup_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | 全部 |
 | 15-3 | `trade_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | Mod Menu・YACL を外した開発用の起動構成（テスト用の Mod は入っている）で、新しいワールドに入って村に交易所を置き、交易画面で1つ買い1つ売れることのみ（配布 jar だけの起動構成では見ていない） |
@@ -427,7 +434,6 @@
 - 1-3 `config_screen_tabs`：[1-3_config_13.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_13.png)
 - 1-3 `config_screen_tabs`：[1-3_config_14.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_14.png)
 - 1-3 `config_screen_tabs`：[1-3_config_15.png](../../Source/TradeExpansion/build/autotest/screenshots/1-3_config_15.png)
-- 2-8 `stall_place_and_open`：[2-8_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/2-8_trade_screen.png)
 - 1-4 `creative_tab`：[1-4_creative_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/1-4_creative_tab.png)
 - 1-5 `item_tooltips`：[1-5_copper_coin.png](../../Source/TradeExpansion/build/autotest/screenshots/1-5_copper_coin.png)
 - 1-5 `item_tooltips`：[1-5_gold_coins.png](../../Source/TradeExpansion/build/autotest/screenshots/1-5_gold_coins.png)
@@ -685,6 +691,14 @@
 - 13-2 `dedicated_server_one_player`：[13-2_settings_on_server.png](../../Source/TradeExpansion/build/autotest/screenshots/13-2_settings_on_server.png)
 - 11-2 `where_show_natural_village`：[11-2_where_show_village.png](../../Source/TradeExpansion/build/autotest/screenshots/11-2_where_show_village.png)
 - 6-1・6-2 `where_show_natural_village`：[6-1_generated_stall.png](../../Source/TradeExpansion/build/autotest/screenshots/6-1_generated_stall.png)
+- 2-8 `stall_place_and_open`：[2-8_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/2-8_trade_screen.png)
+- 40-12 `notebook_screen`：[40-2_notebook_today.png](../../Source/TradeExpansion/build/autotest/screenshots/40-2_notebook_today.png)
+- 40-12 `notebook_screen`：[layout_notebook_today_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_ja_jp_854x480_GUI_auto.png)
+- 40-12 `notebook_screen`：[layout_notebook_days_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_ja_jp_854x480_GUI_auto.png)
+- 40-12 `notebook_screen`：[layout_notebook_prices_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_ja_jp_854x480_GUI_auto.png)
+- 40-12 `notebook_screen`：[layout_notebook_today_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_en_us_854x480_GUI_auto.png)
+- 40-12 `notebook_screen`：[layout_notebook_days_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_en_us_854x480_GUI_auto.png)
+- 40-12 `notebook_screen`：[layout_notebook_prices_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_en_us_854x480_GUI_auto.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)
 - 15-3 `trade_without_modmenu_yacl`：[15-3_bought_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/15-3_bought_without_modmenu_yacl.png)
 - 1-6 `startup_modmenu_without_yacl`：[1-2_mod_list.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_mod_list.png)

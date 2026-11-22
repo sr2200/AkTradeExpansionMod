@@ -147,7 +147,7 @@ public final class StaffService {
 			setStatus(server, e, e.role == Employee.Role.CLERK && e.stock <= 0 && !e.paused ? Employee.Status.SOLD_OUT : Employee.Status.PAUSED, now, changes);
 			return;
 		}
-		if (!payWages(e, home, now, changes)) {
+		if (!payWages(server, e, home, now, changes)) {
 			if (e.status != Employee.Status.UNPAID) {
 				log(e, now, "unpaid", null, -1, wage(e, home));
 				notify(server, e, describe(registry, e, e.log.getLast()));
@@ -169,7 +169,7 @@ public final class StaffService {
 	 * Pays every wage due by {@code now} from the purse. When the purse is short the employee stops and the wage stays due
 	 * "now" (days without work are not paid). @return all wages paid
 	 */
-	private static boolean payWages(Employee e, Market home, long now, Changes changes) {
+	private static boolean payWages(MinecraftServer server, Employee e, Market home, long now, Changes changes) {
 		long wage = wage(e, home);
 		if (wage <= 0) {
 			if (e.wageDue <= now) e.wageDue = now + PriceModel.TICKS_PER_DAY;
@@ -182,6 +182,7 @@ public final class StaffService {
 			}
 			e.purse -= wage;
 			e.wages += wage;
+			com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, -wage); // T
 			e.wageDue += PriceModel.TICKS_PER_DAY;
 			changes.dirty = true;
 		}
@@ -196,6 +197,7 @@ public final class StaffService {
 			e.purse += deal.total();
 			e.earned += deal.total();
 			e.sold += deal.units();
+			com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, deal.total()); // T: the goods were left with it
 			logSale(e, now, deal);
 		}
 		if (e.stock <= 0) {
@@ -281,6 +283,7 @@ public final class StaffService {
 					e.earned += deal.total();
 					e.tripRevenue += deal.total();
 					e.tripCost += cost; // what the goods sold on this trip cost (the commission is on the difference)
+					com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, deal.total() - cost); // T
 					e.sold += deal.units();
 					if (e.auto()) log(e, now, "sold_mix", null, destination.id(), deal.kinds(), deal.items(), deal.total(), cost);
 					else log(e, now, "sold", e.goods, destination.id(), deal.items(), deal.total(), cost);
@@ -311,6 +314,7 @@ public final class StaffService {
 				long commission = Math.min(e.purse, StaffMath.commission(profit, config().carrierCommission));
 				e.purse -= commission;
 				e.wages += commission;
+				com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, -commission); // T
 				log(e, now, "returned", null, -1, e.trips, profit - commission, commission);
 				ServerPlayer owner = profit - commission > 0 ? server.getPlayerList().getPlayer(e.owner) : null;
 				if (owner != null) TradeAdvancements.event(owner, TradeAdvancements.STAFF_PROFIT, profit - commission); // R
@@ -376,13 +380,16 @@ public final class StaffService {
 		lostItems += back.items();
 		cost += back.cost();
 		e.lost += cost;
+		com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, -cost); // T: what the lost goods cost
 		if (e.auto() || returnLoss) log(e, now, "accident_mix", null, -1, lostItems, cost);
 		else log(e, now, "accident", e.goods, -1, lostItems, cost);
 		Component line = describe(registry, e, e.log.getLast());
 		boolean spring = has(home, FacilityKind.HOT_SPRING); // v0.51: a hot spring at home
 		TradeExpansionConfig.Development dev = TradeExpansionConfig.get().development;
 		if (random.nextDouble() < c.quitChance * (spring ? Math.clamp(dev.hotSpringQuitMultiplier, 0.0, 1.0) : 1.0)) {
-			e.lost += e.cargoCost + lineCosts(e.returnCargo); // what is left of the cargo goes with the carrier
+			long left = e.cargoCost + lineCosts(e.returnCargo);
+			e.lost += left; // what is left of the cargo goes with the carrier
+			com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, -left); // T
 			e.stock = 0;
 			e.cargoCost = 0;
 			e.cargo.clear();
@@ -708,6 +715,7 @@ public final class StaffService {
 		e.tripRevenue += deal.total();
 		e.tripCost += deal.cost();
 		e.sold += deal.units();
+		com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, deal.total() - deal.cost()); // T
 		log(e, now, "sold_mix", null, home.id(), deal.kinds(), deal.items(), deal.total(), deal.cost());
 	}
 

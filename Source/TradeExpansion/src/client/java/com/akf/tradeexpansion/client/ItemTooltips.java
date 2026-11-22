@@ -28,6 +28,8 @@ public final class ItemTooltips {
 				case CoinItem coin -> coin.addTooltip(stack, extra::add);
 				case EmeraldCoinItem coin -> coin.addTooltip(stack, extra::add);
 				case WalletItem wallet -> wallet.addTooltip(stack, extra::add);
+				case com.akf.tradeexpansion.item.MerchantNotebookItem notebook -> extra.add(Component.translatable(
+						"tooltip.ak_trade_expansion.merchant_notebook").withStyle(net.minecraft.ChatFormatting.GRAY));
 				case BankCardItem card -> card.addTooltip(stack, extra::add);
 				case CargoCrateItem crate -> {
 					Minecraft mc = Minecraft.getInstance();

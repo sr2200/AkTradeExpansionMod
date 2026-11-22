@@ -156,6 +156,12 @@ public final class ConfigScreen {
 				.option(longField("wallet.capacity", d.wallet.capacity, () -> edit.wallet.capacity, v -> edit.wallet.capacity = v, 1000, 1_000_000_000L))
 				.option(bool("wallet.autoCollect", d.wallet.autoCollect, () -> edit.wallet.autoCollect, v -> edit.wallet.autoCollect = v));
 
+		// T (v0.81): the merchant's notebook and the morning report
+		ConfigCategory.Builder notebook = category("notebook")
+				.option(bool("notebook.dailyReport", d.notebook.dailyReport, () -> edit.notebook.dailyReport, v -> edit.notebook.dailyReport = v))
+				.option(intField("notebook.keepDays", d.notebook.keepDays, () -> edit.notebook.keepDays, v -> edit.notebook.keepDays = v, 1, 30))
+				.option(intField("notebook.priceNotes", d.notebook.priceNotes, () -> edit.notebook.priceNotes, v -> edit.notebook.priceNotes = v, 0, 64));
+
 		ConfigCategory.Builder bank = category("bank")
 				.option(intField("bank.minMarketLevel", d.bank.minMarketLevel, () -> edit.bank.minMarketLevel, v -> edit.bank.minMarketLevel = v, 1, 5))
 				.option(longField("bank.cardFee", d.bank.cardFee, () -> edit.bank.cardFee, v -> edit.bank.cardFee = v, 0, 1_000_000L))
@@ -392,7 +398,7 @@ public final class ConfigScreen {
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.translatable(KEY + "title"))
 				.categories(List.of(currency.build(), priceCat.build(), goods.build(), recovery.build(), distance.build(), marketCat.build(),
-						wallet.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), development.build(), staff.build(), other.build(),
+						wallet.build(), notebook.build(), bank.build(), tradeCat.build(), village.build(), reputation.build(), development.build(), staff.build(), other.build(),
 						client.build()))
 				.save(this::save)
 				.build();

@@ -39,6 +39,7 @@ public final class MarketAccess {
 					formatMultiplier(TradeExpansionConfig.get().development.festivalMultiplier)).withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 		ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
+		com.akf.tradeexpansion.notebook.LedgerService.notePrices(player, market, now); // T: price notes of the notebook
 		BankService.sendAccount(player);
 		com.akf.tradeexpansion.advancement.TradeAdvancements.checkMarket(player, market, now); // R: progress made before
 		com.akf.tradeexpansion.advancement.TradeAdvancements.checkWealth(player);

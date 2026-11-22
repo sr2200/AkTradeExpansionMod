@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "ak_trade_expansion:copper_coin"
+  ],
+  "result": {
+    "id": "ak_trade_expansion:merchant_notebook"
+  }
+}

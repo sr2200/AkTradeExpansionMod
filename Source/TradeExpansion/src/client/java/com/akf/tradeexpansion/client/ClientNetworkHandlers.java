@@ -72,6 +72,11 @@ public final class ClientNetworkHandlers {
 			if (context.player().containerMenu instanceof net.minecraft.world.inventory.MerchantMenu menu) menu.updateSellItem();
 		});
 		ClientPlayNetworking.registerGlobalReceiver(ConfigSyncS2C.TYPE, (payload, context) -> payload.applyOnClient());
+		// T (v0.81): the merchant's notebook (opened by using it; refreshed after its switch is changed)
+		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.NotebookS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof NotebookScreen screen) screen.update(payload);
+			else if (payload.open()) context.client().gui.setScreen(new NotebookScreen(payload));
+		});
 		// I (v0.47): recipe viewer pages
 		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.TradableItemsS2C.TYPE,
 				(payload, context) -> PriceLookupCache.setTradable(payload));
