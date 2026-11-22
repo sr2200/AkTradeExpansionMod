@@ -75,7 +75,7 @@ public final class MarketFactory {
 		market.bonusSpecials().clear();
 		market.setSpecialDay(Long.MIN_VALUE); // D-5: chosen again by the next upkeep
 		// Shortages and requests depend on the goods, so they are chosen again too (K).
-		market.shortages().clear();
+		market.clearShortages();
 		market.setShortagePeriod(Long.MIN_VALUE);
 		market.trends().clear(); // P: the groups depend on the goods too
 		market.setTrendPeriod(Long.MIN_VALUE);

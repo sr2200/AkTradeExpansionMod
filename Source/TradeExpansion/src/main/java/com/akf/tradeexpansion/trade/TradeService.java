@@ -150,6 +150,7 @@ public final class TradeService {
 		// M: reputation for the trade (selling a good the market is short of counts more)
 		Reputation.onTrade(market, player.getUUID(), total, !buy && market.shortages().containsKey(goodsId), now);
 		Development.onTrade(market, player, total, now); // N-2
+		if (!buy) com.akf.tradeexpansion.quest.DemandService.onSold(player.level(), market, player, goodsId, qty, now); // K-2: fulfilling a shortage
 
 		// 6-7. Propagate X to nearby markets (C-2)
 		double deltaX = buy ? -qty : qty;

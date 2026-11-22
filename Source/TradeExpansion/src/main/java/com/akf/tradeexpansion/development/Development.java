@@ -77,12 +77,18 @@ public final class Development {
 		if (points <= 0 || !enabled(market)) return 0;
 		if (market.hasFacility(FacilityKind.PARK)) points *= config().parkPointsMultiplier;
 		points *= Festival.multiplier(market, now); // v0.51 festival day
+		points *= vigorMultiplier(market); // K-2 (v0.78): a village low in vigor grows a little slower
 		market.setDevelopment(points(market, now) + points, now);
 		UUID uuid = player.getUUID();
 		Market.Contributor old = market.contributors().get(uuid);
 		double total = (old == null ? 0 : old.points()) + points;
 		market.contributors().put(uuid, new Market.Contributor(uuid, player.getPlainTextName(), total));
 		return points;
+	}
+
+	/** K-2: multiplier of the points brought to {@code market} from its vigor (1 from vigor 50 up). */
+	public static double vigorMultiplier(Market market) {
+		return com.akf.tradeexpansion.core.DemandMath.pointsMultiplier(market.vigor(), TradeExpansionConfig.get().demand.vigorPenalty);
 	}
 
 	/** Spends points (building a facility). @return {@code false} if there are not enough */

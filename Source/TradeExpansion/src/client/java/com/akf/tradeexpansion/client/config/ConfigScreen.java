@@ -219,6 +219,12 @@ public final class ConfigScreen {
 				.option(doubleField("demand.durationDays", d.demand.durationDays, () -> demand.durationDays, v -> demand.durationDays = v, 0.5, 30))
 				.option(doubleField("demand.minMultiplier", d.demand.minMultiplier, () -> demand.minMultiplier, v -> demand.minMultiplier = v, 1, 5))
 				.option(doubleField("demand.maxMultiplier", d.demand.maxMultiplier, () -> demand.maxMultiplier, v -> demand.maxMultiplier = v, 1, 5))
+				.option(intField("demand.fulfillCount", d.demand.fulfillCount, () -> demand.fulfillCount, v -> demand.fulfillCount = v, 0, 1000))
+				.option(doubleField("demand.fulfillPointsRatio", d.demand.fulfillPointsRatio, () -> demand.fulfillPointsRatio, v -> demand.fulfillPointsRatio = v, 0, 100))
+				.option(intField("demand.villagersEvery", d.demand.villagersEvery, () -> demand.villagersEvery, v -> demand.villagersEvery = v, 0, 100))
+				.option(doubleField("demand.vigorGain", d.demand.vigorGain, () -> demand.vigorGain, v -> demand.vigorGain = v, 0, 100))
+				.option(doubleField("demand.vigorLoss", d.demand.vigorLoss, () -> demand.vigorLoss, v -> demand.vigorLoss = v, 0, 100))
+				.option(doubleField("demand.vigorPenalty", d.demand.vigorPenalty, () -> demand.vigorPenalty, v -> demand.vigorPenalty = v, 0, 1))
 				// O (v0.46): rival guilds
 				.option(bool("rivals.enabled", d.rivals.enabled, () -> edit.rivals.enabled, v -> edit.rivals.enabled = v))
 				.option(doubleField("rivals.chancePerDay", d.rivals.chancePerDay, () -> edit.rivals.chancePerDay, v -> edit.rivals.chancePerDay = v, 0, 1))

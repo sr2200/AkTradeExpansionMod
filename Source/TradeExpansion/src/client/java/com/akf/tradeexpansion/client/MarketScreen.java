@@ -1394,6 +1394,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (view.special()) lines.add(Component.translatable("screen.ak_trade_expansion.special.tooltip"));
 		if (view.shortage()) {
 			lines.add(Component.translatable("screen.ak_trade_expansion.shortage.tooltip", multiplier(view.shortageMultiplier())).withColor(COLOR_ORANGE));
+			if (view.shortageLeft() > 0) { // K-2 (v0.78)
+				lines.add(Component.translatable("screen.ak_trade_expansion.shortage.left", view.shortageLeft()).withStyle(net.minecraft.ChatFormatting.GRAY));
+			}
 		}
 		for (MarketSnapshotS2C.TrendView t : view.trends()) lines.add(trendLine(t, true));
 		view.rival().ifPresent(r -> lines.add(rivalLine(r.guild(), r.buying(), r.daysLeft())));
@@ -1677,9 +1680,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		if (snapshot == null) return;
 		MarketSnapshotS2C.DevelopmentView d = snapshot.development();
 		g.fill(tx, ty, tx + listW, ty + TOWN_HEADER_H, COLOR_DARK);
-		g.text(font, Component.translatable("screen.ak_trade_expansion.town.points", points(d.points())), tx + 4, ty + 1, COLOR_GOLD);
+		Component pointsText = Component.translatable("screen.ak_trade_expansion.town.points", points(d.points()));
+		g.text(font, pointsText, tx + 4, ty + 1, COLOR_GOLD);
 		String level = Component.translatable("screen.ak_trade_expansion.town.level", com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(snapshot.level()), snapshot.level()).getString();
-		g.text(font, level, tx + listW - 4 - font.width(level), ty + 1, COLOR_WHITE);
+		int levelX = tx + listW - 4 - font.width(level);
+		g.text(font, level, levelX, ty + 1, COLOR_WHITE);
+		// K-2 (v0.78): the village's vigor, between the points and the level when it fits (always in the tooltip)
+		String vigor = Component.translatable("screen.ak_trade_expansion.town.vigor", (long) Math.floor(d.vigor())).getString();
+		int vigorX = tx + 4 + font.width(pointsText) + 8;
+		if (vigorX + font.width(vigor) <= levelX - 6) g.text(font, vigor, vigorX, ty + 1, vigorColor(d.vigor()));
 		boolean overHeader = mouseX >= tx && mouseX < tx + listW && mouseY >= ty && mouseY < ty + TOWN_HEADER_H;
 
 		List<MarketSnapshotS2C.FacilityView> facilities = d.facilities();
@@ -1832,7 +1841,24 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		lines.add(Component.translatable("screen.ak_trade_expansion.town.level.bonus", d.bonus()));
 		lines.add(Component.translatable("screen.ak_trade_expansion.town.level.total", com.akf.tradeexpansion.block.MarketStallBlockEntity.levelName(snapshot.level()), snapshot.level()));
 		lines.add(Component.translatable("screen.ak_trade_expansion.town.how").withStyle(net.minecraft.ChatFormatting.GRAY));
+		// K-2 (v0.78): vigor, its effect on the points and the shortages fulfilled
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.vigor", (long) Math.floor(d.vigor())).withColor(vigorColor(d.vigor())));
+		if (d.vigorMultiplier() < 1 - 1e-9) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.town.vigor.low", multiplier(d.vigorMultiplier())).withColor(COLOR_ORANGE));
+		}
+		if (d.villagersEvery() > 0) {
+			int next = d.villagersEvery() - d.shortagesFulfilled() % d.villagersEvery();
+			lines.add(Component.translatable("screen.ak_trade_expansion.town.vigor.fulfilled", d.shortagesFulfilled(), next).withStyle(net.minecraft.ChatFormatting.GRAY));
+		} else {
+			lines.add(Component.translatable("screen.ak_trade_expansion.town.vigor.fulfilled_only", d.shortagesFulfilled()).withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		lines.add(Component.translatable("screen.ak_trade_expansion.town.vigor.how").withStyle(net.minecraft.ChatFormatting.GRAY));
 		return lines;
+	}
+
+	/** K-2: green from 50 up, yellow from 25, red below. */
+	private static int vigorColor(double vigor) {
+		return vigor >= 50 ? COLOR_GREEN : vigor >= 25 ? COLOR_GOLD : COLOR_RED;
 	}
 
 	private List<Component> contributorsTooltip(MarketSnapshotS2C.DevelopmentView d) {

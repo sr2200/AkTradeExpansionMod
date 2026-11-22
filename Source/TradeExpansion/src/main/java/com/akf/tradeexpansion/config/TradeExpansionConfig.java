@@ -815,15 +815,34 @@ public final class TradeExpansionConfig {
 		public double durationDays = 3.0;
 		public double minMultiplier = 1.5;
 		public double maxMultiplier = 2.0;
+		/** K-2 (v0.78): units of a shortage good to sell in its period to fulfill it (0 = never fulfilled). */
+		public int fulfillCount = 16;
+		/** K-2: development points for fulfilling = B (without the shortage) × fulfillCount × this. */
+		public double fulfillPointsRatio = 1.0;
+		/** K-2: a villager comes with every this many fulfilled shortages, if a bed is free (0 = none). */
+		public int villagersEvery = 3;
+		/** K-2: vigor gained by fulfilling a shortage. */
+		public double vigorGain = 10;
+		/** K-2: vigor lost for each shortage left unfulfilled at the end of its period. */
+		public double vigorLoss = 5;
+		/** K-2: at vigor 0 the development points are lowered by this much (× (1 - this)); 0 = no penalty. */
+		public double vigorPenalty = 0.1;
 
 		public Demand() {
 		}
 
-		Demand(int maxShortages, double durationDays, double minMultiplier, double maxMultiplier) {
+		Demand(int maxShortages, double durationDays, double minMultiplier, double maxMultiplier, int fulfillCount,
+				double fulfillPointsRatio, int villagersEvery, double vigorGain, double vigorLoss, double vigorPenalty) {
 			this.maxShortages = maxShortages;
 			this.durationDays = durationDays;
 			this.minMultiplier = minMultiplier;
 			this.maxMultiplier = maxMultiplier;
+			this.fulfillCount = fulfillCount;
+			this.fulfillPointsRatio = fulfillPointsRatio;
+			this.villagersEvery = villagersEvery;
+			this.vigorGain = vigorGain;
+			this.vigorLoss = vigorLoss;
+			this.vigorPenalty = vigorPenalty;
 		}
 
 		static final Codec<Demand> CODEC = RecordCodecBuilder.create(i -> {
@@ -832,7 +851,13 @@ public final class TradeExpansionConfig {
 					Codec.INT.fieldOf("maxShortages").orElse(d.maxShortages).forGetter(c -> c.maxShortages),
 					Codec.DOUBLE.fieldOf("durationDays").orElse(d.durationDays).forGetter(c -> c.durationDays),
 					Codec.DOUBLE.fieldOf("minMultiplier").orElse(d.minMultiplier).forGetter(c -> c.minMultiplier),
-					Codec.DOUBLE.fieldOf("maxMultiplier").orElse(d.maxMultiplier).forGetter(c -> c.maxMultiplier)
+					Codec.DOUBLE.fieldOf("maxMultiplier").orElse(d.maxMultiplier).forGetter(c -> c.maxMultiplier),
+					Codec.INT.fieldOf("fulfillCount").orElse(d.fulfillCount).forGetter(c -> c.fulfillCount),
+					Codec.DOUBLE.fieldOf("fulfillPointsRatio").orElse(d.fulfillPointsRatio).forGetter(c -> c.fulfillPointsRatio),
+					Codec.INT.fieldOf("villagersEvery").orElse(d.villagersEvery).forGetter(c -> c.villagersEvery),
+					Codec.DOUBLE.fieldOf("vigorGain").orElse(d.vigorGain).forGetter(c -> c.vigorGain),
+					Codec.DOUBLE.fieldOf("vigorLoss").orElse(d.vigorLoss).forGetter(c -> c.vigorLoss),
+					Codec.DOUBLE.fieldOf("vigorPenalty").orElse(d.vigorPenalty).forGetter(c -> c.vigorPenalty)
 			).apply(i, Demand::new);
 		});
 	}

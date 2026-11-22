@@ -111,6 +111,7 @@ public final class SellAllService {
 			Propagation.apply(registry, market, p.goods(), p.units(), now).forEach(m -> changed.add(m.id()));
 			Reputation.onTrade(market, player.getUUID(), p.total(), market.shortages().containsKey(p.goods()), now);
 			Development.onTrade(market, player, p.total(), now); // N-2
+			com.akf.tradeexpansion.quest.DemandService.onSold(player.level(), market, player, p.goods(), p.units(), now); // K-2: fulfilling a shortage
 			if (config.log.trades) {
 				TradeExpansion.LOGGER.info("{} SELL {} x{} @market#{} total={}{} (sell all)", player.getPlainTextName(), p.def().item(),
 						p.units() * p.def().unit(), market.id(), CoinItem.formatCopper(p.total()), card ? " (card)" : "");

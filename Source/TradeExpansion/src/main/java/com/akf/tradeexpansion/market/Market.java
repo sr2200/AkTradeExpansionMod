@@ -59,11 +59,21 @@ public final class Market {
 		).apply(i, GoodEntry::new));
 	}
 
-	private record Shortage(Identifier goods, double multiplier) {
+	/** K: one shortage; {@code sold} (v0.78, K-2) = units sold to it in its period. */
+	private record Shortage(Identifier goods, double multiplier, int sold) {
 		static final Codec<Shortage> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Identifier.CODEC.fieldOf("goods").forGetter(Shortage::goods),
-				Codec.DOUBLE.fieldOf("multiplier").forGetter(Shortage::multiplier)
+				Codec.DOUBLE.fieldOf("multiplier").forGetter(Shortage::multiplier),
+				Codec.INT.optionalFieldOf("sold", 0).forGetter(Shortage::sold)
 		).apply(i, Shortage::new));
+	}
+
+	/** K-2 (v0.78): the village's vigor and how many shortages were fulfilled (fields after the two full records). */
+	private record Growth(double vigor, int fulfilled) {
+		static final MapCodec<Growth> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+				Codec.DOUBLE.optionalFieldOf("vigor", com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX).forGetter(Growth::vigor),
+				Codec.INT.optionalFieldOf("shortages_fulfilled", 0).forGetter(Growth::fulfilled)
+		).apply(i, Growth::new));
 	}
 
 	/** C-4: name and namer (founder of a crafted market, or whoever named it first). */
@@ -159,9 +169,12 @@ public final class Market {
 					.forGetter(m -> new Naming(Optional.ofNullable(m.name), Optional.ofNullable(m.namer)))
 	).apply(i, Market::new));
 
-	public static final Codec<Market> CODEC = Codec.mapPair(MAIN_CODEC, Assortment.CODEC).xmap(pair -> {
+	public static final Codec<Market> CODEC = Codec.mapPair(MAIN_CODEC, Codec.mapPair(Assortment.CODEC, Growth.CODEC)).xmap(pair -> {
 		Market m = pair.getFirst();
-		Assortment a = pair.getSecond();
+		Assortment a = pair.getSecond().getFirst();
+		Growth growth = pair.getSecond().getSecond();
+		m.vigor = Math.clamp(growth.vigor(), 0, com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX);
+		m.shortagesFulfilled = Math.max(0, growth.fulfilled());
 		a.shelved().forEach(sh -> m.shelved.put(sh.goods(), sh));
 		m.specials.addAll(a.specials());
 		m.specialDay = a.specialDay();
@@ -179,10 +192,10 @@ public final class Market {
 		m.trendPeriod = a.trendPeriod();
 		m.rerolls = Math.max(0, a.rerolls());
 		return m;
-	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
+	}, m -> Pair.of(m, Pair.of(new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
 			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
-			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls))).codec();
+			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled)))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -202,6 +215,10 @@ public final class Market {
 	/** K: current shortages (goods id → base price multiplier) and the period they belong to. */
 	private final Map<Identifier, Double> shortages = new LinkedHashMap<>();
 	private long shortagePeriod;
+	/** K-2 (v0.78): units sold to each current shortage in its period, the village's vigor and the shortages fulfilled. */
+	private final Map<Identifier, Integer> shortageSold = new LinkedHashMap<>();
+	private double vigor = com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX;
+	private int shortagesFulfilled;
 	/** C-4: custom name ({@code null} = automatic) and the player allowed to change it. */
 	private String name;
 	private UUID namer;
@@ -252,7 +269,10 @@ public final class Market {
 		this.requests.addAll(requests);
 		this.lastRequestRefresh = lastRequestRefresh;
 		this.nextRequestId = nextRequestId;
-		shortages.forEach(sh -> this.shortages.put(sh.goods(), sh.multiplier()));
+		shortages.forEach(sh -> {
+			this.shortages.put(sh.goods(), sh.multiplier());
+			if (sh.sold() > 0) this.shortageSold.put(sh.goods(), sh.sold());
+		});
 		this.shortagePeriod = shortagePeriod;
 		this.name = naming.name().orElse(null);
 		this.namer = naming.namer().orElse(null);
@@ -265,7 +285,7 @@ public final class Market {
 
 	private List<Shortage> shortageEntries() {
 		List<Shortage> list = new ArrayList<>();
-		shortages.forEach((goodsId, m) -> list.add(new Shortage(goodsId, m)));
+		shortages.forEach((goodsId, m) -> list.add(new Shortage(goodsId, m, shortageSold.getOrDefault(goodsId, 0))));
 		return list;
 	}
 
@@ -297,6 +317,35 @@ public final class Market {
 
 	public void setShortagePeriod(long period) {
 		this.shortagePeriod = period;
+	}
+
+	/** K-2: units sold to each current shortage (mutable; cleared with the shortages). */
+	public Map<Identifier, Integer> shortageSold() {
+		return shortageSold;
+	}
+
+	/** Removes every shortage and what was sold to them. */
+	public void clearShortages() {
+		shortages.clear();
+		shortageSold.clear();
+	}
+
+	/** K-2: the village's vigor (0〜100). */
+	public double vigor() {
+		return vigor;
+	}
+
+	public void setVigor(double vigor) {
+		this.vigor = vigor;
+	}
+
+	/** K-2: shortages fulfilled at this market so far. */
+	public int shortagesFulfilled() {
+		return shortagesFulfilled;
+	}
+
+	public void setShortagesFulfilled(int count) {
+		this.shortagesFulfilled = count;
 	}
 
 	private List<TrendEntry> trendEntries() {
@@ -457,6 +506,7 @@ public final class Market {
 		GoodState state = goods.remove(goodsId);
 		if (state == null) return;
 		shortages.remove(goodsId);
+		shortageSold.remove(goodsId);
 		shelved.put(goodsId, new Shelved(goodsId, state, lastUpdateGameTime));
 	}
 
@@ -501,6 +551,7 @@ public final class Market {
 	public void removeGood(Identifier goodsId) {
 		goods.remove(goodsId);
 		shortages.remove(goodsId);
+		shortageSold.remove(goodsId);
 		specials.remove(goodsId);
 		bonusSpecials.remove(goodsId);
 	}

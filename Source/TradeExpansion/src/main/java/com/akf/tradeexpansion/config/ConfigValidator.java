@@ -107,6 +107,12 @@ public final class ConfigValidator {
 		dm.durationDays = clamp("demand.durationDays", dm.durationDays, 0.5, 30);
 		dm.minMultiplier = clamp("demand.minMultiplier", dm.minMultiplier, 1, 5);
 		dm.maxMultiplier = clamp("demand.maxMultiplier", dm.maxMultiplier, dm.minMultiplier, 5);
+		dm.fulfillCount = clamp("demand.fulfillCount", dm.fulfillCount, 0, 1000);
+		dm.fulfillPointsRatio = clamp("demand.fulfillPointsRatio", dm.fulfillPointsRatio, 0, 100);
+		dm.villagersEvery = clamp("demand.villagersEvery", dm.villagersEvery, 0, 100);
+		dm.vigorGain = clamp("demand.vigorGain", dm.vigorGain, 0, 100);
+		dm.vigorLoss = clamp("demand.vigorLoss", dm.vigorLoss, 0, 100);
+		dm.vigorPenalty = clamp("demand.vigorPenalty", dm.vigorPenalty, 0, 1);
 
 		TradeExpansionConfig.Rivals rv = c.rivals;
 		rv.chancePerDay = clamp("rivals.chancePerDay", rv.chancePerDay, 0, 1);

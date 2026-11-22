@@ -324,9 +324,12 @@ public final class FacilityBuilder {
 
 	/** N-4: villagers come to a completed inn (once per market, not when it is rebuilt). */
 	private static void callVillagers(ServerLevel level, Facility facility) {
-		int count = Development.config().innVillagers;
 		BoundingBox box = facility.box();
-		BlockPos center = new BlockPos((box.minX() + box.maxX()) / 2, box.minY() + 1, (box.minZ() + box.maxZ()) / 2);
+		spawnVillagers(level, new BlockPos((box.minX() + box.maxX()) / 2, box.minY() + 1, (box.minZ() + box.maxZ()) / 2), Development.config().innVillagers);
+	}
+
+	/** Spawns {@code count} plain villagers on a free spot near {@code center} (N-4 inn, K-2 fulfilled shortages). */
+	public static void spawnVillagers(ServerLevel level, BlockPos center, int count) {
 		BlockPos spot = center;
 		for (BlockPos p : BlockPos.betweenClosed(center.offset(-3, 0, -3), center.offset(3, 1, 3))) {
 			if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir() && !level.getBlockState(p.below()).isAir()) {

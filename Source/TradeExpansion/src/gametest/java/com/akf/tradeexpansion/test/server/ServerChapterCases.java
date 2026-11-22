@@ -10,6 +10,7 @@ import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.item.WalletItem;
 import com.akf.tradeexpansion.market.Market;
+import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketRegistry;
 import com.akf.tradeexpansion.market.MarketUpkeep;
 import com.akf.tradeexpansion.market.Reputation;
@@ -322,6 +323,21 @@ final class ServerChapterCases {
 				})));
 	}
 
+	private static void near(double expected, double actual, String what) {
+		that(Math.abs(expected - actual) < 1e-6, "%s: expected %.4f, got %.4f", what, expected, actual);
+	}
+
+	/** K-2: a shortage good the market can take 8 of (later periods are tried when none can). */
+	private static Identifier fulfillable(ServerCtx c, ServerPlayer player, Market market) {
+		for (int i = 0; i < 6; i++) {
+			MarketUpkeep.touch(c.level(), market);
+			Optional<Identifier> good = market.shortages().keySet().stream().filter(g -> sellable(c, player, market, g, 8)).findFirst();
+			if (good.isPresent()) return good.get();
+			addDays(c, player, TradeExpansionConfig.get().demand.durationDays);
+		}
+		throw new AutotestCheck.Failed("no shortage good could take 8 units");
+	}
+
 	private static boolean sellable(ServerCtx c, ServerPlayer player, Market market, Identifier g, int units) {
 		GoodsDefinition def = GoodsCatalog.get(g);
 		if (def == null || !def.sell() || def.unit() != 1 || def.components().isPresent()) return false;
@@ -390,6 +406,61 @@ final class ServerChapterCases {
 					changed = !first.equals(market.shortages().keySet());
 				}
 				that(changed, "the shortages never changed over 12 days: %s", first);
+			});
+		}));
+		cases.add(partial("shortage_fulfill_grows_village", List.of("9-5", "9-6", "9-7"),
+				"品不足の品を満たす数（テストでは4）だけ売ると品不足が終わり、発展度のおまけが入ってチャットが届き、画面に送る「あと N 個」が正しいこと。満たすと元気が上がり、満たさずに期間が終わると下がり、元気25で発展度が0.95倍になること。ベッドが空いていないと村人は来ず、空いていれば1人来ること（ツールチップと「発展」タブの表示、3回で村人が来る既定値は見ていない）", ctx -> {
+			dayClock(ctx);
+			ctx.config(cfg -> {
+				cfg.demand.fulfillCount = 4;
+				cfg.demand.villagersEvery = 1;
+			});
+			ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+				TradeExpansionConfig.Demand demand = TradeExpansionConfig.get().demand;
+				c.openStall(player, stall);
+				Identifier good = fulfillable(c, player, market);
+				market.setVigor(60);
+				long now = MarketUpkeep.touch(c.level(), market);
+				double points = com.akf.tradeexpansion.development.Development.points(market, now);
+				double expected = market.params(good).basePrice() / market.shortages().get(good) * demand.fulfillCount * demand.fulfillPointsRatio;
+				ServerCases.giveItems(player, c.item(good), 8);
+				// 3 of 4: still short, and the screen says one more is needed.
+				c.trade(player, market, good, false, 3);
+				that(c.lastTradeResult(player) == TradeResult.SUCCESS, "selling 3 gave %s", c.lastTradeResult(player));
+				that(market.shortages().containsKey(good), "the shortage ended after 3 of 4");
+				var row = c.lastSnapshot(player).goods().stream().filter(v -> v.goods().equals(good)).findFirst().orElseThrow();
+				equal(1, row.shortageLeft(), "units left on the screen");
+				// The 4th fulfills it: the shortage ends, development points and vigor rise; 3 beds for 3 villagers: no villager.
+				c.forget(player);
+				long villagers = MarketFactory.countVillagers(c.level(), market.center());
+				c.trade(player, market, good, false, 1);
+				that(!market.shortages().containsKey(good), "the shortage did not end after 4 sold");
+				that(c.gotMessage(player, "message.ak_trade_expansion.shortage.fulfilled_grow"), "no message: %s", c.messages(player));
+				now = MarketUpkeep.touch(c.level(), market);
+				double gained = com.akf.tradeexpansion.development.Development.points(market, now) - points;
+				that(gained >= expected - 1e-6, "development points +%.1f, expected at least %.1f", gained, expected);
+				near(60 + demand.vigorGain, market.vigor(), "vigor after fulfilling");
+				equal(1, market.shortagesFulfilled(), "shortages fulfilled");
+				that(c.gotMessage(player, "message.ak_trade_expansion.shortage.no_bed"), "no \"no free bed\" message: %s", c.messages(player));
+				equal(villagers, MarketFactory.countVillagers(c.level(), market.center()), "villagers without a free bed");
+				// The period ends with the other shortages unfulfilled: vigor falls by vigorLoss for each.
+				int open = market.shortages().size();
+				addDays(c, player, demand.durationDays);
+				MarketUpkeep.touch(c.level(), market);
+				near(60 + demand.vigorGain - demand.vigorLoss * open, market.vigor(), "vigor after " + open + " unfulfilled shortages");
+				// Low vigor lowers the development points a little.
+				market.setVigor(25);
+				near(1 - demand.vigorPenalty / 2, com.akf.tradeexpansion.development.Development.vigorMultiplier(market), "points multiplier at vigor 25");
+				market.setVigor(100);
+				// With free beds a villager comes.
+				// 4 more beds in the row of the village's 3 (ServerCtx.village), inside the area cleared after the case
+				for (int i = 3; i < 7; i++) c.bed(stall.offset(-8 + 2 * i, 0, -9));
+				Identifier next = fulfillable(c, player, market);
+				ServerCases.giveItems(player, c.item(next), demand.fulfillCount);
+				c.forget(player);
+				c.trade(player, market, next, false, demand.fulfillCount);
+				that(c.gotMessage(player, "message.ak_trade_expansion.shortage.villager"), "no villager message: %s", c.messages(player));
+				equal(villagers + 1, MarketFactory.countVillagers(c.level(), market.center()), "villagers after the 2nd shortage");
 			});
 		}));
 	}

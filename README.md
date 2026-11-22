@@ -18,7 +18,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.3.3（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.3.4（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -150,6 +150,10 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 #### 品不足
 
 ゲーム内3日ごとに、市場ごとに最大2種類の商品が品不足になり、基準価格が1.5〜2.0倍になります（一覧や掲示板でオレンジ色）。品不足の品を売ると評判も多く上がります。
+
+**品不足を満たすと村が育ちます**：3日のうちに品不足の品を16個売ると（何人で売っても合わせて数えます）、その品不足は終わり、村に発展度のおまけ（基準価格 × 16）が入ります。品不足を3回満たすごとに、空いたベッドがあれば村人が1人やって来ます（ネザー・エンドでは来ません）。あと何個で満たせるかは、品不足の商品にマウスを乗せると出ます。
+
+村には**元気**（0〜100）があり、品不足を満たすと上がり、満たさないまま3日たつと少し下がります。元気が50より低いと、その村で貯まる発展度が少し減ります（元気0で 0.9 倍）。元気は「発展」タブの上の行に出ます。
 
 #### 村の流行
 
@@ -831,6 +835,12 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `demand.durationDays` | `3.0` | 0.5〜30 | 品不足の商品を選び直す間隔（ゲーム内日） | `"durationDays": 7.0` |
 | `demand.minMultiplier` | `1.5` | 1〜5 | 品不足の商品の基準価格に掛ける倍率の下限 | `"minMultiplier": 1.2` |
 | `demand.maxMultiplier` | `2.0` | minMultiplier〜5 | 品不足の商品の基準価格に掛ける倍率の上限 | `"maxMultiplier": 1.5` |
+| `demand.fulfillCount` | `16` | 0〜1000 | 品不足の期間のうちにこの数を売ると、その品不足が満たされて終わり、村が育つ。0 で満たせない（元気も下がらない） | `"fulfillCount": 32` |
+| `demand.fulfillPointsRatio` | `1.0` | 0〜100 | 品不足を満たした時の発展度（基準価格 × 満たす数 × この値） | `"fulfillPointsRatio": 2.0` |
+| `demand.villagersEvery` | `3` | 0〜100 | 品不足をこの回数満たすごとに村人が1人来る（空いたベッドがある時だけ）。0 で来ない | `"villagersEvery": 0`（村人は来ない） |
+| `demand.vigorGain` | `10` | 0〜100 | 品不足を満たした時に上がる村の元気 | `"vigorGain": 20` |
+| `demand.vigorLoss` | `5` | 0〜100 | 満たされないまま期間が終わった品不足1つにつき下がる元気 | `"vigorLoss": 0`（下がらない） |
+| `demand.vigorPenalty` | `0.1` | 0〜1 | 元気が50より低い時に発展度を減らす割合（元気0で「1 − この値」倍）。0 で罰なし | `"vigorPenalty": 0` |
 
 #### 村の流行（trend）
 

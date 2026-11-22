@@ -73,10 +73,11 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param shortageMultiplier K: multiplier of B while short (1 = not short)
 	 * @param trends        P (v0.46): the market's trends that apply to this good
 	 * @param rival         O-5 (v0.46): the rival campaign felt most on this good here
+	 * @param shortageLeft  K-2 (v0.78): units still to sell to fulfill the shortage (0 = not short or cannot be fulfilled)
 	 */
 	public record GoodView(Identifier goods, Identifier item, int unit, GoodParams params, double pressure, double stock, boolean buy, boolean sell,
 			boolean shortage, boolean special, DataComponentPatch patch, boolean acceptDamaged, List<Double> history,
-			double shortageMultiplier, List<TrendView> trends, Optional<RivalView> rival) {
+			double shortageMultiplier, List<TrendView> trends, Optional<RivalView> rival, int shortageLeft) {
 		/** Which stacks count as this good (client-side counting and preview). */
 		public InventoryUtil.Match match() {
 			return new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(item), patch, acceptDamaged);
@@ -116,6 +117,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeDouble(shortageMultiplier);
 			TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
 			ByteBufCodecs.optional(RivalView.CODEC).encode(buf, rival);
+			buf.writeVarInt(shortageLeft);
 		}
 
 		private static GoodView read(RegistryFriendlyByteBuf buf) {
@@ -136,8 +138,9 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			double shortageMultiplier = buf.readDouble();
 			List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
 			Optional<RivalView> rival = ByteBufCodecs.optional(RivalView.CODEC).decode(buf);
+			int shortageLeft = buf.readVarInt();
 			return new GoodView(goods, item, unit, params, pressure, stock, buy, sell, shortage, special, patch, acceptDamaged, history,
-					shortageMultiplier, trends, rival);
+					shortageMultiplier, trends, rival, shortageLeft);
 		}
 	}
 
@@ -273,8 +276,10 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param freeBuilds    constructions that may still start ({@code development.maxConcurrentBuilds} minus those under way)
 	 */
 	public record DevelopmentView(boolean enabled, double points, double mine, List<ContributorView> top, int measuredLevel, int bonus,
-			boolean bank, boolean canChoose, int buildLevel, int freeBuilds, List<FacilityView> facilities, int festivalIn) {
-		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of(), 1, 0, false, false, 0, 0, List.of(), -1);
+			boolean bank, boolean canChoose, int buildLevel, int freeBuilds, List<FacilityView> facilities, int festivalIn, double vigor,
+			double vigorMultiplier, int shortagesFulfilled, int villagersEvery) {
+		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of(), 1, 0, false, false, 0, 0, List.of(), -1,
+				100, 1, 0, 0);
 
 		static final StreamCodec<RegistryFriendlyByteBuf, DevelopmentView> CODEC = StreamCodec.ofMember(DevelopmentView::write, DevelopmentView::read);
 
@@ -291,12 +296,17 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeVarInt(freeBuilds);
 			FacilityView.CODEC.apply(ByteBufCodecs.list()).encode(buf, facilities);
 			buf.writeVarInt(festivalIn + 1);
+			buf.writeDouble(vigor);
+			buf.writeDouble(vigorMultiplier);
+			buf.writeVarInt(shortagesFulfilled);
+			buf.writeVarInt(villagersEvery);
 		}
 
 		private static DevelopmentView read(RegistryFriendlyByteBuf buf) {
 			return new DevelopmentView(buf.readBoolean(), buf.readDouble(), buf.readDouble(), ContributorView.CODEC.apply(ByteBufCodecs.list()).decode(buf),
 					buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
-					FacilityView.CODEC.apply(ByteBufCodecs.list()).decode(buf), buf.readVarInt() - 1);
+					FacilityView.CODEC.apply(ByteBufCodecs.list()).decode(buf), buf.readVarInt() - 1, buf.readDouble(), buf.readDouble(),
+					buf.readVarInt(), buf.readVarInt());
 		}
 	}
 
@@ -363,7 +373,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 					: Optional.of(new RivalView(campaign.guild(), campaign.buying(), campaign.daysLeft(RivalService.day(gameTime))));
 			views.add(new GoodView(goodsId, def.item(), def.unit(), params, state.pressure(), state.stock(), def.buy(), def.sell(),
 					market.shortages().containsKey(goodsId), market.isSpecial(goodsId), GoodsCatalog.patch(goodsId), def.acceptsDamaged() && def.unit() == 1,
-					List.copyOf(state.history()), market.shortages().getOrDefault(goodsId, 1.0), TrendView.of(market, goodsId), rival));
+					List.copyOf(state.history()), market.shortages().getOrDefault(goodsId, 1.0), TrendView.of(market, goodsId), rival,
+					com.akf.tradeexpansion.quest.DemandService.left(market, goodsId)));
 		});
 		List<RequestView> requests = new ArrayList<>();
 		for (Request r : market.requests()) {
@@ -449,7 +460,8 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				com.akf.tradeexpansion.market.MarketFactory.levelBonus(market), market.hasFacility(FacilityKind.BANK),
 				Reputation.level(market, player.getUUID(), now) >= buildLevel, buildLevel,
 				(int) Math.max(0, c.maxConcurrentBuilds - FacilityBuilder.constructing(market)), facilities,
-				com.akf.tradeexpansion.development.Festival.daysUntil(market, now));
+				com.akf.tradeexpansion.development.Festival.daysUntil(market, now), market.vigor(), Development.vigorMultiplier(market),
+				market.shortagesFulfilled(), com.akf.tradeexpansion.config.TradeExpansionConfig.get().demand.villagersEvery);
 	}
 
 	/** N-6: contributors listed on the development tab. */
