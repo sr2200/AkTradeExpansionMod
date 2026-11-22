@@ -336,7 +336,7 @@ class BundledDataTest {
 		Path assets = Path.of("src/main/resources/assets/ak_trade_expansion");
 		Map<String, com.google.gson.JsonObject> all = new HashMap<>();
 		try (Stream<Path> files = Files.list(dir)) {
-			for (Path file : files.toList()) {
+			for (Path file : files.filter(f -> f.toString().endsWith(".json")).toList()) {
 				all.put(file.getFileName().toString().replace(".json", ""), JsonParser.parseString(Files.readString(file)).getAsJsonObject());
 			}
 		}
@@ -390,5 +390,49 @@ class BundledDataTest {
 		});
 		// Every event the server reports is used by some advancement.
 		assertEquals(com.akf.tradeexpansion.advancement.AdvancementEvents.ALL, events);
+	}
+
+	/**
+	 * Every bundled recipe has a recipe-book unlock advancement (advancement/recipes/misc/<recipe>.json) that rewards
+	 * exactly that recipe, unlocks it by holding an existing item, and has the same load conditions as the recipe.
+	 */
+	@Test
+	void recipeUnlockAdvancements() throws IOException {
+		Path recipes = Path.of("src/main/resources/data/ak_trade_expansion/recipe");
+		Path unlocks = Path.of("src/main/resources/data/ak_trade_expansion/advancement/recipes/misc");
+		Path assets = Path.of("src/main/resources/assets/ak_trade_expansion");
+		List<Path> recipeFiles;
+		try (Stream<Path> files = Files.list(recipes)) {
+			recipeFiles = files.filter(f -> f.toString().endsWith(".json")).toList();
+		}
+		try (Stream<Path> files = Files.list(unlocks)) {
+			assertEquals(recipeFiles.size(), files.count(), "unlock advancements without a recipe");
+		}
+		for (Path recipeFile : recipeFiles) {
+			String name = recipeFile.getFileName().toString().replace(".json", "");
+			Path file = unlocks.resolve(name + ".json");
+			assertTrue(Files.exists(file), "no unlock advancement for recipe " + name);
+			com.google.gson.JsonObject recipe = JsonParser.parseString(Files.readString(recipeFile)).getAsJsonObject();
+			com.google.gson.JsonObject json = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+			assertEquals(recipe.get("fabric:load_conditions"), json.get("fabric:load_conditions"), name + ": load conditions");
+			assertEquals("minecraft:recipes/root", json.get("parent").getAsString());
+			assertEquals("ak_trade_expansion:" + name, json.getAsJsonObject("rewards").getAsJsonArray("recipes").get(0).getAsString());
+			com.google.gson.JsonObject criteria = json.getAsJsonObject("criteria");
+			assertEquals("ak_trade_expansion:" + name, criteria.getAsJsonObject("has_the_recipe").getAsJsonObject("conditions").get("recipes").getAsString());
+			List<String> requirement = json.getAsJsonArray("requirements").get(0).getAsJsonArray().asList().stream().map(JsonElement::getAsString).toList();
+			assertEquals(new java.util.HashSet<>(criteria.keySet()), new java.util.HashSet<>(requirement), name + ": requirements");
+			assertTrue(criteria.size() >= 2, name + ": no item condition");
+			for (Map.Entry<String, JsonElement> c : criteria.entrySet()) {
+				if (c.getKey().equals("has_the_recipe")) continue;
+				com.google.gson.JsonObject criterion = c.getValue().getAsJsonObject();
+				assertEquals("minecraft:inventory_changed", criterion.get("trigger").getAsString());
+				for (JsonElement predicate : criterion.getAsJsonObject("conditions").getAsJsonArray("items")) {
+					net.minecraft.resources.Identifier item = net.minecraft.resources.Identifier.parse(predicate.getAsJsonObject().get("items").getAsString());
+					assertTrue(item.getNamespace().equals("ak_trade_expansion")
+							? Files.exists(assets.resolve("items/" + item.getPath() + ".json"))
+							: net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(item), name + ": unknown item " + item);
+				}
+			}
+		}
 	}
 }

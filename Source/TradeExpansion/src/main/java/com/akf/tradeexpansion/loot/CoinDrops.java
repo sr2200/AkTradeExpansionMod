@@ -10,6 +10,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -20,11 +21,13 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
  * Coins from hostile mobs (design E-2, Q22): only mobs in {@code #ak_trade_expansion:drops_coins} killed by a player;
  * 0..2 copper coins (+ up to the Looting level more), and a 2.5% chance of one iron coin.
  * In the Nether there is also a 0.5% chance of one gold coin.
+ * A raid or patrol captain (a raider wearing the ominous banner) killed by a player drops one gold coin with a 75% chance.
  */
 public final class CoinDrops {
 	public static final TagKey<EntityType<?>> DROPS_COINS = TagKey.create(Registries.ENTITY_TYPE, TradeExpansion.id("drops_coins"));
 	private static final float IRON_CHANCE = 0.025f;
 	private static final float NETHER_GOLD_CHANCE = 0.005f;
+	public static final float CAPTAIN_GOLD_CHANCE = 0.75f;
 
 	private CoinDrops() {
 	}
@@ -35,9 +38,13 @@ public final class CoinDrops {
 			if (table.unwrapKey().map(k -> !k.identifier().getPath().startsWith("entities/")).orElse(true)) return;
 			Entity entity = context.getOptional(LootContextParams.THIS_ENTITY);
 			Player killer = context.getOptional(LootContextParams.LAST_DAMAGE_PLAYER);
-			if (entity == null || killer == null || !net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()).is(DROPS_COINS)) return;
-
+			if (entity == null || killer == null) return;
 			RandomSource random = context.getRandom();
+			if (entity instanceof Raider raider && raider.isCaptain() && random.nextFloat() < CAPTAIN_GOLD_CHANCE) {
+				drops.add(new ItemStack(ModItems.GOLD_COIN));
+			}
+			if (!net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()).is(DROPS_COINS)) return;
+
 			int looting = context.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).get(Enchantments.LOOTING)
 					.map(h -> EnchantmentHelper.getEnchantmentLevel(h, killer)).orElse(0);
 			int copper = random.nextInt(3) + (looting > 0 ? random.nextInt(looting + 1) : 0);

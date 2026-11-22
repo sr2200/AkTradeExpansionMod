@@ -28,6 +28,7 @@ import com.akf.tradeexpansion.villager.VillagerCoins;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -38,8 +39,11 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.raid.Raid;
+import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
@@ -382,6 +386,45 @@ final class ServerWorldCases {
 					that(looting > plain + 20, "Looting III did not add coins (%d without, %d with)", plain, looting);
 					equal(0, other, "copper coins from zombies not killed by a player");
 				}));
+		cases.add(full("raid_captains_drop_gold_coins", List.of("8-2c"), ctx -> {
+			ServerPlayer player = ctx.player(ctx.center().south(3));
+			// 100 captains (75% each: about 75 gold coins) and 100 plain pillagers (none in the Overworld).
+			int captains = killPillagers(ctx, player, 100, true);
+			int plain = killPillagers(ctx, player, 100, false);
+			player.removeAllEffects();
+			that(captains >= 55 && captains <= 95, "100 raid captains killed by the player dropped %d gold coins (about 75 expected)", captains);
+			equal(0, plain, "gold coins from 100 pillagers without the banner");
+		}));
+		cases.add(full("recipe_unlocks", List.of("8-8"), ctx -> {
+			// Each item unlocks these recipes of the mod in the recipe book (and only these).
+			Map<Item, List<String>> unlocks = new java.util.LinkedHashMap<>();
+			unlocks.put(Items.LEATHER, List.of("wallet"));
+			unlocks.put(ModItems.COPPER_COIN, List.of("wallet"));
+			unlocks.put(Items.EMERALD, List.of("market_stall"));
+			unlocks.put(Items.BARREL, List.of("market_stall"));
+			unlocks.put(ModBlocks.MARKET_STALL.asItem(), List.of("signpost"));
+			unlocks.put(Items.LANTERN, List.of("signpost"));
+			unlocks.put(Items.COPPER_BLOCK.weathering().unaffected(), List.of("copper_coin_minting"));
+			unlocks.put(Items.EMERALD_BLOCK, List.of("emerald_coin"));
+			unlocks.put(Items.IRON_BLOCK, List.of()); // iron minting is off by default: no recipe to unlock
+			List<String> all = List.of("wallet", "market_stall", "signpost", "copper_coin_minting", "iron_coin_minting", "emerald_coin");
+			Map<Item, ServerPlayer> players = new java.util.LinkedHashMap<>();
+			unlocks.keySet().forEach(item -> {
+				ServerPlayer player = ctx.player(ctx.center());
+				ctx.emptyInventory(player);
+				for (String name : all) that(!player.getRecipeBook().contains(recipe(name)), "a new player already knows the recipe %s", name);
+				player.getInventory().add(new ItemStack(item));
+				player.inventoryMenu.broadcastChanges();
+				players.put(item, player);
+			});
+			ctx.later(2, c -> players.forEach((item, player) -> {
+				for (String name : all) {
+					boolean expected = unlocks.get(item).contains(name);
+					that(player.getRecipeBook().contains(recipe(name)) == expected, "holding %s %s the recipe %s",
+							BuiltInRegistries.ITEM.getKey(item), expected ? "did not unlock" : "unlocked", name);
+				}
+			}));
+		}));
 		cases.add(full("iron_minting_switch", List.of("8-3b"), ctx -> {
 			ServerPlayer player = ctx.player(ctx.center());
 			Item[] nine = {Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK, Items.IRON_BLOCK};
@@ -409,6 +452,34 @@ final class ServerWorldCases {
 			equal(CoinType.IRON.ratioToLower(), ctx.count(player, ModItems.COPPER_COIN), "copper coins after breaking one iron coin");
 			that(((CoinItem) ModItems.IRON_COIN).type().lower() == CoinType.COPPER, "iron does not break into copper");
 		}));
+	}
+
+	/** Kills {@code n} pillagers with {@code player}'s attack (captains wear the ominous banner); returns the gold coins they dropped. */
+	private static int killPillagers(ServerCtx c, ServerPlayer player, int n, boolean captain) {
+		BlockPos at = c.center().north(3);
+		AABB box = new AABB(at).inflate(4);
+		for (ItemEntity e : c.level().getEntitiesOfClass(ItemEntity.class, box)) e.discard();
+		ItemStack banner = Raid.getOminousBannerInstance(c.level().registryAccess().lookupOrThrow(Registries.BANNER_PATTERN));
+		for (int i = 0; i < n; i++) {
+			Raider raider = EntityTypes.PILLAGER.spawn(c.level(), at, EntitySpawnReason.COMMAND);
+			that(raider != null, "no pillager was spawned");
+			raider.setNoAi(true);
+			raider.setPatrolLeader(captain);
+			raider.setItemSlot(EquipmentSlot.HEAD, captain ? banner.copy() : ItemStack.EMPTY);
+			that(raider.isCaptain() == captain, "the pillager is%s a captain", captain ? " not" : "");
+			raider.hurtServer(c.level(), c.level().damageSources().playerAttack(player), 1000);
+			that(raider.isDeadOrDying(), "the pillager did not die");
+		}
+		int gold = 0;
+		for (ItemEntity e : c.level().getEntitiesOfClass(ItemEntity.class, box)) {
+			if (e.getItem().is(ModItems.GOLD_COIN)) gold += e.getItem().getCount();
+			e.discard();
+		}
+		return gold;
+	}
+
+	private static ResourceKey<net.minecraft.world.item.crafting.Recipe<?>> recipe(String name) {
+		return ResourceKey.create(Registries.RECIPE, com.akf.tradeexpansion.TradeExpansion.id(name));
 	}
 
 	/** Kills {@code n} zombies (by the player or by plain damage) and returns the copper coins they dropped. */
