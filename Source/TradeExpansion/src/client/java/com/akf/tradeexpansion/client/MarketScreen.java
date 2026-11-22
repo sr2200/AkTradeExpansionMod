@@ -1784,16 +1784,29 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	/** N-6: the selected facility: name, effect, cost, wanted materials (still wanted / required). */
 	private void extractFacilityPanel(GuiGraphicsExtractor g, MarketSnapshotS2C.FacilityView f, int px, int y, int mouseX, int mouseY) {
 		g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(f.icon())), px, y + 36);
-		// v0.58: the size (width x depth x height) at the right of the name; the full wording on hover
+		// v0.58: the size (width x depth x height) under the name, beside the icon; the full wording on hover.
+		// A name too long for one line takes both lines instead, and the size is shown only on hover.
 		String size = f.size().getX() > 0 ? Component.translatable("screen.ak_trade_expansion.town.size.short", f.size().getX(), f.size().getZ(), f.size().getY()).getString() : "";
-		int sizeW = size.isEmpty() ? 0 : font.width(size);
-		fitText(g, facilityName(f).getString(), px + 18, y + 40, PANEL_W - 18 - (sizeW > 0 ? sizeW + 4 : 0), COLOR_TEXT, false);
-		if (sizeW > 0) {
-			int sx = px + PANEL_W - sizeW;
-			g.text(font, size, sx, y + 40, COLOR_DARK, false);
-			if (mouseX >= sx && mouseX < sx + sizeW && mouseY >= y + 38 && mouseY < y + 50) {
-				g.setTooltipForNextFrame(font, wrap(List.of(sizeLine(f))), Optional.empty(), mouseX, tooltipY(mouseY));
+		String name = facilityName(f).getString();
+		int nx = px + 18;
+		int nameW = PANEL_W - 18;
+		if (font.width(name) <= nameW) {
+			if (size.isEmpty()) {
+				g.text(font, name, nx, y + 40, COLOR_TEXT, false);
+			} else {
+				g.text(font, name, nx, y + 36, COLOR_TEXT, false);
+				fitText(g, size, nx, y + 45, nameW, COLOR_DARK, false);
 			}
+		} else {
+			List<FormattedCharSequence> nameLines = font.split(Component.literal(name), nameW);
+			if (nameLines.size() <= 2) {
+				for (int i = 0; i < nameLines.size(); i++) g.text(font, nameLines.get(i), nx, y + 36 + i * 9, COLOR_TEXT, false);
+			} else {
+				fitText(g, name, nx, y + 40, nameW, COLOR_TEXT, false);
+			}
+		}
+		if (!size.isEmpty() && mouseX >= nx && mouseX < px + PANEL_W && mouseY >= y + 36 && mouseY < y + 54) {
+			g.setTooltipForNextFrame(font, wrap(List.of(sizeLine(f))), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 		List<FormattedCharSequence> effect = font.split(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect"), PANEL_W);
 		for (int i = 0; i < Math.min(3, effect.size()); i++) g.text(font, effect.get(i), px, y + 54 + i * 9, COLOR_DARK, false);
