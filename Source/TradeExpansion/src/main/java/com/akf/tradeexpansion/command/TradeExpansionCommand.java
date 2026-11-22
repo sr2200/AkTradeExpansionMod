@@ -366,6 +366,13 @@ public final class TradeExpansionCommand {
 			context.getSource().sendFailure(Component.translatable("command.ak_trade_expansion.no_market"));
 			return 0;
 		}
+		// A-4 (v0.77): whoever has the market's trade screen open sees it close, with the reason
+		for (ServerPlayer viewer : context.getSource().getServer().getPlayerList().getPlayers()) {
+			if (viewer.containerMenu instanceof com.akf.tradeexpansion.menu.MarketMenu menu && menu.marketId() == id) {
+				viewer.closeContainer();
+				viewer.sendSystemMessage(Component.translatable(com.akf.tradeexpansion.trade.TradeResult.MARKET_GONE.translationKey()).withStyle(net.minecraft.ChatFormatting.RED));
+			}
+		}
 		context.getSource().sendSuccess(() -> Component.translatable("command.ak_trade_expansion.market_deleted", id), true);
 		return 1;
 	}

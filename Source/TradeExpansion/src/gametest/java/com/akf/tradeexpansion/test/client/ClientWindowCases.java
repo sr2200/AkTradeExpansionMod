@@ -11,6 +11,7 @@ import com.akf.tradeexpansion.item.WalletItem;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
 import com.akf.tradeexpansion.market.MarketRegistry;
+import com.akf.tradeexpansion.menu.MarketLayout;
 import com.akf.tradeexpansion.menu.MarketMenu;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
@@ -328,14 +329,15 @@ final class ClientWindowCases {
 
 	/**
 	 * 19-5: the trade screen opened at one size is kept through window resizes and GUI scale changes, larger and
-	 * smaller: the same screen, tab, selected good, quantity and scroll; the texts do not overlap or leave the panel,
-	 * nor the window while the size decided at opening (A-4) fits it.
+	 * smaller: the same screen, tab, selected good, quantity and scroll; the texts do not overlap or leave the panel.
+	 * v0.77: when the window no longer fits the screen it shrinks (with its slots) to what fits, and does not grow back
+	 * while open; the texts then stay in the window too (unless even the smallest screen, 300×240, does not fit).
 	 */
 	static void resizeOpen(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
 		context.setScreen(() -> null);
 		List<String> problems = new ArrayList<>();
-		int[] outgrown = {0};
+		int[] shrunk = {0};
 		try {
 			for (int[] start : new int[][] {{854, 480, 0}, {1920, 1080, 2}}) {
 				context.setScreen(() -> null);
@@ -363,6 +365,7 @@ final class ClientWindowCases {
 				int scroll = context.computeOnClient(client -> (Integer) get(screen, "scroll"));
 				check(scroll > 0, "the list did not scroll to the last good");
 				String name = visibleGoods(context, screen).getLast().goods().toString();
+				MarketLayout[] current = {context.computeOnClient(client -> screen.getMenu().layout())};
 				for (int[] size : new int[][] {{1920, 1080, 1}, {854, 480, 0}, {1280, 720, 3}, {1920, 1080, 4}, {854, 480, 1}, {start[0], start[1], start[2]}}) {
 					resize(context, size[0], size[1], size[2]);
 					String where = String.format("opened %dx%d GUI %s, now %dx%d GUI %s", start[0], start[1], start[2] == 0 ? "auto" : start[2],
@@ -382,13 +385,27 @@ final class ClientWindowCases {
 					mouseAway(context);
 					context.runOnClient(client -> client.gui.toastManager().clear());
 					List<TextRecorder.Text> texts = TextRecorder.capture(context);
-					// The size is decided when the screen opens (A-4): when it no longer fits the window, texts may leave the
-					// window (not the panel) until the screen is opened again.
-					boolean fits = context.computeOnClient(client -> screen.getMenu().layout().width() <= client.getWindow().getGuiScaledWidth()
-							&& screen.getMenu().layout().height() <= client.getWindow().getGuiScaledHeight());
+					// v0.77: shrunk to what fits when the window got smaller, never grown back while open.
+					MarketLayout fit = context.computeOnClient(client -> MarketLayout.fit(client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight()));
+					MarketLayout expected = new MarketLayout(Math.min(current[0].extraRows(), fit.extraRows()), Math.min(current[0].extraWidth(), fit.extraWidth()));
+					MarketLayout now = context.computeOnClient(client -> screen.getMenu().layout());
+					check(now.equals(expected), "%s: the screen is %s, not %s (was %s, the window fits %s)", where, now, expected, current[0], fit);
+					if (!expected.equals(current[0])) shrunk[0]++;
+					current[0] = expected;
+					int[] sizes = context.computeOnClient(client -> new int[] {
+							(Integer) get(screen, net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class, "imageWidth"),
+							(Integer) get(screen, net.minecraft.client.gui.screens.inventory.AbstractContainerScreen.class, "imageHeight"),
+							screen.getMenu().slots.get(0).x, screen.getMenu().slots.get(0).y, screen.getMenu().slots.get(1).x, screen.getMenu().slots.get(1).y});
+					check(sizes[0] == expected.width() && sizes[1] == expected.height(), "%s: the screen is drawn %dx%d, not %dx%d", where, sizes[0], sizes[1],
+							expected.width(), expected.height());
+					check(sizes[2] == expected.sellSlotX() && sizes[3] == expected.sellSlotY() && sizes[4] == expected.inventoryX() && sizes[5] == expected.inventoryY(),
+							"%s: the sell slot is at %d,%d and the inventory at %d,%d, not %d,%d and %d,%d", where, sizes[2], sizes[3], sizes[4], sizes[5],
+							expected.sellSlotX(), expected.sellSlotY(), expected.inventoryX(), expected.inventoryY());
+					// Texts may leave the window only when even the smallest screen does not fit it.
+					boolean fits = context.computeOnClient(client -> expected.width() <= client.getWindow().getGuiScaledWidth()
+							&& expected.height() <= client.getWindow().getGuiScaledHeight());
 					List<String> found = context.computeOnClient(client -> ClientChecklistTests.layoutProblems(client, where, texts, ClientChecklistTests.panel(client.gui.screen())))
 							.stream().filter(p -> fits || !p.contains(" leaves the screen ")).toList();
-					if (!fits) outgrown[0]++;
 					if (!found.isEmpty() && problems.stream().noneMatch(p -> p.startsWith(where))) screenshot(context, result, "19-5_" + where);
 					problems.addAll(found);
 				}
@@ -398,7 +415,7 @@ final class ClientWindowCases {
 			context.setScreen(() -> null);
 			resize(context, 854, 480, 0);
 		}
-		check(outgrown[0] > 0, "the screen opened large always fit the smaller windows (the case means to check that too)");
+		check(shrunk[0] > 0, "the screen opened large never had to shrink for a smaller window (the case means to check that too)");
 		problems.forEach(p -> com.akf.tradeexpansion.test.AutotestReport.LOGGER.info("LAYOUT {}", p));
 		check(problems.isEmpty(), "%d layout problems, e.g. %s", problems.size(), String.join(" | ", problems.subList(0, Math.min(8, problems.size()))));
 	}
@@ -484,25 +501,14 @@ final class ClientWindowCases {
 			context.waitTicks(5);
 			boolean deleted = s.world.getServer().computeOnServer(server -> MarketRegistry.get(server).get(market) == null);
 			check(deleted, "market delete left the market %d", market);
-			if (context.computeOnClient(client -> client.gui.screen()) == screen) {
-				for (String tab : List.of("board", "quest", "exchange", "sell", "buy")) {
-					context.clickScreenButton(S + "tab." + tab);
-					context.waitTicks(5);
-					mouseAway(context);
-					check(!TextRecorder.capture(context).isEmpty(), "the %s tab draws no text after the delete", tab);
-				}
-				select(context, screen, other);
-				context.runOnClient(client -> set(screen, "status", Component.empty()));
-				if (context.computeOnClient(client -> ((Button) get(screen, "confirmButton")).active)) {
-					context.clickScreenButton(S + "confirm.buy");
-					boolean said = waitClient(context, client -> !((Component) get(screen, "status")).getString().isEmpty(), 40);
-					check(said, "buying in the deleted market said nothing");
-					int color = context.computeOnClient(client -> (Integer) get(screen, "statusColor"));
-					check(color == constant(MarketScreen.class, "COLOR_RED"), "buying in the deleted market says \"%s\" in %08X, not red",
-							context.computeOnClient(client -> ((Component) get(screen, "status")).getString()), color);
-				}
-				screenshot(context, result, "2-20_market_deleted");
-			}
+			// v0.77: the screen closes and the chat says why (a click that still gets there is answered the same, see request_market_gone)
+			boolean closed = waitClient(context, client -> !(client.gui.screen() instanceof MarketScreen), 40);
+			check(closed, "the trade screen stayed open after market delete");
+			String goneText = net.minecraft.locale.Language.getInstance().getOrDefault(com.akf.tradeexpansion.trade.TradeResult.MARKET_GONE.translationKey());
+			check(waitClient(context, client -> ClientScreenCases.chat(client).stream().anyMatch(m -> m.content().getString().contains(goneText)), 40),
+					"the chat does not say \"%s\" after market delete: %s", goneText,
+					context.computeOnClient(client -> ClientScreenCases.chat(client).stream().map(m -> m.content().getString()).toList()));
+			screenshot(context, result, "2-20_market_deleted");
 			context.waitTicks(5);
 			check(serverMoney(s) == money0, "buying in the deleted market took %dc", money0 - serverMoney(s));
 			check(serverCount(s, other) == items0, "buying in the deleted market gave %d items", serverCount(s, other) - items0);

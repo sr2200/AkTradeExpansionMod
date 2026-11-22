@@ -46,6 +46,18 @@ public final class MarketFactory {
 		return level.getSeed() ^ center.asLong() * 0x9E3779B97F4A7C15L;
 	}
 
+	/**
+	 * Seed of the goods draw (D-1): {@link #seed} with the number of rerolls mixed in (v0.77), so each
+	 * {@code market reroll} draws other goods. With no reroll it is {@link #seed} itself (markets keep their goods).
+	 */
+	public static long goodsSeed(ServerLevel level, Market market) {
+		return seed(level, market.center()) ^ rerollSalt(market.rerolls());
+	}
+
+	static long rerollSalt(int rerolls) {
+		return rerolls * 0xC2B2AE3D27D4EB4FL;
+	}
+
 	/** Fills a freshly created (empty) market: profile, level, goods (D-1). */
 	public static void populate(ServerLevel level, Market market, List<Market> neighbors) {
 		populate(level, market, neighbors, MarketLevel.MIN_LEVEL);
@@ -69,12 +81,13 @@ public final class MarketFactory {
 		market.setTrendPeriod(Long.MIN_VALUE);
 		market.requests().clear();
 		market.setLastRequestRefresh(Long.MIN_VALUE);
+		market.addReroll(); // v0.77: another draw each time
 		populate(level, market, neighbors, previous);
 	}
 
 	private static void populate(ServerLevel level, Market market, List<Market> neighbors, int minLevel) {
 		long now = MarketClock.now(level);
-		Random random = new Random(seed(level, market.center()));
+		Random random = new Random(goodsSeed(level, market));
 		MarketContext context = new MarketContext(level, market.center(), market.origin());
 
 		int measured = measureLevel(level, market.center());
@@ -202,7 +215,7 @@ public final class MarketFactory {
 		if (profile == null) return;
 		Set<String> existing = new HashSet<>();
 		market.regularGoods().forEach(id -> existing.add(id.toString())); // auto_add goods and specials are outside N
-		Random random = new Random(seed(level, market.center()) ^ market.level());
+		Random random = new Random(goodsSeed(level, market) ^ market.level());
 		for (String goodsId : GoodsSelector.grow(existing, profile.selectorPools(), market.level(), target, random)) {
 			Identifier id = Identifier.parse(goodsId);
 			// A special chosen for good becomes a regular good with its current state (D-5).

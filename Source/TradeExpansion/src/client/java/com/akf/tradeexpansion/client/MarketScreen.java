@@ -189,27 +189,23 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	/** Q (v0.48): the staff tab (its own widgets and drawing). */
 	private final StaffTab staffTab = new StaffTab(this);
 
-	/** A-4 (v0.33): sizes from the layout the menu was made with (fits the window when the screen opened). */
-	private final MarketLayout layout;
-	private final int listW;
-	private final int rows;
-	private final int panelX;
+	/**
+	 * A-4 (v0.33): sizes from the layout the menu was made with (fits the window when the screen opened). v0.77: made
+	 * smaller when the window no longer fits it ({@link #fitWindow}).
+	 */
+	private MarketLayout layout;
+	private int listW;
+	private int rows;
+	private int panelX;
 	/** Extra width of the list over the base 200: added to the name columns. */
-	private final int wide;
-	private final int sellAllW;
-	private final int sellAllH;
-	private final int sellAllRows;
+	private int wide;
+	private int sellAllW;
+	private int sellAllH;
+	private int sellAllRows;
 
 	public MarketScreen(MarketMenu menu, Inventory inventory, Component title) {
 		super(menu, inventory, title, menu.layout().width(), menu.layout().height());
-		this.layout = menu.layout();
-		this.wide = layout.extraWidth();
-		this.listW = 200 + wide;
-		this.rows = layout.rows();
-		this.panelX = LIST_X + listW + 6;
-		this.sellAllW = layout.width() - 16;
-		this.sellAllH = 134 + layout.extraRows() * ROW_H;
-		this.sellAllRows = 5 + layout.extraRows();
+		applyLayout(menu.layout());
 		this.snapshot = ClientMarketCache.get(menu.marketId());
 		if (snapshot != null) recordBaseline(snapshot);
 		// N-4: a facility's sign opens its tab.
@@ -218,8 +214,37 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 	}
 
+	/** A-4: the sizes that follow the layout. */
+	private void applyLayout(MarketLayout l) {
+		this.layout = l;
+		this.wide = l.extraWidth();
+		this.listW = 200 + wide;
+		this.rows = l.rows();
+		this.panelX = LIST_X + listW + 6;
+		this.sellAllW = l.width() - 16;
+		this.sellAllH = 134 + l.extraRows() * ROW_H;
+		this.sellAllRows = 5 + l.extraRows();
+	}
+
+	/**
+	 * A-4 (v0.77): when the window became too small for the screen (resized while open), the screen and its slots shrink
+	 * to what fits. It does not grow again while open (a larger window is used the next time it opens).
+	 */
+	private void fitWindow() {
+		MarketLayout fit = MarketLayout.fit(width, height);
+		if (fit.extraRows() >= layout.extraRows() && fit.extraWidth() >= layout.extraWidth()) return;
+		MarketLayout smaller = new MarketLayout(Math.min(fit.extraRows(), layout.extraRows()), Math.min(fit.extraWidth(), layout.extraWidth()));
+		menu.relayout(smaller);
+		var image = (com.akf.tradeexpansion.mixin.client.AbstractContainerScreenAccessor) this;
+		image.tradeExpansion$setImageWidth(smaller.width());
+		image.tradeExpansion$setImageHeight(smaller.height());
+		applyLayout(smaller);
+		scroll = Math.clamp(scroll, 0, Math.max(0, rowCount() - rows));
+	}
+
 	@Override
 	protected void init() {
+		fitWindow(); // before super.init(), which centres the screen by its size
 		super.init();
 		int x = leftPos;
 		int y = topPos;
@@ -1131,7 +1156,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				return true;
 			}
 		}
-		int maxScroll = Math.max(0, rowCount() - rows);
+		int maxScroll = tab == Tab.STAFF && staffTab.summaryOverflows() ? staffTab.summaryTotal() - staffTab.summaryVisible() // v0.77: by line
+				: Math.max(0, rowCount() - rows);
 		if (maxScroll > 0 && mouseX - leftPos < panelX && mouseY - topPos < LIST_Y + rows * ROW_H) {
 			scroll = Math.clamp(scroll - (int) Math.signum(scrollY), 0, maxScroll);
 			return true;
@@ -1237,6 +1263,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	/** The goods / requests / board list, or {@code null} on tabs without a list. */
 	private Scrollbar listScrollbar() {
+		if (tab == Tab.STAFF && staffTab.summaryOverflows() && !sellAllOpen) { // v0.77: the hiring setup page, by line
+			return new Scrollbar(leftPos + LIST_X + listW - SCROLLBAR_W, topPos + LIST_Y, rows * ROW_H, staffTab.summaryTotal(), staffTab.summaryVisible());
+		}
 		if (!(tradeTab() || tab == Tab.QUEST || tab == Tab.BOARD || tab == Tab.STAFF && staffTab.scrollable()) || sellAllOpen) return null;
 		return new Scrollbar(leftPos + LIST_X + listW - SCROLLBAR_W, topPos + LIST_Y, rows * ROW_H, rowCount(), rows);
 	}

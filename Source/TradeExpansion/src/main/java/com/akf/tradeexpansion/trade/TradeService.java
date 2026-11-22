@@ -75,6 +75,7 @@ public final class TradeService {
 
 		// 1. Validation. Shift ("all") may exceed trade.maxPerTransaction up to a full inventory (A-4, Q13).
 		int limit = request.all() && config.trade.allowShiftAll ? MAX_ALL : config.trade.maxPerTransaction;
+		if (MarketMenu.gone(player, request.marketId(), market)) return fail(TradeResult.MARKET_GONE, request);
 		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()
 				|| qty <= 0 || qty > limit) {
 			return fail(TradeResult.INVALID_REQUEST, request);

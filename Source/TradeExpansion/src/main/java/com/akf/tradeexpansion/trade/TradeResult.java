@@ -56,7 +56,9 @@ public enum TradeResult {
 	/** N-4: minting needs a completed mint at the market. */
 	NO_MINT,
 	/** N-4 / E-2: minting that metal is off (currency.allowMinting / allowIronMinting). */
-	MINTING_DISABLED;
+	MINTING_DISABLED,
+	/** A-4 (v0.77): the open screen's market was deleted ({@code market delete}). */
+	MARKET_GONE;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

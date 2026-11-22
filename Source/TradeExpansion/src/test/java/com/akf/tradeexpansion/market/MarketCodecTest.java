@@ -67,6 +67,8 @@ class MarketCodecTest {
 		m.setRivalDay(6);
 		m.trends().put(Identifier.parse("ak_trade_expansion:food"), 1.2);
 		m.setTrendPeriod(2);
+		m.addReroll();
+		m.addReroll();
 
 		Market back = roundTrip(m);
 		assertEquals(5, back.id());
@@ -105,6 +107,7 @@ class MarketCodecTest {
 		assertEquals(6, back.rivalDay());
 		assertEquals(1.2, back.trends().get(Identifier.parse("ak_trade_expansion:food")));
 		assertEquals(2, back.trendPeriod());
+		assertEquals(2, back.rerolls());
 	}
 
 	/** A shelved good keeps its state through a save (D-4). */
@@ -130,8 +133,9 @@ class MarketCodecTest {
 		m.setSpecialDay(3);
 		m.setMeasuredLevel(2);
 		m.setTrendPeriod(4);
+		m.addReroll();
 		JsonObject json = Market.CODEC.encodeStart(JsonOps.INSTANCE, m).getOrThrow().getAsJsonObject();
-		for (String key : List.of("last_level_check", "last_update", "next_request_id", "special_day", "measured_level", "trend_period")) {
+		for (String key : List.of("last_level_check", "last_update", "next_request_id", "special_day", "measured_level", "trend_period", "rerolls")) {
 			assertTrue(json.has(key), key);
 		}
 		JsonObject good = json.getAsJsonArray("goods").get(0).getAsJsonObject();
@@ -163,6 +167,7 @@ class MarketCodecTest {
 		assertTrue(m.facilities().isEmpty());
 		assertTrue(m.trends().isEmpty());
 		assertEquals(Long.MIN_VALUE, m.rivalDay());
+		assertEquals(0, m.rerolls()); // v0.77: no reroll yet, so the goods draw is the one at creation
 		GoodState bread = m.good(BREAD);
 		assertTrue(bread.history().isEmpty());
 		assertEquals(Long.MIN_VALUE, bread.lastSampleDay());

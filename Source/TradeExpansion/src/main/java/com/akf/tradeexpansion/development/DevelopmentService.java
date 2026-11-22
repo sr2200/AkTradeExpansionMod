@@ -49,7 +49,9 @@ public final class DevelopmentService {
 		Market market = registry.get(request.marketId());
 		long now = MarketClock.now(player.level());
 		DevelopmentResultS2C result;
-		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()) {
+		if (MarketMenu.gone(player, request.marketId(), market)) {
+			result = fail(TradeResult.MARKET_GONE, request);
+		} else if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()) {
 			result = fail(TradeResult.INVALID_REQUEST, request);
 		} else if (!menu.stillValid(player)) {
 			result = fail(TradeResult.TOO_FAR, request);

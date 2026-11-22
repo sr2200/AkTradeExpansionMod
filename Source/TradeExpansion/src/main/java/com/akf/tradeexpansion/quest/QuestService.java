@@ -293,7 +293,9 @@ public final class QuestService {
 		TradeResult result;
 		long paid = 0;
 		int delivered = 0;
-		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()) {
+		if (MarketMenu.gone(player, request.marketId(), market)) {
+			result = TradeResult.MARKET_GONE;
+		} else if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()) {
 			result = TradeResult.INVALID_REQUEST;
 		} else if (!menu.stillValid(player)) {
 			result = TradeResult.TOO_FAR;
@@ -359,7 +361,9 @@ public final class QuestService {
 		Market market = registry.get(request.marketId());
 		long reward = 0;
 		TradeResult result;
-		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()) {
+		if (MarketMenu.gone(player, request.marketId(), market)) {
+			result = TradeResult.MARKET_GONE;
+		} else if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id()) {
 			result = TradeResult.INVALID_REQUEST;
 		} else if (!menu.stillValid(player)) {
 			result = TradeResult.TOO_FAR;

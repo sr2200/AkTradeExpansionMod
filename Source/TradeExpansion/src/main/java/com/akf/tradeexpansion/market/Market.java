@@ -112,12 +112,12 @@ public final class Market {
 	/**
 	 * Fields added after the 16-field limit of RecordCodecBuilder: shelved goods and today's specials (v0.27), reputation
 	 * and the specials shown only to players with a good reputation (v0.29), development (v0.36), rival guilds and
-	 * trends (v0.46).
+	 * trends (v0.46), the number of rerolls (v0.77). This record is full (16 fields): add the next fields elsewhere.
 	 */
 	private record Assortment(List<Shelved> shelved, List<Identifier> specials, long specialDay, List<Standing> reputation,
 			List<Identifier> bonusSpecials, double development, long developmentSince, List<Contributor> contributors,
 			List<Facility> facilities, Map<Identifier, Map<String, Integer>> donations, List<BlockPos> markers, int measuredLevel,
-			long rivalDay, List<TrendEntry> trends, long trendPeriod) {
+			long rivalDay, List<TrendEntry> trends, long trendPeriod, int rerolls) {
 		static final MapCodec<Assortment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Shelved.CODEC.listOf().optionalFieldOf("shelved", List.of()).forGetter(Assortment::shelved),
 				Identifier.CODEC.listOf().optionalFieldOf("specials", List.of()).forGetter(Assortment::specials),
@@ -134,7 +134,8 @@ public final class Market {
 				Codec.INT.optionalFieldOf("measured_level", 0).forGetter(Assortment::measuredLevel),
 				Codec.LONG.optionalFieldOf("rival_day", Long.MIN_VALUE).forGetter(Assortment::rivalDay),
 				TrendEntry.CODEC.listOf().optionalFieldOf("trends", List.of()).forGetter(Assortment::trends),
-				Codec.LONG.optionalFieldOf("trend_period", Long.MIN_VALUE).forGetter(Assortment::trendPeriod)
+				Codec.LONG.optionalFieldOf("trend_period", Long.MIN_VALUE).forGetter(Assortment::trendPeriod),
+				Codec.INT.optionalFieldOf("rerolls", 0).forGetter(Assortment::rerolls)
 		).apply(i, Assortment::new));
 	}
 
@@ -176,11 +177,12 @@ public final class Market {
 		m.rivalDay = a.rivalDay();
 		a.trends().forEach(t -> m.trends.put(t.group(), t.multiplier()));
 		m.trendPeriod = a.trendPeriod();
+		m.rerolls = Math.max(0, a.rerolls());
 		return m;
 	}, m -> Pair.of(m, new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
 			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
-			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod))).codec();
+			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -229,6 +231,8 @@ public final class Market {
 	/** P (v0.46): goods groups in / out of fashion (group id → multiplier of B) and the period they belong to. */
 	private final Map<Identifier, Double> trends = new LinkedHashMap<>();
 	private long trendPeriod = Long.MIN_VALUE;
+	/** D-1 (v0.77): how many times {@code market reroll} drew the goods again; mixed into the draw so each reroll differs. */
+	private int rerolls;
 
 	private Market(long id, ResourceKey<Level> dimension, BlockPos center, MarketOrigin origin, Optional<Identifier> profileId,
 			int level, long lastLevelCheckGameTime, List<BlockPos> stalls, long lastUpdateGameTime, List<GoodEntry> goods,
@@ -321,6 +325,15 @@ public final class Market {
 
 	public void setTrendPeriod(long period) {
 		this.trendPeriod = period;
+	}
+
+	/** D-1 (v0.77): the number of {@code market reroll}s (0 = the goods drawn when the market was created). */
+	public int rerolls() {
+		return rerolls;
+	}
+
+	public void addReroll() {
+		rerolls++;
 	}
 
 	/** P: product of the trend multipliers of every group the good is in; 1 for specials and auto_add goods. */

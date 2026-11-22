@@ -62,6 +62,7 @@ public final class MintService {
 
 	private static TradeResult process(ServerPlayer player, MintRequestC2S request, long[] minted) {
 		Market market = MarketRegistry.get(player.level().getServer()).get(request.marketId());
+		if (MarketMenu.gone(player, request.marketId(), market)) return TradeResult.MARKET_GONE;
 		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != request.marketId()
 				|| request.metal() < 0 || request.metal() >= METALS.size() || request.batches() <= 0 || request.batches() > MAX_BATCHES) {
 			return TradeResult.INVALID_REQUEST;

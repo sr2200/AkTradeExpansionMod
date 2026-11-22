@@ -858,7 +858,7 @@ function build(style, m, kind, spec) {
 		}
 		set(c, 15, c, state('minecraft:bell', { attachment: 'ceiling', facing: 'north' }));
 		hipRoof(0, 0, W - 1, D - 1, 17, m.bankRoof, m.cornice);
-		set(c, 21, c, state('minecraft:lightning_rod', { facing: 'up' }));
+		set(c, 21, c, state('minecraft:waxed_lightning_rod', { facing: 'up' }));
 		coreSign(c, t1 - 1, 'north');
 	}
 

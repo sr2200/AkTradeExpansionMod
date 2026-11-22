@@ -59,6 +59,7 @@ public final class SellAllService {
 
 	private static TradeResultS2C process(ServerPlayer player, MarketRegistry registry, Market market, SellAllC2S request, long now) {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
+		if (MarketMenu.gone(player, request.marketId(), market)) return fail(TradeResult.MARKET_GONE);
 		if (market == null || !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != market.id() || request.lines().isEmpty()) {
 			return fail(TradeResult.INVALID_REQUEST);
 		}

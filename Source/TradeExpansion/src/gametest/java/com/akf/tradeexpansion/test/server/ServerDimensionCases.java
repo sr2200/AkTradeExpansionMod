@@ -132,7 +132,7 @@ final class ServerDimensionCases {
 			}));
 		}));
 		cases.add(ServerCase.partial("level5_nether_and_end_goods", List.of("30-4"),
-				"村人24人（レベル5）のネザー・エンドの市場で、並ぶ商品が候補の一部だけで（すべての候補が並ぶことはない）、market reroll の後も同じ数の候補の一部であること。ネザーの別の場所（400 ブロック離れた所）の村人24人の市場とは品揃えが違うこと（同じ場所で reroll を繰り返すと、場所で決まる乱数なので同じ品揃えになる）",
+				"村人24人（レベル5）のネザー・エンドの市場で、並ぶ商品が候補の一部だけで（すべての候補が並ぶことはない）、market reroll の後も同じ数の候補の一部であること。同じ市場で reroll を繰り返すと品揃えが変わり（reroll の回数を乱数に混ぜる）、ネザーの別の場所（400 ブロック離れた所）の村人24人の市場とも品揃えが違うこと",
 				ctx -> {
 					ServerLevel nether = ctx.dimension(Level.NETHER);
 					ServerLevel end = ctx.dimension(Level.END);
@@ -147,13 +147,18 @@ final class ServerDimensionCases {
 							Market market = found(c, level, at);
 							equal(5, market.level(), "level of a market with 24 villagers in " + level.dimension().identifier() + " at " + at.toShortString());
 							Set<Identifier> candidates = goodsOf((String) where[2]);
+							Set<List<Identifier>> draws = new HashSet<>();
+							int rerolls = market.rerolls();
 							for (int roll = 0; roll < 3; roll++) {
 								List<Identifier> picked = market.regularGoods().stream().filter(candidates::contains).sorted().toList();
+								draws.add(picked);
 								that(picked.size() >= 10, "%s: only %d goods at level 5: %s", level.dimension().identifier(), picked.size(), picked);
 								that(picked.size() < candidates.size(), "%s: all %d candidates are picked at level 5", level.dimension().identifier(), candidates.size());
 								first.putIfAbsent(level.dimension().identifier() + "@" + at.toShortString(), picked);
 								c.command(c.player(level, at.south(3)), "aktradeex market reroll " + market.id());
 							}
+							equal(rerolls + 3, market.rerolls(), "rerolls counted in " + level.dimension().identifier());
+							that(draws.size() >= 2, "%s at %s: 2 rerolls drew the same goods every time: %s", level.dimension().identifier(), at.toShortString(), draws);
 						}
 						List<Identifier> a = first.get(nether.dimension().identifier() + "@" + inNether.toShortString());
 						List<Identifier> b = first.get(nether.dimension().identifier() + "@" + inNether2.toShortString());

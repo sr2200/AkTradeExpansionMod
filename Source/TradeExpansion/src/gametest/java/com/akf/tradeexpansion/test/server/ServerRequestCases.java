@@ -268,6 +268,36 @@ final class ServerRequestCases {
 			equal(500, ctx.balance(player), "money (wallet + coins) after taking coins out");
 		}));
 
+		// A-4 (v0.77): the open screen's market is deleted. A request still sent for it is answered "this market is gone",
+		// not "invalid"; market delete closes the screens open on the market and says why.
+		cases.add(full("request_market_gone", List.of(), ctx -> twoMarkets(ctx, (c, player, a, b, stall) -> {
+			c.giveMoney(player, 100_000);
+			Identifier good = c.tradableGood(a, 10, 0);
+			long expected = c.previewTotal(player, a, good, true, 1);
+			c.registry().remove(a.id()); // as if deleted between the screen's last update and the click
+			String before = c.fingerprint(player);
+			var r = c.tradeRaw(player, a.id(), good, true, 1, expected, false, false);
+			that(r == TradeResult.MARKET_GONE, "buying in the deleted market of the open screen gave %s", r);
+			that(before.equals(c.fingerprint(player)), "buying in the deleted market changed something");
+			c.forget(player);
+			ExchangeService.handle(player, new ExchangeRequestC2S(a.id(), 1, false, 1));
+			var exchanged = c.payloads(player, com.akf.tradeexpansion.network.ExchangeResultS2C.class);
+			that(!exchanged.isEmpty() && exchanged.stream().allMatch(p -> p.result() == TradeResult.MARKET_GONE),
+					"exchanging in the deleted market did not say it is gone: %s", exchanged);
+			// Another market than the open screen's that does not exist is still just invalid.
+			var other = c.tradeRaw(player, 987_654_321L, good, true, 1, expected, false, false);
+			that(other == TradeResult.INVALID_REQUEST, "a request for an unknown market (not the open screen's) gave %s", other);
+			// market delete with the screen open on B
+			BlockPos bStall = stall.east(300); // twoMarkets puts B's stall there
+			player.teleportTo(bStall.getX() + 0.5, bStall.getY(), bStall.getZ() + 2.5);
+			c.openStall(player, bStall);
+			that(player.containerMenu instanceof com.akf.tradeexpansion.menu.MarketMenu m && m.marketId() == b.id(), "B's trade screen did not open");
+			c.forget(player);
+			equal(1, c.commandResult(player, "aktradeex market delete " + b.id()), "market delete");
+			that(!(player.containerMenu instanceof com.akf.tradeexpansion.menu.MarketMenu), "the trade screen stayed open after market delete");
+			that(c.messages(player).contains(TradeResult.MARKET_GONE.translationKey()), "market delete did not tell the viewer: %s", c.messages(player));
+		})));
+
 		return cases;
 	}
 }

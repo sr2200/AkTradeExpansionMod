@@ -3,7 +3,8 @@
   "package": "com.akf.tradeexpansion.mixin.client",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "MerchantScreenMixin"
+    "MerchantScreenMixin",
+    "AbstractContainerScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

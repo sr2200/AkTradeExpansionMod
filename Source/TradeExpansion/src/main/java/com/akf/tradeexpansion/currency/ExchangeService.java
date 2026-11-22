@@ -29,6 +29,9 @@ public final class ExchangeService {
 		CoinType[] types = CoinType.values();
 		int from = request.coin();
 		int to = request.up() ? from + 1 : from - 1;
+		if (MarketMenu.gone(player, request.marketId(), MarketRegistry.get(player.level().getServer()).get(request.marketId()))) {
+			return TradeResult.MARKET_GONE;
+		}
 		if (MarketRegistry.get(player.level().getServer()).get(request.marketId()) == null
 				|| !(player.containerMenu instanceof MarketMenu menu) || menu.marketId() != request.marketId()
 				|| from < 0 || from >= types.length || to < 0 || to >= types.length || request.count() <= 0 || request.count() > 640) {

@@ -39,6 +39,7 @@ final class StaffTab {
 	private static final int PANEL_W = 78;
 	private static final int ROW_H = 18;
 	private static final int LINE_H = 10;
+	private static final int SCROLLBAR_W = 6; // as MarketScreen's
 	private static final int COLOR_TEXT = 0xFF404040;
 	private static final int COLOR_DARK = 0xFF555555;
 	private static final int COLOR_WHITE = 0xFFFFFFFF;
@@ -504,9 +505,26 @@ final class StaffTab {
 		};
 	}
 
-	/** The list scrolls on every mode but the setup (a page of text). */
+	/** The list scrolls (and its rows are clicked) on every mode but the setup (a page of text, see {@link #summaryOverflows}). */
 	boolean scrollable() {
 		return mode != Mode.SETUP;
+	}
+
+	/** v0.77: wrapped lines of the setup page and how many fit in the list, as last drawn (the page scrolls by line). */
+	private int summaryTotal;
+	private int summaryVisible = 1;
+
+	/** v0.77: the setup page is longer than the list, so it scrolls by line (mouse wheel and scrollbar). */
+	boolean summaryOverflows() {
+		return mode == Mode.SETUP && data != null && summaryTotal > summaryVisible;
+	}
+
+	int summaryTotal() {
+		return summaryTotal;
+	}
+
+	int summaryVisible() {
+		return summaryVisible;
 	}
 
 	private boolean goodsMatch() {
@@ -669,7 +687,7 @@ final class StaffTab {
 				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.staff.pick_destination"), px, y + 56, PANEL_W, COLOR_TEXT, false);
 			}
 			case SETUP -> {
-				extractSummary(g, font, lx, ly, listW, rows);
+				extractSummary(g, font, lx, ly, listW, rows, scroll);
 				extractSetupPanel(g, font, px, y);
 			}
 		}
@@ -993,7 +1011,7 @@ final class StaffTab {
 	}
 
 	/** The setup page: what the employee will do and what it costs. */
-	private void extractSummary(GuiGraphicsExtractor g, Font font, int lx, int ly, int listW, int rows) {
+	private void extractSummary(GuiGraphicsExtractor g, Font font, int lx, int ly, int listW, int rows, int scroll) {
 		List<Component> lines = new ArrayList<>();
 		StaffS2C.Info info = data.info();
 		GoodView view = goodView(goods);
@@ -1005,8 +1023,8 @@ final class StaffTab {
 			double travelMultiplier = destination != null ? destination.travelMultiplier() : edited != null ? edited.travelMultiplier() : 1.0;
 			double accidentMultiplier = destination != null ? destination.accidentMultiplier() : edited != null ? edited.accidentMultiplier() : 1.0;
 			StaffS2C.Destination d = setupDestination();
-			// v0.54: the return cargo's expected profit right after the trip's own (the page is cut at the bottom of the
-			// list on small screens, and the explanations below are long).
+			// v0.54: the return cargo's expected profit right after the trip's own (the explanations below are long; on
+			// small screens the page scrolls and its first lines are seen first).
 			Component back = info.backhaul() && d != null ? returnLine(d) : null;
 			if (auto()) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto", to).withColor(COLOR_GOLD));
@@ -1046,7 +1064,7 @@ final class StaffTab {
 		}
 		StaffS2C.View old = changedView();
 		if (old != null && (old.stock() > 0 || old.returnItems() > 0)) {
-			// Right after the first line: the page is cut at the bottom of the list on small screens.
+			// Right after the first line: on small screens the page scrolls, and the first lines are seen first.
 			lines.add(Math.min(1, lines.size()), Component.translatable("screen.ak_trade_expansion.staff.summary.change", old.stock() * (old.auto() ? 1 : old.unit()) + old.returnItems())
 					.withColor(COLOR_GOLD));
 		}
@@ -1060,15 +1078,23 @@ final class StaffTab {
 			lines.add(Component.translatable(hiringCarrier ? "screen.ak_trade_expansion.staff.summary.purse.carrier"
 					: "screen.ak_trade_expansion.staff.summary.purse.clerk").withStyle(ChatFormatting.GRAY));
 		}
-		int ty = ly + 3;
+		int top = ly + 3;
 		int bottom = ly + rows * ROW_H - 2;
-		for (Component line : lines) {
-			for (FormattedCharSequence part : font.split(line, listW - 8)) {
-				if (ty + LINE_H > bottom) return;
-				g.text(font, part, lx + 4, ty, COLOR_WHITE);
-				ty += LINE_H;
-			}
+		int visible = Math.max(1, (bottom - top) / LINE_H);
+		List<FormattedCharSequence> parts = wrap(font, lines, listW - 8);
+		if (parts.size() > visible) parts = wrap(font, lines, listW - 8 - SCROLLBAR_W); // v0.77: room for the scrollbar
+		summaryTotal = parts.size();
+		summaryVisible = visible;
+		int first = Math.clamp(scroll, 0, Math.max(0, parts.size() - visible));
+		for (int i = first; i < parts.size() && i < first + visible; i++) {
+			g.text(font, parts.get(i), lx + 4, top + (i - first) * LINE_H, COLOR_WHITE);
 		}
+	}
+
+	private static List<FormattedCharSequence> wrap(Font font, List<Component> lines, int width) {
+		List<FormattedCharSequence> parts = new ArrayList<>();
+		for (Component line : lines) parts.addAll(font.split(line, width));
+		return parts;
 	}
 
 	/** v0.48.1: "今なら1往復 約40個（5種類）・見込み +60c" of an automatic carrier. */

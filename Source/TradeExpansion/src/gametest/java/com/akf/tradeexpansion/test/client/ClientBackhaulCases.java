@@ -64,11 +64,35 @@ final class ClientBackhaulCases {
 		clickRow(context, screen, staff, row);
 		check(mode(context, staff).equals("SETUP"), "the destination opened %s, not the setup", mode(context, staff));
 		String page = all(context);
-		// The explanation is long: the page may cut it at the bottom of the list; its beginning shows.
+		// The explanation is long: on small screens the page scrolls by line (v0.77); its beginning shows first.
 		String explain = squeeze(text(K + "summary.return")).substring(0, 20);
 		check(page.contains(returnLine), "the setup page does not show the return cargo \"%s\": %s", returnLine, page);
 		check(page.contains(explain), "the setup page does not explain the return cargo (\"%s…\"): %s", explain, page);
 		screenshot(context, result, "26-26_return_cargo_setup");
+		// v0.77: scrolled to the end (the wheel over the list), the fee, the commission and the purse are seen.
+		String fee = squeeze(prefix(K + "summary.cost.carrier"));
+		String purse = squeeze(text(K + "summary.purse.carrier"));
+		purse = purse.substring(Math.max(0, purse.length() - 12));
+		Object setup = staff;
+		MarketScreen setupScreen = screen;
+		boolean overflows = context.computeOnClient(c -> (Boolean) call(setup, "summaryOverflows"));
+		int lines = context.computeOnClient(c -> (Integer) call(setup, "summaryTotal"));
+		moveTo(context, listX(context, screen) + 40, context.computeOnClient(c -> topPos(setupScreen)) + constant(MarketScreen.class, "LIST_Y") + 20);
+		for (int i = 0; i < lines; i++) {
+			context.getInput().scroll(-1);
+			context.waitTicks(1);
+		}
+		int scrolled = context.computeOnClient(c -> (Integer) get(setupScreen, "scroll"));
+		if (overflows) {
+			int max = context.computeOnClient(c -> (Integer) call(setup, "summaryTotal") - (Integer) call(setup, "summaryVisible"));
+			check(scrolled == max, "the wheel scrolled the setup page to line %d, not to its end (%d)", scrolled, max);
+		} else {
+			check(scrolled == 0, "the wheel scrolled the setup page that fits (to %d)", scrolled);
+		}
+		page = all(context);
+		check(page.contains(fee), "the setup page scrolled to its end does not show the fee (\"%s\"): %s", fee, page);
+		check(page.contains(purse), "the setup page scrolled to its end does not show its last line (\"…%s\"): %s", purse, page);
+		screenshot(context, result, "26-26_setup_scrolled");
 
 		// 26-30: return cargo off.
 		try {
@@ -99,8 +123,8 @@ final class ClientBackhaulCases {
 
 	/**
 	 * 26-29: a carrier whose own good does not pay at the other market sets out with nothing when the return cargo pays;
-	 * on the way back its right panel says "荷 ×0個・帰り荷 ×○個" and its log has the return cargo bought; at home it
-	 * sells it here.
+	 * on the way back its right panel says "荷 ×0個・帰り荷 ×○個" and its log has setting out with nothing and the return
+	 * cargo bought; at home it sells it here.
 	 */
 	static void emptyTrip(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
@@ -135,6 +159,8 @@ final class ClientBackhaulCases {
 			String boughtBack = squeeze(middle(LOG + "bought_return"));
 			String tip = rowTooltip(context, screen, staff, rowIndex(context, staff, id));
 			check(tip.contains(boughtBack), "the tooltip's log has no return cargo (\"%s\"): %s", boughtBack, tip);
+			String setOut = squeeze(middle(LOG + "departed_empty"));
+			check(tip.contains(setOut), "the tooltip's log has no setting out with nothing (\"%s\"): %s", setOut, tip);
 			screenshot(context, result, "26-29_empty_trip_return_cargo");
 			// Home, it sells the return cargo and (waiting no longer) sets out again.
 			v = hurryUntil(s, staff, id, x -> x.trips() >= 1, 3, "back from its first round trip");

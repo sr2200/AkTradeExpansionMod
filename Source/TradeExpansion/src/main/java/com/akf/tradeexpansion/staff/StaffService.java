@@ -232,6 +232,7 @@ public final class StaffService {
 				}
 				// v0.54: with nothing to take there, it still goes when the return cargo should pay
 				if (e.stock > 0 || returnTripPays(server, home, destination, e)) {
+					if (e.stock <= 0) log(e, now, "departed_empty", null, destination.id()); // for the return cargo only
 					depart(e, Employee.Phase.OUTBOUND, home, destination, now);
 					setStatus(server, e, Employee.Status.WORKING, now, changes);
 				} else {
@@ -813,6 +814,7 @@ public final class StaffService {
 			case "accident_mix" -> Component.translatable(key, v.get(0), coins(v.get(1)));
 			case "leftover_mix" -> Component.translatable(key, market, v.get(0));
 			case "clerk_sold_out", "destination_gone" -> Component.translatable(key, item);
+			case "departed_empty" -> Component.translatable(key, market);
 			default -> Component.translatable(key);
 		};
 	}

@@ -60,7 +60,7 @@ public class MarketMenu extends AbstractContainerMenu {
 	private final String initialTab;
 	private final SimpleContainer sellSlot = new SimpleContainer(1);
 	private final int sellSlotIndex;
-	private final MarketLayout layout;
+	private MarketLayout layout;
 
 	public MarketMenu(int containerId, Inventory inventory, OpenData data) {
 		super(ModMenus.MARKET, containerId);
@@ -85,8 +85,33 @@ public class MarketMenu extends AbstractContainerMenu {
 		return layout;
 	}
 
+	/**
+	 * A-4 (v0.77, client): moves the sell slot and the player inventory to {@code fitted} when the trade screen is made
+	 * smaller for a smaller window. Only the client looks at slot positions.
+	 */
+	public void relayout(MarketLayout fitted) {
+		int invDx = fitted.inventoryX() - layout.inventoryX(), invDy = fitted.inventoryY() - layout.inventoryY();
+		int sellDx = fitted.sellSlotX() - layout.sellSlotX(), sellDy = fitted.sellSlotY() - layout.sellSlotY();
+		for (int i = 0; i < slots.size(); i++) {
+			Slot slot = slots.get(i);
+			boolean sell = i == sellSlotIndex;
+			com.akf.tradeexpansion.mixin.SlotAccessor moved = (com.akf.tradeexpansion.mixin.SlotAccessor) slot;
+			moved.tradeExpansion$setX(slot.x + (sell ? sellDx : invDx));
+			moved.tradeExpansion$setY(slot.y + (sell ? sellDy : invDy));
+		}
+		layout = fitted;
+	}
+
 	public long marketId() {
 		return marketId;
+	}
+
+	/**
+	 * A-4 (v0.77): the player's trade screen still shows market {@code marketId}, which no longer exists
+	 * ({@code market == null}, deleted with {@code market delete}): the request gets {@code MARKET_GONE}, not {@code INVALID_REQUEST}.
+	 */
+	public static boolean gone(Player player, long marketId, Object market) {
+		return market == null && player.containerMenu instanceof MarketMenu menu && menu.marketId() == marketId;
 	}
 
 	public BlockPos stallPos() {

@@ -61,7 +61,7 @@ final class ServerLookCases {
 	static List<ServerCase> all() {
 		List<ServerCase> cases = new ArrayList<>();
 		cases.add(partial("buildings_stand_every_way", List.of("29-2", "22-50"),
-				"15種類の建物を7種類の見た目（平原・砂漠・サバンナ・雪原・タイガ・ネザー・エンド）と4つの向きで、完成の時と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品（ボタン・旗・松明・はしご・吊り看板・ろうそく・ケーキなど）が無く、ランダムティックを速めて30ティック進めてもブロックが変わらず（火が付かない。銅の避雷針が錆びる・ブロックの下の草と菌糸が土とネザーラックになる・つる・サトウキビ・竹が伸びるのは除く）、水と溶岩が建物の外に流れ出ないこと（材料と形の見た目は画像で見る。村の家や木の近くでは見ていない）",
+				"15種類の建物を7種類の見た目（平原・砂漠・サバンナ・雪原・タイガ・ネザー・エンド）と4つの向きで、完成の時と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品（ボタン・旗・松明・はしご・吊り看板・ろうそく・ケーキなど）が無く、ランダムティックを速めて30ティック進めてもブロックが変わらず（火が付かない。時計塔の避雷針は蝋引きで錆びない。ブロックの下の草と菌糸が土とネザーラックになる・つる・サトウキビ・竹が伸びるのは除く）、水と溶岩が建物の外に流れ出ないこと（材料と形の見た目は画像で見る。村の家や木の近くでは見ていない）",
 				ServerLookCases::stand));
 		cases.add(partial("building_parts_by_style", List.of("29-14", "22-52", "22-53", "22-55", "22-56", "28-6"),
 				"7種類の見た目それぞれに15種類の建物の構造物があり（平原に代わらない）、看板（建物の目印）が1つずつあること。宿屋は村の見た目でベッド4つ・ネザーとエンドはベッドなしでカーペット、煙突に火の付いた焚き火（エンドはエンドロッド）。依頼所と時計塔に鐘、時計塔にボタンと避雷針、見張り塔にはしご・旗・松明、酒場に吊り看板とろうそく、市場にハチの巣（bee_nest）と飾り壺、劇場と祭りの広場に旗、祭りの広場にろうそくのケーキ、銀行に鉄格子、温泉にソウルサンド、鋳造所に溶鉱炉・金床・鍛冶台と煙突の火（エンドはエンドロッド）。噴水広場はネザーで溶岩・ほかは水、公園はネザーで真紅のキノコと溶岩・エンドでコーラスとエンドロッド・村で葉（材料の見た目、鐘を鳴らせる・寝られる・村人が来るは見ていない）",
@@ -214,8 +214,7 @@ final class ServerLookCases {
 							if (covered && (b == Blocks.GRASS_BLOCK && now == Blocks.DIRT || b.defaultBlockState().is(BlockTags.NYLIUM) && now == Blocks.NETHERRACK)) return;
 							if ((b == Blocks.AIR || b == Blocks.WATER || b == Blocks.LAVA) && (now == Blocks.WATER || now == Blocks.LAVA || now == Blocks.AIR)) return;
 							if (b == Blocks.WATER && now == Blocks.BUBBLE_COLUMN) return; // over soul sand
-							String was = BuiltInRegistries.BLOCK.getKey(b).getPath(), is = BuiltInRegistries.BLOCK.getKey(now).getPath();
-							if (is.matches("(exposed|weathered|oxidized)_" + java.util.regex.Pattern.quote(was))) return; // copper weathers (the clock tower's rod)
+							String was = BuiltInRegistries.BLOCK.getKey(b).getPath(), is = BuiltInRegistries.BLOCK.getKey(now).getPath(); // the clock tower's rod is waxed, so copper must not weather either
 							if (java.util.stream.Stream.of(was, is).anyMatch(x -> x.contains("vines") || x.equals("sugar_cane") || x.contains("bamboo"))) return; // plants grow
 							changed.add(name(q, c.level(), b) + " -> " + BuiltInRegistries.BLOCK.getKey(now).getPath());
 						});
