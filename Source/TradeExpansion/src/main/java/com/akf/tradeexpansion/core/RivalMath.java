@@ -7,6 +7,16 @@ public final class RivalMath {
 	private RivalMath() {
 	}
 
+	/**
+	 * O-3 (v0.82): a market visited at market-clock time {@code lastVisit} counts as visited lately on {@code day} if the
+	 * visit was in the last {@code days} days (today included). A visit after {@code day} (the clock was set back) counts
+	 * too; {@link Long#MIN_VALUE} = never visited.
+	 */
+	public static boolean visitedLately(long lastVisit, long day, int days) {
+		if (lastVisit == Long.MIN_VALUE) return false;
+		return Math.floorDiv(lastVisit, PriceModel.TICKS_PER_DAY) > day - days;
+	}
+
 	/** Fraction of X left after one day: f = 2^(-1 / H). */
 	public static double dailyRetention(double halfLifeDays) {
 		return Math.pow(2.0, -1.0 / halfLifeDays);

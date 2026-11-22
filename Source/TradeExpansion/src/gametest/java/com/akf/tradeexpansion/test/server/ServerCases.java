@@ -403,6 +403,7 @@ public final class ServerCases {
 		cases.addAll(ServerRequestCases.all());
 		cases.addAll(ServerRouteCases.all());
 		cases.addAll(ServerNotebookCases.all());
+		cases.addAll(ServerWeatherCases.all()); // v0.82: rival centers near the players, the weather
 		return cases;
 	}
 

@@ -47,6 +47,10 @@ public final class ConfigValidator {
 		TradeExpansionConfig.Notebook nb = c.notebook; // T
 		nb.keepDays = clamp("notebook.keepDays", nb.keepDays, 1, 30);
 		nb.priceNotes = clamp("notebook.priceNotes", nb.priceNotes, 0, 64);
+		TradeExpansionConfig.Weather wt = c.weather; // U
+		wt.rainDays = clamp("weather.rainDays", wt.rainDays, 0.1, 3);
+		wt.rainMultiplier = clamp("weather.rainMultiplier", wt.rainMultiplier, 0.3, 1);
+		wt.stormRewardMultiplier = clamp("weather.stormRewardMultiplier", wt.stormRewardMultiplier, 1, 5);
 
 		TradeExpansionConfig.Market m = c.market;
 		m.minGoods = clamp("market.minGoods", m.minGoods, 1, 100);

@@ -149,6 +149,14 @@
       "multiplier": 0.8
     },
     {
+      "item": "minecraft:golden_carrot",
+      "multiplier": 0.8
+    },
+    {
+      "item": "minecraft:golden_apple",
+      "multiplier": 0.8
+    },
+    {
       "item": "minecraft:coal",
       "multiplier": 1.5
     },

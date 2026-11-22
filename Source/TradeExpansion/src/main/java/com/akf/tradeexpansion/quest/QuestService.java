@@ -310,6 +310,8 @@ public final class QuestService {
 			Set<Long> changed = new HashSet<>();
 			changed.add(market.id());
 			boolean expired = false;
+			double storm = com.akf.tradeexpansion.weather.WeatherService.stormMultiplier(player.level().getServer(), market); // U (v0.82)
+			long stormBonus = 0;
 			for (int slot : slots) {
 				Cargo cargo = Cargo.of(inventory.getItem(slot));
 				if (cargo == null) continue;
@@ -318,7 +320,9 @@ public final class QuestService {
 					continue;
 				}
 				inventory.setItem(slot, ItemStack.EMPTY);
-				long amount = cargo.reward() + cargo.deposit();
+				long reward = com.akf.tradeexpansion.core.WeatherMath.stormReward(cargo.reward(), storm); // U: delivered in a thunderstorm
+				stormBonus += reward - cargo.reward();
+				long amount = reward + cargo.deposit();
 				if (request.useCard()) {
 					BankService.accounts(player).add(player.getUUID(), amount);
 				} else {
@@ -331,7 +335,7 @@ public final class QuestService {
 				// N-2: the reward counts for both the source and this market.
 				if (source != null) Development.onRequest(source, player, cargo.reward(), now);
 				Development.onRequest(market, player, cargo.reward(), now);
-				com.akf.tradeexpansion.notebook.LedgerService.onCargoDelivered(player, cargo.reward()); // T
+				com.akf.tradeexpansion.notebook.LedgerService.onCargoDelivered(player, reward); // T
 				TradeAdvancements.event(player, TradeAdvancements.CARGO_DELIVERED); // R
 				if (source != null) {
 					source.requests().removeIf(r -> r.id() == cargo.requestId() && r.isTransport());
@@ -349,6 +353,11 @@ public final class QuestService {
 				registry.setDirty();
 				result = TradeResult.SUCCESS;
 				TradeService.broadcast(player.level().getServer(), registry, changed, now);
+				if (stormBonus > 0) { // U (v0.82)
+					player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.ak_trade_expansion.weather.storm_bonus",
+							com.akf.tradeexpansion.weather.WeatherService.multiplier(storm), CoinItem.formatCopper(stormBonus))
+							.withStyle(net.minecraft.ChatFormatting.GOLD));
+				}
 			} else {
 				result = expired ? TradeResult.CARGO_EXPIRED : TradeResult.NO_CARGO;
 			}

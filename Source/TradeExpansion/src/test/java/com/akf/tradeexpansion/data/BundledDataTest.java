@@ -435,4 +435,92 @@ class BundledDataTest {
 			}
 		}
 	}
+
+	/**
+	 * goods-design 1-1 / appendix A (v0.12): crafting. A recipe from one kind of material (with sticks for tools) must not
+	 * pay: product B &lt; materials × 1.109. A recipe combining several goods pays for the work: product B is at least
+	 * materials × 1.15, but below materials × 1.5 in every profile, so that buying the materials and selling the product
+	 * at the same market never pays without the jitter. Profiles are checked for recipes whose product and goods
+	 * materials can all be in one of their markets.
+	 */
+	@Test
+	void craftingPrices() throws IOException {
+		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);
+		Map<String, MarketProfile> profiles = decodeAll("market_profile", MarketProfile.CODEC);
+		// product, items made, materials ("goods:count", or "=c" for a fixed value: stick 1c, planks 2c)
+		List<List<String>> single = List.of(
+				List.of("bread", "1", "wheat:3"), List.of("sandstone", "1", "sand:4"), List.of("glass", "1", "sand:1"),
+				List.of("gold_ingot", "1", "gold_nugget:9"), List.of("gold_nugget", "9", "gold_ingot:1"), List.of("white_wool", "1", "string:4"),
+				List.of("packed_ice", "1", "ice:9"), List.of("leather", "1", "rabbit_hide:4"), List.of("magma_block", "1", "magma_cream:4"),
+				List.of("bucket", "1", "iron_ingot:3"), List.of("shears", "1", "iron_ingot:2"),
+				List.of("iron_helmet", "1", "iron_ingot:5"), List.of("iron_chestplate", "1", "iron_ingot:8"),
+				List.of("iron_leggings", "1", "iron_ingot:7"), List.of("iron_boots", "1", "iron_ingot:4"),
+				List.of("iron_sword", "1", "iron_ingot:2", "=1"), List.of("iron_pickaxe", "1", "iron_ingot:3", "=2"),
+				List.of("iron_axe", "1", "iron_ingot:3", "=2"), List.of("iron_shovel", "1", "iron_ingot:1", "=2"),
+				List.of("diamond_helmet", "1", "diamond:5"), List.of("diamond_chestplate", "1", "diamond:8"),
+				List.of("diamond_leggings", "1", "diamond:7"), List.of("diamond_boots", "1", "diamond:4"),
+				List.of("diamond_sword", "1", "diamond:2", "=1"), List.of("diamond_pickaxe", "1", "diamond:3", "=2"),
+				List.of("diamond_axe", "1", "diamond:3", "=2"), List.of("diamond_shovel", "1", "diamond:1", "=2"),
+				List.of("diamond_hoe", "1", "diamond:2", "=2"));
+		List<List<String>> combined = List.of(
+				List.of("pumpkin_pie", "1", "pumpkin:1", "sugar_cane:1", "egg:1"), List.of("golden_carrot", "1", "carrot:1", "gold_nugget:8"),
+				List.of("golden_apple", "1", "apple:1", "gold_ingot:8"), List.of("torch", "4", "coal:1", "=1"),
+				List.of("arrow", "4", "flint:1", "feather:1", "=1"), List.of("bow", "1", "string:3", "=3"),
+				List.of("shield", "1", "iron_ingot:1", "=12"), List.of("white_bed", "1", "white_wool:3", "=6"),
+				List.of("ender_eye", "1", "ender_pearl:1", "blaze_rod:0.5"), List.of("magma_cream", "1", "slime_ball:1", "blaze_rod:0.5"),
+				List.of("saddle", "1", "leather:3", "iron_ingot:1"), List.of("book", "1", "sugar_cane:3", "leather:1"),
+				List.of("end_rod", "4", "blaze_rod:1", "chorus_fruit:1"));
+		Map<String, MarketProfile> withBase = new java.util.TreeMap<>(profiles);
+		withBase.put("(none)", null);
+		for (Map.Entry<String, MarketProfile> profile : withBase.entrySet()) {
+			for (List<String> recipe : single) {
+				if (!dealsInAll(profile.getValue(), recipe)) continue;
+				double[] r = craftRatio(goods, profile.getValue(), recipe);
+				assertTrue(r[0] < r[1] * 1.109, profile.getKey() + ": " + recipe + " pays (" + r[0] + " vs materials " + r[1] + ")");
+			}
+			for (List<String> recipe : combined) {
+				if (!dealsInAll(profile.getValue(), recipe)) continue;
+				double[] r = craftRatio(goods, profile.getValue(), recipe);
+				assertTrue(r[0] < r[1] * 1.5, profile.getKey() + ": " + recipe + " pays even without the jitter (" + r[0] + " vs " + r[1] + ")");
+				if (profile.getValue() == null) {
+					assertTrue(r[0] >= r[1] * 1.15, recipe + " does not pay for the work (" + r[0] + " vs materials " + r[1] + ")");
+				}
+			}
+		}
+	}
+
+	/** The profile's markets may deal in the product and every goods material of the recipe ({@code null}: always). */
+	private static boolean dealsInAll(MarketProfile profile, List<String> recipe) {
+		if (profile == null) return true;
+		Set<String> ids = new java.util.HashSet<>();
+		profile.always().forEach(id -> ids.add(id.getPath()));
+		profile.pools().forEach(pool -> pool.entries().forEach(e -> ids.add(e.goods().getPath())));
+		if (!ids.contains(recipe.get(0))) return false;
+		for (String m : recipe.subList(2, recipe.size())) {
+			if (!m.startsWith("=") && !ids.contains(m.split(":")[0])) return false;
+		}
+		return true;
+	}
+
+	/** {product B × items made, materials B} of a recipe at a profile ({@code null} = base prices). */
+	private static double[] craftRatio(Map<String, GoodsDefinition> goods, MarketProfile profile, List<String> recipe) {
+		double product = price(goods, profile, recipe.get(0)) * Double.parseDouble(recipe.get(1));
+		double materials = 0;
+		for (String m : recipe.subList(2, recipe.size())) {
+			if (m.startsWith("=")) {
+				materials += Double.parseDouble(m.substring(1));
+			} else {
+				String[] parts = m.split(":");
+				materials += price(goods, profile, parts[0]) * Double.parseDouble(parts[1]);
+			}
+		}
+		return new double[] {product, materials};
+	}
+
+	private static double price(Map<String, GoodsDefinition> goods, MarketProfile profile, String id) {
+		GoodsDefinition def = goods.get(id);
+		assertNotNull(def, "unknown goods " + id);
+		double m = profile == null ? 1.0 : profile.multiplier(net.minecraft.resources.Identifier.fromNamespaceAndPath("ak_trade_expansion", id), def.item());
+		return def.basePrice() * m;
+	}
 }

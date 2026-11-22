@@ -68,11 +68,16 @@ public final class Market {
 		).apply(i, Shortage::new));
 	}
 
-	/** K-2 (v0.78): the village's vigor and how many shortages were fulfilled (fields after the two full records). */
-	private record Growth(double vigor, int fulfilled) {
+	/**
+	 * Fields after the two full records: K-2 (v0.78) the village's vigor and how many shortages were fulfilled; v0.82 the
+	 * last player visit (O-3) and the rain multiplier of the crops (U).
+	 */
+	private record Growth(double vigor, int fulfilled, long lastVisit, double rainMultiplier) {
 		static final MapCodec<Growth> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Codec.DOUBLE.optionalFieldOf("vigor", com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX).forGetter(Growth::vigor),
-				Codec.INT.optionalFieldOf("shortages_fulfilled", 0).forGetter(Growth::fulfilled)
+				Codec.INT.optionalFieldOf("shortages_fulfilled", 0).forGetter(Growth::fulfilled),
+				Codec.LONG.optionalFieldOf("last_visit", Long.MIN_VALUE).forGetter(Growth::lastVisit),
+				Codec.DOUBLE.optionalFieldOf("rain_multiplier", 1.0).forGetter(Growth::rainMultiplier)
 		).apply(i, Growth::new));
 	}
 
@@ -175,6 +180,8 @@ public final class Market {
 		Growth growth = pair.getSecond().getSecond();
 		m.vigor = Math.clamp(growth.vigor(), 0, com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX);
 		m.shortagesFulfilled = Math.max(0, growth.fulfilled());
+		m.lastVisit = growth.lastVisit();
+		m.rainMultiplier = growth.rainMultiplier() > 0 ? growth.rainMultiplier() : 1.0;
 		a.shelved().forEach(sh -> m.shelved.put(sh.goods(), sh));
 		m.specials.addAll(a.specials());
 		m.specialDay = a.specialDay();
@@ -195,7 +202,7 @@ public final class Market {
 	}, m -> Pair.of(m, Pair.of(new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
 			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
-			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled)))).codec();
+			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled, m.lastVisit, m.rainMultiplier)))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -219,6 +226,10 @@ public final class Market {
 	private final Map<Identifier, Integer> shortageSold = new LinkedHashMap<>();
 	private double vigor = com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX;
 	private int shortagesFulfilled;
+	/** O-3 (v0.82): market-clock time a player last opened the screen of / traded with this market. */
+	private long lastVisit = Long.MIN_VALUE;
+	/** U (v0.82): multiplier of B of the rain goods, copied from the world's weather when the market is touched (1 = none). */
+	private double rainMultiplier = 1.0;
 	/** C-4: custom name ({@code null} = automatic) and the player allowed to change it. */
 	private String name;
 	private UUID namer;
@@ -355,6 +366,30 @@ public final class Market {
 	}
 
 	/** O-4: last day of rival pushes received. */
+	/** O-3 (v0.82): when a player last visited (opened the screen, traded); {@link Long#MIN_VALUE} = never. */
+	public long lastVisit() {
+		return lastVisit;
+	}
+
+	public void setLastVisit(long time) {
+		this.lastVisit = time;
+	}
+
+	/** U (v0.82): multiplier of B of the rain goods (1 = no effect). */
+	public double rainMultiplier() {
+		return rainMultiplier;
+	}
+
+	public void setRainMultiplier(double multiplier) {
+		this.rainMultiplier = multiplier;
+	}
+
+	/** U: the rain multiplier that applies to one good (1 for goods that are not rain goods, specials and auto_add goods). */
+	public double rainMultiplierFor(Identifier goodsId) {
+		if (rainMultiplier == 1.0 || specials.contains(goodsId) || !com.akf.tradeexpansion.data.RainGoods.contains(goodsId)) return 1.0;
+		return rainMultiplier;
+	}
+
 	public long rivalDay() {
 		return rivalDay;
 	}
@@ -643,6 +678,7 @@ public final class Market {
 		if (state == null || def == null) return null;
 		double multiplier = profileMultiplier(goodsId, def) * shortages.getOrDefault(goodsId, 1.0); // K: shortage raises B
 		multiplier *= trendMultiplier(goodsId); // P: trends
+		multiplier *= rainMultiplierFor(goodsId); // U (v0.82): a rainy spell makes the crops cheaper
 		if (specials.contains(goodsId)) multiplier *= specialPriceMultiplier(); // D-5
 		GoodParams params = def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
 		if (hasFacility(FacilityKind.WAREHOUSE)) params = warehouse(params);

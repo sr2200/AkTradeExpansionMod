@@ -48,8 +48,18 @@ public final class MarketRegistry extends SavedData {
 			// G: market clock offset of /aktradeex clock advance (ticks)
 			Codec.LONG.optionalFieldOf("clock_offset", 0L).forGetter(r -> r.clockOffset),
 			// C-5: signposts of the trade routes
-			Signpost.CODEC.listOf().optionalFieldOf("signposts", List.of()).forGetter(MarketRegistry::signpostList)
+			Signpost.CODEC.listOf().optionalFieldOf("signposts", List.of()).forGetter(MarketRegistry::signpostList),
+			// U (v0.82): rain of the last game days
+			RainDay.CODEC.listOf().optionalFieldOf("rain", List.of()).forGetter(MarketRegistry::rainList)
 	).apply(i, MarketRegistry::new));
+
+	/** U (v0.82): ticks it rained in the overworld on one game day. */
+	public record RainDay(long day, int ticks) {
+		static final Codec<RainDay> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.LONG.fieldOf("day").forGetter(RainDay::day),
+				Codec.INT.fieldOf("ticks").forGetter(RainDay::ticks)
+		).apply(i, RainDay::new));
+	}
 
 	/** C-5: a saved signpost. */
 	public record Signpost(ResourceKey<Level> dimension, BlockPos pos) {
@@ -100,13 +110,17 @@ public final class MarketRegistry extends SavedData {
 	/** C-5: trade routes of each dimension, worked out from the signposts and markets when needed. Not saved. */
 	private final Map<ResourceKey<Level>, TradeRoutes.Cached> routes = new HashMap<>();
 
+	/** U (v0.82): ticks it rained on each of the last game days (game day → ticks), oldest first. */
+	private final Map<Long, Integer> rain = new java.util.TreeMap<>();
+
 	private MarketRegistry() {
-		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of(), 0L, List.of());
+		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of(), 0L, List.of(), List.of());
 	}
 
 	private MarketRegistry(int schemaVersion, List<Integer> currencyRatios, long nextId, List<Market> markets, long rivalDay,
 			int nextCampaignId, List<Campaign> campaigns, int nextEmployeeId, List<Employee> employees, long clockOffset,
-			List<Signpost> signposts) {
+			List<Signpost> signposts, List<RainDay> rain) {
+		rain.forEach(r -> this.rain.put(r.day(), r.ticks()));
 		for (Signpost s : signposts) this.signposts.computeIfAbsent(s.dimension(), k -> new java.util.LinkedHashSet<>()).add(s.pos().immutable());
 		this.clockOffset = Math.max(0, clockOffset);
 		this.nextEmployeeId = nextEmployeeId;
@@ -128,6 +142,17 @@ public final class MarketRegistry extends SavedData {
 	private static List<Integer> toList(int[] values) {
 		List<Integer> list = new ArrayList<>(values.length);
 		for (int v : values) list.add(v);
+		return list;
+	}
+
+	/** U (v0.82): ticks it rained on each of the last game days (mutable; callers mark the registry dirty). */
+	public Map<Long, Integer> rain() {
+		return rain;
+	}
+
+	private List<RainDay> rainList() {
+		List<RainDay> list = new ArrayList<>();
+		rain.forEach((day, ticks) -> list.add(new RainDay(day, ticks)));
 		return list;
 	}
 

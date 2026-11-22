@@ -97,6 +97,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final int COLOR_GREEN = 0xFF55FF55;
 	private static final int COLOR_GOLD = 0xFFFFD700;
 	private static final int COLOR_ORANGE = 0xFFFFAA33;
+	private static final int COLOR_RAIN = 0xFF66BBFF;
 	private static final int COLOR_WARNING = 0xFFA02020;
 	private static final int COLOR_UNAVAILABLE_ROW = 0xFF7E6A6A;
 	private static final int COLOR_SPECIAL = 0xFF8FE3FF;
@@ -1388,7 +1389,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 	}
 
-	/** Tooltip of a goods row: special (D-5), shortage (K), trends (P), rival guild (O-5), debug values (A-4). */
+	/** Tooltip of a goods row: special (D-5), shortage (K), trends (P), rival guild (O-5), rain (U), debug values (A-4). */
 	private List<Component> rowTooltip(GoodView view) {
 		List<Component> lines = new ArrayList<>();
 		if (view.special()) lines.add(Component.translatable("screen.ak_trade_expansion.special.tooltip"));
@@ -1402,6 +1403,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		for (MarketSnapshotS2C.TrendView t : view.trends()) lines.add(trendLine(t, true));
 		if (!view.trends().isEmpty() && snapshot.outlook().school()) lines.add(outlookLine("trend", snapshot.outlook().trendDays()));
 		view.rival().ifPresent(r -> lines.add(rivalLine(r.guild(), r.buying(), r.daysLeft())));
+		if (view.rainMultiplier() != 1.0) { // U (v0.82): a rainy spell
+			lines.add(Component.translatable("screen.ak_trade_expansion.weather.rain.tooltip", multiplier(view.rainMultiplier())).withColor(COLOR_RAIN));
+		}
 		if (TradeExpansionConfig.get().client.showDebugTooltip) lines.addAll(debugLines(view));
 		return lines;
 	}

@@ -123,10 +123,10 @@ final class ServerGoodsCases {
 							PriceModel.sellPrice(dearPacked, 0), 9 * PriceModel.buyPrice(cheapIce, 0));
 				}));
 		cases.add(partial("savanna_saddle_price", List.of("30-6"),
-				"サバンナの村の鞍の基準価格が 117c（×0.9）で、革3つと鉄インゴットを買って作って売っても儲からないこと（実際の村では見ていない）",
+				"サバンナの村の鞍の基準価格が 135c（150c × 0.9、goods-design v0.12）で、革3つと鉄インゴットを買って作って売っても儲からないこと（実際の村では見ていない）",
 				ctx -> {
 					GoodParams saddle = params("savanna_village", "saddle");
-					that(Math.abs(saddle.basePrice() - 117) < 1e-6, "a saddle in a savanna village: %.2fc", saddle.basePrice());
+					that(Math.abs(saddle.basePrice() - 135) < 1e-6, "a saddle in a savanna village: %.2fc", saddle.basePrice());
 					long cost = 3 * PriceModel.buyPrice(params("savanna_village", "leather"), 0) + PriceModel.buyPrice(params("savanna_village", "iron_ingot"), 0);
 					that(PriceModel.sellPrice(saddle, 0) < cost, "the saddle sells for %dc, its leather and iron cost %dc", PriceModel.sellPrice(saddle, 0), cost);
 				}));

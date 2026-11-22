@@ -1,0 +1,13 @@
+{
+  "goods": [
+    "ak_trade_expansion:wheat",
+    "ak_trade_expansion:carrot",
+    "ak_trade_expansion:potato",
+    "ak_trade_expansion:beetroot",
+    "ak_trade_expansion:pumpkin",
+    "ak_trade_expansion:melon_slice",
+    "ak_trade_expansion:sugar_cane",
+    "ak_trade_expansion:sweet_berries",
+    "ak_trade_expansion:cocoa_beans"
+  ]
+}

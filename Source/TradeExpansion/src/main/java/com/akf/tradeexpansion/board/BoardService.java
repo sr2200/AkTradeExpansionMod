@@ -47,7 +47,7 @@ public final class BoardService {
 				.sorted(Comparator.comparingDouble(m -> m.horizontalDistanceTo(here.center())))
 				.limit((long) Math.ceil(config.maxMarkets * reach))
 				.toList());
-		long now = MarketUpkeep.touch(player.level(), here);
+		long now = MarketUpkeep.visit(player.level(), here); // O-3: a player looks at the board here
 		java.util.UUID uuid = player.getUUID();
 		double threshold = config.dealThreshold;
 		List<BoardS2C.Entry> entries = new ArrayList<>();

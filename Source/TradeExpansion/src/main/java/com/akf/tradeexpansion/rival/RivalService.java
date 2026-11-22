@@ -30,6 +30,8 @@ import java.util.Random;
 public final class RivalService {
 	/** O-4: how many days back campaigns are rolled / applied; finished campaigns are dropped this long after their end. */
 	public static final int KEEP_DAYS = 16;
+	/** O-3 (v0.82): a market a player visited this many days back (today included) counts as visited lately. */
+	public static final int RECENT_DAYS = 3;
 
 	private RivalService() {
 	}
@@ -76,13 +78,21 @@ public final class RivalService {
 		return campaign;
 	}
 
-	/** O-3: chooses the center market, good, guild, direction, length and strength of a new campaign. */
+	/**
+	 * O-3: chooses the center market, good, guild, direction, length and strength of a new campaign. v0.82: the center
+	 * is drawn from the markets near ({@code board.radius}) a market players visited lately, or from all markets when
+	 * no market qualifies there.
+	 */
 	private static Campaign roll(MarketRegistry registry, Market fixedCenter, long day, Random random) {
 		TradeExpansionConfig.Rivals c = config();
 		List<Market> markets = new ArrayList<>(fixedCenter != null ? List.of(fixedCenter) : registry.all());
 		markets.sort(Comparator.comparingLong(Market::id));
+		List<Market> visited = registry.all().stream().filter(m -> RivalMath.visitedLately(m.lastVisit(), day, RECENT_DAYS)).toList();
+		double radius = TradeExpansionConfig.get().board.radius;
 		List<Market> centers = new ArrayList<>();
 		List<List<Identifier>> choices = new ArrayList<>();
+		List<Market> nearCenters = new ArrayList<>();
+		List<List<Identifier>> nearChoices = new ArrayList<>();
 		List<Campaign> running = active(registry, day);
 		for (Market m : markets) {
 			List<Identifier> goods = eligibleGoods(m);
@@ -91,6 +101,14 @@ public final class RivalService {
 			if (goods.isEmpty()) continue;
 			centers.add(m);
 			choices.add(goods);
+			if (nearVisited(m, visited, radius)) {
+				nearCenters.add(m);
+				nearChoices.add(goods);
+			}
+		}
+		if (!nearCenters.isEmpty()) {
+			centers = nearCenters;
+			choices = nearChoices;
 		}
 		if (centers.isEmpty()) return null;
 		int index = random.nextInt(centers.size());
@@ -103,6 +121,14 @@ public final class RivalService {
 		int days = c.minDays + random.nextInt(Math.max(1, c.maxDays - c.minDays + 1));
 		double impact = c.minImpact + (c.maxImpact - c.minImpact) * random.nextDouble();
 		return new Campaign(registry.takeCampaignId(), guild, good, center.id(), buying, day, day + days, impact);
+	}
+
+	/** O-3 (v0.82): {@code m} is within {@code radius} of a market players visited lately (in the same dimension). */
+	static boolean nearVisited(Market m, List<Market> visited, double radius) {
+		for (Market v : visited) {
+			if (v.dimension().equals(m.dimension()) && v.horizontalDistanceTo(m.center()) <= radius) return true;
+		}
+		return false;
 	}
 
 	private static boolean near(MarketRegistry registry, Market m, Campaign other) {

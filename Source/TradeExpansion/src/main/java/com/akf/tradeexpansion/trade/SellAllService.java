@@ -67,7 +67,7 @@ public final class SellAllService {
 		if (player.isCreative() && !config.trade.allowCreative) return fail(TradeResult.CREATIVE_NOT_ALLOWED);
 		boolean card = request.useCard();
 		if (card && !BankService.hasValidCard(player)) return fail(TradeResult.CARD_INVALID);
-		MarketUpkeep.touch(player.level(), market);
+		MarketUpkeep.visit(player.level(), market); // O-3: a player trades here
 		Container sellSlot = menu.sellSlot();
 
 		// 1. Plan every line exactly like a single sale; any problem cancels the whole sale.

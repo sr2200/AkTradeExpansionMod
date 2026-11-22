@@ -59,4 +59,16 @@ class RivalMathTest {
 		lazy.setPressure(lazy.pressure() - push * RivalMath.decay(1.5, p.halfLifeDays()));
 		assertEquals(eager.pressure(), lazy.pressure(), 1e-9);
 	}
+
+	/** O-3 (v0.82): visits today and the 2 days before count; never, or 3 days back, does not. */
+	@Test
+	void visitedLately() {
+		long day = 10;
+		long t = PriceModel.TICKS_PER_DAY;
+		assertFalse(RivalMath.visitedLately(Long.MIN_VALUE, day, 3));
+		assertTrue(RivalMath.visitedLately(day * t + 5, day, 3));
+		assertTrue(RivalMath.visitedLately((day - 2) * t, day, 3));
+		assertFalse(RivalMath.visitedLately((day - 2) * t - 1, day, 3));
+		assertTrue(RivalMath.visitedLately((day + 4) * t, day, 3)); // the clock was set back: still counts
+	}
 }

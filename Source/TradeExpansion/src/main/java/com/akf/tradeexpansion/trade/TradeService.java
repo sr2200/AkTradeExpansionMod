@@ -94,8 +94,8 @@ public final class TradeService {
 			return fail(TradeResult.NOT_AVAILABLE, request);
 		}
 
-		// 2. Lazy recovery, shortages (K) and requests (J)
-		MarketUpkeep.touch(player.level(), market);
+		// 2. Lazy recovery, shortages (K) and requests (J); O-3: a player trades here
+		MarketUpkeep.visit(player.level(), market);
 		GoodParams params = Reputation.params(market, player.getUUID(), goodsId, now); // M: the player's price bonus
 		int unit = def.unit();
 		int itemCount = qty * unit; // qty counts trading units (B-5)

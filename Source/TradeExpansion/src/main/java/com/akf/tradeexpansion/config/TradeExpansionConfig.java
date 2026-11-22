@@ -54,6 +54,8 @@ public final class TradeExpansionConfig {
 	public Route route = new Route();
 	/** T (v0.81): the merchant's notebook and the morning report. */
 	public Notebook notebook = new Notebook();
+	/** U (v0.82): the weather moves the market (rainy spells, thunderstorms). */
+	public Weather weather = new Weather();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -104,7 +106,7 @@ public final class TradeExpansionConfig {
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
 			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend,
-			Staff staff, Route route, Notebook notebook) {
+			Staff staff, Route route, Notebook notebook, Weather weather) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -119,7 +121,8 @@ public final class TradeExpansionConfig {
 				section("trend", Trend.CODEC, new Trend()).forGetter(Extra::trend),
 				section("staff", Staff.CODEC, new Staff()).forGetter(Extra::staff),
 				section("route", Route.CODEC, new Route()).forGetter(Extra::route),
-				section("notebook", Notebook.CODEC, new Notebook()).forGetter(Extra::notebook)
+				section("notebook", Notebook.CODEC, new Notebook()).forGetter(Extra::notebook),
+				section("weather", Weather.CODEC, new Weather()).forGetter(Extra::weather)
 		).apply(i, Extra::new));
 	}
 
@@ -140,9 +143,10 @@ public final class TradeExpansionConfig {
 		c.staff = e.staff();
 		c.route = e.route();
 		c.notebook = e.notebook();
+		c.weather = e.weather();
 		return c;
 	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend,
-			c.staff, c.route, c.notebook))).codec();
+			c.staff, c.route, c.notebook, c.weather))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -762,6 +766,41 @@ public final class TradeExpansionConfig {
 					Codec.INT.fieldOf("keepDays").orElse(d.keepDays).forGetter(c -> c.keepDays),
 					Codec.INT.fieldOf("priceNotes").orElse(d.priceNotes).forGetter(c -> c.priceNotes)
 			).apply(i, Notebook::new);
+		});
+	}
+
+	/** U (v0.82): the weather moves the market. */
+	public static final class Weather {
+		public boolean enabled = true;
+		/** Hours of rain (in days: 1 = 24,000 ticks) today and the 2 days before that make the rain goods cheaper. */
+		public double rainDays = 1.0;
+		/** Multiplier of B of the rain goods during a rainy spell. */
+		public double rainMultiplier = 0.85;
+		/** Multiplier of the reward of a cargo crate delivered while it thunders (1 = no bonus). */
+		public double stormRewardMultiplier = 1.5;
+		/** Tell the players in the chat when a rainy spell / a thunderstorm begins. */
+		public boolean notifyChat = true;
+
+		public Weather() {
+		}
+
+		Weather(boolean enabled, double rainDays, double rainMultiplier, double stormRewardMultiplier, boolean notifyChat) {
+			this.enabled = enabled;
+			this.rainDays = rainDays;
+			this.rainMultiplier = rainMultiplier;
+			this.stormRewardMultiplier = stormRewardMultiplier;
+			this.notifyChat = notifyChat;
+		}
+
+		static final Codec<Weather> CODEC = RecordCodecBuilder.create(i -> {
+			Weather d = new Weather();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.DOUBLE.fieldOf("rainDays").orElse(d.rainDays).forGetter(c -> c.rainDays),
+					Codec.DOUBLE.fieldOf("rainMultiplier").orElse(d.rainMultiplier).forGetter(c -> c.rainMultiplier),
+					Codec.DOUBLE.fieldOf("stormRewardMultiplier").orElse(d.stormRewardMultiplier).forGetter(c -> c.stormRewardMultiplier),
+					Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(c -> c.notifyChat)
+			).apply(i, Weather::new);
 		});
 	}
 

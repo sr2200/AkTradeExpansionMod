@@ -250,6 +250,12 @@ public final class ConfigScreen {
 				.option(doubleField("trend.unpopularMin", d.trend.unpopularMin, () -> edit.trend.unpopularMin, v -> edit.trend.unpopularMin = v, 0.1, 1))
 				.option(doubleField("trend.unpopularMax", d.trend.unpopularMax, () -> edit.trend.unpopularMax, v -> edit.trend.unpopularMax = v, 0.1, 1))
 				.option(intField("trend.minGoods", d.trend.minGoods, () -> edit.trend.minGoods, v -> edit.trend.minGoods = v, 1, 20))
+				// U (v0.82): the weather moves the market
+				.option(bool("weather.enabled", d.weather.enabled, () -> edit.weather.enabled, v -> edit.weather.enabled = v))
+				.option(doubleField("weather.rainDays", d.weather.rainDays, () -> edit.weather.rainDays, v -> edit.weather.rainDays = v, 0.1, 3))
+				.option(doubleField("weather.rainMultiplier", d.weather.rainMultiplier, () -> edit.weather.rainMultiplier, v -> edit.weather.rainMultiplier = v, 0.3, 1))
+				.option(doubleField("weather.stormRewardMultiplier", d.weather.stormRewardMultiplier, () -> edit.weather.stormRewardMultiplier, v -> edit.weather.stormRewardMultiplier = v, 1, 5))
+				.option(bool("weather.notifyChat", d.weather.notifyChat, () -> edit.weather.notifyChat, v -> edit.weather.notifyChat = v))
 				.option(bool("trader.spawnOnOpen", d.trader.spawnOnOpen, () -> edit.trader.spawnOnOpen, v -> edit.trader.spawnOnOpen = v))
 				.option(bool("villager.coinTrades", d.villager.coinTrades, () -> edit.villager.coinTrades, v -> edit.villager.coinTrades = v))
 				.option(bool("villager.wanderingTraderCoins", d.villager.wanderingTraderCoins, () -> edit.villager.wanderingTraderCoins, v -> edit.villager.wanderingTraderCoins = v))

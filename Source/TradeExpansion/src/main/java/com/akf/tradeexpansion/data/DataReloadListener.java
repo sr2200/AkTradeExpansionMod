@@ -36,6 +36,26 @@ public final class DataReloadListener {
 		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("goods_groups"));
 		loader.registerReloadListener(TradeExpansion.id("rival_guilds"), new Guilds());
 		loader.addListenerOrdering(TradeExpansion.id("goods_groups"), TradeExpansion.id("rival_guilds"));
+		loader.registerReloadListener(TradeExpansion.id("rain_goods"), new Rain()); // U (v0.82)
+		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("rain_goods"));
+	}
+
+	/** U (v0.82): goods that get cheaper in a rainy spell (all files together). */
+	private static final class Rain extends SimpleJsonResourceReloadListener<GoodsGroups.Group> {
+		Rain() {
+			super(GoodsGroups.Group.CODEC, FileToIdConverter.json("ak_trade_expansion/rain_goods"));
+		}
+
+		@Override
+		protected void apply(Map<Identifier, GoodsGroups.Group> loaded, ResourceManager manager, ProfilerFiller profiler) {
+			java.util.Set<Identifier> goods = new java.util.LinkedHashSet<>();
+			loaded.keySet().stream().sorted().forEach(id -> loaded.get(id).goods().forEach(g -> {
+				if (GoodsCatalog.get(g) == null) TradeExpansion.LOGGER.warn("Rain goods {}: unknown goods {}, skipped", id, g);
+				else goods.add(g);
+			}));
+			RainGoods.replace(goods);
+			TradeExpansion.LOGGER.info("Loaded {} rain goods", goods.size());
+		}
 	}
 
 	/** O-1: goods groups. */

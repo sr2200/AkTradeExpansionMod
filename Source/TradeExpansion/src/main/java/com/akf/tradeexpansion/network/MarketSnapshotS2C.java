@@ -75,10 +75,11 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param trends        P (v0.46): the market's trends that apply to this good
 	 * @param rival         O-5 (v0.46): the rival campaign felt most on this good here
 	 * @param shortageLeft  K-2 (v0.78): units still to sell to fulfill the shortage (0 = not short or cannot be fulfilled)
+	 * @param rainMultiplier U (v0.82): multiplier of B of a rainy spell (1 = none)
 	 */
 	public record GoodView(Identifier goods, Identifier item, int unit, GoodParams params, double pressure, double stock, boolean buy, boolean sell,
 			boolean shortage, boolean special, DataComponentPatch patch, boolean acceptDamaged, List<Double> history,
-			double shortageMultiplier, List<TrendView> trends, Optional<RivalView> rival, int shortageLeft) {
+			double shortageMultiplier, List<TrendView> trends, Optional<RivalView> rival, int shortageLeft, double rainMultiplier) {
 		/** Which stacks count as this good (client-side counting and preview). */
 		public InventoryUtil.Match match() {
 			return new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(item), patch, acceptDamaged);
@@ -119,6 +120,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
 			ByteBufCodecs.optional(RivalView.CODEC).encode(buf, rival);
 			buf.writeVarInt(shortageLeft);
+			buf.writeDouble(rainMultiplier);
 		}
 
 		private static GoodView read(RegistryFriendlyByteBuf buf) {
@@ -140,8 +142,9 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
 			Optional<RivalView> rival = ByteBufCodecs.optional(RivalView.CODEC).decode(buf);
 			int shortageLeft = buf.readVarInt();
+			double rainMultiplier = buf.readDouble();
 			return new GoodView(goods, item, unit, params, pressure, stock, buy, sell, shortage, special, patch, acceptDamaged, history,
-					shortageMultiplier, trends, rival, shortageLeft);
+					shortageMultiplier, trends, rival, shortageLeft, rainMultiplier);
 		}
 	}
 
@@ -375,7 +378,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			views.add(new GoodView(goodsId, def.item(), def.unit(), params, state.pressure(), state.stock(), def.buy(), def.sell(),
 					market.shortages().containsKey(goodsId), market.isSpecial(goodsId), GoodsCatalog.patch(goodsId), def.acceptsDamaged() && def.unit() == 1,
 					List.copyOf(state.history()), market.shortages().getOrDefault(goodsId, 1.0), TrendView.of(market, goodsId), rival,
-					com.akf.tradeexpansion.quest.DemandService.left(market, goodsId)));
+					com.akf.tradeexpansion.quest.DemandService.left(market, goodsId), market.rainMultiplierFor(goodsId)));
 		});
 		List<RequestView> requests = new ArrayList<>();
 		for (Request r : market.requests()) {
