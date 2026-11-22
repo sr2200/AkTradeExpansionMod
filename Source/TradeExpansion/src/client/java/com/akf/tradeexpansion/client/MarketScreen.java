@@ -18,6 +18,9 @@ import com.akf.tradeexpansion.network.BoardRequestC2S;
 import com.akf.tradeexpansion.network.BoardS2C;
 import com.akf.tradeexpansion.network.ExchangeRequestC2S;
 import com.akf.tradeexpansion.network.ExchangeResultS2C;
+import com.akf.tradeexpansion.network.MintRequestC2S;
+import com.akf.tradeexpansion.network.MintResultS2C;
+import com.akf.tradeexpansion.core.DevelopmentMath;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.GoodView;
 import com.akf.tradeexpansion.network.MarketSnapshotS2C.RequestView;
@@ -74,6 +77,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private static final int LIST_Y = 36;
 	private static final int ROW_H = MarketLayout.ROW_H;
 	private static final int PANEL_W = 78;
+	/** N-4 mint panel (exchange tab): top of its title and the height of one metal (icon and text, then the buttons). */
+	private static final int MINT_Y = 36;
+	private static final int MINT_ROW_H = 38;
+	private static final int MINT_MAX_BATCHES = 64;
+	/** Notes and warnings on the light right panel. */
+	private static final int COLOR_PANEL_NOTE = 0xFF606060;
+	private static final int COLOR_PANEL_WARN = 0xFFA02020;
 	private static final int TAB_W = 32;
 
 	private static final int COLOR_BG = 0xFFC6C6C6;
@@ -167,6 +177,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private final List<Button> tradeWidgets = new ArrayList<>();
 	private final List<Button> bankWidgets = new ArrayList<>();
 	private final List<Button> exchangeWidgets = new ArrayList<>();
+	/** N-4 mint: per metal of the snapshot's MintView, "9 blocks" and "all" (exchange tab, right panel). */
+	private final List<Button[]> mintButtons = new ArrayList<>();
 	/** N (v0.36): development tab buttons (coin donations), shown while no facility is selected. */
 	private final List<Button> townWidgets = new ArrayList<>();
 	/** N-6 (v0.38): selected facility id on the development tab, or {@code null}. */
@@ -215,6 +227,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		tradeWidgets.clear();
 		bankWidgets.clear();
 		exchangeWidgets.clear();
+		mintButtons.clear();
 		townWidgets.clear();
 
 		Tab[] tabs = Tab.values();
@@ -264,6 +277,17 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↓10"), b -> exchange(tier, false, 10)).bounds(x + LIST_X + 133, ry, 20, 14).build()));
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↑1"), b -> exchange(tier, true, 1)).bounds(x + LIST_X + 156, ry, 20, 14).build()));
 			exchangeWidgets.add(addRenderableWidget(Button.builder(Component.literal("↑10"), b -> exchange(tier, true, 10)).bounds(x + LIST_X + 177, ry, 20, 14).build()));
+		}
+
+		// N-4 mint: two metals (copper and iron blocks), each with "9 blocks" and "all" in the right panel.
+		for (int i = 0; i < 2; i++) {
+			int metal = i;
+			int by = y + MINT_Y + 14 + i * MINT_ROW_H + 19;
+			Button one = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.mint.one"), b -> mint(metal, 1))
+					.bounds(x + panelX, by, 30, 14).build());
+			Button all = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.mint.all"), b -> mint(metal, -1))
+					.bounds(x + panelX + 32, by, PANEL_W - 32, 14).build());
+			mintButtons.add(new Button[] {one, all});
 		}
 
 		// Development tab (N-6): coin donations and the stake in the right panel; a selected facility's buttons.
@@ -573,6 +597,50 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		ClientPlayNetworking.send(new BankRequestC2S(menu.marketId(), action, value));
 	}
 
+	/** N-4: mint {@code batches} times 9 blocks of {@code metal} (-1 = as many as held, at most 64 times). */
+	private void mint(int metal, int batches) {
+		MarketSnapshotS2C.MintOption option = mintOption(metal);
+		if (option == null) return;
+		int n = batches < 0 ? DevelopmentMath.mintBatches(mintHeld(option), MINT_MAX_BATCHES) : batches;
+		if (n <= 0) return;
+		ClientPlayNetworking.send(new MintRequestC2S(menu.marketId(), metal, n));
+	}
+
+	public void onMintResult(MintResultS2C result) {
+		boolean ok = result.result() == TradeResult.SUCCESS;
+		setStatus(ok ? Component.translatable("screen.ak_trade_expansion.mint.done", CoinItem.formatCopper(result.value()))
+				: Component.translatable(result.result().translationKey()), ok);
+	}
+
+	private MarketSnapshotS2C.MintOption mintOption(int metal) {
+		if (snapshot == null || !snapshot.mint().built() || metal >= snapshot.mint().options().size()) return null;
+		return snapshot.mint().options().get(metal);
+	}
+
+	/** Blocks of the option's metal in the inventory (the server takes them from there, not from the sell slot). */
+	private long mintHeld(MarketSnapshotS2C.MintOption option) {
+		Player player = player();
+		return player == null ? 0 : InventoryUtil.countPlain(player, BuiltInRegistries.ITEM.getValue(option.block()));
+	}
+
+	/** Shows the mint buttons on the exchange tab of a market with a mint; enabled when a minting is possible. */
+	private void updateMintButtons() {
+		for (int i = 0; i < mintButtons.size(); i++) {
+			MarketSnapshotS2C.MintOption option = tab == Tab.EXCHANGE && !sellAllOpen ? mintOption(i) : null;
+			int batches = option == null ? 0 : DevelopmentMath.mintBatches(mintHeld(option), MINT_MAX_BATCHES);
+			for (Button b : mintButtons.get(i)) {
+				b.visible = option != null;
+				b.active = option != null && option.enabled() && batches > 0;
+			}
+			if (option != null) {
+				mintButtons.get(i)[0].setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable(
+						"screen.ak_trade_expansion.mint.one.tooltip", DevelopmentMath.MINT_BATCH, CoinItem.formatCopper(option.value()))));
+				mintButtons.get(i)[1].setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable(
+						"screen.ak_trade_expansion.mint.all.tooltip", batches * DevelopmentMath.MINT_BATCH, CoinItem.formatCopper(option.value() * batches))));
+			}
+		}
+	}
+
 	/** E-3: {@code up} makes {@code count} coins of {@code tier} from the tier below; otherwise breaks {@code count} of them. */
 	private void exchange(int tier, boolean up, int count) {
 		ClientPlayNetworking.send(new ExchangeRequestC2S(menu.marketId(), up ? tier - 1 : tier, up, count));
@@ -750,6 +818,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		for (Button b : tradeWidgets) b.visible = tradeTab();
 		for (Button b : bankWidgets) b.visible = tab == Tab.BANK;
 		for (Button b : exchangeWidgets) b.visible = tab == Tab.EXCHANGE;
+		updateMintButtons();
 		MarketSnapshotS2C.FacilityView facility = tab == Tab.TOWN ? selectedFacilityView() : null;
 		for (Button b : townWidgets) {
 			b.visible = tab == Tab.TOWN && facility == null;
@@ -1763,6 +1832,28 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		double fee = TradeExpansionConfig.get().currency.exchangeFee;
 		g.text(font, Component.translatable("screen.ak_trade_expansion.exchange.help", Math.round(fee * 100)), ex + 4, ey + rows * ROW_H - 10, COLOR_GRAY);
+		extractMint(g, leftPos + panelX, topPos);
+	}
+
+	/** N-4: the mint in the right panel of the exchange tab: per metal its block, how many are held and what 9 are worth. */
+	private void extractMint(GuiGraphicsExtractor g, int px, int y) {
+		updateMintButtons(); // the held blocks change while the screen is open
+		if (snapshot == null || !snapshot.mint().built()) {
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.mint.none"), px, y + MINT_Y, PANEL_W, COLOR_PANEL_NOTE, false);
+			return;
+		}
+		g.text(font, Component.translatable("screen.ak_trade_expansion.mint.title"), px, y + MINT_Y, COLOR_TEXT, false);
+		List<MarketSnapshotS2C.MintOption> options = snapshot.mint().options();
+		for (int i = 0; i < options.size() && i < mintButtons.size(); i++) {
+			MarketSnapshotS2C.MintOption option = options.get(i);
+			int ry = y + MINT_Y + 14 + i * MINT_ROW_H;
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(option.block())), px, ry);
+			fitText(g, "×" + mintHeld(option), px + 18, ry, PANEL_W - 18, COLOR_TEXT, false);
+			Component value = option.enabled()
+					? Component.translatable("screen.ak_trade_expansion.mint.value", DevelopmentMath.MINT_BATCH, CoinItem.formatCopper(option.value()))
+					: Component.translatable("screen.ak_trade_expansion.mint.disabled");
+			fitText(g, value.getString(), px + 18, ry + 9, PANEL_W - 18, option.enabled() ? COLOR_PANEL_NOTE : COLOR_PANEL_WARN, false);
+		}
 	}
 
 	/** J: request list. */

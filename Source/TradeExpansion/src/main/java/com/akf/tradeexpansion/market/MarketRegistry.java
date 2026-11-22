@@ -46,8 +46,18 @@ public final class MarketRegistry extends SavedData {
 			Codec.INT.optionalFieldOf("next_employee_id", 1).forGetter(r -> r.nextEmployeeId),
 			Employee.CODEC.listOf().optionalFieldOf("employees", List.of()).forGetter(r -> List.copyOf(r.employees)),
 			// G: market clock offset of /aktradeex clock advance (ticks)
-			Codec.LONG.optionalFieldOf("clock_offset", 0L).forGetter(r -> r.clockOffset)
+			Codec.LONG.optionalFieldOf("clock_offset", 0L).forGetter(r -> r.clockOffset),
+			// C-5: signposts of the trade routes
+			Signpost.CODEC.listOf().optionalFieldOf("signposts", List.of()).forGetter(MarketRegistry::signpostList)
 	).apply(i, MarketRegistry::new));
+
+	/** C-5: a saved signpost. */
+	public record Signpost(ResourceKey<Level> dimension, BlockPos pos) {
+		static final Codec<Signpost> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Level.RESOURCE_KEY_CODEC.fieldOf("dimension").forGetter(Signpost::dimension),
+				BlockPos.CODEC.fieldOf("pos").forGetter(Signpost::pos)
+		).apply(i, Signpost::new));
+	}
 
 	/** No vanilla data fixer applies to mod data; Fabric API skips fixing when the type is null. */
 	public static final SavedDataType<MarketRegistry> TYPE = new SavedDataType<>(
@@ -85,13 +95,19 @@ public final class MarketRegistry extends SavedData {
 	private final List<Employee> employees = new ArrayList<>();
 	/** G: ticks the market clock is ahead of the game clock ({@link MarketClock}). */
 	private long clockOffset;
+	/** C-5: signposts of each dimension, in the order they were placed. */
+	private final Map<ResourceKey<Level>, java.util.LinkedHashSet<BlockPos>> signposts = new HashMap<>();
+	/** C-5: trade routes of each dimension, worked out from the signposts and markets when needed. Not saved. */
+	private final Map<ResourceKey<Level>, TradeRoutes.Cached> routes = new HashMap<>();
 
 	private MarketRegistry() {
-		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of(), 0L);
+		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of(), 0L, List.of());
 	}
 
 	private MarketRegistry(int schemaVersion, List<Integer> currencyRatios, long nextId, List<Market> markets, long rivalDay,
-			int nextCampaignId, List<Campaign> campaigns, int nextEmployeeId, List<Employee> employees, long clockOffset) {
+			int nextCampaignId, List<Campaign> campaigns, int nextEmployeeId, List<Employee> employees, long clockOffset,
+			List<Signpost> signposts) {
+		for (Signpost s : signposts) this.signposts.computeIfAbsent(s.dimension(), k -> new java.util.LinkedHashSet<>()).add(s.pos().immutable());
 		this.clockOffset = Math.max(0, clockOffset);
 		this.nextEmployeeId = nextEmployeeId;
 		this.employees.addAll(employees);
@@ -151,6 +167,49 @@ public final class MarketRegistry extends SavedData {
 		if (ticks <= 0) return;
 		clockOffset += ticks;
 		setDirty();
+	}
+
+	private List<Signpost> signpostList() {
+		List<Signpost> list = new ArrayList<>();
+		signposts.forEach((dimension, set) -> set.forEach(pos -> list.add(new Signpost(dimension, pos))));
+		list.sort(Comparator.comparing((Signpost s) -> s.dimension().identifier().toString()));
+		return list;
+	}
+
+	/** C-5: signposts of the dimension, oldest first (read only). */
+	public java.util.Set<BlockPos> signposts(ResourceKey<Level> dimension) {
+		java.util.Set<BlockPos> set = signposts.get(dimension);
+		return set == null ? java.util.Set.of() : java.util.Collections.unmodifiableSet(set);
+	}
+
+	/** C-5: records a signpost; false when it was already recorded. */
+	public boolean addSignpost(ResourceKey<Level> dimension, BlockPos pos) {
+		boolean added = signposts.computeIfAbsent(dimension, k -> new java.util.LinkedHashSet<>()).add(pos.immutable());
+		if (added) {
+			routes.remove(dimension);
+			setDirty();
+		}
+		return added;
+	}
+
+	/** C-5: forgets a signpost; false when it was not recorded. */
+	public boolean removeSignpost(ResourceKey<Level> dimension, BlockPos pos) {
+		java.util.Set<BlockPos> set = signposts.get(dimension);
+		if (set == null || !set.remove(pos)) return false;
+		if (set.isEmpty()) signposts.remove(dimension);
+		routes.remove(dimension);
+		setDirty();
+		return true;
+	}
+
+	/** C-5: the trade routes of the dimension (worked out again after signposts, markets or the settings change). */
+	public TradeRoutes.Cached routes(ResourceKey<Level> dimension) {
+		TradeRoutes.Cached cached = routes.get(dimension);
+		if (cached == null || !cached.current()) {
+			cached = TradeRoutes.compute(dimension, signposts(dimension), inDimension(dimension));
+			routes.put(dimension, cached);
+		}
+		return cached;
 	}
 
 	/** Coin ratios this world was created with (E-4). */
@@ -310,6 +369,7 @@ public final class MarketRegistry extends SavedData {
 		MarketFactory.populate(level, market, sameDimension);
 		markets.put(market.id(), market);
 		indexAdd(market);
+		routes.remove(market.dimension()); // C-5: a new market may sit at the end of a road
 		TradeExpansion.LOGGER.info("Created market #{} ({}, {}, level {}, {} goods) at {} in {}", market.id(), origin.getSerializedName(),
 				market.profileId(), market.level(), market.goods().size(), center.toShortString(), level.dimension().identifier());
 		return market;
@@ -321,6 +381,7 @@ public final class MarketRegistry extends SavedData {
 		if (market == null) return false;
 		SpatialHash<Market> hash = index.get(market.dimension());
 		if (hash != null) hash.remove(market);
+		routes.remove(market.dimension());
 		setDirty();
 		return true;
 	}

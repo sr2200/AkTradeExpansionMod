@@ -27,7 +27,15 @@ public final class PropagationMath {
 	 * @return the other market's new X, or {@code pressure} unchanged when it is out of reach
 	 */
 	public static double spread(GoodParams params, double pressure, double deltaX, double distance, Falloff falloff, double link) {
-		double w = falloff.weight(distance);
+		return spread(params, pressure, deltaX, distance, falloff, link, 0);
+	}
+
+	/**
+	 * C-5: the same with a weight of at least {@code minWeight} (markets on a trade route: {@code route.roadWeight};
+	 * 0 for other markets), even past {@code farRadius}.
+	 */
+	public static double spread(GoodParams params, double pressure, double deltaX, double distance, Falloff falloff, double link, double minWeight) {
+		double w = RouteMath.routeWeight(falloff.weight(distance), minWeight);
 		if (w <= 0) return pressure;
 		return params.clampPressure(pressure + deltaX * w * link);
 	}

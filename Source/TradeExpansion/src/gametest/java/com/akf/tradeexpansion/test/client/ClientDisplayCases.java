@@ -73,7 +73,7 @@ final class ClientDisplayCases {
 	private static final int COLUMN_SLACK = 4;
 	/** Every building of the development tab (the bundled facility data). */
 	private static final List<String> FACILITIES = List.of("quest_hall", "warehouse", "inn", "bank", "fountain", "park", "clock_tower",
-			"watchtower", "tavern", "market_hall", "harbor", "theater", "hot_spring", "festival");
+			"watchtower", "tavern", "market_hall", "harbor", "theater", "hot_spring", "festival", "mint");
 
 	private static String text(String key, Object... args) {
 		return Component.translatable(key, args).getString();
@@ -867,7 +867,7 @@ final class ClientDisplayCases {
 	// ---- 22-20 / 22-21 / 28-1 / 29-1 / 31-3 / 34-1 / 34-2 the development tab
 
 	/**
-	 * The development tab: the points and the market size above, the 14 buildings cheapest first (with the fountain and
+	 * The development tab: the points and the market size above, the 15 buildings cheapest first (with the fountain and
 	 * the park), the level breakdown and each building's effect, size and materials on hover. A click (also after the
 	 * list was scrolled with the wheel) selects the row's building: its name, size (with the full size on hover), cost,
 	 * materials and buttons on the right; a second click goes back.

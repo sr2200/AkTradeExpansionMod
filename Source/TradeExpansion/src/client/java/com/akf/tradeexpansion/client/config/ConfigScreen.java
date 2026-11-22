@@ -111,7 +111,12 @@ public final class ConfigScreen {
 				.option(doubleField("distance.farRadius", d.distance.farRadius, () -> dist.farRadius, v -> dist.farRadius = v, 9, 100000))
 				.option(doubleField("distance.falloffExponent", d.distance.falloffExponent, () -> dist.falloffExponent, v -> dist.falloffExponent = v, 0.5, 5))
 				.option(doubleField("distance.minNewMarketDistance", d.distance.minNewMarketDistance, () -> dist.minNewMarketDistance, v -> dist.minNewMarketDistance = v, 0, 10000))
-				.option(bool("distance.linkNetherToOverworld", d.distance.linkNetherToOverworld, () -> dist.linkNetherToOverworld, v -> dist.linkNetherToOverworld = v));
+				.option(bool("distance.linkNetherToOverworld", d.distance.linkNetherToOverworld, () -> dist.linkNetherToOverworld, v -> dist.linkNetherToOverworld = v))
+				// C-5: trade routes (signposts)
+				.option(bool("route.enabled", d.route.enabled, () -> edit.route.enabled, v -> edit.route.enabled = v))
+				.option(intField("route.signpostSpacing", d.route.signpostSpacing, () -> edit.route.signpostSpacing, v -> edit.route.signpostSpacing = v, 16, 256))
+				.option(doubleField("route.roadWeight", d.route.roadWeight, () -> edit.route.roadWeight, v -> edit.route.roadWeight = v, 0, 1))
+				.option(intField("route.maxRoutesPerMarket", d.route.maxRoutesPerMarket, () -> edit.route.maxRoutesPerMarket, v -> edit.route.maxRoutesPerMarket = v, 0, 16));
 
 		ConfigCategory.Builder marketCat = category("market")
 				.option(intField("market.minGoods", d.market.minGoods, () -> market.minGoods, v -> market.minGoods = v, 1, 100))
@@ -312,7 +317,8 @@ public final class ConfigScreen {
 				.option(doubleField("development.hotSpringRestMultiplier", dd.hotSpringRestMultiplier, () -> dev.hotSpringRestMultiplier, v -> dev.hotSpringRestMultiplier = v, 0, 1))
 				.option(doubleField("development.hotSpringQuitMultiplier", dd.hotSpringQuitMultiplier, () -> dev.hotSpringQuitMultiplier, v -> dev.hotSpringQuitMultiplier = v, 0, 1))
 				.option(intField("development.festivalIntervalDays", dd.festivalIntervalDays, () -> dev.festivalIntervalDays, v -> dev.festivalIntervalDays = v, 2, 100))
-				.option(doubleField("development.festivalMultiplier", dd.festivalMultiplier, () -> dev.festivalMultiplier, v -> dev.festivalMultiplier = v, 1, 10));
+				.option(doubleField("development.festivalMultiplier", dd.festivalMultiplier, () -> dev.festivalMultiplier, v -> dev.festivalMultiplier = v, 1, 10))
+				.option(doubleField("development.mintValueMultiplier", dd.mintValueMultiplier, () -> dev.mintValueMultiplier, v -> dev.mintValueMultiplier = v, 1, 10));
 
 		// Q (v0.48): hired staff.
 		TradeExpansionConfig.Staff st = edit.staff;

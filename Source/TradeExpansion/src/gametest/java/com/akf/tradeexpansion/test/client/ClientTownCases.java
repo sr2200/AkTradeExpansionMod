@@ -936,6 +936,63 @@ final class ClientTownCases {
 		}
 	}
 
+	// ---- 37-1 / 37-2 the mint on the exchange tab
+
+	/**
+	 * 37-1 / 37-2: the sign of a mint opens the exchange tab, whose right panel shows the mint: per metal its block, the
+	 * blocks held and "9個→96c"; "9個" mints 9 copper blocks into 96c of coins. The texts do not overlap.
+	 */
+	static void mintPanel(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		BlockPos core = stall.east(2);
+		net.minecraft.world.item.Item copper = com.akf.tradeexpansion.currency.MintService.METALS.get(0).block();
+		try {
+			s.world.getServer().runOnServer(server -> {
+				facility(server, stall, "mint", FacilityKind.MINT, State.COMPLETE, core);
+				player(server).getInventory().add(new net.minecraft.world.item.ItemStack(copper, 18));
+			});
+			context.setScreen(() -> null);
+			context.waitTicks(2);
+			context.getInput().lookAt(core);
+			context.waitTicks(2);
+			context.getInput().pressKey(options -> options.keyUse);
+			check(waitClient(context, m -> m.gui.screen() instanceof MarketScreen, 40), "the mint's sign opened no trade screen");
+			context.waitTicks(5);
+			String tab = context.computeOnClient(m -> ((Enum<?>) get(m.gui.screen(), "tab")).name());
+			check(tab.equals("EXCHANGE"), "the mint's sign opened the tab %s, not EXCHANGE", tab);
+			mouseAway(context);
+			context.waitTicks(3);
+			List<String> texts = strings(TextRecorder.capture(context));
+			String value = text("screen.ak_trade_expansion.mint.value", 9, CoinItem.formatCopper(96));
+			check(texts.contains(text("screen.ak_trade_expansion.mint.title")) && texts.contains(value) && texts.contains("×18")
+					&& texts.contains(text("screen.ak_trade_expansion.mint.disabled")),
+					"the mint panel does not show the title, \"%s\", ×18 and the iron row turned off: %s", value, texts);
+			List<String> problems = new ArrayList<>();
+			ClientChecklistTests.checkLayout(context, result, "mint " + "exchange", true, problems, null);
+			check(problems.isEmpty(), "%s", problems);
+			long before = context.computeOnClient(c -> WalletService.balance(c.player));
+			context.clickScreenButton("screen.ak_trade_expansion.mint.one");
+			check(waitClient(context, c -> c.player.getInventory().countItem(copper) == 9, 40), "\"9個\" did not take 9 copper blocks");
+			check(waitClient(context, c -> WalletService.balance(c.player) == before + 96, 40), "minting did not give 96c (%d -> %d)", before,
+					context.computeOnClient(c -> WalletService.balance(c.player)));
+			mouseAway(context);
+			context.waitTicks(3);
+			check(strings(TextRecorder.capture(context)).contains(text("screen.ak_trade_expansion.mint.done", CoinItem.formatCopper(96))),
+					"no message after minting");
+			screenshot(context, result, "37-2_mint");
+		} finally {
+			context.setScreen(() -> null);
+			s.world.getServer().runOnServer(server -> {
+				var inv = player(server).getInventory();
+				for (int i = 0; i < inv.getContainerSize(); i++) if (inv.getItem(i).is(copper)) inv.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+			});
+			restore(s, saved, List.of("mint"), List.of(core));
+		}
+	}
+
 	// ---- 22-9 / 26-20 / 24-7 tabs turned off
 
 	private static boolean tabShown(ClientGameTestContext context, String tab) {

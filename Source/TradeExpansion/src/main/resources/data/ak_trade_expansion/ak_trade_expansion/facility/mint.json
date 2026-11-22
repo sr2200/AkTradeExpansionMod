@@ -1,0 +1,24 @@
+{
+  "kind": "mint",
+  "order": 15,
+  "icon": "minecraft:blast_furnace",
+  "cost": 3000,
+  "structure": "mint",
+  "wanted": [
+    {
+      "item": "minecraft:copper_block",
+      "count": 16,
+      "value": 20
+    },
+    {
+      "item": "minecraft:blast_furnace",
+      "count": 2,
+      "value": 30
+    },
+    {
+      "item": "minecraft:iron_ingot",
+      "count": 16,
+      "value": 8
+    }
+  ]
+}

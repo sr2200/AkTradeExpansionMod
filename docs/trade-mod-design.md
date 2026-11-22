@@ -1,6 +1,6 @@
 # AK Trade Expansion 設計書（Minecraft Java Edition 26.3 / Fabric）
 
-- 版：v0.73（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定を反映。v0.66 で全体をソースと照らし合わせて見直した。v0.67 で建てる場所を探す範囲を市場レベルで広げた。v0.68 で見張り塔のはしごと港の桟橋の柱を直した。v0.70 で雇い人に所持金を入れた時にすぐ仕入れるようにした。v0.71 で「追加の商品と消耗品」をタイトル画面から開けなくした。v0.72 で雪原の村の建物の見た目とエンドの公園のコーラスを直した）　作成日：2026-11-02　更新日：2026-11-20（改版履歴は付録B）
+- 版：v0.74（段階0〜14と拡張機能の実装結果、確認事項 Q1〜Q58 の決定を反映。v0.66 で全体をソースと照らし合わせて見直した。v0.67 で建てる場所を探す範囲を市場レベルで広げた。v0.68 で見張り塔のはしごと港の桟橋の柱を直した。v0.70 で雇い人に所持金を入れた時にすぐ仕入れるようにした。v0.71 で「追加の商品と消耗品」をタイトル画面から開けなくした。v0.72 で雪原の村の建物の見た目とエンドの公園のコーラスを直した。v0.74 で建物「鋳造所」と交易路（道標）を足した）　作成日：2026-11-02　更新日：2026-11-22（改版履歴は付録B）
 - 対象：Minecraft Java Edition 26.3、Java 25
 - ビルド環境（テンプレート `fabric-example-mod-26.3` 準拠）：Fabric Loader 0.20.1、Fabric API 0.165.0+26.3、Loom 1.19-SNAPSHOT（実際に解決されたのは 1.19.3、`net.fabricmc.fabric-loom`）、Gradle 9.8.2、`splitEnvironmentSourceSets()`（共通コードとクライアントコードを別フォルダに分ける）
 - 実装状況：段階0〜14 と拡張機能（輸送依頼 J-2、評判 M、村の発展 N、商会 O、村の流行 P、雇い人 Q、進捗 R、他 Mod 向けの API S）を実装済み（5-1 の表を参照）。ソースは `Source/TradeExpansion`。ゲーム内での確認の状況は `docs/release/ingame-checklist.md`
@@ -437,6 +437,7 @@ w(d) = 1                                  (d ≤ Rnear)
 | `p` | 2.0 | 減衰カーブ。1＝直線、2＝Rnearを出た直後に大きく下がり、遠方ではなだらかに0へ |
 
 - 波及するのは **相場（X）だけ**。在庫（S）は波及しない（遠くの店の棚が空になるのは不自然）。
+- 【v0.74】交易路（C-5）でつながった市場には、w を少なくとも `route.roadWeight`（既定 0.5）にして波及する（`Rfar` より遠くても）。
 - 波及先がその商品を扱っていない場合は無視。扱いがあるが `B` が違っても `X` で波及するので「割合」で連動する。
 - 計算量：【v0.62】空間インデックス（`MarketIndex`）：次元ごとに、市場の中心を512ブロックのマスに分けたハッシュ（`core/SpatialHash`）を `MarketRegistry` が持つ（保存はせず、読み込み時と市場の作成・削除の時に作り直す。市場の中心と次元は変わらない）。波及は `Rfar`（`Rnear` の方が大きければ `Rnear`）以内のマスだけを見る（ネザーとの連動では相手の次元の座標に直して探す）。一番近い市場（交易所の割り当て・評判・発展の目印・村人の換算額）、半径内の市場（掲示板・値段の問い合わせ・置き場所の案内）も同じ索引で探す。半径が広くてマスを見る方が多くなる時は全件を見る。結果は全件走査と同じ（同じ距離なら ID の小さい方）。v0.61 までは全件走査だった。
 
@@ -469,6 +470,27 @@ w(d) = 1                                  (d ≤ Rnear)
 
 - 変えられない時は理由をアクションバーに出し、名札は減らさない。
 - 開いている交易画面のタイトルは開き直すまで変わらない。
+
+#### C-5. 交易路（道標）【v0.74 追加】
+
+道でつないだ2つの市場は、離れていても相場が強く連動する。道は新しいブロック「道標」を並べて作る。道の素材（石レンガ・砂利・ハーフブロックなど）は自由で、判定には使わない（素材では屋根や床と見分けられないため）。
+
+| 項目 | 内容 |
+|---|---|
+| 道標 | ブロック `ak_trade_expansion:signpost`（柱に2枚の板と銅のかさ。板は置いた人の向き）。レシピ：上の段に銅インゴット・ランタン・銅インゴット、真ん中に看板（`#minecraft:signs`）、下に柵（`#minecraft:wooden_fences`）で1個。斧で壊せる。ピストンで押せない（位置を保存しているため）。爆発で壊れた時も落とす |
+| 道 | `route.signpostSpacing`（既定 64）ブロック以内（水平）にある道標どうしは同じ道。間が空くと別の道になる |
+| 交易路 | 道の道標のどれかが市場の中心から `distance.mergeRadius`（既定 64）以内にあれば、その道はその市場に「届いている」。1本の道が届いているすべての市場の組が、それぞれ交易路になる（3つの市場を通る道なら3本） |
+| 効果 | 交易路でつながった市場どうしは、相場の波及（C-2）の重み w を少なくとも `route.roadWeight`（既定 0.5）にする：w′ = max(w(d), roadWeight)。`Rfar` より遠くても波及する。在庫は今までどおり波及しない。交易路は同じ次元の市場どうしだけ（ネザーとの連動 C-3 は今までどおり） |
+| 数の上限 | 1つの市場の交易路は `route.maxRoutesPerMarket`（既定 4）本まで。交易路の候補の組を、市場の中心どうしの距離が短い順（同じなら ID の小さい順）に見て、両方の市場に空きがあれば交易路にする。上限で外れた組は道標の右クリックで「交易路の数の上限を超えるのでつながりません」と出す |
+| 置いた時 | 新しくできた交易路を「交易路ができました：A ↔ B（相場の連動 50% 以上）」と置いた人に知らせる。できなければ右クリックと同じ説明を出す |
+| 右クリック | その道の道標の数・道が届いている市場・交易路・上限で外れた組。交易路が無い時は並べ方の説明と、間隔より遠い時はいちばん近いほかの道標までの距離 |
+| 管理 | `/aktradeex market info` に交易路の相手（`route ↔ 名前`。上限で外れたものは `route (over the limit) ↔ 名前`）を出す |
+| 設定 | `route.enabled`（既定 ON。OFF で交易路が無くなる。道標は置ける）・`route.signpostSpacing`・`route.roadWeight`・`route.maxRoutesPerMarket`（G章。設定画面の「距離」タブ） |
+
+- 判定は保存した道標の位置だけで行い、道標の間のブロックは調べない（長い距離をたどるのは重く、読み込まれていないチャンクは確かめられないため）。道を作らずに道標だけ並べても成り立つので、道標の材料を少し高くし（銅インゴット2つとランタン）、交易路の数を市場ごとに制限した。
+- 保存（F-1）：`ak_trade_expansion:markets` に `signposts`（次元 `dimension`・座標 `pos` の一覧。置いた順。省略可能）。道と交易路は保存せず、道標・市場・設定が変わった後に初めて使う時に次元ごとに作り直す（`core/RouteMath`：道標どうしを空間ハッシュで近い所だけ調べてつなぎ、市場の中心の近くの道標を探す。`market/TradeRoutes` が結果を `MarketRegistry` に持つ）。市場を作った・消した時も作り直す。
+- 道標は置いた時（`setPlacedBy`）に登録し、壊れた・爆発した・置き換えられた時（`affectNeighborsAfterRemoval`）に外す。プレイヤーが置いたのではない道標（構造物など）は、右クリックした時に登録する。
+- 鉄道（駅とトロッコの走行で確かめる交易路）・交易画面に交易路を出す・通った回数で強くなる、はあとで足す案（docs/TODO）。
 
 ---
 
@@ -706,6 +728,7 @@ w(d) = 1                                  (d ≤ Rnear)
   - 市場で買った素材を鋳造しても損になる条件（鋳造価値 ÷ 81 ＜ そのインゴットの買値）は、`/aktradeex audit` で検査している（v0.14。素材のブロックが商品でなくても、インゴット×9 のレシピ経由の買値で計算する）。
 - `currency.allowMinting=false` の時はレシピを無効にする（Fabric の Resource Conditions API で設定値を見る独自条件を作る。同じ仕組みをエメラルド貨で実装済み、E-5）。
 - コイン比率（E-1）を変えると出力枚数が変わり、銅換算の価値は変わらない（例：比率20なら鉄貨は1枚20cなので、鉄ブロック×9 → 鉄貨32枚）。
+- 【v0.74】村の建物「鋳造所」（N-4）のある市場では、交易画面の「両替」タブで銅ブロック・鉄ブロック9個を、このレシピの価値の `development.mintValueMultiplier`（既定 1.5）倍のコインに鋳造できる（銅ブロック9個 → 96c）。使える金属はレシピと同じ設定（`allowMinting`・`allowIronMinting`）で決まる。
 
 ※ 3×3クラフトは9枠しかないので **1:10 の両替はクラフトレシピでは作れない**。両替は交易画面の「両替タブ」と、コインを手に持ってスニーク+右クリック（1枚を下位コインに崩す。`currency.sneakUseExchange`）で行う。
 
@@ -872,6 +895,7 @@ MarketRegistry
 ```
 - 【v0.48】雇い人（Q章）も同じ `ak_trade_expansion:markets` に持つ：`next_employee_id`・`employees`（項目は Q-4）。どれも省略可能。
 - 【v0.62】`clock_offset`：市場の時計のずれ（tick、B-3。省略時 0）。
+- 【v0.74】`signposts`：交易路の道標（次元 `dimension`・座標 `pos` の一覧、C-5。省略時は無し）。
 - 【v0.66 で整理】上の図より後に足した市場の項目（どれも省略可能で、`schema_version` は 2 のまま）：`measured_level`（N-3）、`shelved`（D-4）、`specials`・`special_day`（D-5）、`reputation`・`bonus_specials`（M章）、`development`・`development_since`・`contributors`・`facilities`・`facility_donations`・`markers`（N-7）、`trends`・`trend_period`（P章）、`rival_day`（O-6）。ワールド全体の項目：`rival_day`・`next_campaign_id`・`campaigns`（O-6）、`next_employee_id`・`employees`（Q-4）、`clock_offset`。保存の往復は `MarketCodecTest` で確かめる。
 - 書き込み：取引時に `setDirty()`。保存はバニラの自動保存に任せる。
 - 【v0.9】銀行口座は別の SavedData `ak_trade_expansion:bank`（サーバー全体に1つ）：`accounts: Map<UUID, Account>`、`Account { balance: long, cardNumber: int }`。財布の残高はアイテム側（データコンポーネント）に持つので、保存データには入らない。
@@ -890,6 +914,7 @@ MarketRegistry
 | `SellAllC2S` | C→S | 市場ID, 商品ごとの（商品ID・単位の数）, 確認の枠に出した合計, カード払いか | 「まとめて売る」の確定（v0.32、A-4）。結果は `TradeResultS2C`（数量はアイテムの個数の合計） | 実装済 |
 | `TradeResultS2C` | S→C | 結果コード（B-5）, 方向, 数量, 合計額（成功時は取引額、`PRICE_CHANGED` 時はサーバーの再計算額、その他の失敗時は 0） | 取引処理後 | 実装済 |
 | `ExchangeRequestC2S` / `ExchangeResultS2C` | C→S / S→C | 市場ID, 下側のコイン種, 方向（まとめる／崩す）, 枚数（上位のコインの枚数） ／ 結果コード | 両替タブのボタン | 実装済（段階11） |
+| `MintRequestC2S` / `MintResultS2C`（v0.74） | C→S / S→C | 市場ID, 金属（0 銅ブロック・1 鉄ブロック）, 回数（1〜64、1回9個） ／ 結果コード, 鋳造した価値 | 両替タブの鋳造所の「9個」「全部」（N-4）。スナップショットの `MintView`（鋳造所があるか・金属ごとのブロック・1回の価値・使えるか）で表示する | 実装済 |
 | `BankRequestC2S` | C→S | 市場ID, 操作（預け入れ／引き出し／カード発行）, 金額 | 銀行タブのボタン | 実装済 |
 | `AccountS2C` | S→C | 銀行残高, 有効なカードを持っているか, 直前の銀行操作の結果 | 画面を開いた時／取引・銀行操作の後に本人へ | 実装済 |
 | `WalletWithdrawC2S` | C→S | どちらの手か, コイン種, 枚数 | 財布の画面で取り出す | 実装済 |
@@ -985,6 +1010,10 @@ MarketRegistry
 | 距離 | `distance.falloffExponent` | 2.0 | 0.5〜5 | p |
 | 距離 | `distance.linkNetherToOverworld` | true | bool | 【v0.31 で実装、既定を ON に】ネザー×8 でオーバーワールドと相場を連動（C-2・C-3） |
 | 距離 | `distance.minNewMarketDistance` | 256 | 0〜10000 | クラフト屋台で新規市場を作れる最小距離（C-1） |
+| 距離 | `route.enabled` | true | bool | 【v0.74】交易路（C-5）。OFF で道標は置けるが何もつながらない |
+| 距離 | `route.signpostSpacing` | 64 | 16〜256 | 【v0.74】同じ道になる道標どうしの距離（水平） |
+| 距離 | `route.roadWeight` | 0.5 | 0〜1 | 【v0.74】交易路でつながった市場の波及の重みの最小値 |
+| 距離 | `route.maxRoutesPerMarket` | 4 | 0〜16 | 【v0.74】1つの市場の交易路の数（短い順に残す。0 で交易路なし） |
 | 市場 | `market.minGoods` | 10 | 1〜100 | 1市場の商品数の下限（レベル1、D-4） |
 | 市場 | `market.maxGoods` | 20 | minGoods〜100 | 1市場の商品数の上限（最大レベル、D-4） |
 | 市場 | `market.levelThresholds` | `[5,10,20,40]` | 昇順の整数4つ | レベル2〜5になるベッド数（オーバーワールド・他Modの次元、D-4） |
@@ -1055,7 +1084,7 @@ MarketRegistry
 | 評判 | `reputation.hardQuestLevel` | 3 | 0〜5 | 【v0.29】★★★の依頼を納めるのに必要なレベル（0 で誰でも）（M章） |
 | 評判 | `reputation.specialBonusLevel` | 4 | 0〜5 | 【v0.29】評判の掘り出し物が見えるレベル（M章） |
 | 評判 | `reputation.specialBonusCount` | 1 | 0〜5 | 【v0.29】評判の掘り出し物の数（M章） |
-| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 39 項目（一覧は N-7。v0.50・v0.51 の建物の設定を含む）。設定画面の「村の発展」タブ |
+| 発展 | `development.*` | — | — | 【v0.36】村の発展の設定 40 項目（一覧は N-7。v0.50・v0.51・v0.74 の建物の設定を含む）。設定画面の「村の発展」タブ |
 | 需要 | `demand.maxShortages` | 2 | 0〜10 | 1市場の不足品の最大数（0 で不足なし、K章） |
 | 需要 | `demand.durationDays` | 3.0 | 0.5〜30 | 不足品を選び直す間隔（ゲーム内日） |
 | 需要 | `demand.minMultiplier` / `demand.maxMultiplier` | 1.5 / 2.0 | 1〜5 | 不足品の基準価格に掛ける倍率の範囲 |
@@ -1354,7 +1383,7 @@ MarketRegistry
 
 **状態：段階 a（発展度・コインの寄付・「発展」タブ・設定、v0.37）・段階 b（建物、v0.38）・段階 c（村の種類ごとの見た目、v0.39）を実装済み**。方針（N-1）は Q56、細部（N-9）は Q57 で決めた。数値はすべて【既定案】で、ゲーム内で遊んで調整する。
 
-プレイヤーが依頼・寄付・取引で村に貢献すると、村の**発展度**が貯まる。発展度を使って村に**施設の建物**（倉庫・銀行・依頼所・宿屋、【v0.50】娯楽施設の噴水広場・公園、【v0.51】時計塔・見張り塔・酒場・屋根つき市場・港・野外劇場・温泉・祭りの広場）を建てると、建物ごとの効果が付き、完成した建物の数に応じて**市場レベル（D-4）にボーナス**が付く。
+プレイヤーが依頼・寄付・取引で村に貢献すると、村の**発展度**が貯まる。発展度を使って村に**施設の建物**（倉庫・銀行・依頼所・宿屋、【v0.50】娯楽施設の噴水広場・公園、【v0.51】時計塔・見張り塔・酒場・屋根つき市場・港・野外劇場・温泉・祭りの広場、【v0.74】鋳造所）を建てると、建物ごとの効果が付き、完成した建物の数に応じて**市場レベル（D-4）にボーナス**が付く。
 
 #### N-1. 決定した方針（Q56）
 
@@ -1365,7 +1394,7 @@ MarketRegistry
 | 発展度の貯め方 | 依頼の達成・コインの寄付・品物の寄付・取引 |
 | 品物の寄付 | **村がほしい品だけ**（建物ごとに決めた資材） |
 | 発展度の減り方 | 既定では時間で減らない（設定 `development.halfLifeDays` で減らせる）。建物を建てる時に**使って減る**（村の資金） |
-| 建物の種類 | 倉庫・銀行・依頼所・宿屋。**各種類1つずつ**（1市場に最大4つ）。【v0.50】娯楽施設の噴水広場・公園を足して6種類（最大6つ）。【v0.51】8種類を足して14種類 |
+| 建物の種類 | 倉庫・銀行・依頼所・宿屋。**各種類1つずつ**（1市場に最大4つ）。【v0.50】娯楽施設の噴水広場・公園を足して6種類（最大6つ）。【v0.51】8種類を足して14種類。【v0.74】鋳造所を足して15種類 |
 | 同時に建設中にできる数 | 1つ（設定 `development.maxConcurrentBuilds`） |
 | 建てる建物の決め方 | 交易画面の「発展」タブで**プレイヤーが選ぶ**。その村での評判が一定以上の人だけ |
 | 建て方 | **自動で建つ**。場所は屋台の周りの空き地を自動で探す。プレイヤーが「建設予定地」の目印を置いていれば、そこを使う |
@@ -1435,6 +1464,7 @@ MarketRegistry
 | 【v0.51】温泉 | 9×9 | 3,000 | 滑らかな石 64・ソウルサンド 8・ランタン 4（×4） | この市場で雇った運び屋の、事故の後の療養の日数を 0.5 倍（`hotSpringRestMultiplier`）、辞める確率を 0.5 倍（`hotSpringQuitMultiplier`） |
 | 【v0.51】祭りの広場 | 11×11 | 3,500 | 羊毛 32・ランタン 16・旗 4（×4） | `festivalIntervalDays`（5）日ごとに1日「祭りの日」（市場の時計の日。市場ごとにずらす：(id × 7 + 3) mod 間隔 の日）。その日は評判（M章）と発展度（N-2）の増える量を 2 倍（`festivalMultiplier`。噴水広場・公園の倍率と掛け合わせる）。祭りの日に交易画面を開くとチャットで知らせ、「発展」タブの行に「今日は祭り」「祭りまで N 日」 |
 | 【v0.50】公園 | 13×13 | 2,000 | 苗木 8・花 16・原木 24（×4。苗木・花・原木はタグ） | その市場で貯まる発展度（N-2。寄付・依頼・取引）を 1.25 倍（`development.parkPointsMultiplier`）。寄付で上がる評判は倍率を掛ける前の発展度で計算する |
+| 【v0.74】鋳造所 | 7×7 | 3,000 | 銅ブロック 16・溶鉱炉 2・鉄インゴット 16（×4） | 交易画面の「両替」タブで、銅ブロック・鉄ブロック9個を、作業台の鋳造レシピ（E-2）の価値の 1.5 倍（`development.mintValueMultiplier`）のコインに鋳造できる（銅ブロック9個 → 96c、鉄ブロック9個 → 960c）。鉄ブロックは `currency.allowIronMinting` が ON の時だけ（下） |
 
 （資材の必要数も【既定案】。データパックで変えられる）
 
@@ -1452,6 +1482,16 @@ MarketRegistry
 - 建物が壊れる（中心ブロックが壊れる）と登録が外れ、上限は元に戻る。建て直した銀行やほかの銀行で、また登録できる。
 - 利息は口座を使う時にまとめて計算する（E-7）ので、計算した時に登録が外れていれば、前回からの日数をすべて元の上限で計算する（壊れた時刻までを分けて計算しない）。
 - 銀行タブに「利息：1日 0.03%（200,000c まで・○○の銀行に登録中）」と出す。
+
+**鋳造所の鋳造**（v0.74、E-2）：
+
+- 完成した鋳造所がある市場の交易画面の「両替」タブの右の欄に「鋳造所」を出す。金属（銅ブロック・鉄ブロック）ごとに、ブロックのアイコン・持っている数（インベントリ。売却枠は数えない）・「9個→96c」と、ボタン「9個」（1回）・「全部」（持っている分を9個ずつ、最大64回）。ボタンにマウスを乗せると何個がいくらになるかを出す。結果は画面の下に「鋳造しました：96c 分のコイン」。
+- 1回（9個）の価値 = floor(レシピの価値 × `mintValueMultiplier`)。レシピの価値は同梱の鋳造レシピと同じ（銅ブロック 64c、鉄ブロック 640c。`MintService.METALS`）。コインはその価値の一番少ない枚数（E-3）でインベントリに入れ、入らない分は足元に落とす（お釣りと同じ）。
+- 鋳造できる金属はレシピと同じ条件：`currency.allowMinting`、鉄はさらに `currency.allowIronMinting`（既定 OFF。E-2 のアイアンゴーレムトラップ対策）。使えない金属の行は「設定で無効」でボタンを押せない（結果コード `MINTING_DISABLED`）。
+- 鋳造所が無い市場の両替タブの右には「鋳造所のある村では、銅ブロック・鉄ブロックからレシピより多くのコインを鋳造できます」と出す。鋳造所の看板が壊れると鋳造できない（`NO_MINT`）。
+- 看板を右クリックすると「両替」タブが開く（`FacilityKind.tab`）。
+- 鋳造では発展度・評判は増えない。
+- パケットは `MintRequestC2S`・`MintResultS2C`（F-2）。サーバーは画面の市場ID・屋台までの距離・クリエイティブ・回数（1〜64）・鋳造所・設定・持っている数を確かめる。
 
 #### N-5. 建て方
 
@@ -1496,6 +1536,7 @@ MarketRegistry
 - 野外劇場（11×11、高さ 11）：手前に4段の客席（石の段と、背もたれのある階段の席。いちばん後ろが高い）、両端にランタン。奥に一段高い舞台（板材）と上る段、両脇の壁と柱、梁、赤い幕（背景）と両脇の垂れ幕、赤と黄色の飾り幕、段々の屋根、黄色の旗2つ、音符ブロック2つとジュークボックス、吊りランタン。両脇の通路から舞台の前に出られる。
 - 温泉（9×9）：竹の柵（雪原・タイガはトウヒ、ネザーは真紅、エンドは塀）と入り口、四隅に石灯籠。真ん中に楕円の湯船（高さ1の水）、まわりは見た目ごとの岩（苔むした丸石・安山岩など）で、ところどころ高い岩とランタン。底の真ん中にソウルサンド（泡が上がる）、ほかは光るブロックと滑らかな石を交互に（夜に光り、凍らない）。ベンチと鉢植えの竹。
 - 祭りの広場（11×11）：真ん中にやぐら（4本柱、紅白の幕、上の台と柵、小さな寄棟屋根、吊った鐘と音符ブロック、てっぺんにランタン）。まわりに踊りの輪（石畳の模様）とろうそくのケーキ4つ。四隅の柱の間に柵の綱を張り、提灯（ランタン）を吊るす。四隅に露店（縞の日よけ、カウンターに品物、樽）と色の違う旗。
+- 【v0.74】鋳造所（7×7、高さ 9）：銀行と同じ石造りの壁（角の柱・土台・鉄格子の窓・上の帯）。正面は柱2本のポーチで、扉の上に模様入りの銅（錆びない）、金床・水の入った大釜（ネザーは溶岩）・銅ブロック、吊りランタン。中は奥に火の付いた溶鉱炉2つと鍛冶台・チェスト（看板はその間）、横に樽と銅ブロック・砥石・大釜、天井と吊りランタン。屋根は寄棟（銀行の屋根の材料）で、右の溶鉱炉から屋根を抜ける煙突の上に焚き火（ネザーは魂の焚き火、エンドはエンドロッド）。
 - 港の場所（`SiteFinder`、データの `waterside`：陸に建つ列の数）：手前の列とその周りは今までと同じ条件（平らな地面）。奥の列（周りの1マスは見ない）は、地面の高さが床以下で、半分以上の列の下が水であること（水で無い列は床から4ブロック以内）。合わなければ「奥側が水の上にありません」。水が無いネザーなどでは建たない。
 
 **対象の次元**（`development.dimensions`、既定 `["minecraft:overworld"]`）：
@@ -1565,6 +1606,7 @@ MarketRegistry
 | `development.hotSpringQuitMultiplier` | 0.5 | 0〜1 | 【v0.51】温泉：辞める確率の倍率 |
 | `development.festivalIntervalDays` | 5 | 2〜100 | 【v0.51】祭りの広場：祭りの間隔（日） |
 | `development.festivalMultiplier` | 2.0 | 1〜10 | 【v0.51】祭りの広場：祭りの日の評判と発展度の倍率 |
+| `development.mintValueMultiplier` | 1.5 | 1〜10 | 【v0.74】鋳造所：鋳造したコインの価値の倍率（レシピの価値に掛ける） |
 | `development.reputationPerPoint` | 0.03 | 0〜10 | 寄付した発展度 1 あたりに上がる評判のポイント（M章） |
 
 - `levelBonusThresholds` の数がボーナスの上限になる（既定は2つなので最大 +2）。合計のレベルは 5 で頭打ち。
@@ -1577,6 +1619,7 @@ MarketRegistry
 3. **段階 c**（v0.39 で実装）：村の種類ごとの見た目（5種類 × 4建物）と、ネザー・エンド用の見た目（`development.dimensions` に足した時に使う。宿屋にベッドなし）。計 7 種類 × 4 建物。
 4. **娯楽施設**（v0.50 で実装）：噴水広場・公園（N-4・N-5）。7 種類の見た目 × 6 建物。
 5. **建物8種の追加**（v0.51 で実装）：時計塔・見張り塔・酒場・屋根つき市場・港・野外劇場・温泉・祭りの広場。7 種類の見た目 × 14 建物。
+6. **鋳造所**（v0.74 で実装）：両替タブでの鋳造。7 種類の見た目 × 15 建物。
 
 #### N-9. 決めたこと（Q57）
 
@@ -1584,7 +1627,7 @@ v0.36 で残していた点は v0.36.1 ですべて決めた（N-1 の「細部�
 
 #### N-10. 実装の詳細（v0.38）
 
-- **建物の定義**（データパック `ak_trade_expansion/facility/<id>.json`、`FacilityDefinition`）：`kind`（`quest_hall`／`warehouse`／`inn`／`bank`、v0.50 から `fountain`／`park`、v0.51 から `clock_tower`／`watchtower`／`tavern`／`market_hall`／`harbor`／`theater`／`hot_spring`／`festival`）・【v0.51】`waterside`（省略可。水辺の建物の、陸に建つ手前の列の数）・`order`（タブの並び）・`icon`・`cost`・`structure`（構造物の名前）・`wanted`（`item` か `tag`、`count`、`value`）。同じ種類が複数あれば `order` が小さい1つだけ使う。ほしい品の発展度は、その品が商品（取引単位1・付加情報なし）ならその市場の基準価格 B、そうでなければ（タグを含む）`value` を使う。同梱：依頼所（板材のタグ・紙・本）、倉庫（原木のタグ・丸石・チェスト）、宿屋（原木のタグ・羊毛のタグ・ガラス）、銀行（石レンガ・金インゴット・ガラス）、【v0.50】噴水広場（石レンガ・ラピスラズリ・ランタン）、公園（苗木・小さな花・原木のタグ）。
+- **建物の定義**（データパック `ak_trade_expansion/facility/<id>.json`、`FacilityDefinition`）：`kind`（`quest_hall`／`warehouse`／`inn`／`bank`、v0.50 から `fountain`／`park`、v0.51 から `clock_tower`／`watchtower`／`tavern`／`market_hall`／`harbor`／`theater`／`hot_spring`／`festival`、v0.74 から `mint`）・【v0.51】`waterside`（省略可。水辺の建物の、陸に建つ手前の列の数）・`order`（タブの並び）・`icon`・`cost`・`structure`（構造物の名前）・`wanted`（`item` か `tag`、`count`、`value`）。同じ種類が複数あれば `order` が小さい1つだけ使う。ほしい品の発展度は、その品が商品（取引単位1・付加情報なし）ならその市場の基準価格 B、そうでなければ（タグを含む）`value` を使う。同梱：依頼所（板材のタグ・紙・本）、倉庫（原木のタグ・丸石・チェスト）、宿屋（原木のタグ・羊毛のタグ・ガラス）、銀行（石レンガ・金インゴット・ガラス）、【v0.50】噴水広場（石レンガ・ラピスラズリ・ランタン）、公園（苗木・小さな花・原木のタグ）。
 - **構造物**：`data/ak_trade_expansion/structure/facility/<見た目>/<structure>.nbt`。北向き（`z = 0` が正面、扉は `x = 幅 ÷ 2`。v0.48.6 から `z = 0` はポーチ・玄関で、扉のある壁は `z = 1`）、`y = 0` が床。中に `facility_sign`（built=true）を1つ置く。見た目のフォルダが無ければ `plains`。見た目は市場の中心のバイオームの村の種類（`VillagerType.BY_BIOME`。plains／desert／savanna／snowy／taiga 以外は plains。【v0.72】雪原のバイオームの村人の種類は `snow` なので `snowy` に読み替える）、ネザーは `nether`、エンドは `end`。`tools/structures/genfacility.js` で作る。【v0.39】見た目ごとの材料：平原（丸石の床・オークの柱と壁・トウヒの屋根）、砂漠（砂岩）、サバンナ（アカシアと粗い土・橙色のテラコッタの屋根）、雪原（雪ブロックの壁・トウヒ）、タイガ（トウヒ・丸石・ダークオークの屋根）、ネザー（真紅の木材・ブラックストーン・ネザーレンガの屋根・魂のランタン）、エンド（プルプァ・エンドストーンレンガ）。銀行はどの見た目でも石系の材料（石レンガ・砂岩・テラコッタ・閃緑岩・苔むした石レンガなど）。ネザー・エンドの宿屋はベッドの代わりにカーペット。
 - **場所探し**（`SiteFinder`）：正面の真ん中を候補の点にし、杭（市場の `markers` の古い順。杭が消えていれば一覧から外す）→ 中心から 2 ブロックおきの点（`DevelopmentMath.siteOffsets`、近い順、最大 `siteSearchLimit` 点。半径は `Development.siteRadius(market)`＝`DevelopmentMath.siteRadius`）。各点で正面を中心向き・左右・反対の順に試す。地面は高さマップ（`MOTION_BLOCKING_NO_LEAVES`）から置き換えてよいブロックを下へたどった高さ。建物の列の地面はブロックタグ `ak_trade_expansion:facility_ground`（土・草ブロック・砂・石・テラコッタ・ネザーラック・エンドストーンなど。土の道・氷・液体は入らない。【v0.43】26.3 の `#minecraft:dirt` には草ブロックが入っていないので、土と草は `#minecraft:substrate_overworld`（土・泥・苔・草ブロック類）で指定する）。床の高さ＝建物の列の地面の一番高い所。周り1マスを含めた高さの差が 1 以下。床から屋根まで空気か置き換えてよいブロック（液体は不可）。ほかの建物（壊れたものを除く）と屋台から 1 マス以上離す。チャンクが読み込まれていない点は使わない。
 - **建設**（`FacilityBuilder`）：四隅に高さ3の足場、正面の真ん中に `facility_sign`（built=false）。杭は消す。完成はサーバーの 40 tick ごとの見回りで、期日を過ぎて建物の範囲のチャンクが読み込まれていれば行う：足場と建設中の看板を消し、その間に置かれたブロックはアイテムとして落とし、構造物を置き、床より低い列の下に床と同じブロックを1つ入れる。看板の座標を `core` に記録する。依頼所は次の画面で依頼の枠をすぐ埋める（依頼の入れ替えの時刻を戻す）。
@@ -2008,7 +2051,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ReputationMath.java        ✅ … 評判の減衰・レベル、値段の有利さを B と s の調整で表す（上限つき、M章、v0.29）
 │   ├─ InterestMath.java          ✅ … 預金の利息：毎日複利、上限の残高まで（E-7、v0.29.1）
 │   ├─ DistanceModel.java         ✅ … w(d), 新規市場の初期相場（C-1）
-│   ├─ PropagationMath.java       ✅ … 波及の式：ΔX × w(d) × link を X の範囲に収める（C-2、v0.62 で Propagation から切り出し）
+│   ├─ PropagationMath.java       ✅ … 波及の式：ΔX × w(d) × link を X の範囲に収める（C-2、v0.62 で Propagation から切り出し。v0.74 で交易路の重みの下限）
+│   ├─ RouteMath.java             ✅ … 交易路：道標をつないだ道・道が届く市場・交易路の組と数の上限・重みの下限（C-5、v0.74）
 │   ├─ SpatialHash.java           ✅ … 市場の空間インデックス（512ブロックのマス、半径内・一番近いもの。C-2 MarketIndex、v0.62）
 │   ├─ SettlementMath.java        ✅ … 新しい市場を作れるかのベッドと村人の数の判定（C-1 `newMarketRequires`、v0.62 で SettlementRule から切り出し）
 │   ├─ ProfileChoice.java         ✅ … 市場プロファイルの選び方：優先度の一番高いもの、同じなら重みで抽選（D-1、v0.62 で MarketProfiles から切り出し）
@@ -2047,6 +2091,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 ├─ currency/
 │   ├─ CoinType.java (enum)       ✅ … COPPER..NETHERITE、価値（比率から計算）
 │   ├─ ExchangeService.java       ✅ … 両替タブ（手数料の掛け方は A-4、E-3）
+│   ├─ MintService.java           ✅ … 鋳造所の鋳造（金属と価値、設定の確認、N-4、v0.74）
 │   ├─ WalletService.java         ✅ … 所持金（コイン＋財布）・支払い（財布→コイン）・受け取り（財布→コイン）・取り出し・拾ったコインの収納
 │   └─ StartingMoney.java         ✅ … 初回支給：ワールドに初めて入った時に一度だけ渡す（E-2、v0.31）
 ├─ market/
@@ -2055,7 +2100,8 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ MarketRegistry.java        ✅ … SavedData（Codec、schema 2）、屋台の割当・統合
 │   ├─ （MarketIndex）            ✅ … 空間インデックス（次元×512セル）。v0.62 で `MarketRegistry` の中に `core/SpatialHash` を次元ごとに持つ形で実装
 │   ├─ MarketFactory.java         ✅ … 新規市場の中身（プロファイル選択・レベル測定・商品の抽選・auto_add）、レベルアップ
-│   ├─ Propagation.java           ✅ … 波及処理
+│   ├─ Propagation.java           ✅ … 波及処理（v0.74 で交易路の相手を足す）
+│   ├─ TradeRoutes.java           ✅ … 交易路：道標の登録と削除・次元ごとの交易路・道標の説明（C-5、v0.74）
 │   ├─ Reputation.java            ✅ … 市場×プレイヤーの評判：ポイントの増減・レベル・効果・村人と商人への攻撃（M章、v0.29）
 │   ├─ MarketClock.java           ✅ … 回復の時計（`recovery.clock`＋時計のずれ、B-3）
 │   ├─ PlacementGuide.java        ✅ … 置き場所の案内（`/aktradeex where`・範囲のパーティクル・交易所を持った時の案内、C-1）
@@ -2113,6 +2159,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ MarketStallBlock.java      ✅ … 屋台の形・名札での名付け・名前付き交易所の設置（C-4）
 │   ├─ FacilitySignBlock.java     ✅ … 建物の看板（建設中／完成。右クリックで建物のタブを開く、N-4・N-5）
 │   ├─ ConstructionMarkerBlock.java ✅ … 建設予定地の杭（N-5）
+│   ├─ SignpostBlock.java         ✅ … 交易路の道標（置く・壊す・右クリック、C-5、v0.74）
 │   └─ MarketStallBlockEntity.java ✅ … market_id・origin、ExtendedMenuProvider、画面タイトル（市場名とレベル名、C-4）、紐付いた商人の UUID・商人を出す処理（A-5）
 ├─ menu/
 │   └─ MarketMenu.java            ✅ … プレイヤーインベントリと売却スロット（閉じたら返却）、stillValid で距離・存在チェック
@@ -2124,6 +2171,7 @@ src/main/java/com/akf/tradeexpansion/        ★共通（サーバー・クラ�
 │   ├─ ConfigSyncS2C.java         ✅ … クライアントに同期する設定（G章）
 │   ├─ AccountS2C.java / BankRequestC2S.java / WalletWithdrawC2S.java ✅ … 段階12
 │   ├─ ExchangeRequestC2S.java / ExchangeResultS2C.java ✅ … 両替（段階11）
+│   ├─ MintRequestC2S.java / MintResultS2C.java ✅ … 鋳造所の鋳造（N-4、v0.74）
 │   ├─ VillagerPricesS2C.java     ✅ … 村人の取引ごとの代金（14a）
 │   ├─ SellAllC2S.java（v0.32）/ BoardRequestC2S.java / BoardS2C.java / TradableItemsS2C.java・PriceLookupC2S.java・PriceLookupS2C.java（v0.47）/ QuestDeliverC2S.java / QuestAcceptC2S.java（v0.29）/ CargoDeliverC2S.java（v0.35）/ QuestResultS2C.java ✅ … 段階13。MarketDeltaS2C は作らない（Q19）。StaffRequestC2S.java・StaffS2C.java（v0.48、Q章）
 │   └─ DevelopmentRequestC2S.java / DevelopmentResultS2C.java ✅ … 「発展」タブ（N章、v0.37）
@@ -2190,7 +2238,7 @@ src/client/java/com/akf/tradeexpansion/client/   ★クライアント専用
 | クラス | 確かめること |
 |---|---|
 | `core/PriceModelTest` | 3章の数値、V のクランプ、回復と半減期、B-6 の往復、まとめ買い割引と安全上限、買取再開までの日数、消耗品の c と H |
-| `core/DistanceModelTest`・`PropagationMathTest`・`SpatialHashTest` | w(d)・新規市場の初期相場（C-1）、波及の式（C-2）、空間インデックスと全件走査の一致（C-2） |
+| `core/DistanceModelTest`・`PropagationMathTest`・`SpatialHashTest`・`RouteMathTest` | w(d)・新規市場の初期相場（C-1）、波及の式（C-2）、空間インデックスと全件走査の一致（C-2）、交易路の道・上限・重みの下限（C-5） |
 | `core/CoinMathTest`・`WalletMathTest`・`MintingCountTest`・`TradeUnitTest` | 支払い・お釣り（E-3）、財布（E-6）、鋳造の枚数（E-2）、取引単位（B-5） |
 | `core/MarketLevelTest`・`GoodsSelectorTest`・`ProfileChoiceTest`・`SettlementMathTest` | レベルと商品数（D-4）、商品の抽選と掘り出し物（D-1・D-5）、プロファイルの選び方（D-1）、新しい市場の条件（C-1） |
 | `core/QuestMathTest`・`ReputationMathTest`・`InterestMathTest`・`DevelopmentMathTest` | 依頼・不足品（J・K章）、評判（M章）、利息（E-7）、発展度・ボーナス・資材（N章） |
@@ -2283,14 +2331,14 @@ src/main/resources/
 │   ├─ sounds.json                                         ✅（工事の音。バニラの音のファイルを使う、v0.45）
 │   └─ textures/item/*.png, textures/block/market_stall_{front,side,top}.png ✅（仮テクスチャ）
 └─ data/
-    ├─ ak_trade_expansion/recipe/market_stall.json, wallet.json, emerald_coin.json, copper_coin_minting.json, iron_coin_minting.json ✅（エメラルド貨は石切台、鋳造は独自形式。どちらも読み込み条件つき）
+    ├─ ak_trade_expansion/recipe/market_stall.json, wallet.json, signpost.json（v0.74、C-5）, emerald_coin.json, copper_coin_minting.json, iron_coin_minting.json ✅（エメラルド貨は石切台、鋳造は独自形式。どちらも読み込み条件つき）
     ├─ ak_trade_expansion/structure/village/<5種類>/market_stall.nbt ✅（村の屋台の建物、段階9。`tools/structures/genstall.js` で生成）
     ├─ ak_trade_expansion/structure/facility/<見た目>/<建物>.nbt ✅（村の発展の建物、v0.38。`tools/structures/genfacility.js` で生成）
     ├─ ak_trade_expansion/ak_trade_expansion/facility/*.json ✅（村の発展の建物の定義、14件。v0.38 で4件、v0.50・v0.51 で足した）
     ├─ ak_trade_expansion/advancement/*.json ✅（進捗 29個、R章。`tools/advancements/genadv.js` で生成）
     ├─ ak_trade_expansion/ak_trade_expansion/goods_group/*.json（11件）, rival_guild/*.json（4件） ✅（商品グループ O-1、商会 O-2、v0.46）
     ├─ ak_trade_expansion/tags/item/consumables.json, tags/entity_type/drops_coins.json, tags/block/facility_ground.json ✅（消耗品 B-3、コインを落とすモブ E-2、建物を建てられる地面 N-10）
-    ├─ ak_trade_expansion/loot_table/blocks/market_stall.json ✅
+    ├─ ak_trade_expansion/loot_table/blocks/market_stall.json, construction_marker.json, signpost.json（v0.74） ✅
     ├─ minecraft/tags/block/mineable/axe.json              ✅
     └─ ak_trade_expansion/ak_trade_expansion/goods/*.json（147件。146種とエメラルド貨。中身は別紙 2章）, market_profile/*.json（13件、別紙 3章） ✅
 ```
@@ -2567,3 +2615,4 @@ test {
 | v0.71 | 2026-11-15 | G章：設定画面の「追加の商品と消耗品」をタイトル画面から開くとゲームが落ちていた（アイテムのデータがワールドを読み込むまで無いため。設定画面のクライアントの自動テスト `layout_config_screen` で見つかった）。ワールドに入っている時だけ開けるようにし、説明文にも書いた |
 | v0.72 | 2026-11-20 | N-4：雪原のバイオームの村人の種類は `snow` で、建物の見た目の名前 `snowy` と一致せず、雪原の村の建物が平原の見た目になっていた（サーバーの自動テスト `snow_does_not_freeze` で見つかった）。`snow` を `snowy` に読み替える。エンドの公園のコーラスの木は、枝のある茎の上下がどちらも茎で、完成した時のブロックの更新で壊れていた（`buildings_stand_every_way`）。枝を幹のてっぺんから出す形にした。Q-3：運び屋を雇う設定の説明で、帰り荷の見込みをおすすめのすぐ後に出す（854×480 では一覧の高さで切れて見えなかった。`staff_backhaul_hint`）。D-2：`components` つきの商品の読み込みを自動テストで確かめた |
 | v0.73 | 2026-11-21 | 村の屋台の建物を村の家のプールに足す要素を `legacy` から `single` に変えた（構造物の空気も置き、床の上に草が残らない。チェックリスト 6-1 の自動テストで見つかった） |
+| v0.74 | 2026-11-22 | 村の建物「鋳造所」を足した（N-4・N-5・N-7・N-8・N-10、E-2）：両替タブで銅ブロック・鉄ブロック9個をレシピの 1.5 倍の価値のコインに鋳造できる（設定 `development.mintValueMultiplier`、パケット `MintRequestC2S`・`MintResultS2C`、結果コード `NO_MINT`・`MINTING_DISABLED`、F-2）。交易路（道標）を足した（C-5 新設、F-1 の `signposts`、G章の `route.*`）：道標を 64 ブロック以内ごとに並べて2つの市場をつなぐと、相場の波及の重みが少なくとも 0.5 になる（1つの市場に4本まで） |

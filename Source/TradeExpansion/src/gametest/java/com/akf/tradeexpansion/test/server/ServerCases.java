@@ -400,6 +400,7 @@ public final class ServerCases {
 		cases.addAll(ServerCommandCases.all());
 		cases.addAll(ServerDimensionCases.all());
 		cases.addAll(ServerRequestCases.all());
+		cases.addAll(ServerRouteCases.all());
 		return cases;
 	}
 

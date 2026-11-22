@@ -14,6 +14,8 @@
 // - v0.51: clock_tower, watchtower, market_hall, harbor (front rows on land, the rest over water), theater, hot_spring
 //   and festival have their own functions; the tavern is a house with its own interior.
 //   The sign stands in the front opening (fountain) or inside the gate (park).
+// - mint (7x7): a stone workshop with a porch (anvil, quenching cauldron, copper), blast furnaces at the back and a
+//   chimney through the hipped roof.
 // Styles share the shapes and only change the materials: one per village type (plains, desert, savanna, snowy, taiga)
 // and one each for the Nether and the End (used when development.dimensions includes them). Beds explode there, so the
 // inn of those styles has rugs instead (its effect is the villagers who arrive).
@@ -219,6 +221,7 @@ const facilities = {
 	theater: { w: 11, d: 11 },
 	hot_spring: { w: 9, d: 9 },
 	festival: { w: 11, d: 11 },
+	mint: { w: 7, d: 7, wall: 4 },
 };
 
 /** Stairs and slabs from the stem of their block ids: minecraft:spruce -> minecraft:spruce_stairs. */
@@ -1138,7 +1141,68 @@ function build(style, m, kind, spec) {
 		coreSign(c, 0, 'north');
 	}
 
-	const shapes = { bank, fountain, park, clock_tower: clockTower, watchtower, market_hall: marketHall, harbor, theater, hot_spring: hotSpring, festival };
+	/**
+	 * Mint (7x7): a stone workshop like the bank without the portico. The porch holds an anvil, a quenching cauldron and
+	 * stacked copper under two hanging lanterns; inside, blast furnaces and a smithing table stand at the back, barrels
+	 * and a grindstone along the sides, and a chimney rises from the right furnace through the hipped roof.
+	 */
+	function mint() {
+		const fz = 1;
+		const bz = D - 1;
+		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const inside = x > 0 && x < W - 1 && z > fz && z < bz;
+			set(x, 0, z, block(inside ? m.bankFloor : m.stoneBase));
+		}
+		// Porch: two columns and the cornice, waxed chiselled copper over the door.
+		for (const x of [0, W - 1]) for (let y = 1; y < wall; y++) set(x, y, 0, up(m.column));
+		for (let x = 0; x < W; x++) set(x, wall, 0, block(m.cornice));
+		set(mid, wall, 0, block('minecraft:waxed_chiseled_copper'));
+		set(1, wall - 1, 0, lantern(true));
+		set(W - 2, wall - 1, 0, lantern(true));
+		set(1, 1, 0, state('minecraft:anvil', { facing: 'east' }));
+		set(W - 2, 1, 0, m.fluid === 'minecraft:lava' ? block('minecraft:lava_cauldron') : state('minecraft:water_cauldron', { level: '3' }));
+		set(W - 3, 1, 0, block('minecraft:waxed_copper_block'));
+		// Walls: columns at the corners, a base course, barred windows, the cornice on top (as the bank).
+		const cell = (x, y, z, corner, win) => {
+			if (y === wall) return set(x, y, z, block(m.cornice));
+			if (corner) return set(x, y, z, up(m.column));
+			if (win && (y === 2 || y === 3)) return set(x, y, z, block('minecraft:iron_bars'));
+			set(x, y, z, block(y === 1 ? m.stoneBase : m.stone));
+		};
+		for (let y = 1; y <= wall; y++) {
+			for (let x = 0; x < W; x++) {
+				const corner = x === 0 || x === W - 1;
+				cell(x, y, fz, corner, x === 1 || x === W - 2);
+				cell(x, y, bz, corner, false);
+			}
+			for (let z = fz + 1; z < bz; z++) {
+				cell(0, y, z, false, z === 3);
+				cell(W - 1, y, z, false, z === 3);
+			}
+		}
+		door(mid, fz);
+		for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, wall, z, block(m.ceiling));
+		set(mid, wall - 1, 3, lantern(true));
+		hipRoof(0, 0, W - 1, D - 1, wall + 1, m.bankRoof, m.cornice);
+		// Back: two blast furnaces, a smithing table and the sign between them; barrels and a grindstone at the sides.
+		set(1, 1, D - 2, state('minecraft:blast_furnace', { facing: 'north', lit: 'true' }));
+		set(W - 2, 1, D - 2, state('minecraft:blast_furnace', { facing: 'north', lit: 'true' }));
+		set(mid - 1, 1, D - 2, block('minecraft:smithing_table'));
+		set(mid + 1, 1, D - 2, state('minecraft:chest', { facing: 'north' }));
+		set(1, 1, 2, state('minecraft:barrel', { facing: 'up' }));
+		set(1, 2, 2, block('minecraft:waxed_copper_block'));
+		set(W - 2, 1, 2, state('minecraft:grindstone', { face: 'floor', facing: 'north' }));
+		set(1, 1, 3, block('minecraft:cauldron'));
+		// Chimney from the right furnace up through the ceiling and the roof, a fire on top.
+		let roofY = wall;
+		for (let y = wall; y < 64; y++) if (get(W - 2, y, D - 2) !== undefined) roofY = y;
+		for (let y = 2; y <= roofY + 1; y++) set(W - 2, y, D - 2, block(m.chimney));
+		set(W - 2, roofY + 2, D - 2, m.chimneyTop.endsWith('campfire') ? state(m.chimneyTop, { lit: 'true', signal_fire: 'false' })
+				: state(m.chimneyTop, { facing: 'up' }));
+		sign();
+	}
+
+	const shapes = { bank, mint, fountain, park, clock_tower: clockTower, watchtower, market_hall: marketHall, harbor, theater, hot_spring: hotSpring, festival };
 	(shapes[kind] || house)();
 
 	// Air everywhere else in the box (the site is checked to be free up to the top).

@@ -419,6 +419,36 @@
     "built=true,facing=west,kind=festival": {
       "model": "ak_trade_expansion:block/facility_sign_festival",
       "y": 270
+    },
+    "built=false,facing=north,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_mint"
+    },
+    "built=false,facing=east,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_mint",
+      "y": 90
+    },
+    "built=false,facing=south,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_mint",
+      "y": 180
+    },
+    "built=false,facing=west,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=mint": {
+      "model": "ak_trade_expansion:block/facility_sign_mint",
+      "y": 270
     }
   }
 }

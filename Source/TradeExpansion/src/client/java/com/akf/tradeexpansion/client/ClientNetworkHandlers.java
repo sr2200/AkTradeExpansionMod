@@ -58,6 +58,11 @@ public final class ClientNetworkHandlers {
 				screen.onExchangeResult(payload);
 			}
 		});
+		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.MintResultS2C.TYPE, (payload, context) -> {
+			if (context.client().gui.screen() instanceof MarketScreen screen) {
+				screen.onMintResult(payload);
+			}
+		});
 		// Server settings needed for previews (design G); local settings come back on disconnect.
 		// Stage 14a (design H): coin prices of the villager trade screen; an empty array means coin trades are off.
 		ClientPlayNetworking.registerGlobalReceiver(com.akf.tradeexpansion.network.VillagerPricesS2C.TYPE, (payload, context) -> {

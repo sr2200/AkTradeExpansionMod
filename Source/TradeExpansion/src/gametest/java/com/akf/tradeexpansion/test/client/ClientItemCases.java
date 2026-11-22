@@ -164,6 +164,7 @@ final class ClientItemCases {
 
 			List<Item> expected = new ArrayList<>();
 			expected.add(ModBlocks.MARKET_STALL.asItem());
+			expected.add(ModBlocks.SIGNPOST.asItem());
 			for (CoinType type : CoinType.values()) expected.add(ModItems.coin(type));
 			expected.add(ModItems.EMERALD_COIN);
 			expected.add(ModItems.WALLET);

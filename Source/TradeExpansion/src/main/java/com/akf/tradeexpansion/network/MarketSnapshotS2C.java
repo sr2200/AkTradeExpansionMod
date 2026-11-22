@@ -53,10 +53,11 @@ import java.util.List;
  *                     are already those of that player
  * @param development  N (v0.36): development points and facilities of the market
  * @param staffTab     Q (v0.48.2): show the staff tab: staff is on, or the player still has employees (to take their money and goods back)
+ * @param mint         N-4: minting at the market's mint (exchange tab)
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
 		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation, DevelopmentView development,
-		List<TrendView> trends, boolean staffTab) implements CustomPacketPayload {
+		List<TrendView> trends, boolean staffTab, MintView mint) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -378,7 +379,36 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				rc.hardQuestLevel, rc.specialBonusLevel);
 		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
 				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime), TrendView.of(market),
-				TradeExpansionConfig.get().staff.enabled || registry.employees().stream().anyMatch(e -> e.owner().equals(uuid)));
+				TradeExpansionConfig.get().staff.enabled || registry.employees().stream().anyMatch(e -> e.owner().equals(uuid)), MintView.of(market));
+	}
+
+	/**
+	 * N-4: the mint of the exchange tab: whether the market has a completed mint, and per metal of
+	 * {@code MintService.METALS} its block, the copper value of one minting (9 blocks) and whether it is allowed.
+	 */
+	public record MintView(boolean built, List<MintOption> options) {
+		public static final MintView NONE = new MintView(false, List.of());
+		static final StreamCodec<RegistryFriendlyByteBuf, MintView> CODEC = StreamCodec.composite(
+				ByteBufCodecs.BOOL, MintView::built,
+				MintOption.CODEC.apply(ByteBufCodecs.list()), MintView::options,
+				MintView::new);
+
+		static MintView of(Market market) {
+			if (!market.hasFacility(FacilityKind.MINT)) return NONE;
+			List<MintOption> options = new ArrayList<>();
+			for (com.akf.tradeexpansion.currency.MintService.Metal m : com.akf.tradeexpansion.currency.MintService.METALS) {
+				options.add(new MintOption(BuiltInRegistries.ITEM.getKey(m.block()), m.mintValue(), m.enabled()));
+			}
+			return new MintView(true, options);
+		}
+	}
+
+	public record MintOption(Identifier block, long value, boolean enabled) {
+		static final StreamCodec<RegistryFriendlyByteBuf, MintOption> CODEC = StreamCodec.composite(
+				Identifier.STREAM_CODEC, MintOption::block,
+				ByteBufCodecs.VAR_LONG, MintOption::value,
+				ByteBufCodecs.BOOL, MintOption::enabled,
+				MintOption::new);
 	}
 
 	/** N: points, contributors (top 5 and the player) of a market that develops. */
@@ -442,6 +472,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		DevelopmentView.CODEC.encode(buf, development);
 		TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
 		buf.writeBoolean(staffTab);
+		MintView.CODEC.encode(buf, mint);
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -459,8 +490,9 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		ReputationView reputation = ReputationView.CODEC.decode(buf);
 		DevelopmentView development = DevelopmentView.CODEC.decode(buf);
 		List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
+		boolean staffTab = buf.readBoolean();
 		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development, trends,
-				buf.readBoolean());
+				staffTab, MintView.CODEC.decode(buf));
 	}
 
 	@Override

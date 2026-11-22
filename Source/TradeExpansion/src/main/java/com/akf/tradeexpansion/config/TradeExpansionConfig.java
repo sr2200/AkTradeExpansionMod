@@ -50,6 +50,8 @@ public final class TradeExpansionConfig {
 	public Trend trend = new Trend();
 	/** Q (v0.48): hired staff (carriers and clerks). */
 	public Staff staff = new Staff();
+	/** C-5: trade routes between markets (signposts). */
+	public Route route = new Route();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -100,7 +102,7 @@ public final class TradeExpansionConfig {
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
 			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend,
-			Staff staff) {
+			Staff staff, Route route) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -113,7 +115,8 @@ public final class TradeExpansionConfig {
 				section("development", Development.CODEC, new Development()).forGetter(Extra::development),
 				section("rivals", Rivals.CODEC, new Rivals()).forGetter(Extra::rivals),
 				section("trend", Trend.CODEC, new Trend()).forGetter(Extra::trend),
-				section("staff", Staff.CODEC, new Staff()).forGetter(Extra::staff)
+				section("staff", Staff.CODEC, new Staff()).forGetter(Extra::staff),
+				section("route", Route.CODEC, new Route()).forGetter(Extra::route)
 		).apply(i, Extra::new));
 	}
 
@@ -132,9 +135,10 @@ public final class TradeExpansionConfig {
 		c.rivals = e.rivals();
 		c.trend = e.trend();
 		c.staff = e.staff();
+		c.route = e.route();
 		return c;
 	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend,
-			c.staff))).codec();
+			c.staff, c.route))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -288,6 +292,38 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("consumableMultiplier").orElse(d.consumableMultiplier).forGetter(c -> c.consumableMultiplier),
 					Codec.DOUBLE.fieldOf("consumableHalfLifeDays").orElse(d.consumableHalfLifeDays).forGetter(c -> c.consumableHalfLifeDays)
 			).apply(i, Recovery::new);
+		});
+	}
+
+	/** C-5: trade routes. Roads are chains of signposts; the ends must be within distance.mergeRadius of a market center. */
+	public static final class Route {
+		/** Trade routes on / off (off: signposts can still be placed, but connect nothing). */
+		public boolean enabled = true;
+		/** Two signposts this close (horizontal blocks) belong to the same road. */
+		public int signpostSpacing = 64;
+		/** Markets on a route share at least this share of each other's price changes (C-2 weight). */
+		public double roadWeight = 0.5;
+		/** Routes one market can have (the shortest are kept). */
+		public int maxRoutesPerMarket = 4;
+
+		public Route() {
+		}
+
+		Route(boolean enabled, int signpostSpacing, double roadWeight, int maxRoutesPerMarket) {
+			this.enabled = enabled;
+			this.signpostSpacing = signpostSpacing;
+			this.roadWeight = roadWeight;
+			this.maxRoutesPerMarket = maxRoutesPerMarket;
+		}
+
+		static final Codec<Route> CODEC = RecordCodecBuilder.create(i -> {
+			Route d = new Route();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.INT.fieldOf("signpostSpacing").orElse(d.signpostSpacing).forGetter(c -> c.signpostSpacing),
+					Codec.DOUBLE.fieldOf("roadWeight").orElse(d.roadWeight).forGetter(c -> c.roadWeight),
+					Codec.INT.fieldOf("maxRoutesPerMarket").orElse(d.maxRoutesPerMarket).forGetter(c -> c.maxRoutesPerMarket)
+			).apply(i, Route::new);
 		});
 	}
 
@@ -1240,6 +1276,8 @@ public final class TradeExpansionConfig {
 		public int festivalIntervalDays = 5;
 		/** v0.51 festival plaza: multiplier of reputation and development points on a festival day. */
 		public double festivalMultiplier = 2.0;
+		/** Mint: coins minted there are worth this many times the minting recipe (E-2). */
+		public double mintValueMultiplier = 1.5;
 
 		public Development() {
 		}
@@ -1310,7 +1348,7 @@ public final class TradeExpansionConfig {
 		private record Buildings(double clockTowerRecoveryMultiplier, double watchtowerAccidentMultiplier, double watchtowerRivalMultiplier,
 				double tavernBoardMultiplier, int marketHallExtraGoods, double harborRewardMultiplier, double harborTravelMultiplier,
 				double theaterTrendMultiplier, double hotSpringRestMultiplier, double hotSpringQuitMultiplier, int festivalIntervalDays,
-				double festivalMultiplier) {
+				double festivalMultiplier, double mintValueMultiplier) {
 			static final MapCodec<Buildings> CODEC = RecordCodecBuilder.mapCodec(i -> {
 				Development d = new Development();
 				return i.group(
@@ -1325,7 +1363,8 @@ public final class TradeExpansionConfig {
 						Codec.DOUBLE.fieldOf("hotSpringRestMultiplier").orElse(d.hotSpringRestMultiplier).forGetter(Buildings::hotSpringRestMultiplier),
 						Codec.DOUBLE.fieldOf("hotSpringQuitMultiplier").orElse(d.hotSpringQuitMultiplier).forGetter(Buildings::hotSpringQuitMultiplier),
 						Codec.INT.fieldOf("festivalIntervalDays").orElse(d.festivalIntervalDays).forGetter(Buildings::festivalIntervalDays),
-						Codec.DOUBLE.fieldOf("festivalMultiplier").orElse(d.festivalMultiplier).forGetter(Buildings::festivalMultiplier)
+						Codec.DOUBLE.fieldOf("festivalMultiplier").orElse(d.festivalMultiplier).forGetter(Buildings::festivalMultiplier),
+						Codec.DOUBLE.fieldOf("mintValueMultiplier").orElse(d.mintValueMultiplier).forGetter(Buildings::mintValueMultiplier)
 				).apply(i, Buildings::new);
 			});
 		}
@@ -1370,10 +1409,12 @@ public final class TradeExpansionConfig {
 			c.hotSpringQuitMultiplier = b.hotSpringQuitMultiplier();
 			c.festivalIntervalDays = b.festivalIntervalDays();
 			c.festivalMultiplier = b.festivalMultiplier();
+			c.mintValueMultiplier = b.mintValueMultiplier();
 			return c;
 		}, c -> Pair.of(c, new Buildings(c.clockTowerRecoveryMultiplier, c.watchtowerAccidentMultiplier, c.watchtowerRivalMultiplier,
 				c.tavernBoardMultiplier, c.marketHallExtraGoods, c.harborRewardMultiplier, c.harborTravelMultiplier, c.theaterTrendMultiplier,
-				c.hotSpringRestMultiplier, c.hotSpringQuitMultiplier, c.festivalIntervalDays, c.festivalMultiplier))).codec();
+				c.hotSpringRestMultiplier, c.hotSpringQuitMultiplier, c.festivalIntervalDays, c.festivalMultiplier,
+				c.mintValueMultiplier))).codec();
 
 		public int[] levelBonusThresholdArray() {
 			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();

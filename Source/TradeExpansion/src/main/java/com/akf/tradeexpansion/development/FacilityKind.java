@@ -32,7 +32,9 @@ public enum FacilityKind implements StringRepresentable {
 	/** v0.51: carriers hired here rest less after an accident and quit less often (Q). */
 	HOT_SPRING("hot_spring"),
 	/** v0.51: every few days a festival day with more reputation and development points. */
-	FESTIVAL("festival");
+	FESTIVAL("festival"),
+	/** Mint: copper and iron blocks are minted into more coins than by the recipe, on the exchange tab (E-2). */
+	MINT("mint");
 
 	public static final Codec<FacilityKind> CODEC = StringRepresentable.fromEnum(FacilityKind::values);
 
@@ -52,6 +54,7 @@ public enum FacilityKind implements StringRepresentable {
 		return switch (this) {
 			case QUEST_HALL -> "quest";
 			case BANK -> "bank";
+			case MINT -> "exchange";
 			default -> "town";
 		};
 	}

@@ -10,7 +10,7 @@ rem   autotest.bat minimal  the client without Mod Menu and YACL only (checklist
 rem   autotest.bat variants the clients with other mods left out only: without Mod Menu and YACL, Mod Menu without
 rem                         YACL (1-6) and YACL without Mod Menu (1-7)
 rem   autotest.bat mods     the clients with JEI, REI or JourneyMap only (checklist 25, 20-3, 20-5, 30-1)
-rem   autotest.bat looks    pictures of every building in every look only (98 pictures for a person to look at,
+rem   autotest.bat looks    pictures of every building in every look only (105 pictures for a person to look at,
 rem                         about 5 minutes; not part of the full run)
 rem   Then records the results in docs\release\ingame-checklist.md and docs\release\autotest-report.md (needs node).
 rem   Other arguments go to Gradle, e.g. autotest.bat server --offline

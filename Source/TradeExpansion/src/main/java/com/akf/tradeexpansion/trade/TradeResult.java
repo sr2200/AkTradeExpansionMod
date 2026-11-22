@@ -52,7 +52,11 @@ public enum TradeResult {
 	/** Q: the carrier is on the way; it can be dismissed or have its goods taken back only at its home market. */
 	STAFF_AWAY,
 	/** Q: the action needs the employee's home market. */
-	STAFF_NOT_HOME;
+	STAFF_NOT_HOME,
+	/** N-4: minting needs a completed mint at the market. */
+	NO_MINT,
+	/** N-4 / E-2: minting that metal is off (currency.allowMinting / allowIronMinting). */
+	MINTING_DISABLED;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

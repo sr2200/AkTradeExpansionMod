@@ -45,4 +45,13 @@ class PropagationMathTest {
 		assertEquals(2000, odd.reach());
 		assertTrue(PropagationMath.reaches(1500, odd));
 	}
+	/** C-5: markets on a trade route move by at least route.roadWeight, even past the far radius. */
+	@Test
+	void routesSpreadAtLeastTheRoadWeight() {
+		assertEquals(3 + 10 * 0.5, PropagationMath.spread(BREAD, 3, 10, 9999, FALLOFF, 1.0, 0.5), 1e-9);
+		assertEquals(5.0, PropagationMath.spread(BREAD, 0, 5, 100, FALLOFF, 1.0, 0.5), 1e-9); // near: still the whole change
+		double w = DistanceModel.weight(500, 128, 1536, 2.0); // 0.541 > 0.5
+		assertEquals(2 + 10 * w, PropagationMath.spread(BREAD, 2, 10, 500, FALLOFF, 1.0, 0.5), 1e-9);
+		assertEquals(3.0, PropagationMath.spread(BREAD, 3, 10, 9999, FALLOFF, 1.0, 0.0), 1e-9);
+	}
 }

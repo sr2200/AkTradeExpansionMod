@@ -40,6 +40,10 @@ public final class ConfigValidator {
 		d.farRadius = clamp("distance.farRadius", d.farRadius, d.nearRadius + 1, 100000);
 		d.falloffExponent = clamp("distance.falloffExponent", d.falloffExponent, 0.5, 5);
 		d.minNewMarketDistance = clamp("distance.minNewMarketDistance", d.minNewMarketDistance, 0, 10000);
+		TradeExpansionConfig.Route rt = c.route;
+		rt.signpostSpacing = clamp("route.signpostSpacing", rt.signpostSpacing, 16, 256);
+		rt.roadWeight = clamp("route.roadWeight", rt.roadWeight, 0, 1);
+		rt.maxRoutesPerMarket = clamp("route.maxRoutesPerMarket", rt.maxRoutesPerMarket, 0, 16);
 
 		TradeExpansionConfig.Market m = c.market;
 		m.minGoods = clamp("market.minGoods", m.minGoods, 1, 100);
@@ -204,6 +208,7 @@ public final class ConfigValidator {
 		dv.hotSpringQuitMultiplier = clamp("development.hotSpringQuitMultiplier", dv.hotSpringQuitMultiplier, 0, 1);
 		dv.festivalIntervalDays = clamp("development.festivalIntervalDays", dv.festivalIntervalDays, 2, 100);
 		dv.festivalMultiplier = clamp("development.festivalMultiplier", dv.festivalMultiplier, 1, 10);
+		dv.mintValueMultiplier = clamp("development.mintValueMultiplier", dv.mintValueMultiplier, 1, 10);
 		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
 		dv.materialCountMultiplier = clamp("development.materialCountMultiplier", dv.materialCountMultiplier, 0.1, 100);
 

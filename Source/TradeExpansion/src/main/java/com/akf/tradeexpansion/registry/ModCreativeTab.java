@@ -23,6 +23,7 @@ public final class ModCreativeTab {
 				.icon(() -> new ItemStack(ModItems.GOLD_COIN))
 				.displayItems((parameters, output) -> {
 					output.accept(ModBlocks.MARKET_STALL);
+					output.accept(ModBlocks.SIGNPOST);
 					for (CoinType type : CoinType.values()) {
 						output.accept(ModItems.coin(type));
 					}

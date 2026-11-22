@@ -92,4 +92,20 @@ public final class DevelopmentMath {
 		long offset = Math.floorMod(marketId * 7L + 3, interval);
 		return (int) Math.floorMod(offset - day, interval);
 	}
+	/** Blocks one minting at the mint takes (the same 3×3 as the minting recipe, E-2). */
+	public static final int MINT_BATCH = 9;
+
+	/**
+	 * N-4 mint: copper value of {@code batches} mintings of {@code recipeValue} each (the recipe's value of 9 blocks,
+	 * E-2) at the mint: the value × {@code multiplier} rounded down, per batch. Never negative.
+	 */
+	public static long mintValue(long recipeValue, double multiplier, int batches) {
+		if (recipeValue <= 0 || batches <= 0 || !(multiplier > 0)) return 0;
+		return (long) Math.floor(recipeValue * multiplier + 1e-9) * batches;
+	}
+
+	/** N-4 mint: whole mintings {@code held} blocks allow, at most {@code max}. */
+	public static int mintBatches(long held, int max) {
+		return (int) Math.max(0, Math.min(max, held / MINT_BATCH));
+	}
 }

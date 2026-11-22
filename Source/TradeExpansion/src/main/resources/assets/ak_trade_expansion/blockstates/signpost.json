@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "ak_trade_expansion:block/signpost"
+    },
+    "facing=east": {
+      "model": "ak_trade_expansion:block/signpost",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "ak_trade_expansion:block/signpost",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "ak_trade_expansion:block/signpost",
+      "y": 270
+    }
+  }
+}

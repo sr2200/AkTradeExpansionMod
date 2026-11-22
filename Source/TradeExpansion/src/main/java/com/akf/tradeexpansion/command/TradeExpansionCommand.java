@@ -291,6 +291,10 @@ public final class TradeExpansionCommand {
 		if (!market.trends().isEmpty()) {
 			source.sendSuccess(() -> Component.literal(" trends=" + market.trends()), false);
 		}
+		// C-5: trade routes
+		for (Component line : com.akf.tradeexpansion.market.TradeRoutes.marketLines(MarketRegistry.get(level.getServer()), market)) {
+			source.sendSuccess(() -> line, false);
+		}
 		market.goods().forEach((goodsId, state) -> {
 			GoodParams p = market.params(goodsId);
 			if (p == null) return;

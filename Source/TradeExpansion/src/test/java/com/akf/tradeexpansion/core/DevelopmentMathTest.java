@@ -99,4 +99,16 @@ class DevelopmentMathTest {
 		assertNotEquals(DevelopmentMath.festivalIn(1, 0, interval), DevelopmentMath.festivalIn(2, 0, interval));
 		assertTrue(DevelopmentMath.festivalIn(5, -3, 1) < 2); // interval at least 2
 	}
+	/** N-4 mint: the recipe's value of 9 blocks × the multiplier, per minting. */
+	@Test
+	void mintValue() {
+		assertEquals(96, DevelopmentMath.mintValue(64, 1.5, 1));
+		assertEquals(960 * 3, DevelopmentMath.mintValue(640, 1.5, 3));
+		assertEquals(80, DevelopmentMath.mintValue(64, 1.25, 1));
+		assertEquals(0, DevelopmentMath.mintValue(64, 1.5, 0));
+		assertEquals(0, DevelopmentMath.mintValue(0, 1.5, 2));
+		assertEquals(2, DevelopmentMath.mintBatches(26, 64));
+		assertEquals(64, DevelopmentMath.mintBatches(9 * 100, 64));
+		assertEquals(0, DevelopmentMath.mintBatches(8, 64));
+	}
 }

@@ -4,6 +4,7 @@ import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.block.ConstructionMarkerBlock;
 import com.akf.tradeexpansion.block.FacilitySignBlock;
 import com.akf.tradeexpansion.block.MarketStallBlock;
+import com.akf.tradeexpansion.block.SignpostBlock;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -45,6 +46,16 @@ public final class ModBlocks {
 					.sound(SoundType.WOOD)
 					.noOcclusion()
 					.pushReaction(PushReaction.POPPED)));
+
+	/** C-5: signpost of a trade route; cannot be pushed (its position is saved). */
+	public static final SignpostBlock SIGNPOST = register("signpost",
+			new SignpostBlock(BlockBehaviour.Properties.of()
+					.setId(blockKey("signpost"))
+					.mapColor(MapColor.WOOD)
+					.strength(1.5f)
+					.sound(SoundType.WOOD)
+					.noOcclusion()
+					.pushReaction(PushReaction.IMMOVEABLE)));
 
 	private ModBlocks() {
 	}
