@@ -1,0 +1,23 @@
+{
+  "kind": "school",
+  "order": 23,
+  "icon": "minecraft:bookshelf",
+  "cost": 3000,
+  "structure": "school",
+  "wanted": [
+    {
+      "item": "minecraft:bookshelf",
+      "count": 16,
+      "value": 12
+    },
+    {
+      "item": "minecraft:book",
+      "count": 16
+    },
+    {
+      "item": "minecraft:paper",
+      "count": 32,
+      "value": 2
+    }
+  ]
+}

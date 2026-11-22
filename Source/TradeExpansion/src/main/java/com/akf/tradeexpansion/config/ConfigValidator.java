@@ -215,6 +215,17 @@ public final class ConfigValidator {
 		dv.festivalIntervalDays = clamp("development.festivalIntervalDays", dv.festivalIntervalDays, 2, 100);
 		dv.festivalMultiplier = clamp("development.festivalMultiplier", dv.festivalMultiplier, 1, 10);
 		dv.mintValueMultiplier = clamp("development.mintValueMultiplier", dv.mintValueMultiplier, 1, 10);
+		dv.stationExtraRoutes = clamp("development.stationExtraRoutes", dv.stationExtraRoutes, 0, 8);
+		dv.stationRoadWeight = clamp("development.stationRoadWeight", dv.stationRoadWeight, 0, 1);
+		dv.appraiserExtraSpecials = clamp("development.appraiserExtraSpecials", dv.appraiserExtraSpecials, 0, 5);
+		dv.appraiserSpecialPriceMultiplier = clamp("development.appraiserSpecialPriceMultiplier", dv.appraiserSpecialPriceMultiplier, 0.5, 2);
+		dv.wholesalerExtraShortages = clamp("development.wholesalerExtraShortages", dv.wholesalerExtraShortages, 0, 5);
+		dv.wholesalerFulfillMultiplier = clamp("development.wholesalerFulfillMultiplier", dv.wholesalerFulfillMultiplier, 1, 10);
+		dv.guildHallClerkSpeedMultiplier = clamp("development.guildHallClerkSpeedMultiplier", dv.guildHallClerkSpeedMultiplier, 1, 5);
+		dv.guildHallClerkWageMultiplier = clamp("development.guildHallClerkWageMultiplier", dv.guildHallClerkWageMultiplier, 0, 1);
+		dv.chapelReputationDecayMultiplier = clamp("development.chapelReputationDecayMultiplier", dv.chapelReputationDecayMultiplier, 0, 1);
+		dv.townHallMaterialMultiplier = clamp("development.townHallMaterialMultiplier", dv.townHallMaterialMultiplier, 0.1, 1);
+		dv.workshopVillagerPriceMultiplier = clamp("development.workshopVillagerPriceMultiplier", dv.workshopVillagerPriceMultiplier, 0.1, 1);
 		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
 		dv.materialCountMultiplier = clamp("development.materialCountMultiplier", dv.materialCountMultiplier, 0.1, 100);
 

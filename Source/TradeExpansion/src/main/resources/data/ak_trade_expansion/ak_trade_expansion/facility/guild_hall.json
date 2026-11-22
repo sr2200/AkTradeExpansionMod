@@ -1,0 +1,22 @@
+{
+  "kind": "guild_hall",
+  "order": 19,
+  "icon": "minecraft:emerald_block",
+  "cost": 4000,
+  "structure": "guild_hall",
+  "wanted": [
+    {
+      "item": "minecraft:stone_bricks",
+      "count": 96,
+      "value": 2
+    },
+    {
+      "item": "minecraft:book",
+      "count": 16
+    },
+    {
+      "item": "minecraft:gold_ingot",
+      "count": 16
+    }
+  ]
+}

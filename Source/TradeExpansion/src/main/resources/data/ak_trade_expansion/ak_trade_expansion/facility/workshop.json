@@ -1,0 +1,24 @@
+{
+  "kind": "workshop",
+  "order": 22,
+  "icon": "minecraft:anvil",
+  "cost": 2500,
+  "structure": "workshop",
+  "wanted": [
+    {
+      "item": "minecraft:crafting_table",
+      "count": 4,
+      "value": 4
+    },
+    {
+      "item": "minecraft:furnace",
+      "count": 4,
+      "value": 8
+    },
+    {
+      "item": "minecraft:anvil",
+      "count": 1,
+      "value": 60
+    }
+  ]
+}

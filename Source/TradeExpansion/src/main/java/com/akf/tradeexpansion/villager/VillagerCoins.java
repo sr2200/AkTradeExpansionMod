@@ -128,9 +128,26 @@ public final class VillagerCoins {
 		long price = (long) emeralds * config.villager.emeraldPrice;
 		ItemStack result = offer.getResult();
 		Identifier goodsId = goodsOf(result);
-		if (goodsId == null) return price;
+		double workshop = workshop(player.level(), player.blockPosition()); // v0.79
+		if (goodsId == null) return discounted(price, workshop);
 		long definitionFloor = (long) Math.ceil(GoodsCatalog.get(goodsId).basePrice() * config.villager.minGoodsPriceMultiplier - 1e-9) * result.getCount();
-		return Math.max(price, Math.max(definitionFloor, marketFloor(player.level(), player.blockPosition(), goodsId, result.getCount())));
+		// The workshop lowers the emerald price and the definition floor, never below what the nearest market asks (案A).
+		return Math.max(discounted(Math.max(price, definitionFloor), workshop), marketFloor(player.level(), player.blockPosition(), goodsId, result.getCount()));
+	}
+
+	/** v0.79: the workshop's multiplier if a market within distance.mergeRadius of {@code pos} has one, else 1. */
+	public static double workshop(ServerLevel level, BlockPos pos) {
+		double radius = TradeExpansionConfig.get().distance.mergeRadius;
+		for (Market market : MarketRegistry.get(level.getServer()).within(level.dimension(), pos, radius)) {
+			if (market.horizontalDistanceTo(pos) <= radius && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.WORKSHOP)) {
+				return Math.clamp(TradeExpansionConfig.get().development.workshopVillagerPriceMultiplier, 0.1, 1.0);
+			}
+		}
+		return 1.0;
+	}
+
+	private static long discounted(long price, double multiplier) {
+		return multiplier >= 1.0 ? price : Math.max(1, (long) Math.ceil(price * multiplier - 1e-9));
 	}
 
 	/** The plain single-unit good a stack is, or {@code null} (enchanted / named items, maps, ... are not goods). */

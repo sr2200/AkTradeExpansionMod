@@ -96,6 +96,26 @@ class RouteMathTest {
 	}
 
 	@Test
+	void aStationRaisesTheLimitOfItsMarket() {
+		// v0.79: one road through three markets; market 1 in the middle keeps one route, with a station all of its routes.
+		List<RouteMath.Point> markets = List.of(market(1, 0, 0), market(2, 1000, 0), market(3, -1000, 0));
+		List<RouteMath.Point> posts = line(-1000, 1000, 50);
+		var plain = RouteMath.routes(posts, markets, 64, 64, id -> 1);
+		assertEquals(1, plain.partners(1).size());
+		var station = RouteMath.routes(posts, markets, 64, 64, id -> id == 1 ? 3 : 1);
+		assertEquals(List.of(2L, 3L), station.partners(1).stream().sorted().toList());
+		assertTrue(station.partners(2).size() <= 1 && station.partners(3).size() <= 1);
+	}
+
+	@Test
+	void aStationStrengthensTheRoadWeight() {
+		assertEquals(0.5, RouteMath.roadWeight(0.5, false, 0.75), 1e-9);
+		assertEquals(0.75, RouteMath.roadWeight(0.5, true, 0.75), 1e-9);
+		assertEquals(0.9, RouteMath.roadWeight(0.9, true, 0.75), 1e-9); // never weaker than the road itself
+		assertEquals(1.0, RouteMath.roadWeight(0.5, true, 2.0), 1e-9);
+	}
+
+	@Test
 	void routeWeightIsAtLeastTheRoadWeight() {
 		assertEquals(0.5, RouteMath.routeWeight(0.0, 0.5), 1e-9);
 		assertEquals(0.8, RouteMath.routeWeight(0.8, 0.5), 1e-9);

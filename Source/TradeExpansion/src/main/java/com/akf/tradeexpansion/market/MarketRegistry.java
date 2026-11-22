@@ -202,6 +202,11 @@ public final class MarketRegistry extends SavedData {
 		return true;
 	}
 
+	/** v0.79: the routes of the dimension are worked out again on next use (a station was completed or destroyed). */
+	public void invalidateRoutes(ResourceKey<Level> dimension) {
+		routes.remove(dimension);
+	}
+
 	/** C-5: the trade routes of the dimension (worked out again after signposts, markets or the settings change). */
 	public TradeRoutes.Cached routes(ResourceKey<Level> dimension) {
 		TradeRoutes.Cached cached = routes.get(dimension);

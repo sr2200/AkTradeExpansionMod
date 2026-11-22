@@ -519,7 +519,7 @@ final class ServerFacilityCases {
 	}
 
 	/** {@link ServerChapterCases#markets} with the large floor of {@link ServerDevelopmentCases#town} around the first market. */
-	private static void townMarkets(ServerCtx ctx, int[] offsets, ServerChapterCases.MarketsBody body) {
+	static void townMarkets(ServerCtx ctx, int[] offsets, ServerChapterCases.MarketsBody body) {
 		for (int dx = -24; dx <= 24; dx += 24) {
 			for (int dz = -24; dz <= 24; dz += 24) {
 				if (dx != 0 || dz != 0) ctx.floor(ctx.center().offset(dx, 0, dz));
@@ -536,7 +536,12 @@ final class ServerFacilityCases {
 		double before = Reputation.points(market, player.getUUID(), c.now());
 		long total = c.trade(player, market, good, true, 4);
 		that(c.lastTradeResult(player) == TradeResult.SUCCESS, "buying gave %s", c.lastTradeResult(player));
-		return (Reputation.points(market, player.getUUID(), c.now()) - before) / total;
+		double gain = (Reputation.points(market, player.getUUID(), c.now()) - before) / total;
+		// The goods bought go again: unstackable ones (beds) would fill the hotbar the stall is opened with.
+		net.minecraft.world.item.Item item = c.item(good);
+		var inv = player.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) if (inv.getItem(i).is(item)) inv.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+		return gain;
 	}
 
 	/** A building site stake at {@code pos} whose front faces {@code facing} (the player looks the other way). */

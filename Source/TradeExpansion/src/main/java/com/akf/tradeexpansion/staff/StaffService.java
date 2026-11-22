@@ -106,8 +106,21 @@ public final class StaffService {
 
 	// ---- the work ----
 
-	private static long wage(Employee e) {
-		return e.role == Employee.Role.CARRIER ? config().carrierWagePerDay : config().clerkWagePerDay;
+	private static long wage(Employee e, Market home) {
+		return e.role == Employee.Role.CARRIER ? config().carrierWagePerDay : clerkWage(home);
+	}
+
+	/** Daily wage of a clerk at {@code home}; v0.79: lower at a market with a guild hall. */
+	public static long clerkWage(Market home) {
+		long wage = config().clerkWagePerDay;
+		if (!has(home, FacilityKind.GUILD_HALL)) return wage;
+		return Math.round(wage * Math.clamp(TradeExpansionConfig.get().development.guildHallClerkWageMultiplier, 0.0, 1.0));
+	}
+
+	/** v0.79: how much a clerk's sale of one unit moves X at {@code home} (1, less with a guild hall: it sells more). */
+	public static double clerkImpact(Market home) {
+		if (!has(home, FacilityKind.GUILD_HALL)) return 1.0;
+		return 1.0 / Math.max(1.0, TradeExpansionConfig.get().development.guildHallClerkSpeedMultiplier);
 	}
 
 	/** Working (and paid): not quit, a carrier not resting at home on purpose, a clerk with goods and not paused. */
@@ -134,9 +147,9 @@ public final class StaffService {
 			setStatus(server, e, e.role == Employee.Role.CLERK && e.stock <= 0 && !e.paused ? Employee.Status.SOLD_OUT : Employee.Status.PAUSED, now, changes);
 			return;
 		}
-		if (!payWages(e, now, changes)) {
+		if (!payWages(e, home, now, changes)) {
 			if (e.status != Employee.Status.UNPAID) {
-				log(e, now, "unpaid", null, -1, wage(e));
+				log(e, now, "unpaid", null, -1, wage(e, home));
 				notify(server, e, describe(registry, e, e.log.getLast()));
 			}
 			setStatus(server, e, Employee.Status.UNPAID, now, changes);
@@ -156,8 +169,8 @@ public final class StaffService {
 	 * Pays every wage due by {@code now} from the purse. When the purse is short the employee stops and the wage stays due
 	 * "now" (days without work are not paid). @return all wages paid
 	 */
-	private static boolean payWages(Employee e, long now, Changes changes) {
-		long wage = wage(e);
+	private static boolean payWages(Employee e, Market home, long now, Changes changes) {
+		long wage = wage(e, home);
 		if (wage <= 0) {
 			if (e.wageDue <= now) e.wageDue = now + PriceModel.TICKS_PER_DAY;
 			return true;
@@ -561,12 +574,24 @@ public final class StaffService {
 		GoodParams p = market.params(e.goods);
 		int max = Math.min(maxUnits, PriceModel.sellCapacity(p, state));
 		if (max <= 0) return Deal.none(Employee.Status.WAIT_SELL);
-		int n = StaffMath.sellableWithin(p, state.pressure(), max, e.sellLimit);
-		if (n <= 0) return Deal.none(Employee.Status.WAIT_SELL);
-		long total = PriceModel.sumSell(p, state.pressure(), n);
-		PriceModel.applySell(p, state, n);
+		double impact = e.role == Employee.Role.CLERK ? clerkImpact(market) : 1.0;
+		int n;
+		long total;
+		if (impact < 1.0) { // v0.79 guild hall: each unit moves the price less, so more sell before the lowest price
+			StaffMath.SellPlan plan = StaffMath.planSell(p, state.pressure(), max, e.sellLimit, impact);
+			n = plan.units();
+			total = plan.total();
+			if (n <= 0) return Deal.none(Employee.Status.WAIT_SELL);
+			state.setPressure(p.clampPressure(state.pressure() + n * impact));
+			state.setStock(state.stock() + n);
+		} else {
+			n = StaffMath.sellableWithin(p, state.pressure(), max, e.sellLimit);
+			if (n <= 0) return Deal.none(Employee.Status.WAIT_SELL);
+			total = PriceModel.sumSell(p, state.pressure(), n);
+			PriceModel.applySell(p, state, n);
+		}
 		state.setLastTradeGameTime(now);
-		traded(registry, market, e.goods, n, now, changes);
+		traded(registry, market, e.goods, n * impact, now, changes);
 		logTrade(e, "STAFF SELL", def, n, market, total);
 		return Deal.of(n, total, def.unit());
 	}
@@ -843,6 +868,14 @@ public final class StaffService {
 		if (action == StaffRequestC2S.Action.DESTINATIONS) {
 			destinations = destinations(market, candidates(server, registry, market), request.goods());
 			destinationGoods = Optional.of(request.goods());
+			if (market.hasFacility(FacilityKind.SCHOOL) && !Employee.AUTO.equals(request.goods())) { // v0.79: the school's outlook
+				ServerLevel level = server.getLevel(market.dimension());
+				Identifier goods = request.goods();
+				destinations = destinations.stream().map(d -> {
+					Market m = registry.get(d.id());
+					return m == null || level == null ? d : d.withOutlook(outlook(registry, level, m, goods, now));
+				}).toList();
+			}
 		}
 		List<Identifier> carrierGoods = hireable(player, market, true, now);
 		List<Identifier> clerkGoods = hireable(player, market, false, now);
@@ -920,9 +953,21 @@ public final class StaffService {
 			AutoPlan back = returns.getOrDefault(m.id(), AutoPlan.NONE);
 			list.add(new StaffS2C.Destination(m.id(), MarketNames.name(m), dx, dz, (int) Math.round(MarketRegistry.linkedDistance(here, m)), buyPrice,
 					price, units, profit, units > 0 ? plan.highestPrice() : Math.max(1, buyPrice), sellLimit, 1, (int) back.items(), back.kinds(),
-					back.profit(), harbor(here, m), watchtower(here, m)));
+					back.profit(), harbor(here, m), watchtower(here, m), Optional.empty()));
 		}
 		return list;
+	}
+
+	/** v0.79 school: what moves the price of {@code goodsId} at {@code m} and for how long (empty: nothing). */
+	private static Optional<StaffS2C.Outlook> outlook(MarketRegistry registry, ServerLevel level, Market m, Identifier goodsId, long now) {
+		double shortage = m.shortages().getOrDefault(goodsId, 1.0);
+		double trend = m.trendMultiplier(goodsId);
+		com.akf.tradeexpansion.rival.Campaign c = com.akf.tradeexpansion.rival.RivalService.strongest(registry, m, goodsId, now);
+		StaffS2C.Outlook o = new StaffS2C.Outlook(shortage, com.akf.tradeexpansion.network.MarketSnapshotS2C.OutlookView.shortageDays(m, now),
+				trend, com.akf.tradeexpansion.network.MarketSnapshotS2C.OutlookView.trendDays(level, m, now),
+				c == null ? Optional.empty() : Optional.of(c.guild()), c != null && c.buying(),
+				c == null ? 0 : c.daysLeft(com.akf.tradeexpansion.rival.RivalService.day(now)));
+		return o.empty() ? Optional.empty() : Optional.of(o);
 	}
 
 	/** v0.48.1: what an automatic carrier would take to each destination now (all goods together). */
@@ -939,7 +984,7 @@ public final class StaffService {
 			int dz = (int) Math.round(m.center().getZ() * sm - here.center().getZ() * sh);
 			list.add(new StaffS2C.Destination(m.id(), MarketNames.name(m), dx, dz, (int) Math.round(MarketRegistry.linkedDistance(here, m)), -1, 0,
 					(int) plan.items(), plan.profit(), 0, 0, plan.kinds(), (int) back.items(), back.kinds(), back.profit(), harbor(here, m),
-					watchtower(here, m)));
+					watchtower(here, m), Optional.empty()));
 		}
 		return list;
 	}
@@ -994,13 +1039,15 @@ public final class StaffService {
 		long limit = Math.max(1, (long) Math.floor(PriceModel.sellPrice(p, now.pressure()) * CLERK_LIMIT_SHARE));
 		GoodState s = new GoodState(now.priceFactor(), now.pressure(), now.stock(), 0);
 		int held = config().clerkCapacity;
+		double impact = clerkImpact(here); // v0.79 guild hall
 		int units = 0;
 		long revenue = 0;
 		double step = CLERK_CHECK_TICKS / (double) PriceModel.TICKS_PER_DAY;
 		for (double t = 0; t < 1 - 1e-9 && held > 0; t += step) {
-			StaffMath.SellPlan plan = StaffMath.planSell(p, s.pressure(), Math.min(held, PriceModel.sellCapacity(p, s)), limit, 1.0);
+			StaffMath.SellPlan plan = StaffMath.planSell(p, s.pressure(), Math.min(held, PriceModel.sellCapacity(p, s)), limit, impact);
 			if (plan.units() > 0) {
-				PriceModel.applySell(p, s, plan.units());
+				s.setPressure(p.clampPressure(s.pressure() + plan.units() * impact));
+				s.setStock(s.stock() + plan.units());
 				held -= plan.units();
 				units += plan.units();
 				revenue += plan.total();
@@ -1031,7 +1078,7 @@ public final class StaffService {
 		TradeExpansionConfig.Staff c = config();
 		boolean reputation = TradeExpansionConfig.get().reputation.enabled;
 		return new StaffS2C.Info(c.enabled, c.maxPerPlayer, c.minReputationLevel, Reputation.level(market, player.getUUID(), now), reputation,
-				c.carrierHireFee, c.clerkHireFee, c.carrierWagePerDay, c.clerkWagePerDay, c.carrierCapacity, c.clerkCapacity, c.carrierBlocksPerDay,
+				c.carrierHireFee, c.clerkHireFee, c.carrierWagePerDay, clerkWage(market), c.carrierCapacity, c.clerkCapacity, c.carrierBlocksPerDay,
 				c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax, c.quitChance, c.carrierMaxWaitDays, c.carrierMaxDistance,
 				c.carrierCommission, c.carrierBackhaul);
 	}
@@ -1053,7 +1100,7 @@ public final class StaffService {
 					atHome(e, here, home), e.goods, item, def == null ? 1 : def.unit(), e.destination,
 					destination == null ? (e.destination < 0 ? Component.empty() : marketName(registry, e.destination)) : MarketNames.name(destination),
 					distance, e.quantity, e.buyLimit, e.sellLimit, e.purse, e.auto() ? (int) cargoItems(e) : e.stock, e.phase.ordinal(), e.paused,
-					e.status.ordinal(), e.phaseStart, e.nextTime, wage(e), e.earned, e.spent, e.wages, e.lost, e.trips, e.sold, log, e.auto(), e.cargo.size(),
+					e.status.ordinal(), e.phaseStart, e.nextTime, wage(e, home), e.earned, e.spent, e.wages, e.lost, e.trips, e.sold, log, e.auto(), e.cargo.size(),
 					(int) lineItems(e.returnCargo), harbor(home, destination), watchtower(home, destination)));
 		}
 		return views;

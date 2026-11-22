@@ -643,11 +643,17 @@ public final class Market {
 		if (state == null || def == null) return null;
 		double multiplier = profileMultiplier(goodsId, def) * shortages.getOrDefault(goodsId, 1.0); // K: shortage raises B
 		multiplier *= trendMultiplier(goodsId); // P: trends
-		if (specials.contains(goodsId)) multiplier *= TradeExpansionConfig.get().market.specialPriceMultiplier; // D-5
+		if (specials.contains(goodsId)) multiplier *= specialPriceMultiplier(); // D-5
 		GoodParams params = def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
 		if (hasFacility(FacilityKind.WAREHOUSE)) params = warehouse(params);
 		if (hasFacility(FacilityKind.CLOCK_TOWER)) params = clockTower(params);
 		return params;
+	}
+
+	/** D-5: multiplier of B for today's specials; v0.79: the appraiser's own (no surcharge by default). */
+	public double specialPriceMultiplier() {
+		TradeExpansionConfig c = TradeExpansionConfig.get();
+		return hasFacility(FacilityKind.APPRAISER) ? c.development.appraiserSpecialPriceMultiplier : c.market.specialPriceMultiplier;
 	}
 
 	/** v0.51: a clock tower shortens the recovery half-life H of every good. */

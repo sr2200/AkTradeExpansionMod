@@ -154,7 +154,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("sell_all_limits_and_other_player", List.of("18-4", "18-5"), null, true, ClientSellAllCases::limitsAndOtherPlayer));
 		cases.add(new ClientCase("goods_order", List.of("31-1"), null, true, ClientDisplayCases::goodsOrder));
 		cases.add(new ClientCase("town_tab", List.of("22-20", "22-21", "31-3"), null, true, ClientDisplayCases::townTab,
-				List.of("28-1", "29-1", "34-1", "34-2"), "噴水広場・公園を含む15種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る）"));
+				List.of("28-1", "29-1", "34-1", "34-2"), "噴水広場・公園を含む23種類の建物が出て、入りきらない時はホイールでスクロールでき、スクロールした後もクリックで正しい建物が選ばれること。行のツールチップに大きさ、選んだ建物の名前の右に大きさが出て、マウスで詳しい大きさが出ること（倉庫で。砂漠と平原の高さの違い・行の見え方は画像で見る）"));
 		cases.add(new ClientCase("exchange_tab", List.of("8-6"), null, true, ClientDisplayCases::exchange));
 		cases.add(new ClientCase("wallet_screen", List.of("7-4"), null, true, ClientDisplayCases::wallet));
 		cases.add(new ClientCase("wallet_offhand_and_limits", List.of("7-12"), null, true, ClientWindowCases::wallet));
@@ -330,7 +330,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 	/** The pictures of the buildings (runClientGameTestLooks; a person looks at them). */
 	private static List<ClientCase> looksCases() {
 		return List.of(new ClientCase("building_looks", List.of("22-50", "22-52", "22-53", "22-54", "22-55", "22-56", "28-2", "28-3", "28-4", "28-5", "28-6", "29-2", "29-14"),
-				"15種類の建物を7種類の見た目で、完成の時と同じく構造物を置いて、正面の斜め上から撮った画像（105枚、look_<見た目>_<建物>.png）があり、どの建物にも看板があること（材料と形の見た目・扉や窓や屋根の向き・水の張り方は画像で見る。向きは1つ。鐘を鳴らせる・寝られる・村人が来るは見ていない）",
+				"23種類の建物を7種類の見た目で、完成の時と同じく構造物を置いて、正面の斜め上から撮った画像（161枚、look_<見た目>_<建物>.png）があり、どの建物にも看板があること（材料と形の見た目・扉や窓や屋根の向き・水の張り方は画像で見る。向きは1つ。鐘を鳴らせる・寝られる・村人が来るは見ていない）",
 				true, ClientLookCases::buildings));
 	}
 

@@ -1397,11 +1397,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			if (view.shortageLeft() > 0) { // K-2 (v0.78)
 				lines.add(Component.translatable("screen.ak_trade_expansion.shortage.left", view.shortageLeft()).withStyle(net.minecraft.ChatFormatting.GRAY));
 			}
+			if (snapshot.outlook().school()) lines.add(outlookLine("shortage", snapshot.outlook().shortageDays())); // v0.79 school
 		}
 		for (MarketSnapshotS2C.TrendView t : view.trends()) lines.add(trendLine(t, true));
+		if (!view.trends().isEmpty() && snapshot.outlook().school()) lines.add(outlookLine("trend", snapshot.outlook().trendDays()));
 		view.rival().ifPresent(r -> lines.add(rivalLine(r.guild(), r.buying(), r.daysLeft())));
 		if (TradeExpansionConfig.get().client.showDebugTooltip) lines.addAll(debugLines(view));
 		return lines;
+	}
+
+	/** v0.79 school: "学舎の見立て：品不足はあと2日で入れ替わります". */
+	private static Component outlookLine(String what, int days) {
+		return Component.translatable("screen.ak_trade_expansion.outlook." + what, days).withColor(COLOR_GRAY);
 	}
 
 	/** "×1.22" */
@@ -2294,6 +2301,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			lines.add(Component.translatable("screen.ak_trade_expansion.trend.title"));
 			for (MarketSnapshotS2C.TrendView t : snapshot.trends()) lines.add(trendLine(t, false));
 			lines.add(Component.translatable("screen.ak_trade_expansion.trend.hint").withColor(COLOR_GRAY));
+			if (snapshot.outlook().school()) lines.add(outlookLine("trend", snapshot.outlook().trendDays())); // v0.79 school
 			g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 	}

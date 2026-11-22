@@ -54,10 +54,11 @@ import java.util.List;
  * @param development  N (v0.36): development points and facilities of the market
  * @param staffTab     Q (v0.48.2): show the staff tab: staff is on, or the player still has employees (to take their money and goods back)
  * @param mint         N-4: minting at the market's mint (exchange tab)
+ * @param outlook      v0.79: with a school, how long the shortages and trends of the market still last
  */
 public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, int level, List<GoodView> goods,
 		List<RequestView> requests, BulkDiscount bulkDiscount, ReputationView reputation, DevelopmentView development,
-		List<TrendView> trends, boolean staffTab, MintView mint) implements CustomPacketPayload {
+		List<TrendView> trends, boolean staffTab, MintView mint, OutlookView outlook) implements CustomPacketPayload {
 	public static final Type<MarketSnapshotS2C> TYPE = new Type<>(TradeExpansion.id("market_snapshot"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, MarketSnapshotS2C> CODEC = StreamCodec.ofMember(MarketSnapshotS2C::write, MarketSnapshotS2C::read);
 
@@ -390,7 +391,46 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				rc.hardQuestLevel, rc.specialBonusLevel);
 		return new MarketSnapshotS2C(market.id(), market.center(), gameTime, market.level(), views, requests,
 				TradeExpansionConfig.get().trade.bulkDiscount(), reputation, developmentView(market, player, gameTime), TrendView.of(market),
-				TradeExpansionConfig.get().staff.enabled || registry.employees().stream().anyMatch(e -> e.owner().equals(uuid)), MintView.of(market));
+				TradeExpansionConfig.get().staff.enabled || registry.employees().stream().anyMatch(e -> e.owner().equals(uuid)), MintView.of(market),
+				OutlookView.of(player.level(), market, gameTime));
+	}
+
+	/**
+	 * v0.79 school: days (rounded up, at least 1) until the market's shortages and trends change; {@code school} false
+	 * (and the days 0) when the market has no school.
+	 */
+	public record OutlookView(boolean school, int shortageDays, int trendDays) {
+		public static final OutlookView NONE = new OutlookView(false, 0, 0);
+		static final StreamCodec<RegistryFriendlyByteBuf, OutlookView> CODEC = StreamCodec.composite(
+				ByteBufCodecs.BOOL, OutlookView::school,
+				ByteBufCodecs.VAR_INT, OutlookView::shortageDays,
+				ByteBufCodecs.VAR_INT, OutlookView::trendDays,
+				OutlookView::new);
+
+		public static OutlookView of(net.minecraft.server.level.ServerLevel level, Market market, long now) {
+			if (!market.hasFacility(FacilityKind.SCHOOL)) return NONE;
+			return new OutlookView(true, shortageDays(market, now), trendDays(level, market, now));
+		}
+
+		/** Days until the shortages of {@code market} are rolled again. */
+		public static int shortageDays(Market market, long now) {
+			long length = com.akf.tradeexpansion.core.TrendMath.length(TradeExpansionConfig.get().demand.durationDays);
+			long end = (Math.floorDiv(now, length) + 1) * length; // QuestMath.period
+			return days(end - now);
+		}
+
+		/** Days until the trends of {@code market} are chosen again (each market's period is shifted, TrendService). */
+		public static int trendDays(net.minecraft.server.level.ServerLevel level, Market market, long now) {
+			double duration = TradeExpansionConfig.get().trend.durationDays;
+			long length = com.akf.tradeexpansion.core.TrendMath.length(duration);
+			long offset = com.akf.tradeexpansion.core.TrendMath.offset(com.akf.tradeexpansion.market.MarketFactory.seed(level, market.center()), duration);
+			long end = (Math.floorDiv(now + offset, length) + 1) * length - offset;
+			return days(end - now);
+		}
+
+		private static int days(long ticks) {
+			return (int) Math.max(1, Math.ceil(ticks / (double) com.akf.tradeexpansion.core.PriceModel.TICKS_PER_DAY - 1e-9));
+		}
 	}
 
 	/**
@@ -485,6 +525,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		TrendView.CODEC.apply(ByteBufCodecs.list()).encode(buf, trends);
 		buf.writeBoolean(staffTab);
 		MintView.CODEC.encode(buf, mint);
+		OutlookView.CODEC.encode(buf, outlook);
 	}
 
 	private static MarketSnapshotS2C read(RegistryFriendlyByteBuf buf) {
@@ -504,7 +545,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		List<TrendView> trends = TrendView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
 		boolean staffTab = buf.readBoolean();
 		return new MarketSnapshotS2C(marketId, center, gameTime, level, goods, requests, new BulkDiscount(tiers), reputation, development, trends,
-				staffTab, MintView.CODEC.decode(buf));
+				staffTab, MintView.CODEC.decode(buf), OutlookView.CODEC.decode(buf));
 	}
 
 	@Override

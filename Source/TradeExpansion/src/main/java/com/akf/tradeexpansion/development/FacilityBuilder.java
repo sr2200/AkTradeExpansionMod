@@ -110,7 +110,12 @@ public final class FacilityBuilder {
 	public static int required(Market market, Identifier id, FacilityDefinition.Wanted wanted) {
 		Facility existing = market.facilities().get(id);
 		boolean rebuild = existing != null && existing.state() == Facility.State.DESTROYED;
-		long full = DevelopmentMath.materialCount(wanted.count(), Development.config().materialCountMultiplier);
+		double multiplier = Development.config().materialCountMultiplier;
+		FacilityDefinition def = FacilityCatalog.get(id);
+		if (market.hasFacility(FacilityKind.TOWN_HALL) && (def == null || def.kind() != FacilityKind.TOWN_HALL)) {
+			multiplier *= Math.clamp(Development.config().townHallMaterialMultiplier, 0.1, 1.0); // v0.79: the town hall
+		}
+		long full = DevelopmentMath.materialCount(wanted.count(), multiplier);
 		return (int) Math.min(Integer.MAX_VALUE, DevelopmentMath.cost(full, rebuild, Development.config().rebuildCostRatio));
 	}
 
@@ -352,6 +357,7 @@ public final class FacilityBuilder {
 	/** Level bonus (N-3), saving and the screens of everyone looking at the market; nearby players are told. */
 	private static void changed(ServerLevel level, Market market, Component message) {
 		MarketRegistry registry = MarketRegistry.get(level.getServer());
+		registry.invalidateRoutes(market.dimension()); // v0.79: a station changes the routes
 		int resized = MarketFactory.resize(level, market, registry.linkedTo(level.dimension()));
 		registry.setDirty();
 		for (ServerPlayer player : level.players()) {

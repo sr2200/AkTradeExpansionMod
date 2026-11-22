@@ -3,6 +3,7 @@ package com.akf.tradeexpansion.market;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.DistanceModel;
 import com.akf.tradeexpansion.core.RouteMath;
+import com.akf.tradeexpansion.development.FacilityKind;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -29,10 +30,11 @@ public final class TradeRoutes {
 	}
 
 	/** The settings the routes depend on; a change of any works the routes out again. */
-	record Key(boolean enabled, int spacing, double reach, int max) {
+	record Key(boolean enabled, int spacing, double reach, int max, int stationExtra) {
 		static Key now() {
 			TradeExpansionConfig c = TradeExpansionConfig.get();
-			return new Key(c.route.enabled, c.route.signpostSpacing, c.distance.mergeRadius, c.route.maxRoutesPerMarket);
+			return new Key(c.route.enabled, c.route.signpostSpacing, c.distance.mergeRadius, c.route.maxRoutesPerMarket,
+					Math.max(0, c.development.stationExtraRoutes));
 		}
 	}
 
@@ -66,8 +68,13 @@ public final class TradeRoutes {
 			points.add(new RouteMath.Point(0, posts.get(i).getX(), posts.get(i).getZ()));
 		}
 		List<RouteMath.Point> centers = new ArrayList<>(markets.size());
-		for (Market m : markets) centers.add(new RouteMath.Point(m.id(), m.center().getX(), m.center().getZ()));
-		RouteMath.Result result = RouteMath.routes(points, centers, key.spacing(), key.reach(), key.enabled() ? key.max() : 0);
+		Set<Long> stations = new HashSet<>();
+		for (Market m : markets) {
+			centers.add(new RouteMath.Point(m.id(), m.center().getX(), m.center().getZ()));
+			if (m.hasFacility(FacilityKind.STATION)) stations.add(m.id()); // v0.79: a station allows more routes
+		}
+		RouteMath.Result result = RouteMath.routes(points, centers, key.spacing(), key.reach(),
+				id -> !key.enabled() ? 0 : key.max() + (stations.contains(id) ? key.stationExtra() : 0));
 		return new Cached(result, List.copyOf(posts), Map.copyOf(index), key);
 	}
 
@@ -87,6 +94,22 @@ public final class TradeRoutes {
 		return TradeExpansionConfig.get().route.roadWeight;
 	}
 
+	/** v0.79: the road weight between two markets on a route; a station at either end raises it (development.stationRoadWeight). */
+	public static double roadWeight(Market a, Market b) {
+		boolean station = a != null && a.hasFacility(FacilityKind.STATION) || b != null && b.hasFacility(FacilityKind.STATION);
+		return RouteMath.roadWeight(roadWeight(), station, TradeExpansionConfig.get().development.stationRoadWeight);
+	}
+
+	/** v0.79: routes {@code market} can have: route.maxRoutesPerMarket, more with a station. */
+	public static int maxRoutes(Market market) {
+		TradeExpansionConfig c = TradeExpansionConfig.get();
+		return c.route.maxRoutesPerMarket + (market != null && market.hasFacility(FacilityKind.STATION) ? Math.max(0, c.development.stationExtraRoutes) : 0);
+	}
+
+	private static double roadWeight(MarketRegistry registry, RouteMath.Route r) {
+		return roadWeight(registry.get(r.a()), registry.get(r.b()));
+	}
+
 	// ---- signpost blocks
 
 	/** A signpost was placed: record it and tell the player what it connects. */
@@ -100,7 +123,7 @@ public final class TradeRoutes {
 		for (RouteMath.Route r : after.result().routes()) {
 			if (before.contains(r)) continue;
 			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.route.opened", pair(registry, r),
-					percent(roadWeight())).withStyle(ChatFormatting.GREEN));
+					percent(roadWeight(registry, r))).withStyle(ChatFormatting.GREEN));
 			opened = true;
 		}
 		if (!opened) describe(player, level, pos);
@@ -147,13 +170,14 @@ public final class TradeRoutes {
 		boolean any = false;
 		for (RouteMath.Route r : cached.result().routes()) {
 			if (!markets.contains(r.a()) || !markets.contains(r.b())) continue;
-			lines.add(Component.translatable("message.ak_trade_expansion.route.route", pair(registry, r), percent(roadWeight()))
+			lines.add(Component.translatable("message.ak_trade_expansion.route.route", pair(registry, r), percent(roadWeight(registry, r)))
 					.withStyle(ChatFormatting.GREEN));
 			any = true;
 		}
 		for (RouteMath.Route r : cached.result().blocked()) {
 			if (!markets.contains(r.a()) || !markets.contains(r.b())) continue;
-			lines.add(Component.translatable("message.ak_trade_expansion.route.blocked", pair(registry, r), config.route.maxRoutesPerMarket)
+			lines.add(Component.translatable("message.ak_trade_expansion.route.blocked", pair(registry, r),
+					Math.min(maxRoutes(registry.get(r.a())), maxRoutes(registry.get(r.b()))))
 					.withStyle(ChatFormatting.RED));
 		}
 		if (!any) {

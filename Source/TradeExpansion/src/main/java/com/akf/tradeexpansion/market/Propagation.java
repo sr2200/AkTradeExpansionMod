@@ -39,7 +39,6 @@ public final class Propagation {
 			partners.add(m.id());
 			if (!candidates.contains(m)) candidates.add(m);
 		}
-		double roadWeight = TradeRoutes.roadWeight();
 		for (Market other : candidates) {
 			if (other == source) continue;
 			GoodState state = other.good(goodsId);
@@ -47,7 +46,7 @@ public final class Propagation {
 			if (state == null || params == null) continue;
 
 			double d = MarketRegistry.linkedDistance(source, other);
-			double minWeight = partners.contains(other.id()) ? roadWeight : 0;
+			double minWeight = partners.contains(other.id()) ? TradeRoutes.roadWeight(source, other) : 0; // v0.79: stations
 			if (!PropagationMath.reaches(d, falloff) && minWeight <= 0) continue;
 
 			other.refresh(gameTime);

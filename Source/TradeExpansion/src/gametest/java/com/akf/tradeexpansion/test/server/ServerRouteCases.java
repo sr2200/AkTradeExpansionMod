@@ -197,7 +197,7 @@ final class ServerRouteCases {
 	}
 
 	/** Sells {@code qty} of {@code good} at A; how far B's X moved. */
-	private static double sellAndMeasure(ServerCtx c, ServerPlayer player, Market a, Market b, Identifier good, int qty) {
+	static double sellAndMeasure(ServerCtx c, ServerPlayer player, Market a, Market b, Identifier good, int qty) {
 		MarketUpkeep.touch(c.level(), b);
 		double before = b.good(good).pressure();
 		ServerCases.giveItems(player, c.item(good), qty);

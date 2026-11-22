@@ -990,6 +990,7 @@ final class StaffTab {
 							d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice()))
 							.withStyle(ChatFormatting.GRAY));
 					lines.add(recommendLine(d, unit));
+					d.outlook().ifPresent(o -> lines.addAll(outlookLines(o))); // v0.79 school
 				}
 				Component back = returnLine(d);
 				if (back != null) lines.add(back);
@@ -1039,6 +1040,7 @@ final class StaffTab {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.prices", CoinItem.formatCopper(Math.max(0, d.buyPrice())),
 						d.sellPrice() < 0 ? Component.translatable("screen.ak_trade_expansion.not_buying").getString() : CoinItem.formatCopper(d.sellPrice())));
 				lines.add(recommendLine(d, unit(view)));
+				d.outlook().ifPresent(o -> lines.addAll(outlookLines(o))); // v0.79 school
 				if (back != null) lines.add(back);
 			}
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.how", quantity * unit(view), CoinItem.formatCopper(buyLimit),
@@ -1108,6 +1110,28 @@ final class StaffTab {
 		if (d.returnItems() <= 0 || d.returnProfit() <= 0) return null;
 		return Component.translatable("screen.ak_trade_expansion.staff.hint.return", d.returnItems(), d.returnKinds(), CoinItem.formatCopper(d.returnProfit()))
 				.withColor(COLOR_GREEN);
+	}
+
+	/**
+	 * v0.79 school: what moves the price at the destination and how long it lasts, e.g. "学舎の見立て：品不足 ×1.80（あと2日）",
+	 * so the player knows whether the price there will still be high when the carrier arrives.
+	 */
+	private static List<Component> outlookLines(StaffS2C.Outlook o) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.translatable("screen.ak_trade_expansion.staff.outlook").withColor(COLOR_GOLD));
+		if (o.shortage() != 1.0) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.staff.outlook.shortage", String.format(java.util.Locale.ROOT, "×%.2f", o.shortage()),
+					o.shortageDays()).withStyle(ChatFormatting.GRAY));
+		}
+		if (o.trend() != 1.0) {
+			lines.add(Component.translatable(o.trend() > 1 ? "screen.ak_trade_expansion.staff.outlook.trend_up" : "screen.ak_trade_expansion.staff.outlook.trend_down",
+					String.format(java.util.Locale.ROOT, "×%.2f", o.trend()), o.trendDays()).withStyle(ChatFormatting.GRAY));
+		}
+		o.rivalGuild().ifPresent(g -> lines.add(Component.translatable(o.rivalBuying() ? "screen.ak_trade_expansion.staff.outlook.rival_buying"
+				: "screen.ak_trade_expansion.staff.outlook.rival_selling", com.akf.tradeexpansion.data.RivalGuilds.name(g),
+				o.rivalDays() <= 0 ? Component.translatable("screen.ak_trade_expansion.rival.today")
+						: Component.translatable("screen.ak_trade_expansion.rival.days_left", o.rivalDays())).withStyle(ChatFormatting.GRAY)));
+		return lines;
 	}
 
 	/** v0.48.1: "おすすめ：上限 66c・下限 70c、今なら1往復 約12個・見込み +45c". */

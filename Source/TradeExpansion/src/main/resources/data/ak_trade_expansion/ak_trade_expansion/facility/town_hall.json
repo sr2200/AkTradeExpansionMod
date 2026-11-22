@@ -1,0 +1,23 @@
+{
+  "kind": "town_hall",
+  "order": 21,
+  "icon": "minecraft:white_banner",
+  "cost": 2000,
+  "structure": "town_hall",
+  "wanted": [
+    {
+      "item": "minecraft:stone_bricks",
+      "count": 64,
+      "value": 2
+    },
+    {
+      "tag": "minecraft:banners",
+      "count": 4,
+      "value": 20
+    },
+    {
+      "item": "minecraft:book",
+      "count": 8
+    }
+  ]
+}

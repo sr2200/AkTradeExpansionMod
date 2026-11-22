@@ -73,7 +73,8 @@ final class ClientDisplayCases {
 	private static final int COLUMN_SLACK = 4;
 	/** Every building of the development tab (the bundled facility data). */
 	private static final List<String> FACILITIES = List.of("quest_hall", "warehouse", "inn", "bank", "fountain", "park", "clock_tower",
-			"watchtower", "tavern", "market_hall", "harbor", "theater", "hot_spring", "festival", "mint");
+			"watchtower", "tavern", "market_hall", "harbor", "theater", "hot_spring", "festival", "mint", "station", "appraiser", "wholesaler",
+			"guild_hall", "chapel", "town_hall", "workshop", "school");
 
 	private static String text(String key, Object... args) {
 		return Component.translatable(key, args).getString();

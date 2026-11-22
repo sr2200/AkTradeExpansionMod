@@ -1,0 +1,24 @@
+{
+  "kind": "wholesaler",
+  "order": 18,
+  "icon": "minecraft:chest",
+  "cost": 2500,
+  "structure": "wholesaler",
+  "wanted": [
+    {
+      "item": "minecraft:barrel",
+      "count": 16,
+      "value": 6
+    },
+    {
+      "item": "minecraft:chest",
+      "count": 16,
+      "value": 10
+    },
+    {
+      "item": "minecraft:hay_block",
+      "count": 16,
+      "value": 9
+    }
+  ]
+}

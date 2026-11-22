@@ -58,6 +58,12 @@ public final class RouteMath {
 	}
 
 	public static Result routes(List<Point> signposts, List<Point> markets, double spacing, double reach, int maxPerMarket) {
+		return routes(signposts, markets, spacing, reach, id -> maxPerMarket);
+	}
+
+	/** As above, with a limit per market (v0.79: a station raises it, N-4). */
+	public static Result routes(List<Point> signposts, List<Point> markets, double spacing, double reach,
+			java.util.function.LongToIntFunction maxPerMarket) {
 		int n = signposts.size();
 		if (n == 0) return Result.EMPTY;
 		// Roads: union of signposts within spacing of each other (only nearby cells are looked at).
@@ -93,7 +99,7 @@ public final class RouteMath {
 		List<Route> routes = new ArrayList<>();
 		List<Route> blocked = new ArrayList<>();
 		for (Route r : sorted) {
-			if (count.getOrDefault(r.a(), 0) < maxPerMarket && count.getOrDefault(r.b(), 0) < maxPerMarket) {
+			if (count.getOrDefault(r.a(), 0) < maxPerMarket.applyAsInt(r.a()) && count.getOrDefault(r.b(), 0) < maxPerMarket.applyAsInt(r.b())) {
 				routes.add(r);
 				count.merge(r.a(), 1, Integer::sum);
 				count.merge(r.b(), 1, Integer::sum);
@@ -109,6 +115,12 @@ public final class RouteMath {
 	/** C-5: the propagation weight between two markets on a route: at least {@code roadWeight}. */
 	public static double routeWeight(double weight, double roadWeight) {
 		return Math.max(weight, Math.clamp(roadWeight, 0.0, 1.0));
+	}
+
+	/** v0.79: the road weight of a route; a station at either end raises it to at least {@code stationWeight}. */
+	public static double roadWeight(double roadWeight, boolean station, double stationWeight) {
+		double w = Math.clamp(roadWeight, 0.0, 1.0);
+		return station ? Math.max(w, Math.clamp(stationWeight, 0.0, 1.0)) : w;
 	}
 
 	private static double distance(Point a, Point b) {

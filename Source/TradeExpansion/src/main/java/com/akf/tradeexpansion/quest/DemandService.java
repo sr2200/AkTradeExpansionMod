@@ -9,6 +9,7 @@ import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
 import com.akf.tradeexpansion.development.Development;
 import com.akf.tradeexpansion.development.FacilityBuilder;
+import com.akf.tradeexpansion.development.FacilityKind;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketFactory;
 import com.akf.tradeexpansion.market.MarketNames;
@@ -70,7 +71,9 @@ public final class DemandService {
 			if (def != null && def.sell() && def.unit() == 1 && def.autoAdd().isEmpty() && !market.isSpecial(goodsId)) candidates.add(goodsId);
 		}
 		Random random = new Random(MarketFactory.seed(level, market.center()) ^ (period * 0x632BE59BD9B4E019L));
-		for (int i = 0; i < config.maxShortages && !candidates.isEmpty(); i++) {
+		int slots = config.maxShortages;
+		if (market.hasFacility(FacilityKind.WHOLESALER)) slots += Math.max(0, TradeExpansionConfig.get().development.wholesalerExtraShortages); // v0.79
+		for (int i = 0; i < slots && !candidates.isEmpty(); i++) {
 			Identifier pick = candidates.remove(random.nextInt(candidates.size()));
 			market.shortages().put(pick, QuestMath.shortageMultiplier(random.nextDouble(), config.minMultiplier, config.maxMultiplier));
 		}
@@ -110,7 +113,9 @@ public final class DemandService {
 		}
 		market.setVigor(DemandMath.vigor(market.vigor(), config.vigorGain));
 		market.setShortagesFulfilled(market.shortagesFulfilled() + 1);
-		double points = Development.add(market, player, DemandMath.fulfillPoints(base, config.fulfillCount, config.fulfillPointsRatio), now);
+		double ratio = config.fulfillPointsRatio;
+		if (market.hasFacility(FacilityKind.WHOLESALER)) ratio *= TradeExpansionConfig.get().development.wholesalerFulfillMultiplier; // v0.79
+		double points = Development.add(market, player, DemandMath.fulfillPoints(base, config.fulfillCount, ratio), now);
 		tell(level, market, player, Component.translatable("message.ak_trade_expansion.shortage.fulfilled_grow", MarketNames.name(market), good,
 				(long) Math.floor(points), (long) Math.floor(market.vigor())).withStyle(ChatFormatting.GREEN));
 		if (DemandMath.villagerDue(market.shortagesFulfilled(), config.villagersEvery)) villager(level, market, player);

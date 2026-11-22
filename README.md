@@ -18,7 +18,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.3.4（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.3.5（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -239,6 +239,14 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 温泉 | 9×9 | 3,000 | 滑らかな石256・ソウルサンド32・ランタン16 | この村で雇った運び屋は、事故の後の療養が半分、辞める確率も半分 |
 | 鋳造所 | 7×7 | 3,000 | 銅ブロック64・溶鉱炉8・鉄インゴット64 | 「両替」タブで、銅ブロック9個を 96c 分（作業台の鋳造の1.5倍）のコインに鋳造できる。鉄ブロック9個は 960c 分（設定 `currency.allowIronMinting` を ON にした時だけ） |
 | 祭りの広場 | 11×11 | 3,500 | 羊毛128・ランタン64・旗16 | 5日に1日「祭りの日」になり、その日はこの村で上がる評判と貯まる発展度が2倍（交易画面を開くと知らせが出て、「発展」タブに祭りまでの日数が出る） |
+| 駅舎 | 9×11 | 3,500 | 石レンガ256・レール128・トロッコ8 | この村は交易路を6本まで持てる（ふつうは4本）。この村につながる交易路は、相場の動きが75%伝わる（道だけなら50%） |
+| 目利きの店 | 7×7 | 2,500 | 本棚32・望遠鏡8・金インゴット64 | 本日の掘り出し物が1つ増え（次の日から）、掘り出し物の値段の上乗せ（1.2倍）が無くなる |
+| 問屋 | 9×9 | 2,500 | 樽64・チェスト64・干し草の俵64 | 品不足が1つ増え（次の入れ替えから）、品不足を満たした時のおまけの発展度が1.5倍 |
+| 商人組合の会館 | 7×9 | 4,000 | 石レンガ384・本64・金インゴット64 | この村で雇った番頭は、同じ下限までに1.5倍売れ、給金が0.75倍 |
+| 礼拝堂 | 7×9 | 3,000 | 石レンガ384・白色の色付きガラス64・鐘4 | この村での評判が時間で減る速さが半分（60日で半分） |
+| 村役場 | 9×9 | 2,000 | 石レンガ256・旗16・本32 | この村のほかの建物を建てるのに要る資材が0.75倍。最初に建てると後が楽になる |
+| 職人の工房 | 9×9 | 2,500 | 作業台16・かまど16・金床4 | この村の近く（市場の範囲）の村人の交易が0.9倍のコインでできる（近くの市場の買値より安くはならない） |
+| 学舎 | 9×9 | 3,000 | 本棚64・本64・紙128 | 交易画面の品不足・流行の品に「あと何日で入れ替わるか」が出る。雇い人タブで品を決めた運び屋の行き先に、行き先の品不足・流行・商会の動きと残り日数が出る |
 
 - **建てる**：建物を選んで「**建てる**」を押します。建物ごとの**発展度**と、**ほしい資材をすべて寄付してあること**が必要です。押せるのは、その村での評判が「常連」以上の人です（同時に建設できるのは1つ）。屋台から32ブロック以内（市場レベルが1上がるごとに8ブロック広がり、レベル5で64ブロック）の平らな空き地に足場と看板が立ち、ゲーム内2日（現実の約40分）で完成します（その場所が読み込まれている時）。空気・草・花・雪の層しか無い場所にだけ建てるので、ほかの建物は壊しません。
 - **場所を決めたい時**：「杭をもらう」で**建設予定地の杭**を受け取り、建てたい場所（建物の正面の真ん中）に置きます。置いた時に向いていた方が正面になります。杭を置いた時と右クリックした時に、建つ場所の枠が30秒間出ます（緑：建てられる／赤：建てられない。チャットに理由）。**港**は、手前の6列が陸、奥の7列が水の上になるように、杭を岸に置いて正面を陸側に向けてください。
@@ -950,6 +958,17 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 | `development.festivalIntervalDays` | `5` | 2〜100 | 祭りの広場：祭りの間隔（ゲーム内の日） | `"festivalIntervalDays": 3` |
 | `development.festivalMultiplier` | `2.0` | 1〜10 | 祭りの広場：祭りの日の評判と発展度の倍率 | `"festivalMultiplier": 3.0` |
 | `development.mintValueMultiplier` | `1.5` | 1〜10 | 鋳造所：両替タブで鋳造したコインの価値の、作業台の鋳造レシピに対する倍率 | `"mintValueMultiplier": 2.0` |
+| `development.stationExtraRoutes` | `2` | 0〜8 | 駅舎：増える交易路の数 | `"stationExtraRoutes": 4` |
+| `development.stationRoadWeight` | `0.75` | 0〜1 | 駅舎：この村につながる交易路の連動の強さ（`route.roadWeight` より大きい時だけ効く） | `"stationRoadWeight": 1.0` |
+| `development.appraiserExtraSpecials` | `1` | 0〜5 | 目利きの店：増える掘り出し物の数 | `"appraiserExtraSpecials": 2` |
+| `development.appraiserSpecialPriceMultiplier` | `1.0` | 0.5〜2 | 目利きの店：掘り出し物の基準価格の倍率（`market.specialPriceMultiplier` の代わり） | `"appraiserSpecialPriceMultiplier": 0.9` |
+| `development.wholesalerExtraShortages` | `1` | 0〜5 | 問屋：増える品不足の数 | `"wholesalerExtraShortages": 2` |
+| `development.wholesalerFulfillMultiplier` | `1.5` | 1〜10 | 問屋：品不足を満たした時のおまけの発展度の倍率 | `"wholesalerFulfillMultiplier": 2.0` |
+| `development.guildHallClerkSpeedMultiplier` | `1.5` | 1〜5 | 商人組合の会館：番頭が同じ下限までに売れる数の倍率 | `"guildHallClerkSpeedMultiplier": 2.0` |
+| `development.guildHallClerkWageMultiplier` | `0.75` | 0〜1 | 商人組合の会館：番頭の給金の倍率 | `"guildHallClerkWageMultiplier": 0.5` |
+| `development.chapelReputationDecayMultiplier` | `0.5` | 0〜1 | 礼拝堂：評判が時間で減る速さの倍率（0 で減らない） | `"chapelReputationDecayMultiplier": 0` |
+| `development.townHallMaterialMultiplier` | `0.75` | 0.1〜1 | 村役場：ほかの建物の資材の必要数の倍率 | `"townHallMaterialMultiplier": 0.5` |
+| `development.workshopVillagerPriceMultiplier` | `0.9` | 0.1〜1 | 職人の工房：村人の交易のコインの値段の倍率 | `"workshopVillagerPriceMultiplier": 0.8` |
 
 #### 雇い人（staff）
 

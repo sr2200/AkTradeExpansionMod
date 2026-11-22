@@ -5,6 +5,7 @@ import com.akf.tradeexpansion.trade.TradeResult;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -181,10 +182,16 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 * @param returnProfit expected profit of that return cargo (after the commission and the accident risk)
 	 * @param travelMultiplier   multiplier of the travel time (a harbor at either end, 1 = none)
 	 * @param accidentMultiplier multiplier of the accident chance (a watchtower at either end, 1 = none)
+	 * @param outlook            v0.79: with a school at home, what moves the price of the good there and for how long
 	 */
 	public record Destination(long id, Component name, int dx, int dz, int distance, long buyPrice, long sellPrice, int units, long profit,
 			long buyLimit, long sellLimit, int kinds, int returnItems, int returnKinds, long returnProfit, double travelMultiplier,
-			double accidentMultiplier) {
+			double accidentMultiplier, Optional<Outlook> outlook) {
+		public Destination withOutlook(Optional<Outlook> outlook) {
+			return new Destination(id, name, dx, dz, distance, buyPrice, sellPrice, units, profit, buyLimit, sellLimit, kinds, returnItems,
+					returnKinds, returnProfit, travelMultiplier, accidentMultiplier, outlook);
+		}
+
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeVarLong(id);
 			ComponentSerialization.STREAM_CODEC.encode(buf, name);
@@ -203,12 +210,37 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeLong(returnProfit);
 			buf.writeDouble(travelMultiplier);
 			buf.writeDouble(accidentMultiplier);
+			ByteBufCodecs.optional(Outlook.CODEC).encode(buf, outlook);
 		}
 
 		static Destination read(RegistryFriendlyByteBuf buf) {
 			return new Destination(buf.readVarLong(), ComponentSerialization.STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readVarInt(),
 					buf.readVarInt(), buf.readLong(), buf.readLong(), buf.readVarInt(), buf.readLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarInt(),
-					buf.readVarInt(), buf.readVarInt(), buf.readLong(), buf.readDouble(), buf.readDouble());
+					buf.readVarInt(), buf.readVarInt(), buf.readLong(), buf.readDouble(), buf.readDouble(), ByteBufCodecs.optional(Outlook.CODEC).decode(buf));
+		}
+	}
+
+	/**
+	 * v0.79 school: the outlook of a good at a destination: its shortage (multiplier of B, 1 = none) and the days it lasts,
+	 * its trends (product of the multipliers, 1 = none) and their days, and the rival campaign felt most on it there.
+	 *
+	 * @param rivalDays days after today (0 = ends today, as the goods rows)
+	 */
+	public record Outlook(double shortage, int shortageDays, double trend, int trendDays, Optional<Identifier> rivalGuild, boolean rivalBuying,
+			int rivalDays) {
+		public static final StreamCodec<RegistryFriendlyByteBuf, Outlook> CODEC = StreamCodec.composite(
+				ByteBufCodecs.DOUBLE, Outlook::shortage,
+				ByteBufCodecs.VAR_INT, Outlook::shortageDays,
+				ByteBufCodecs.DOUBLE, Outlook::trend,
+				ByteBufCodecs.VAR_INT, Outlook::trendDays,
+				ByteBufCodecs.optional(Identifier.STREAM_CODEC), Outlook::rivalGuild,
+				ByteBufCodecs.BOOL, Outlook::rivalBuying,
+				ByteBufCodecs.VAR_INT, Outlook::rivalDays,
+				Outlook::new);
+
+		/** Nothing moves the price there (no line is shown). */
+		public boolean empty() {
+			return shortage == 1.0 && trend == 1.0 && rivalGuild.isEmpty();
 		}
 	}
 

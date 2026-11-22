@@ -38,9 +38,17 @@ public final class Reputation {
 		if (standing == null || !config().enabled) return 0;
 		double days = (now - standing.since()) / (double) PriceModel.TICKS_PER_DAY;
 		if (days <= 0) return standing.points();
-		double decayed = ReputationMath.decay(standing.points(), days, config().halfLifeDays);
+		double decayed = ReputationMath.decay(standing.points(), days, halfLifeDays(market));
 		market.setStanding(new Market.Standing(player, decayed, now));
 		return decayed;
+	}
+
+	/** Half-life of the reputation at {@code market}; v0.79: a chapel makes it fade more slowly (0 = never). */
+	public static double halfLifeDays(Market market) {
+		double h = config().halfLifeDays;
+		if (h <= 0 || !market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.CHAPEL)) return h;
+		double k = Math.clamp(TradeExpansionConfig.get().development.chapelReputationDecayMultiplier, 0.0, 1.0);
+		return k <= 0 ? 0 : h / k;
 	}
 
 	/** Adds (or with a negative {@code delta} removes) points; never below 0. The caller marks the registry dirty. */

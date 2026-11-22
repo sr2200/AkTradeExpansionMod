@@ -34,7 +34,23 @@ public enum FacilityKind implements StringRepresentable {
 	/** v0.51: every few days a festival day with more reputation and development points. */
 	FESTIVAL("festival"),
 	/** Mint: copper and iron blocks are minted into more coins than by the recipe, on the exchange tab (E-2). */
-	MINT("mint");
+	MINT("mint"),
+	/** v0.79: more trade routes for the market and a stronger link on its routes (C-5). */
+	STATION("station"),
+	/** v0.79: one more of today's specials, sold without the special surcharge (D-5). */
+	APPRAISER("appraiser"),
+	/** v0.79: one more shortage slot and more development points for fulfilling one (K / K-2). */
+	WHOLESALER("wholesaler"),
+	/** v0.79: clerks hired at the market sell faster (their sales move the price less) for a lower wage (Q-2). */
+	GUILD_HALL("guild_hall"),
+	/** v0.79: reputation with the market fades more slowly (M). */
+	CHAPEL("chapel"),
+	/** v0.79: the market's other facilities need fewer materials (N-2). */
+	TOWN_HALL("town_hall"),
+	/** v0.79: villagers near the market charge fewer coins (H). */
+	WORKSHOP("workshop"),
+	/** v0.79: the trade screen tells how many days shortages, trends and rival campaigns still last (outlook). */
+	SCHOOL("school");
 
 	public static final Codec<FacilityKind> CODEC = StringRepresentable.fromEnum(FacilityKind::values);
 

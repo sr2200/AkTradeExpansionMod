@@ -324,7 +324,18 @@ public final class ConfigScreen {
 				.option(doubleField("development.hotSpringQuitMultiplier", dd.hotSpringQuitMultiplier, () -> dev.hotSpringQuitMultiplier, v -> dev.hotSpringQuitMultiplier = v, 0, 1))
 				.option(intField("development.festivalIntervalDays", dd.festivalIntervalDays, () -> dev.festivalIntervalDays, v -> dev.festivalIntervalDays = v, 2, 100))
 				.option(doubleField("development.festivalMultiplier", dd.festivalMultiplier, () -> dev.festivalMultiplier, v -> dev.festivalMultiplier = v, 1, 10))
-				.option(doubleField("development.mintValueMultiplier", dd.mintValueMultiplier, () -> dev.mintValueMultiplier, v -> dev.mintValueMultiplier = v, 1, 10));
+				.option(doubleField("development.mintValueMultiplier", dd.mintValueMultiplier, () -> dev.mintValueMultiplier, v -> dev.mintValueMultiplier = v, 1, 10))
+				.option(intField("development.stationExtraRoutes", dd.stationExtraRoutes, () -> dev.stationExtraRoutes, v -> dev.stationExtraRoutes = v, 0, 8))
+				.option(doubleField("development.stationRoadWeight", dd.stationRoadWeight, () -> dev.stationRoadWeight, v -> dev.stationRoadWeight = v, 0, 1))
+				.option(intField("development.appraiserExtraSpecials", dd.appraiserExtraSpecials, () -> dev.appraiserExtraSpecials, v -> dev.appraiserExtraSpecials = v, 0, 5))
+				.option(doubleField("development.appraiserSpecialPriceMultiplier", dd.appraiserSpecialPriceMultiplier, () -> dev.appraiserSpecialPriceMultiplier, v -> dev.appraiserSpecialPriceMultiplier = v, 0.5, 2))
+				.option(intField("development.wholesalerExtraShortages", dd.wholesalerExtraShortages, () -> dev.wholesalerExtraShortages, v -> dev.wholesalerExtraShortages = v, 0, 5))
+				.option(doubleField("development.wholesalerFulfillMultiplier", dd.wholesalerFulfillMultiplier, () -> dev.wholesalerFulfillMultiplier, v -> dev.wholesalerFulfillMultiplier = v, 1, 10))
+				.option(doubleField("development.guildHallClerkSpeedMultiplier", dd.guildHallClerkSpeedMultiplier, () -> dev.guildHallClerkSpeedMultiplier, v -> dev.guildHallClerkSpeedMultiplier = v, 1, 5))
+				.option(doubleField("development.guildHallClerkWageMultiplier", dd.guildHallClerkWageMultiplier, () -> dev.guildHallClerkWageMultiplier, v -> dev.guildHallClerkWageMultiplier = v, 0, 1))
+				.option(doubleField("development.chapelReputationDecayMultiplier", dd.chapelReputationDecayMultiplier, () -> dev.chapelReputationDecayMultiplier, v -> dev.chapelReputationDecayMultiplier = v, 0, 1))
+				.option(doubleField("development.townHallMaterialMultiplier", dd.townHallMaterialMultiplier, () -> dev.townHallMaterialMultiplier, v -> dev.townHallMaterialMultiplier = v, 0.1, 1))
+				.option(doubleField("development.workshopVillagerPriceMultiplier", dd.workshopVillagerPriceMultiplier, () -> dev.workshopVillagerPriceMultiplier, v -> dev.workshopVillagerPriceMultiplier = v, 0.1, 1));
 
 		// Q (v0.48): hired staff.
 		TradeExpansionConfig.Staff st = edit.staff;

@@ -21,7 +21,7 @@ Gradle プロジェクトは `Source/TradeExpansion/` にある。リポジト�
 | `./gradlew test` | 単体テストだけ実行（ゲームは起動しない） |
 | `./gradlew test --tests com.akf.tradeexpansion.core.PriceModelTest` | 1クラスだけ実行 |
 | `./gradlew runClient` / `runServer` | 開発用のクライアント／サーバー（ユーザーが操作するもの） |
-| `autotest.bat` | ゲーム内の自動テスト（サーバー → クライアント → 他の Mod を外したクライアント3つ：Mod Menu・YACL なし、Mod Menu だけ、YACL だけ → JEI・REI・JourneyMap をそれぞれ足したクライアント3つ）を実行し、結果を `docs/release/ingame-checklist.md` と `autotest-report.md` に書き込む。`autotest.bat server` / `client` / `minimal`（Mod Menu・YACL なし）/ `variants`（外したもの3つ）/ `mods`（JEI・REI・JourneyMap）でそれだけ。`autotest.bat looks` は建物15種類×見た目7種類の画像（105枚、人が見る）を撮る（全体の実行には入らない）。クライアントはゲームのウィンドウが開く（数分、操作しない）。`-Pautotest.only=2-10+stall` で項目番号かテスト名で絞る |
+| `autotest.bat` | ゲーム内の自動テスト（サーバー → クライアント → 他の Mod を外したクライアント3つ：Mod Menu・YACL なし、Mod Menu だけ、YACL だけ → JEI・REI・JourneyMap をそれぞれ足したクライアント3つ）を実行し、結果を `docs/release/ingame-checklist.md` と `autotest-report.md` に書き込む。`autotest.bat server` / `client` / `minimal`（Mod Menu・YACL なし）/ `variants`（外したもの3つ）/ `mods`（JEI・REI・JourneyMap）でそれだけ。`autotest.bat looks` は建物23種類×見た目7種類の画像（161枚、人が見る）を撮る（全体の実行には入らない）。クライアントはゲームのウィンドウが開く（数分、操作しない）。`-Pautotest.only=2-10+stall` で項目番号かテスト名で絞る |
 
 - Git Bash（Bash ツール）から .bat を実行するときは、フルパスで `cmd` に渡す（`build.bat` とだけ書くと中の `gradlew.bat` が見つからず失敗する）。例：`Source/TradeExpansion` で `cmd //c "$(cygpath -w "$PWD/build.bat") --offline -q"`。`gradlew` を直接使うときも同じ形（`cmd //c "$(cygpath -w "$PWD/gradlew.bat") test --offline -q"`）。
 - バージョンの上げ方は `tools/version/bump.ps1`。手で書き換えない。

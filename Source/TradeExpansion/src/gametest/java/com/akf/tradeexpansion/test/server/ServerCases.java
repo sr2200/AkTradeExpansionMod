@@ -394,6 +394,7 @@ public final class ServerCases {
 		cases.addAll(ServerAdvancementCases.all());
 		cases.addAll(ServerDevelopmentCases.all());
 		cases.addAll(ServerFacilityCases.all());
+		cases.addAll(ServerMoreFacilityCases.all());
 		cases.addAll(ServerSurroundingsCases.all());
 		cases.addAll(ServerLookCases.all());
 		cases.addAll(ServerGoodsCases.all());

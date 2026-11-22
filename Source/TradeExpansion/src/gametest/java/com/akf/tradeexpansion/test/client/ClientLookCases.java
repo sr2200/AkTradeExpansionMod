@@ -118,8 +118,8 @@ final class ClientLookCases {
 	}
 
 	/**
-	 * 22-50〜22-56, 28-2〜28-6, 29-2, 29-14 (pictures): each of the 15 buildings in each of the 7 looks, placed as built,
-	 * taken from its front (105 pictures: look_&lt;look&gt;_&lt;building&gt;.png); every building has its sign.
+	 * 22-50〜22-56, 28-2〜28-6, 29-2, 29-14 (pictures): each of the 23 buildings in each of the 7 looks, placed as built,
+	 * taken from its front (161 pictures: look_&lt;look&gt;_&lt;building&gt;.png); every building has its sign.
 	 */
 	static void buildings(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;

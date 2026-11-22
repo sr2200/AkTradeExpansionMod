@@ -1303,6 +1303,28 @@ public final class TradeExpansionConfig {
 		public double festivalMultiplier = 2.0;
 		/** Mint: coins minted there are worth this many times the minting recipe (E-2). */
 		public double mintValueMultiplier = 1.5;
+		/** v0.79 station: more trade routes the market can have (C-5, added to route.maxRoutesPerMarket). */
+		public int stationExtraRoutes = 2;
+		/** v0.79 station: the least share of price changes on routes from / to the market (instead of route.roadWeight if higher). */
+		public double stationRoadWeight = 0.75;
+		/** v0.79 appraiser: more of today's specials (D-5). */
+		public int appraiserExtraSpecials = 1;
+		/** v0.79 appraiser: multiplier of B for today's specials there (instead of market.specialPriceMultiplier). */
+		public double appraiserSpecialPriceMultiplier = 1.0;
+		/** v0.79 wholesaler: more shortage slots (K, added to demand.maxShortages). */
+		public int wholesalerExtraShortages = 1;
+		/** v0.79 wholesaler: multiplier of the development points for fulfilling a shortage (K-2). */
+		public double wholesalerFulfillMultiplier = 1.5;
+		/** v0.79 guild hall: clerks hired there sell this many times as much (their sales move X by 1 / this per unit). */
+		public double guildHallClerkSpeedMultiplier = 1.5;
+		/** v0.79 guild hall: multiplier of the wage of clerks hired there. */
+		public double guildHallClerkWageMultiplier = 0.75;
+		/** v0.79 chapel: multiplier of the speed reputation fades at the market (0 = it does not fade). */
+		public double chapelReputationDecayMultiplier = 0.5;
+		/** v0.79 town hall: multiplier of the materials the market's other facilities need. */
+		public double townHallMaterialMultiplier = 0.75;
+		/** v0.79 workshop: multiplier of the coin prices of villager trades near the market (H). */
+		public double workshopVillagerPriceMultiplier = 0.9;
 
 		public Development() {
 		}
@@ -1419,7 +1441,30 @@ public final class TradeExpansionConfig {
 				c.reputationPerPoint, c.requireMaterials, c.materialCountMultiplier, c.constructionEffects, c.fountainReputationMultiplier,
 				c.parkPointsMultiplier, c.siteRadiusPerLevel)));
 
-		static final Codec<Development> CODEC = Codec.mapPair(FIRST_CODEC, Buildings.CODEC).xmap(pair -> {
+		/** Fourth part of the fields (v0.79 buildings). */
+		private record MoreBuildings(int stationExtraRoutes, double stationRoadWeight, int appraiserExtraSpecials,
+				double appraiserSpecialPriceMultiplier, int wholesalerExtraShortages, double wholesalerFulfillMultiplier,
+				double guildHallClerkSpeedMultiplier, double guildHallClerkWageMultiplier, double chapelReputationDecayMultiplier,
+				double townHallMaterialMultiplier, double workshopVillagerPriceMultiplier) {
+			static final MapCodec<MoreBuildings> CODEC = RecordCodecBuilder.mapCodec(i -> {
+				Development d = new Development();
+				return i.group(
+						Codec.INT.fieldOf("stationExtraRoutes").orElse(d.stationExtraRoutes).forGetter(MoreBuildings::stationExtraRoutes),
+						Codec.DOUBLE.fieldOf("stationRoadWeight").orElse(d.stationRoadWeight).forGetter(MoreBuildings::stationRoadWeight),
+						Codec.INT.fieldOf("appraiserExtraSpecials").orElse(d.appraiserExtraSpecials).forGetter(MoreBuildings::appraiserExtraSpecials),
+						Codec.DOUBLE.fieldOf("appraiserSpecialPriceMultiplier").orElse(d.appraiserSpecialPriceMultiplier).forGetter(MoreBuildings::appraiserSpecialPriceMultiplier),
+						Codec.INT.fieldOf("wholesalerExtraShortages").orElse(d.wholesalerExtraShortages).forGetter(MoreBuildings::wholesalerExtraShortages),
+						Codec.DOUBLE.fieldOf("wholesalerFulfillMultiplier").orElse(d.wholesalerFulfillMultiplier).forGetter(MoreBuildings::wholesalerFulfillMultiplier),
+						Codec.DOUBLE.fieldOf("guildHallClerkSpeedMultiplier").orElse(d.guildHallClerkSpeedMultiplier).forGetter(MoreBuildings::guildHallClerkSpeedMultiplier),
+						Codec.DOUBLE.fieldOf("guildHallClerkWageMultiplier").orElse(d.guildHallClerkWageMultiplier).forGetter(MoreBuildings::guildHallClerkWageMultiplier),
+						Codec.DOUBLE.fieldOf("chapelReputationDecayMultiplier").orElse(d.chapelReputationDecayMultiplier).forGetter(MoreBuildings::chapelReputationDecayMultiplier),
+						Codec.DOUBLE.fieldOf("townHallMaterialMultiplier").orElse(d.townHallMaterialMultiplier).forGetter(MoreBuildings::townHallMaterialMultiplier),
+						Codec.DOUBLE.fieldOf("workshopVillagerPriceMultiplier").orElse(d.workshopVillagerPriceMultiplier).forGetter(MoreBuildings::workshopVillagerPriceMultiplier)
+				).apply(i, MoreBuildings::new);
+			});
+		}
+
+		static final Codec<Development> CODEC = Codec.mapPair(Codec.mapPair(FIRST_CODEC, Buildings.CODEC).xmap(pair -> {
 			Development c = pair.getFirst();
 			Buildings b = pair.getSecond();
 			c.clockTowerRecoveryMultiplier = b.clockTowerRecoveryMultiplier();
@@ -1439,7 +1484,25 @@ public final class TradeExpansionConfig {
 		}, c -> Pair.of(c, new Buildings(c.clockTowerRecoveryMultiplier, c.watchtowerAccidentMultiplier, c.watchtowerRivalMultiplier,
 				c.tavernBoardMultiplier, c.marketHallExtraGoods, c.harborRewardMultiplier, c.harborTravelMultiplier, c.theaterTrendMultiplier,
 				c.hotSpringRestMultiplier, c.hotSpringQuitMultiplier, c.festivalIntervalDays, c.festivalMultiplier,
-				c.mintValueMultiplier))).codec();
+				c.mintValueMultiplier))), MoreBuildings.CODEC).xmap(pair -> {
+			Development c = pair.getFirst();
+			MoreBuildings b = pair.getSecond();
+			c.stationExtraRoutes = b.stationExtraRoutes();
+			c.stationRoadWeight = b.stationRoadWeight();
+			c.appraiserExtraSpecials = b.appraiserExtraSpecials();
+			c.appraiserSpecialPriceMultiplier = b.appraiserSpecialPriceMultiplier();
+			c.wholesalerExtraShortages = b.wholesalerExtraShortages();
+			c.wholesalerFulfillMultiplier = b.wholesalerFulfillMultiplier();
+			c.guildHallClerkSpeedMultiplier = b.guildHallClerkSpeedMultiplier();
+			c.guildHallClerkWageMultiplier = b.guildHallClerkWageMultiplier();
+			c.chapelReputationDecayMultiplier = b.chapelReputationDecayMultiplier();
+			c.townHallMaterialMultiplier = b.townHallMaterialMultiplier();
+			c.workshopVillagerPriceMultiplier = b.workshopVillagerPriceMultiplier();
+			return c;
+		}, c -> Pair.of(c, new MoreBuildings(c.stationExtraRoutes, c.stationRoadWeight, c.appraiserExtraSpecials,
+				c.appraiserSpecialPriceMultiplier, c.wholesalerExtraShortages, c.wholesalerFulfillMultiplier, c.guildHallClerkSpeedMultiplier,
+				c.guildHallClerkWageMultiplier, c.chapelReputationDecayMultiplier, c.townHallMaterialMultiplier,
+				c.workshopVillagerPriceMultiplier))).codec();
 
 		public int[] levelBonusThresholdArray() {
 			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();

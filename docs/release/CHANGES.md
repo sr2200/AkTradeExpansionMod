@@ -15,6 +15,15 @@
 - 襲撃者の旗持ち（不吉な旗をかぶった隊長）をプレイヤーが倒すと、75% の確率で金貨（100c）を1枚落とすようにしました（ネザー以外でも）
 - **品不足を満たすと村が育つ**ようにしました。品不足の期間（3日）のうちにその品を16個売ると（何人で売っても合わせて数えます）、その品不足は終わり、村に発展度のおまけ（その品の基準価格 × 16）が入ります。品不足を3回満たすごとに、空いたベッドがあれば村人が1人やって来ます（ネザー・エンドでは来ません）。品不足の商品にマウスを乗せると、あと何個で満たせるかが出ます。
 - 村に「**元気**」（0〜100）を追加しました。品不足を満たすと上がり、満たさないまま期間が終わると少し下がります。元気が50より低いと、その村で貯まる発展度が少し減ります（元気0で 0.9 倍）。「発展」タブの上の行に出て、マウスを乗せると満たした回数と、あと何回で村人が来るかが出ます。設定 `demand.fulfillCount`・`demand.fulfillPointsRatio`・`demand.villagersEvery`・`demand.vigorGain`・`demand.vigorLoss`・`demand.vigorPenalty`
+- 村の発展の建物を8種類追加しました（全部で23種類）。どれも村のそれぞれの仕組みに効きます。設定画面の「村の発展」で倍率などを変えられます
+  - **駅舎**：この村は交易路を6本まで持てて（ふつうは4本）、この村につながる交易路では相場の変化の75%が伝わります（道だけなら50%）。設定 `development.stationExtraRoutes`・`development.stationRoadWeight`
+  - **目利きの店**：本日の掘り出し物が1つ増え（次の日から）、掘り出し物の値段の上乗せ（1.2倍）が無くなります。設定 `development.appraiserExtraSpecials`・`development.appraiserSpecialPriceMultiplier`
+  - **問屋**：品不足が1つ増え（次の入れ替えから）、品不足を満たした時のおまけの発展度が1.5倍になります。設定 `development.wholesalerExtraShortages`・`development.wholesalerFulfillMultiplier`
+  - **商人組合の会館**：この村で雇った番頭が、同じ下限までに1.5倍売れるようになり、給金が0.75倍になります。設定 `development.guildHallClerkSpeedMultiplier`・`development.guildHallClerkWageMultiplier`
+  - **礼拝堂**：この村での評判が時間で減る速さが半分になります。設定 `development.chapelReputationDecayMultiplier`
+  - **村役場**：この村のほかの建物を建てるのに要る資材が0.75倍になります。設定 `development.townHallMaterialMultiplier`
+  - **職人の工房**：この村の近くの村人との交易が0.9倍のコインでできます（近くの市場の買値より安くはなりません）。設定 `development.workshopVillagerPriceMultiplier`
+  - **学舎**：交易画面の品不足・流行の品にマウスを乗せると「あと何日で入れ替わるか」が出ます。雇い人タブで品を決めた運び屋の行き先にマウスを乗せると、行き先の品不足・流行・商会の動きと、それがあと何日続くかが出ます
 
 ### 変更
 

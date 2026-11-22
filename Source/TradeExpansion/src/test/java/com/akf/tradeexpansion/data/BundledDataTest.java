@@ -106,13 +106,13 @@ class BundledDataTest {
 		assertEquals(groups.keySet(), covered);
 	}
 
-	/** N-4 (v0.38, v0.50, v0.51, mint): the fifteen facilities, one per kind, each with its structure in every style it falls back to. */
+	/** N-4 (v0.38, v0.50, v0.51, mint, v0.79): the twenty-three facilities, one per kind, each with its structure in every style it falls back to. */
 	@Test
 	void facilitiesDecode() throws IOException {
 		Map<String, FacilityDefinition> facilities = decodeAll("facility", FacilityDefinition.CODEC);
-		assertEquals(15, facilities.size());
-		assertEquals(15, facilities.values().stream().map(FacilityDefinition::kind).distinct().count());
-		assertEquals(15, com.akf.tradeexpansion.development.FacilityKind.values().length);
+		assertEquals(23, facilities.size());
+		assertEquals(23, facilities.values().stream().map(FacilityDefinition::kind).distinct().count());
+		assertEquals(23, com.akf.tradeexpansion.development.FacilityKind.values().length);
 		assertEquals(6, facilities.get("harbor").landRows());
 		assertEquals(-1, facilities.get("bank").landRows());
 		for (Map.Entry<String, FacilityDefinition> e : facilities.entrySet()) {

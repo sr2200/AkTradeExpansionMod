@@ -61,10 +61,10 @@ final class ServerLookCases {
 	static List<ServerCase> all() {
 		List<ServerCase> cases = new ArrayList<>();
 		cases.add(partial("buildings_stand_every_way", List.of("29-2", "22-50"),
-				"15種類の建物を7種類の見た目（平原・砂漠・サバンナ・雪原・タイガ・ネザー・エンド）と4つの向きで、完成の時と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品（ボタン・旗・松明・はしご・吊り看板・ろうそく・ケーキなど）が無く、ランダムティックを速めて30ティック進めてもブロックが変わらず（火が付かない。時計塔の避雷針は蝋引きで錆びない。ブロックの下の草と菌糸が土とネザーラックになる・つる・サトウキビ・竹が伸びるのは除く）、水と溶岩が建物の外に流れ出ないこと（材料と形の見た目は画像で見る。村の家や木の近くでは見ていない）",
+				"23種類の建物を7種類の見た目（平原・砂漠・サバンナ・雪原・タイガ・ネザー・エンド）と4つの向きで、完成の時と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品（ボタン・旗・松明・はしご・吊り看板・ろうそく・ケーキなど）が無く、ランダムティックを速めて30ティック進めてもブロックが変わらず（火が付かない。時計塔の避雷針は蝋引きで錆びない。ブロックの下の草と菌糸が土とネザーラックになる・つる・サトウキビ・竹が伸びるのは除く）、水と溶岩が建物の外に流れ出ないこと（材料と形の見た目は画像で見る。村の家や木の近くでは見ていない）",
 				ServerLookCases::stand));
 		cases.add(partial("building_parts_by_style", List.of("29-14", "22-52", "22-53", "22-55", "22-56", "28-6"),
-				"7種類の見た目それぞれに15種類の建物の構造物があり（平原に代わらない）、看板（建物の目印）が1つずつあること。宿屋は村の見た目でベッド4つ・ネザーとエンドはベッドなしでカーペット、煙突に火の付いた焚き火（エンドはエンドロッド）。依頼所と時計塔に鐘、時計塔にボタンと避雷針、見張り塔にはしご・旗・松明、酒場に吊り看板とろうそく、市場にハチの巣（bee_nest）と飾り壺、劇場と祭りの広場に旗、祭りの広場にろうそくのケーキ、銀行に鉄格子、温泉にソウルサンド、鋳造所に溶鉱炉・金床・鍛冶台と煙突の火（エンドはエンドロッド）。噴水広場はネザーで溶岩・ほかは水、公園はネザーで真紅のキノコと溶岩・エンドでコーラスとエンドロッド・村で葉（材料の見た目、鐘を鳴らせる・寝られる・村人が来るは見ていない）",
+				"7種類の見た目それぞれに23種類の建物の構造物があり（平原に代わらない）、看板（建物の目印）が1つずつあること。宿屋は村の見た目でベッド4つ・ネザーとエンドはベッドなしでカーペット、煙突に火の付いた焚き火（エンドはエンドロッド）。依頼所と時計塔に鐘、時計塔にボタンと避雷針、見張り塔にはしご・旗・松明、酒場に吊り看板とろうそく、市場にハチの巣（bee_nest）と飾り壺、劇場と祭りの広場に旗、祭りの広場にろうそくのケーキ、銀行に鉄格子、温泉にソウルサンド、鋳造所に溶鉱炉・金床・鍛冶台と煙突の火（エンドはエンドロッド）、駅舎にレールと鐘、目利きの店にアメジストの塊・模様入りの本棚・書見台、問屋に樽・チェスト・干し草、商人組合の会館にエメラルドブロック・旗・ろうそく、礼拝堂に鐘・ろうそく・色付きガラス、村役場に旗・書見台・本棚、職人の工房に金床・作業台・石切台と煙突の火、学舎に本棚・書見台・ろうそく。噴水広場はネザーで溶岩・ほかは水、公園はネザーで真紅のキノコと溶岩・エンドでコーラスとエンドロッド・村で葉（材料の見た目、鐘を鳴らせる・寝られる・村人が来るは見ていない）",
 				ServerLookCases::parts));
 		cases.add(ServerCase.full("look_by_biome", List.of("22-51"), ctx -> {
 			// The biome of the market's center decides the look: the village type, jungles and swamps the plains look.
@@ -288,6 +288,14 @@ final class ServerLookCases {
 							case FESTIVAL -> wanted.addAll(List.of("@banner", "@candle_cake"));
 							case BANK -> wanted.add("iron_bars");
 							case HOT_SPRING -> wanted.add("soul_sand");
+							case STATION -> wanted.addAll(List.of("rail", "bell"));
+							case APPRAISER -> wanted.addAll(List.of("amethyst_cluster", "chiseled_bookshelf", "lectern"));
+							case WHOLESALER -> wanted.addAll(List.of("barrel", "chest", "hay_block"));
+							case GUILD_HALL -> wanted.addAll(List.of("emerald_block", "@banner", "@candle"));
+							case CHAPEL -> wanted.addAll(List.of("bell", "@candle", "white_stained_glass_pane"));
+							case TOWN_HALL -> wanted.addAll(List.of("@banner", "lectern", "bookshelf"));
+							case WORKSHOP -> wanted.addAll(List.of("anvil", "crafting_table", "stonecutter", style.equals("end") ? "end_rod" : "@lit_campfire"));
+							case SCHOOL -> wanted.addAll(List.of("bookshelf", "lectern", "@candle"));
 							case MINT -> wanted.addAll(List.of("blast_furnace", "anvil", "smithing_table", style.equals("end") ? "end_rod" : "@lit_campfire")); // chimney top
 							case FOUNTAIN -> wanted.add(style.equals("nether") ? "@lava" : "@water");
 							case PARK -> wanted.addAll(style.equals("nether") ? List.of("crimson_fungus", "@lava") : style.equals("end") ? List.of("chorus", "end_rod")

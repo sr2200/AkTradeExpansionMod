@@ -1,0 +1,24 @@
+{
+  "kind": "chapel",
+  "order": 20,
+  "icon": "minecraft:bell",
+  "cost": 3000,
+  "structure": "chapel",
+  "wanted": [
+    {
+      "item": "minecraft:stone_bricks",
+      "count": 96,
+      "value": 2
+    },
+    {
+      "item": "minecraft:white_stained_glass",
+      "count": 16,
+      "value": 3
+    },
+    {
+      "item": "minecraft:bell",
+      "count": 1,
+      "value": 60
+    }
+  ]
+}

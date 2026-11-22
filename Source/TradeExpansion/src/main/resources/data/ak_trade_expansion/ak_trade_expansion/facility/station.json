@@ -1,0 +1,24 @@
+{
+  "kind": "station",
+  "order": 16,
+  "icon": "minecraft:minecart",
+  "cost": 3500,
+  "structure": "station",
+  "wanted": [
+    {
+      "item": "minecraft:stone_bricks",
+      "count": 64,
+      "value": 2
+    },
+    {
+      "item": "minecraft:rail",
+      "count": 32,
+      "value": 2
+    },
+    {
+      "item": "minecraft:minecart",
+      "count": 2,
+      "value": 30
+    }
+  ]
+}

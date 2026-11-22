@@ -449,6 +449,246 @@
     "built=true,facing=west,kind=mint": {
       "model": "ak_trade_expansion:block/facility_sign_mint",
       "y": 270
+    },
+    "built=false,facing=north,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_station"
+    },
+    "built=false,facing=east,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_station",
+      "y": 90
+    },
+    "built=false,facing=south,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_station",
+      "y": 180
+    },
+    "built=false,facing=west,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=station": {
+      "model": "ak_trade_expansion:block/facility_sign_station",
+      "y": 270
+    },
+    "built=false,facing=north,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_appraiser"
+    },
+    "built=false,facing=east,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_appraiser",
+      "y": 90
+    },
+    "built=false,facing=south,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_appraiser",
+      "y": 180
+    },
+    "built=false,facing=west,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=appraiser": {
+      "model": "ak_trade_expansion:block/facility_sign_appraiser",
+      "y": 270
+    },
+    "built=false,facing=north,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_wholesaler"
+    },
+    "built=false,facing=east,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_wholesaler",
+      "y": 90
+    },
+    "built=false,facing=south,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_wholesaler",
+      "y": 180
+    },
+    "built=false,facing=west,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=wholesaler": {
+      "model": "ak_trade_expansion:block/facility_sign_wholesaler",
+      "y": 270
+    },
+    "built=false,facing=north,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_guild_hall"
+    },
+    "built=false,facing=east,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_guild_hall",
+      "y": 90
+    },
+    "built=false,facing=south,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_guild_hall",
+      "y": 180
+    },
+    "built=false,facing=west,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=guild_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_guild_hall",
+      "y": 270
+    },
+    "built=false,facing=north,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_chapel"
+    },
+    "built=false,facing=east,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_chapel",
+      "y": 90
+    },
+    "built=false,facing=south,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_chapel",
+      "y": 180
+    },
+    "built=false,facing=west,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=chapel": {
+      "model": "ak_trade_expansion:block/facility_sign_chapel",
+      "y": 270
+    },
+    "built=false,facing=north,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_town_hall"
+    },
+    "built=false,facing=east,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_town_hall",
+      "y": 90
+    },
+    "built=false,facing=south,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_town_hall",
+      "y": 180
+    },
+    "built=false,facing=west,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=town_hall": {
+      "model": "ak_trade_expansion:block/facility_sign_town_hall",
+      "y": 270
+    },
+    "built=false,facing=north,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_workshop"
+    },
+    "built=false,facing=east,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_workshop",
+      "y": 90
+    },
+    "built=false,facing=south,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_workshop",
+      "y": 180
+    },
+    "built=false,facing=west,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=workshop": {
+      "model": "ak_trade_expansion:block/facility_sign_workshop",
+      "y": 270
+    },
+    "built=false,facing=north,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_construction"
+    },
+    "built=true,facing=north,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_school"
+    },
+    "built=false,facing=east,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 90
+    },
+    "built=true,facing=east,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_school",
+      "y": 90
+    },
+    "built=false,facing=south,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 180
+    },
+    "built=true,facing=south,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_school",
+      "y": 180
+    },
+    "built=false,facing=west,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_construction",
+      "y": 270
+    },
+    "built=true,facing=west,kind=school": {
+      "model": "ak_trade_expansion:block/facility_sign_school",
+      "y": 270
     }
   }
 }
