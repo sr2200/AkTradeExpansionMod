@@ -100,11 +100,20 @@ public class NotebookScreen extends Screen {
 			addRenderableWidget(b);
 		}
 		addRenderableWidget(FittedButton.create(Component.translatable("gui.done"), b -> onClose(), left + panelW - 66, top + panelH - 22, 60, 18));
+		// v0.85: opened from a lectern: take it (as the lectern's "Take Book", only for players who may build)
+		int takeW = 0;
+		if (data.lectern() && minecraft != null && minecraft.player != null && minecraft.player.mayBuild()) {
+			takeW = Math.min(100, Math.max(40, panelW / 4));
+			addRenderableWidget(FittedButton.create(Component.translatable("screen.ak_trade_expansion.notebook.take"), b -> {
+				ClientPlayNetworking.send(new NotebookRequestC2S(NotebookRequestC2S.TAKE));
+				onClose();
+			}, left + panelW - 70 - takeW, top + panelH - 22, takeW, 18));
+		}
 		reportButton = null;
 		if (tab == Tab.TODAY) {
 			Component label = Component.translatable(data.reportOn() ? "screen.ak_trade_expansion.notebook.report_on" : "screen.ak_trade_expansion.notebook.report_off");
 			reportButton = FittedButton.create(label, b -> ClientPlayNetworking.send(new NotebookRequestC2S(
-					data.reportOn() ? NotebookRequestC2S.REPORT_OFF : NotebookRequestC2S.REPORT_ON)), left + 6, top + panelH - 22, Math.min(170, panelW - 80), 18);
+					data.reportOn() ? NotebookRequestC2S.REPORT_OFF : NotebookRequestC2S.REPORT_ON)), left + 6, top + panelH - 22, Math.min(170, panelW - 80 - (takeW > 0 ? takeW + 4 : 0)), 18);
 			reportButton.active = data.reportEnabled();
 			reportButton.setTooltip(Tooltip.create(Component.translatable(data.reportEnabled()
 					? "screen.ak_trade_expansion.notebook.report.tooltip" : "screen.ak_trade_expansion.notebook.report.disabled")));

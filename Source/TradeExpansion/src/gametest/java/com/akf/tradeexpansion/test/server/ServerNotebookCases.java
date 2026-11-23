@@ -7,11 +7,17 @@ import com.akf.tradeexpansion.network.NotebookS2C;
 import com.akf.tradeexpansion.notebook.LedgerService;
 import com.akf.tradeexpansion.registry.ModItems;
 import com.akf.tradeexpansion.trade.TradeResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LecternBlock;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +64,12 @@ final class ServerNotebookCases {
 		long total = c.trade(player, market, good, false, qty);
 		that(c.lastTradeResult(player) == TradeResult.SUCCESS, "selling %d %s gave %s", qty, good, c.lastTradeResult(player));
 		return total;
+	}
+
+	/** {@code player} uses the block at {@code pos} with what is in their main hand (as a right-click from the south). */
+	private static void useBlock(ServerPlayer player, BlockPos pos) {
+		BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos).add(0, 0.4, 0), Direction.UP, pos, false);
+		player.gameMode.useItemOn(player, player.level(), player.getMainHandItem(), InteractionHand.MAIN_HAND, hit);
 	}
 
 	private static void addDays(ServerCtx c, ServerPlayer player, int days) {
@@ -165,6 +177,38 @@ final class ServerNotebookCases {
 					c.openStall(other, stall);
 					that(notebook(c, other).notes().isEmpty(), "noted with notebook.priceNotes = 0");
 				})));
+		cases.add(partial("notebook_lectern", List.of("40-14"),
+				"手帳を持って書見台を使うと置かれ、手ぶらで使うと（置いた人でも別の人でも）「書見台から」の印のついた、使った人の手帳の中身が届き、"
+						+ "手帳を持っていなくても日報の切り替えができること。「書見台から取る」で手帳がインベントリに戻り書見台が空になり、離れていると取れないこと"
+						+ "（書見台の本の見た目と画面のボタンは見ていない）",
+				ctx -> {
+					BlockPos pos = ctx.center();
+					ctx.level().setBlock(pos, Blocks.LECTERN.defaultBlockState(), 3);
+					ServerPlayer owner = ctx.player(pos.south());
+					owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.MERCHANT_NOTEBOOK));
+					useBlock(owner, pos);
+					that(ctx.level().getBlockState(pos).getValue(LecternBlock.HAS_BOOK), "the notebook was not placed on the lectern");
+					that(!owner.getInventory().contains(new ItemStack(ModItems.MERCHANT_NOTEBOOK)), "the notebook is still in the inventory");
+					// Someone else opens it: their own ledger, from the lectern; the switch works without a notebook of their own.
+					ServerPlayer other = ctx.player(pos.east());
+					ctx.forget(other);
+					useBlock(other, pos);
+					List<NotebookS2C> sent = ctx.payloads(other, NotebookS2C.class);
+					that(!sent.isEmpty() && sent.getLast().open() && sent.getLast().lectern(), "using the lectern sent %s", sent);
+					that(other.containerMenu == other.inventoryMenu,
+							"the lectern's book screen opened as well");
+					LedgerService.handle(other, new NotebookRequestC2S(NotebookRequestC2S.REPORT_OFF));
+					that(!notebook(ctx, other).reportOn(), "the switch did not turn off from the lectern");
+					// Too far away: cannot take it.
+					other.teleportTo(pos.getX() + 20.5, pos.getY(), pos.getZ() + 0.5);
+					LedgerService.handle(other, new NotebookRequestC2S(NotebookRequestC2S.TAKE));
+					that(ctx.level().getBlockState(pos).getValue(LecternBlock.HAS_BOOK), "taken from 20 blocks away");
+					// The owner takes it back.
+					useBlock(owner, pos);
+					LedgerService.handle(owner, new NotebookRequestC2S(NotebookRequestC2S.TAKE));
+					that(!ctx.level().getBlockState(pos).getValue(LecternBlock.HAS_BOOK), "the lectern still has the notebook");
+					that(owner.getInventory().contains(new ItemStack(ModItems.MERCHANT_NOTEBOOK)), "the notebook did not come back");
+				}));
 		return cases;
 	}
 }

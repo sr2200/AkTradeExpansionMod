@@ -24,9 +24,10 @@ import java.util.List;
  * @param days          the days with takings, oldest first (today last when anything happened)
  * @param notes         price notes, newest first
  * @param staff         v0.83: the player's employees, as on the staff tab (nothing can be changed from the notebook)
+ * @param lectern       v0.85: opened from a notebook on a lectern (the screen offers to take it)
  */
 public record NotebookS2C(boolean open, boolean reportOn, boolean reportEnabled, long today, List<DayView> days, List<NoteView> notes,
-		List<StaffS2C.View> staff)
+		List<StaffS2C.View> staff, boolean lectern)
 		implements CustomPacketPayload {
 	public static final Type<NotebookS2C> TYPE = new Type<>(TradeExpansion.id("notebook"));
 
@@ -137,6 +138,7 @@ public record NotebookS2C(boolean open, boolean reportOn, boolean reportEnabled,
 		NoteView.CODEC.apply(ByteBufCodecs.list()).encode(buf, notes);
 		buf.writeVarInt(staff.size());
 		for (StaffS2C.View v : staff) v.write(buf);
+		buf.writeBoolean(lectern);
 	}
 
 	private static NotebookS2C read(RegistryFriendlyByteBuf buf) {
@@ -149,7 +151,8 @@ public record NotebookS2C(boolean open, boolean reportOn, boolean reportEnabled,
 		int n = buf.readVarInt();
 		List<StaffS2C.View> staff = new java.util.ArrayList<>(n);
 		for (int i = 0; i < n; i++) staff.add(StaffS2C.View.read(buf));
-		return new NotebookS2C(open, reportOn, reportEnabled, today, days, notes, staff);
+		boolean lectern = buf.readBoolean();
+		return new NotebookS2C(open, reportOn, reportEnabled, today, days, notes, staff, lectern);
 	}
 
 	@Override

@@ -17,20 +17,33 @@ import com.akf.tradeexpansion.network.NotebookRequestC2S;
 import com.akf.tradeexpansion.network.NotebookS2C;
 import com.akf.tradeexpansion.registry.ModItems;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LecternBlock;
+import net.minecraft.world.level.block.entity.LecternBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -43,7 +56,12 @@ public final class LedgerService {
 	/** Goods shown for a day in the notebook. */
 	public static final int TOP_GOODS = 5;
 
+	/** How far a player may be from the lectern their notebook screen was opened from (blocks). */
+	private static final double LECTERN_REACH = 8.0;
+
 	private static int tickCounter;
+	/** v0.85: the lectern each player's open notebook screen was opened from (not saved; gone when they use a notebook). */
+	private static final Map<UUID, GlobalPos> LECTERNS = new HashMap<>();
 
 	private LedgerService() {
 	}
@@ -57,6 +75,8 @@ public final class LedgerService {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (++tickCounter % 20 == 0) reportMornings(server);
 		});
+		UseBlockCallback.EVENT.register((player, level, hand, hit) -> useLectern(player, level, hit.getBlockPos()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> LECTERNS.remove(handler.getPlayer().getUUID()));
 	}
 
 	/** Today's day number: days of the overworld clock (day 0 starts at the first sunrise), so a day starts in the morning. */
@@ -203,8 +223,69 @@ public final class LedgerService {
 
 	// ---- the notebook ----
 
-	/** Sends the player's notebook ({@code open}: and opens its screen). */
+	// ---- the notebook on a lectern (v0.85) ----
+
+	/**
+	 * Using a lectern with a notebook on it opens the user's own notebook (the ledger is the player's, not the item's)
+	 * instead of the book screen. Runs before the lectern's own use; on the client the lectern's book is unknown, so the
+	 * client passes and the server decides. As the lectern, not when sneaking with something in the hands.
+	 */
+	private static InteractionResult useLectern(Player player, Level level, BlockPos pos) {
+		if (!(player instanceof ServerPlayer serverPlayer) || player.isSpectator()) return InteractionResult.PASS;
+		if (player.isSecondaryUseActive() && !(player.getMainHandItem().isEmpty() && player.getOffhandItem().isEmpty())) {
+			return InteractionResult.PASS;
+		}
+		if (!notebookOnLectern(level, pos)) return InteractionResult.PASS;
+		player.awardStat(Stats.INTERACT_WITH_LECTERN);
+		send(serverPlayer, true, GlobalPos.of(level.dimension(), pos.immutable()));
+		return InteractionResult.SUCCESS;
+	}
+
+	private static boolean notebookOnLectern(Level level, BlockPos pos) {
+		BlockState state = level.getBlockState(pos);
+		return state.getBlock() instanceof LecternBlock && state.getValue(LecternBlock.HAS_BOOK)
+				&& level.getBlockEntity(pos) instanceof LecternBlockEntity lectern && lectern.getBook().is(ModItems.MERCHANT_NOTEBOOK);
+	}
+
+	/** The lectern the player's notebook screen was opened from, while the notebook is still on it and they are near it. */
+	private static GlobalPos lecternInReach(ServerPlayer player) {
+		GlobalPos at = LECTERNS.get(player.getUUID());
+		if (at == null || !at.dimension().equals(player.level().dimension())) return null;
+		if (!notebookOnLectern(player.level(), at.pos())) return null;
+		if (player.distanceToSqr(Vec3.atCenterOf(at.pos())) > LECTERN_REACH * LECTERN_REACH) return null;
+		return at;
+	}
+
+	/** The notebook screen's "Take from lectern" (as the lectern's "Take Book": only for players who may build). */
+	private static void takeFromLectern(ServerPlayer player) {
+		GlobalPos at = lecternInReach(player);
+		if (at == null || !player.mayBuild()) return;
+		Level level = player.level();
+		BlockPos pos = at.pos();
+		if (!(level.getBlockEntity(pos) instanceof LecternBlockEntity lectern)) return;
+		ItemStack book = lectern.getBook().copy();
+		lectern.setBook(ItemStack.EMPTY);
+		LecternBlock.resetBookState(player, level, pos, level.getBlockState(pos), false);
+		lectern.setChanged();
+		LECTERNS.remove(player.getUUID());
+		player.getInventory().placeItemBackInInventory(book, net.minecraft.util.Prediction.SERVER_ONLY);
+	}
+
+	/** Sends the player's notebook ({@code open}: and opens its screen, as from the notebook in their hand). */
 	public static void send(ServerPlayer player, boolean open) {
+		send(player, open, null);
+	}
+
+	/**
+	 * Sends the player's notebook. {@code open}: and opens its screen, from {@code lectern} (null: the notebook in their
+	 * hand). A refresh ({@code open} false) keeps where the screen was opened from.
+	 */
+	private static void send(ServerPlayer player, boolean open, GlobalPos lectern) {
+		if (open) {
+			if (lectern == null) LECTERNS.remove(player.getUUID());
+			else LECTERNS.put(player.getUUID(), lectern);
+		}
+		boolean fromLectern = lecternInReach(player) != null;
 		MinecraftServer server = player.level().getServer();
 		Ledger ledger = Ledger.get(server);
 		Ledger.Book book = ledger.find(player.getUUID());
@@ -237,12 +318,16 @@ public final class LedgerService {
 		boolean reportOn = book == null || !book.reportOff;
 		List<com.akf.tradeexpansion.network.StaffS2C.View> staff = com.akf.tradeexpansion.staff.StaffService.views(MarketRegistry.get(server), null,
 				player.getUUID()); // v0.83: the staff page
-		ServerPlayNetworking.send(player, new NotebookS2C(open, reportOn, config().dailyReport, today, days, notes, staff));
+		ServerPlayNetworking.send(player, new NotebookS2C(open, reportOn, config().dailyReport, today, days, notes, staff, fromLectern));
 	}
 
-	/** The notebook screen's switch for the morning report. */
+	/** The notebook screen's switch for the morning report, and (v0.85) taking it from the lectern. */
 	public static void handle(ServerPlayer player, NotebookRequestC2S request) {
-		if (!player.getInventory().contains(new ItemStack(ModItems.MERCHANT_NOTEBOOK))) return;
+		if (request.action() == NotebookRequestC2S.TAKE) {
+			takeFromLectern(player);
+			return;
+		}
+		if (!player.getInventory().contains(new ItemStack(ModItems.MERCHANT_NOTEBOOK)) && lecternInReach(player) == null) return;
 		if (request.action() != NotebookRequestC2S.REPORT_ON && request.action() != NotebookRequestC2S.REPORT_OFF) return;
 		Ledger ledger = Ledger.get(player.level().getServer());
 		ledger.book(player.getUUID()).reportOff = request.action() == NotebookRequestC2S.REPORT_OFF;

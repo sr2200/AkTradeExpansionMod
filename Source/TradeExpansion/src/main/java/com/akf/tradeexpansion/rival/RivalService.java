@@ -71,7 +71,9 @@ public final class RivalService {
 	 */
 	public static Campaign startNow(ServerLevel level, MarketRegistry registry, Market center, long now) {
 		long today = day(now);
-		Campaign campaign = roll(registry, center, today, new Random(level.getSeed() ^ now ^ registry.campaigns().size()));
+		// Spread the seed: seeds a tick apart would give java.util.Random almost the same first draws (the same center).
+		long seed = (level.getSeed() ^ now ^ registry.campaigns().size()) * 0x9E3779B97F4A7C15L;
+		Campaign campaign = roll(registry, center, today, new Random(seed ^ (seed >>> 31)));
 		if (campaign == null) return null;
 		registry.campaigns().add(campaign);
 		registry.setDirty();
