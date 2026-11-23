@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.test.client;
 
 import com.akf.tradeexpansion.block.FacilitySignBlock;
+import com.akf.tradeexpansion.client.FittedButton;
 import com.akf.tradeexpansion.client.MarketScreen;
 import com.akf.tradeexpansion.config.ConfigManager;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
@@ -789,6 +790,8 @@ final class ClientTownCases {
 	// ---- 44-1 / 44-8 the levels (v0.86)
 
 	private static final int[][] LEVEL_SIZES = {{854, 480, 0}, {854, 480, 4}, {1920, 1080, 4}, {1920, 1080, 0}};
+	/** 44-8: the smallest scale a direction's name may be drawn at in its button (smaller letters run together). */
+	private static final float BRANCH_LABEL_SCALE = 0.7f;
 
 	/**
 	 * 44-1: a completed warehouse at level 1 shows "Lv2 に：発展度 N" and the two directions as buttons, whose tooltip
@@ -851,6 +854,25 @@ final class ClientTownCases {
 					FacilityView w = view(context, screen, "warehouse");
 					String cost = squeeze(text(T + "upgrade_cost", 2, points(w.cost())));
 					check(all(context).contains(cost), "the panel does not say \"%s\"", cost);
+					// Every building's direction names stay readable in the half-width buttons (a long one takes two lines).
+					problems.addAll(context.computeOnClient(c -> {
+						List<String> small = new ArrayList<>();
+						Component kept = a.getMessage();
+						for (FacilityKind kind : FacilityKind.values()) {
+							for (String branch : new String[] {"a", "b"}) {
+								String key = "facility." + NS + "." + kind.getSerializedName() + ".branch." + branch;
+								if (!Language.getInstance().has(key)) continue;
+								a.setMessage(Component.translatable(key));
+								FittedButton.Label label = ((FittedButton) a).label(c.font);
+								if (label.scale() < BRANCH_LABEL_SCALE) {
+									small.add(String.format(Locale.ROOT, "%s: the direction \"%s\" is drawn at %.2f (under %.2f)",
+											where, a.getMessage().getString(), label.scale(), BRANCH_LABEL_SCALE));
+								}
+							}
+						}
+						a.setMessage(kept);
+						return small;
+					}));
 					ClientChecklistTests.checkLayout(context, result, where + " level1", first, problems, null);
 					if (first) {
 						String tip = buttonTooltip(context, a);

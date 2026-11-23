@@ -346,8 +346,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				b -> townRequest(DevelopmentRequestC2S.Action.DONATE_ITEMS, selectedFacility)).bounds(x + panelX, y + 139, PANEL_W, 14).build());
 		// N-11 (v0.86): raising a building to level 2 chooses one of two directions; to level 3 uses the build button
 		int half = (PANEL_W - 2) / 2;
-		branchAButton = addRenderableWidget(FittedButton.create(Component.empty(), b -> upgradeRequest(0), x + panelX, y + 122, half, 16));
-		branchBButton = addRenderableWidget(FittedButton.create(Component.empty(), b -> upgradeRequest(1), x + panelX + PANEL_W - half, y + 122, half, 16));
+		branchAButton = addRenderableWidget(FittedButton.createWrapping(Component.empty(), b -> upgradeRequest(0), x + panelX, y + 122, half, 16));
+		branchBButton = addRenderableWidget(FittedButton.createWrapping(Component.empty(), b -> upgradeRequest(1), x + panelX + PANEL_W - half, y + 122, half, 16));
 
 		// Request tab (J) and board (I)
 		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
