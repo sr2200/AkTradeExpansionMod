@@ -538,7 +538,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			String style = f != null && f.state() != Facility.State.DESTROYED ? f.style() : placeStyle;
 			// N-11 (v0.86): the size of the look of its level
 			java.util.Optional<net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate> look = f != null
-					? FacilityBuilder.template(server, def, style, f.level(), f.tall()) : FacilityBuilder.template(server, def, style);
+					? FacilityBuilder.template(server, def, style, f.level(), f.tall(), f.branch()) : FacilityBuilder.template(server, def, style);
 			BlockPos size = look.map(t -> new BlockPos(t.getSize().getX(), t.getSize().getY(), t.getSize().getZ())).orElse(BlockPos.ZERO);
 			boolean tallLook = FacilityBuilder.template(server, def, style, com.akf.tradeexpansion.core.FacilityLevelMath.MAX_LEVEL, true).isPresent();
 			int state = f == null ? FacilityView.NONE : switch (f.state()) {

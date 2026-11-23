@@ -90,11 +90,15 @@ final class ServerLevelCases {
 					that(view.branch().equals("a"), "direction on the development tab: %s", view.branch());
 					equal(FacilityLevelMath.scaled(cost, 1.5), view.cost(), "cost of level 3 on the development tab");
 				})));
-		cases.add(partial("facility_upgrade_level3_tall", List.of("44-4", "44-5"),
+		cases.add(partial("facility_upgrade_level3_tall", List.of("44-4", "44-5", "45-8"),
 				"宿屋を「大部屋」で Lv2・Lv3 に上げると、そのたびに村人が増え（2人 → 4人 → 5人の分）、上が空いている Lv3 は2階建てになって建物の高さが 4 増えること。"
+						+ "Lv2 で進捗「普請」、2階建てで進捗「二階建て」が取れること（「立派な村」は見ていない）。"
 						+ "上をふさいだ倉庫は2階なしで Lv3 になり、そのことがチャットに出ること。Lv3 はそれ以上上げられないこと（2階の見た目そのものは見ていない）",
 				ctx -> town(ctx, (c, player, market, stall) -> {
 					builder(c, player, market);
+					// a donation: the advancements of the levels count the villages the player helped develop
+					c.giveMoney(player, 1_000);
+					ServerDevelopmentCases.donate(c, player, market, 100, false);
 					buildAndComplete(c, player, market, INN);
 					Facility inn = market.facilities().get(INN);
 					int villagers = villagers(c, market);
@@ -103,6 +107,7 @@ final class ServerLevelCases {
 					int base = Development.config().innVillagers;
 					int two = FacilityLevelMath.count(base, 1.75) - base;
 					equal(villagers + two, villagers(c, market), "villagers after the inn's level 2");
+					ServerAdvancementCases.done(c, player, "renovation", "after raising the inn to level 2");
 					BoundingBox low = inn.box();
 					that(upgrade(c, player, market, INN, 0) == TradeResult.SUCCESS, "raising the inn to level 3 failed");
 					that(inn.upgradeTall(), "the inn with free space above does not get a second storey");
@@ -110,6 +115,7 @@ final class ServerLevelCases {
 					equal(3, inn.level(), "level of the inn");
 					that(inn.tall(), "the inn has no second storey");
 					equal(low.getYSpan() + 4, inn.box().getYSpan(), "height of the inn with its second storey");
+					ServerAdvancementCases.done(c, player, "upper_storey", "after raising the inn to level 3 with its second storey");
 					c.clearAfter(inn.box());
 					equal(villagers + FacilityLevelMath.count(base, 2.5) - base, villagers(c, market), "villagers after the inn's level 3");
 					that(inn.core() != null && c.level().getBlockState(inn.core()).is(com.akf.tradeexpansion.registry.ModBlocks.FACILITY_SIGN),

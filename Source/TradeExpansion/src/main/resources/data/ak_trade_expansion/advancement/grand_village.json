@@ -1,0 +1,32 @@
+{
+  "parent": "ak_trade_expansion:upper_storey",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "facilities_max_level",
+        "min": 5
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:beacon"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.grand_village.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.grand_village.description"
+    },
+    "frame": "challenge"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  }
+}

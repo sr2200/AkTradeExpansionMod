@@ -73,6 +73,9 @@ def autotestOnly = providers.gradleProperty("autotest.only").orElse("")
 // -Pautotest.looks=plains or -Pautotest.looks=plains+desert:inn+warehouse: autotest.bat looks takes only these looks
 // (and buildings, after the colon) instead of all 161 pictures (ClientLookCases).
 def autotestLooks = providers.gradleProperty("autotest.looks").orElse("")
+// -Pautotest.looksLevel=3t: the pictures show this level of the buildings (N-11): 1 (default), 2 or 3, "t" the tall look
+// of level 3, "b" the look of direction b (e.g. 2b, 3tb).
+def autotestLooksLevel = providers.gradleProperty("autotest.looksLevel").orElse("1")
 loom {
 	runs {
 		configureEach {
@@ -131,6 +134,7 @@ loom {
 			getRunDirectory().set(file("build/run/clientGameTestLooks"))
 			vmArg "-Dak.autotest.variant=looks"
 			vmArg "-Dak.looks.only=${autotestLooks.get()}"
+			vmArg "-Dak.looks.level=${autotestLooksLevel.get()}"
 		}
 		// Screenshots for the download page (shots.bat, called by release.bat): PostScreenshots in the test mod writes
 		// docs/release/Screenshot/auto/*.png. A run directory of its own, emptied first (a new world every time).

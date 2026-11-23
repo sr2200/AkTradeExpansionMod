@@ -74,9 +74,11 @@ final class ServerStaffCases {
 						d.good(good).setPressure(d.params(good).maxPressure() * 0.8);
 						b.good(good).setPressure(b.params(good).minPressure() * 0.8);
 						a.good(good).setPressure(a.params(good).maxPressure() * 0.8);
+						// the first trip may have bought up a good with a small stock (bread: 16): stocked again
+						a.good(good).setStock(a.params(good).maxStock());
 						c.command(player, "aktradeex staff hurry");
 						e = only(c, player, a);
-						equal(b.id(), e.destination(), "the destination after the prices changed");
+						equal(b.id(), e.destination(), "the destination after the prices changed (a " + a.id() + ", d " + d.id() + ")");
 						that(e.log().stream().anyMatch(l -> l.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t
 								&& t.getKey().equals("staff.ak_trade_expansion.log.roam_chose")), "no log line of the new destination");
 					});
@@ -215,6 +217,8 @@ final class ServerStaffCases {
 						equal(Employee.Phase.OUTBOUND.ordinal(), only(c, player, a).phase(), "phase after buying");
 						HiredHands.update(c.level().getServer(), com.akf.tradeexpansion.market.MarketRegistry.get(c.level().getServer()));
 						that(hand.isRemoved(), "the carrier still stands at home while on a trip");
+						// paused, it stops when it is back (whether another trip pays depends on the good the markets have)
+						that(staff(c, player, a, StaffRequestC2S.Action.PAUSE, e.id(), Employee.AUTO, 0, 0, 0, 0, 0, false) == TradeResult.SUCCESS, "pausing failed");
 						c.command(player, "aktradeex staff hurry");
 						c.command(player, "aktradeex staff hurry");
 						equal(Employee.Phase.HOME.ordinal(), only(c, player, a).phase(), "phase after the trip");

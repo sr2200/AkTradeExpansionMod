@@ -177,12 +177,13 @@ public final class FacilityBuilder {
 		// storey is rebuilt without it
 		int buildLevel = existing == null ? 1 : existing.level();
 		boolean tall = existing != null && existing.tall();
-		StructureTemplate template = template(level.getServer(), def, style, buildLevel, tall).orElse(null);
+		String branchLook = existing == null ? "" : existing.branch();
+		StructureTemplate template = template(level.getServer(), def, style, buildLevel, tall, branchLook).orElse(null);
 		if (template == null) return Outcome.fail(TradeResult.NO_TEMPLATE);
 
 		SiteFinder.Result found = SiteFinder.find(level, market, template, def.landRows());
 		if (found.site() == null && tall) {
-			StructureTemplate low = template(level.getServer(), def, style, buildLevel, false).orElse(null);
+			StructureTemplate low = template(level.getServer(), def, style, buildLevel, false, branchLook).orElse(null);
 			SiteFinder.Result lower = low == null ? found : SiteFinder.find(level, market, low, def.landRows());
 			if (lower.site() != null) {
 				found = lower;
@@ -254,17 +255,31 @@ public final class FacilityBuilder {
 	 * is empty, so that the caller builds without the second storey).
 	 */
 	public static Optional<StructureTemplate> template(MinecraftServer server, FacilityDefinition def, String style, int level, boolean tall) {
+		return template(server, def, style, level, tall, "");
+	}
+
+	/**
+	 * v0.87: the look of {@code level} in the direction {@code branch} (chosen at level 2): direction b has looks of its
+	 * own ({@code _lv2_b}, {@code _lv3_b}, {@code _lv3_b_tall}: banners of another colour); without them, and for
+	 * direction a, the looks above.
+	 */
+	public static Optional<StructureTemplate> template(MinecraftServer server, FacilityDefinition def, String style, int level, boolean tall,
+			String branch) {
 		if (level <= 1) return template(server, def, style);
 		String suffix = "_lv" + Math.min(level, FacilityLevelMath.MAX_LEVEL);
+		if ("b".equals(branch)) {
+			Optional<StructureTemplate> own = look(server, def, style, suffix + "_b" + (tall ? "_tall" : ""));
+			if (own.isPresent()) return own;
+		}
 		if (tall) return look(server, def, style, suffix + "_tall");
 		Optional<StructureTemplate> found = look(server, def, style, suffix);
 		return found.isPresent() ? found : template(server, def, style);
 	}
 
-	/** The look a building has now (its level and second storey). */
+	/** The look a building has now (its level, direction and second storey). */
 	public static Optional<StructureTemplate> template(MinecraftServer server, FacilityDefinition def, Facility facility) {
-		Optional<StructureTemplate> found = template(server, def, facility.style(), facility.level(), facility.tall());
-		return found.isPresent() ? found : template(server, def, facility.style(), facility.level(), false);
+		Optional<StructureTemplate> found = template(server, def, facility.style(), facility.level(), facility.tall(), facility.branch());
+		return found.isPresent() ? found : template(server, def, facility.style(), facility.level(), false, facility.branch());
 	}
 
 	private static Optional<StructureTemplate> look(MinecraftServer server, FacilityDefinition def, String style, String suffix) {
@@ -378,13 +393,14 @@ public final class FacilityBuilder {
 		if (Development.points(market, now) + 1e-9 < cost) return Outcome.fail(TradeResult.NOT_ENOUGH_POINTS);
 		int next = facility.level() + 1;
 		MinecraftServer server = level.getServer();
-		if (template(server, def, facility).isEmpty() || template(server, def, facility.style(), next, false).isEmpty()) {
+		String nextBranch = facility.level() == 1 ? (branch == 1 ? "b" : "a") : facility.branch();
+		if (template(server, def, facility).isEmpty() || template(server, def, facility.style(), next, false, nextBranch).isEmpty()) {
 			return Outcome.fail(TradeResult.NO_TEMPLATE);
 		}
 		Component reason = null;
 		boolean tall = false;
 		if (next == FacilityLevelMath.MAX_LEVEL) {
-			StructureTemplate high = template(server, def, facility.style(), next, true).orElse(null);
+			StructureTemplate high = template(server, def, facility.style(), next, true, nextBranch).orElse(null);
 			if (high != null) {
 				tall = roomAbove(level, facility, high);
 				if (!tall) reason = Component.translatable("message.ak_trade_expansion.facility.upgrade.no_room", name(facility.kind()));
@@ -437,10 +453,10 @@ public final class FacilityBuilder {
 		StructureTemplate from = def == null ? null : template(server, def, facility).orElse(null);
 		int next = facility.level() + 1;
 		boolean tall = facility.upgradeTall();
-		StructureTemplate to = def == null ? null : template(server, def, facility.style(), next, tall).orElse(null);
+		StructureTemplate to = def == null ? null : template(server, def, facility.style(), next, tall, facility.branch()).orElse(null);
 		if (to == null && tall && def != null) {
 			tall = false;
-			to = template(server, def, facility.style(), next, false).orElse(null);
+			to = template(server, def, facility.style(), next, false, facility.branch()).orElse(null);
 		}
 		if (from == null || to == null) {
 			TradeExpansion.LOGGER.warn("Facility {} of market #{}: no template for level {}, the raise stays open", facility.id(), market.id(), next);

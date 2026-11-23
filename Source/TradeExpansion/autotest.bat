@@ -16,6 +16,7 @@ rem   Then records the results in docs\release\ingame-checklist.md and docs\rele
 rem   Other arguments go to Gradle, e.g. autotest.bat server --offline
 rem   Only some cases: -Pautotest.only=2-10+2-11+stall (checklist numbers or case names, joined with +)
 rem   Only some pictures (looks): -Pautotest.looks=plains+desert:inn+warehouse (looks, then buildings after the colon)
+rem   Levels of the buildings in the pictures (looks): -Pautotest.looksLevel=3t (2, 3, 3t = tall, b = direction b)
 setlocal
 cd /d "%~dp0"
 

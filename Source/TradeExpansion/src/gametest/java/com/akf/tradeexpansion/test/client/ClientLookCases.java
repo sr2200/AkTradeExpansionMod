@@ -54,6 +54,20 @@ final class ClientLookCases {
 	 */
 	private static final String[] ONLY = System.getProperty("ak.looks.only", "").split(":", 2);
 
+	/**
+	 * System property {@code ak.looks.level} (gradle {@code -Pautotest.looksLevel}, v0.87): the level of the buildings in
+	 * the pictures, "1" (default), "2" or "3"; with "t" the tall look of level 3, with "b" the look of direction b.
+	 */
+	private static final String LEVEL = System.getProperty("ak.looks.level", "1");
+	private static final int LEVEL_NUMBER = LEVEL.chars().filter(Character::isDigit).map(ch -> ch - '0').findFirst().orElse(1);
+	private static final boolean LEVEL_TALL = LEVEL.contains("t");
+	private static final String LEVEL_BRANCH = LEVEL.contains("b") ? "b" : "a";
+
+	/** The picture's name: look_<look>_<building>, from level 2 with _lv<level> (and t, b) after it. */
+	private static String pictureName(String style, String building) {
+		return "look_" + style + "_" + building + (LEVEL_NUMBER <= 1 ? "" : "_lv" + LEVEL);
+	}
+
 	private static boolean wanted(int part, String name) {
 		if (ONLY.length <= part || ONLY[part].isBlank()) return true;
 		return List.of(ONLY[part].split("\\+")).contains(name);
@@ -71,7 +85,8 @@ final class ClientLookCases {
 		for (var entry : FacilityCatalog.all().entrySet()) {
 			if (!wanted(1, entry.getKey().getPath())) continue;
 			FacilityDefinition def = entry.getValue();
-			StructureTemplate template = FacilityBuilder.template(server, def, style).orElseThrow();
+			StructureTemplate template = FacilityBuilder.template(server, def, style, LEVEL_NUMBER, LEVEL_TALL, LEVEL_BRANCH)
+					.or(() -> FacilityBuilder.template(server, def, style, LEVEL_NUMBER, false, LEVEL_BRANCH)).orElseThrow();
 			BlockPos cell = ground(server, base.getX() + i % COLUMNS * SPACING, base.getZ() + i / COLUMNS * SPACING);
 			StructurePlaceSettings settings = new StructurePlaceSettings().setRotation(Rotation.NONE);
 			BlockPos origin = cell.offset(-template.getSize().getX() / 2, 0, -template.getSize().getZ() / 2);
@@ -156,7 +171,7 @@ final class ClientLookCases {
 						if (p.sign() == null) noSign.add(style + "/" + p.id().getPath());
 						Vec3[] cam = camera(p);
 						view(s, cam[0], cam[1]);
-						screenshot(context, result, "look_" + style + "_" + p.id().getPath());
+						screenshot(context, result, pictureName(style, p.id().getPath()));
 					}
 				} finally {
 					s.world.getServer().runOnServer(server -> clear(server, placed));

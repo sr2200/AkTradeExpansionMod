@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:renovation",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "facility_tall"
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:ladder"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.upper_storey.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.upper_storey.description"
+    },
+    "frame": "goal"
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 50
+  }
+}

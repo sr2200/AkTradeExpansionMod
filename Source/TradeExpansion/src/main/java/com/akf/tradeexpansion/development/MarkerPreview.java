@@ -90,7 +90,7 @@ public final class MarkerPreview {
 			if (existing != null && existing.state() != Facility.State.DESTROYED) continue; // built or under construction
 			// N-11 (v0.86): a destroyed building is rebuilt at its level
 			StructureTemplate template = (existing == null ? FacilityBuilder.template(level.getServer(), e.getValue(), style)
-					: FacilityBuilder.template(level.getServer(), e.getValue(), style, existing.level(), existing.tall())).orElse(null);
+					: FacilityBuilder.template(level.getServer(), e.getValue(), style, existing.level(), existing.tall(), existing.branch())).orElse(null);
 			if (template == null) continue;
 			SiteFinder.Preview preview = SiteFinder.preview(level, market, template, pos, facing, e.getValue().landRows());
 			boolean ok = preview.reason() == null;

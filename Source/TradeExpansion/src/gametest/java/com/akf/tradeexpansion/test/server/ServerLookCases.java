@@ -63,6 +63,9 @@ final class ServerLookCases {
 		cases.add(partial("buildings_stand_every_way", List.of("29-2", "22-50"),
 				"23種類の建物を7種類の見た目（平原・砂漠・サバンナ・雪原・タイガ・ネザー・エンド）と4つの向きで、完成の時と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品（ボタン・旗・松明・はしご・吊り看板・ろうそく・ケーキなど）が無く、ランダムティックを速めて30ティック進めてもブロックが変わらず（火が付かない。時計塔の避雷針は蝋引きで錆びない。ブロックの下の草と菌糸が土とネザーラックになる・つる・サトウキビ・竹が伸びるのは除く）、水と溶岩が建物の外に流れ出ないこと（材料と形の見た目は画像で見る。村の家や木の近くでは見ていない）",
 				ServerLookCases::stand));
+		cases.add(partial("raised_buildings_stand", List.of("45-1"),
+				"Lv3 の見た目（23種類の建物の2階建て・高い形（礼拝堂・駅舎・噴水・時計塔・見張り塔）を4つの向きで、2階なしの Lv3 を北向きで、7種類の見た目それぞれ）を、Lv1 と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品が無く、30ティック進めてもブロックが変わらず、水と溶岩が建物の外に流れ出ないこと（Lv2 の飾りと方向 b の旗は Lv3 に含まれるので置いていない。見た目そのものは画像で見る）",
+				ServerLookCases::standRaised));
 		cases.add(partial("building_parts_by_style", List.of("29-14", "22-52", "22-53", "22-55", "22-56", "28-6"),
 				"7種類の見た目それぞれに23種類の建物の構造物があり（平原に代わらない）、看板（建物の目印）が1つずつあること。宿屋は村の見た目でベッド4つ・ネザーとエンドはベッドなしでカーペット、煙突に火の付いた焚き火（エンドはエンドロッド）。依頼所と時計塔に鐘、時計塔にボタンと避雷針、見張り塔にはしご・旗・松明、酒場に吊り看板とろうそく、市場にハチの巣（bee_nest）と飾り壺、劇場と祭りの広場に旗、祭りの広場にろうそくのケーキ、銀行に鉄格子、温泉にソウルサンド、鋳造所に溶鉱炉・金床・鍛冶台と煙突の火（エンドはエンドロッド）、駅舎にレールと鐘、目利きの店にアメジストの塊・模様入りの本棚・書見台、問屋に樽・チェスト・干し草、商人組合の会館にエメラルドブロック・旗・ろうそく、礼拝堂に鐘・ろうそく・色付きガラス、村役場に旗・書見台・本棚、職人の工房に金床・作業台・石切台と煙突の火、学舎に本棚・書見台・ろうそく。噴水広場はネザーで溶岩・ほかは水、公園はネザーで真紅のキノコと溶岩・エンドでコーラスとエンドロッド・村で葉（材料の見た目、鐘を鳴らせる・寝られる・村人が来るは見ていない）",
 				ServerLookCases::parts));
@@ -148,10 +151,21 @@ final class ServerLookCases {
 
 	/** Places every building of {@code style} turned by {@code rotation}, one per cell of the grid, with block updates. */
 	private static List<Placed> placeAll(ServerCtx c, String style, Rotation rotation) {
+		return placeAll(c, style, rotation, 1, false);
+	}
+
+	/**
+	 * v0.87: the same with the look of {@code level} (N-11; {@code tall}: the tall look of level 3 where the building has
+	 * one, else the plain level 3).
+	 */
+	private static List<Placed> placeAll(ServerCtx c, String style, Rotation rotation, int level, boolean tall) {
 		List<Placed> placed = new ArrayList<>();
 		int i = 0;
 		for (Identifier id : FacilityCatalog.all().keySet()) {
-			StructureTemplate template = template(c, id, style);
+			FacilityDefinition def = FacilityCatalog.get(id);
+			StructureTemplate template = level <= 1 ? template(c, id, style)
+					: FacilityBuilder.template(c.server(), def, style, level, tall, "a")
+							.or(() -> FacilityBuilder.template(c.server(), def, style, level, false, "a")).orElseThrow();
 			// Turned around the middle of its cell.
 			BlockPos cell = base(c).offset(i % COLUMNS * SPACING + SPACING / 2, 0, i / COLUMNS * SPACING + SPACING / 2);
 			StructurePlaceSettings settings = new StructurePlaceSettings().setRotation(rotation);
@@ -177,23 +191,47 @@ final class ServerLookCases {
 
 	// ---- 29-2 / 22-50: standing in every direction
 
+	private record Round(String style, Rotation rotation, int level, boolean tall) {
+		@Override
+		public String toString() {
+			return style + " look" + (level > 1 ? " Lv" + level + (tall ? " tall" : "") : "") + " turned " + rotation;
+		}
+	}
+
 	private static void stand(ServerCtx ctx) {
+		List<Round> rounds = new ArrayList<>();
+		for (String style : STYLES) for (Rotation rotation : ROTATIONS) rounds.add(new Round(style, rotation, 1, false));
+		stand(ctx, rounds);
+	}
+
+	/** 45-1 (v0.87): the tall looks of level 3 in every direction, the plain level 3 facing north. */
+	private static void standRaised(ServerCtx ctx) {
+		List<Round> rounds = new ArrayList<>();
+		for (String style : STYLES) {
+			for (Rotation rotation : ROTATIONS) rounds.add(new Round(style, rotation, 3, true));
+			rounds.add(new Round(style, Rotation.NONE, 3, false));
+		}
+		stand(ctx, rounds);
+	}
+
+	private static void stand(ServerCtx ctx, List<Round> rounds) {
 		prepare(ctx);
 		ServerLevel level = ctx.level();
 		int speed = level.getGameRules().get(GameRules.RANDOM_TICK_SPEED);
 		level.getGameRules().set(GameRules.RANDOM_TICK_SPEED, 200, ctx.server());
 		ctx.atCleanUp(() -> level.getGameRules().set(GameRules.RANDOM_TICK_SPEED, speed, ctx.server()));
-		for (String style : STYLES) {
-			for (Rotation rotation : ROTATIONS) {
+		for (Round round : rounds) {
+			{
+				String style = round.toString();
 				@SuppressWarnings("unchecked")
 				List<Placed>[] placed = new List[1];
 				@SuppressWarnings("unchecked")
 				Map<BlockPos, Block>[] before = new Map[1];
 				ctx.later(1, c -> {
-					placed[0] = placeAll(c, style, rotation);
+					placed[0] = placeAll(c, round.style(), round.rotation(), round.level(), round.tall());
 					// What fell off while it was placed lies around as items.
 					List<String> dropped = drops(c, placed[0]);
-					that(dropped.isEmpty(), "%s look turned %s: parts fell off when placed: %s", style, rotation, dropped);
+					that(dropped.isEmpty(), "%s: parts fell off when placed: %s", style, dropped);
 					before[0] = new HashMap<>();
 					for (Placed p : placed[0]) {
 						for (BlockPos q : BlockPos.betweenClosed(p.box().minX(), p.box().minY(), p.box().minZ(), p.box().maxX(), p.box().maxY(), p.box().maxZ())) {
@@ -204,7 +242,7 @@ final class ServerLookCases {
 				ctx.later(STAND, c -> {
 					try {
 						List<String> dropped = drops(c, placed[0]);
-						that(dropped.isEmpty(), "%s look turned %s: parts fell off within %d ticks: %s", style, rotation, STAND, dropped);
+						that(dropped.isEmpty(), "%s: parts fell off within %d ticks: %s", style, STAND, dropped);
 						List<String> changed = new ArrayList<>();
 						before[0].forEach((q, b) -> {
 							Block now = c.level().getBlockState(q).getBlock();
@@ -218,7 +256,7 @@ final class ServerLookCases {
 							if (java.util.stream.Stream.of(was, is).anyMatch(x -> x.contains("vines") || x.equals("sugar_cane") || x.contains("bamboo"))) return; // plants grow
 							changed.add(name(q, c.level(), b) + " -> " + BuiltInRegistries.BLOCK.getKey(now).getPath());
 						});
-						that(changed.isEmpty(), "%s look turned %s: blocks changed within %d ticks: %s", style, rotation, STAND, changed);
+						that(changed.isEmpty(), "%s: blocks changed within %d ticks: %s", style, STAND, changed);
 						List<String> outside = new ArrayList<>();
 						for (Placed p : placed[0]) {
 							BoundingBox b = p.box();
@@ -233,7 +271,7 @@ final class ServerLookCases {
 								if (c.level().getBlockState(q).is(BlockTags.FIRE) && outside.size() < 10) outside.add(p.id().getPath() + " fire at " + q.toShortString());
 							}
 						}
-						that(outside.isEmpty(), "%s look turned %s: water, lava or fire outside the buildings (or fire in them): %s", style, rotation, outside);
+						that(outside.isEmpty(), "%s: water, lava or fire outside the buildings (or fire in them): %s", style, outside);
 					} finally {
 						clear(c, placed[0]);
 					}

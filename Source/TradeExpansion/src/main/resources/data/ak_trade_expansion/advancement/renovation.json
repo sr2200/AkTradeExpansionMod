@@ -1,0 +1,31 @@
+{
+  "parent": "ak_trade_expansion:builder",
+  "criteria": {
+    "done": {
+      "trigger": "ak_trade_expansion:trade_event",
+      "conditions": {
+        "event": "facility_level",
+        "min": 2
+      }
+    }
+  },
+  "display": {
+    "icon": {
+      "id": "minecraft:bricks"
+    },
+    "title": {
+      "translate": "advancements.ak_trade_expansion.renovation.title"
+    },
+    "description": {
+      "translate": "advancements.ak_trade_expansion.renovation.description"
+    }
+  },
+  "requirements": [
+    [
+      "done"
+    ]
+  ],
+  "rewards": {
+    "experience": 30
+  }
+}

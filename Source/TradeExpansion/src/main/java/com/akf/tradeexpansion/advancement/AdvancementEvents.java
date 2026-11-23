@@ -36,11 +36,17 @@ public interface AdvancementEvents {
 	String FACILITIES = "facilities";
 	/** Value: kinds of completed buildings of a market the player helped develop. */
 	String FACILITY_KINDS = "facility_kinds";
+	/** v0.87 (N-11): value: the highest level of a completed building of a market the player helped develop. */
+	String FACILITY_LEVEL = "facility_level";
+	/** v0.87 (N-11): a building of a market the player helped develop is a tall level 3 (second storey or higher shape). */
+	String FACILITY_TALL = "facility_tall";
+	/** v0.87 (N-11): value: completed buildings of a market the player helped develop when all of them are level 3, else 0. */
+	String FACILITIES_MAX_LEVEL = "facilities_max_level";
 	String STAFF_HIRED = "staff_hired";
 	/** Value: a carrier's profit on one round trip, after its pay. */
 	String STAFF_PROFIT = "staff_profit";
 
 	Set<String> ALL = Set.of(TRADE, BULK_BUY, SELL_STOPPED, SHORTAGE_SOLD, RIVAL_SOLD, MARKETS, TRADE_NETHER, TRADE_END, WEALTH,
 			BANK_DEPOSIT, CARD_ISSUED, QUEST_DELIVERED, CARGO_DELIVERED, REPUTATION, DONATED, FACILITIES, FACILITY_KINDS,
-			STAFF_HIRED, STAFF_PROFIT);
+			FACILITY_LEVEL, FACILITY_TALL, FACILITIES_MAX_LEVEL, STAFF_HIRED, STAFF_PROFIT);
 }

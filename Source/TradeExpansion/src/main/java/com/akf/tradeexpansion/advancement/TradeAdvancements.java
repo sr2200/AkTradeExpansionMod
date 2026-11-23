@@ -2,7 +2,9 @@ package com.akf.tradeexpansion.advancement;
 
 import com.akf.tradeexpansion.TradeExpansion;
 import com.akf.tradeexpansion.bank.BankService;
+import com.akf.tradeexpansion.core.FacilityLevelMath;
 import com.akf.tradeexpansion.currency.WalletService;
+import com.akf.tradeexpansion.development.Facility;
 import com.akf.tradeexpansion.development.FacilityKind;
 import com.akf.tradeexpansion.market.Market;
 import com.akf.tradeexpansion.market.MarketClock;
@@ -99,6 +101,21 @@ public final class TradeAdvancements implements AdvancementEvents {
 				if (market.hasFacility(kind)) kinds++;
 			}
 			event(player, FACILITY_KINDS, kinds);
+			// v0.87 (N-11): the levels of the buildings
+			int highest = 0;
+			int completed = 0;
+			boolean allMax = true;
+			boolean tall = false;
+			for (Facility f : market.facilities().values()) {
+				if (!f.complete()) continue;
+				completed++;
+				highest = Math.max(highest, f.level());
+				if (f.level() < FacilityLevelMath.MAX_LEVEL) allMax = false;
+				if (f.tall()) tall = true;
+			}
+			if (highest > 0) event(player, FACILITY_LEVEL, highest);
+			if (tall) event(player, FACILITY_TALL);
+			if (completed > 0 && allMax) event(player, FACILITIES_MAX_LEVEL, completed);
 		}
 	}
 
