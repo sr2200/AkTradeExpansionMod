@@ -284,17 +284,22 @@ public class NotebookScreen extends Screen {
 			}
 			ItemStack stack = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(v.item()));
 			g.item(stack, x + 1, ry + 1);
+			// Two lines, cut with "…" rather than shrunk (long names were squeezed unreadably on one line):
+			// role, goods and route | status / home | purse.
+			int tx = x + 20;
+			int room = x + w - 2 - tx;
 			StaffTab.StatusText status = StaffTab.statusText(v);
-			int sw = Math.min(font.width(status.text()), w / 4);
-			fitText(g, status.text(), x + w - sw - 2, ry + 5, sw, statusColor(status.color()));
+			int sw = Math.min(font.width(status.text()), room / 3);
+			cutText(g, status.text(), x + w - 2 - sw, ry + 1, sw, statusColor(status.color()));
 			String purse = CoinItem.formatCopper(v.purse());
-			int pw = font.width(purse);
-			g.text(font, purse, x + w - sw - 8 - pw, ry + 5, COLOR_MUTED, false);
+			int pw = Math.min(font.width(purse), room / 3);
+			cutText(g, purse, x + w - 2 - pw, ry + 10, pw, COLOR_MUTED);
 			boolean carrier = v.role() == 0;
 			String goods = v.auto() ? Component.translatable("staff.ak_trade_expansion.auto").getString() : stack.getHoverName().getString();
 			String label = Component.translatable("staff.ak_trade_expansion.role." + (carrier ? "carrier" : "clerk")).getString() + "：" + goods
-					+ (carrier ? " → " + StaffTab.destinationLabel(v).getString() : "") + " ＠" + v.homeName().getString();
-			fitText(g, label, x + 20, ry + 5, w - sw - pw - 34, v.phase() == 4 ? COLOR_MUTED : COLOR_TEXT);
+					+ (carrier ? " → " + StaffTab.destinationLabel(v).getString() : "");
+			cutText(g, label, tx, ry + 1, room - sw - 6, v.phase() == 4 ? COLOR_MUTED : COLOR_TEXT);
+			cutText(g, "＠" + v.homeName().getString(), tx, ry + 10, room - pw - 6, COLOR_MUTED);
 		}
 		if (hovered != null) {
 			List<Component> lines = new ArrayList<>(StaffTab.tooltip(hovered));
@@ -542,6 +547,14 @@ public class NotebookScreen extends Screen {
 	private void rightText(GuiGraphicsExtractor g, String text, int right, int y, int maxWidth, int color) {
 		int w = Math.min(font.width(text), maxWidth);
 		fitText(g, text, right - w, y, maxWidth, color);
+	}
+
+	/** Draws {@code text} within {@code maxWidth} at full size, cut with "…" when too wide (the whole text is in the tooltip). */
+	private void cutText(GuiGraphicsExtractor g, String text, int x, int y, int maxWidth, int color) {
+		if (maxWidth <= 0) return;
+		String shown = font.width(text) <= maxWidth ? text
+				: font.plainSubstrByWidth(text, Math.max(0, maxWidth - font.width("…"))) + "…";
+		g.text(font, shown, x, y, color, false);
 	}
 
 	/** Draws {@code text} within {@code maxWidth}: shrunk (down to {@link #MIN_TEXT_SCALE}) or cut with "…" when too wide. */
