@@ -406,6 +406,7 @@ public final class ServerCases {
 		cases.addAll(ServerRouteCases.all());
 		cases.addAll(ServerNotebookCases.all());
 		cases.addAll(ServerWeatherCases.all()); // v0.82: rival centers near the players, the weather
+		cases.addAll(ServerApiCases.all()); // S: the API for other mods
 		return cases;
 	}
 

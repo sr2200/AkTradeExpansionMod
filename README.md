@@ -19,7 +19,7 @@ Minecraft Java Edition 26.3 向けの Fabric Mod です。コインと屋台で�
 | 項目 | 内容 |
 |---|---|
 | Mod ID | `ak_trade_expansion`（表示名「AK Trade Expansion」） |
-| バージョン | 0.3.19（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
+| バージョン | 0.3.20（`Source/TradeExpansion/gradle.properties` の `version`。ビルドのたびに自動で上がります） |
 | 対応 | Minecraft Java Edition 26.3 / Fabric Loader 0.20.1 以上 / Fabric API（必須） / Java 25 以上 |
 | 動作環境 | シングルプレイ・マルチプレイ（サーバーとクライアントの両方に入れます） |
 | 任意の連携 | Mod Menu＋YACL、JourneyMap、JEI か REI（「[他の Mod との連携](#他の-mod-との連携)」） |
@@ -1163,12 +1163,16 @@ JSON の中は、下の表の「キー」の `.` の前がカテゴリ、後ろ�
 
 ### 他の Mod から使う
 
-ほかの Mod から、取引や相場の変化を受け取ったり、市場と値段を読んだりできます（サーバー側、サーバーのスレッドで使います）。公開しているのは `com.akf.tradeexpansion.api` の2つのクラスだけで、ほかのクラスは版ごとに変わることがあります。詳しくは設計書の S章です。
+ほかの Mod から、取引や相場の変化を受け取ったり、市場と値段を読んだり、相場とお金を決まった形で動かしたりできます（サーバー側、サーバーのスレッドで使います）。公開しているのは `com.akf.tradeexpansion.api` の2つのクラスと、下のデータパックの形式だけで、ほかのクラスは版ごとに変わることがあります。詳しくは設計書の S章です。
 
 | クラス | 内容 |
 |---|---|
-| `TradeExpansionEvents` | `TRADE`：プレイヤーの取引が成立した後（プレイヤー・市場・商品・買ったか・数・合計）。`MARKETS_CHANGED`：市場の相場や在庫などが変わった後（変わった市場の ID） |
-| `TradeExpansionApi` | 市場の一覧・一番近い市場・半径内の市場、市場ごとの商品の買値・売値・在庫（評判の割引なし）、アイテムから商品 ID、市場の時計 |
+| `TradeExpansionEvents` | `TRADE`：プレイヤーの取引が成立した後（プレイヤー・市場・商品・買ったか・数・合計）。`STAFF_TRADE`：雇い人が売り買いした後（持ち主・雇い人・市場・商品・数・合計）。`REQUEST_COMPLETED`：依頼を納品した後（品の依頼か運送か・市場・商品・数・報酬）。`MARKETS_CHANGED`：市場の相場や在庫などが変わった後（変わった市場の ID） |
+| `TradeExpansionApi` | 読み取り：市場の一覧・一番近い市場・半径内の市場、市場ごとの商品の買値・売値・在庫（評判の割引なし）、アイテムから商品 ID、市場の時計、口座の残高・持っている現金。書き換え：`recordExternalTrade`（ほかの Mod の店の売買を相場に反映する。アイテムとお金は動かさない）、`deposit`・`withdraw`（口座）、`giveCash`・`takeCash`（財布と硬貨）。プレイヤーに取引させるものはありません |
+
+データパック（ほかの Mod の jar に入れてもよい）では、`data/<namespace>/ak_trade_expansion/market_profile_addition/<name>.json` に `profiles`（足す先のプロファイル ID）と `pools`・`always`・`price_modifiers` を書くと、同梱の村の品揃えを上書きせずに品と値段の倍率を足せます（新しくできた市場から効きます）。`price_modifiers` は `item_tag`・`item` のほかに `goods`（商品 ID）でも指定できます。
+
+開発に使う時は、`Source/TradeExpansion` で `gradlew publishToMavenLocal` を実行すると、自分のパソコンの Maven に `com.akf.tradeexpansion:ak_trade_expansion:<バージョン>`（Mod の jar と、API だけの `api`・`sources`・`javadoc`）が入ります。依存する側は `mavenLocal()` から compileOnly で使い、この Mod が入っている時だけ API のクラスを読み込むと、この Mod が無くても動きます。
 
 ```java
 TradeExpansionEvents.TRADE.register(trade -> {

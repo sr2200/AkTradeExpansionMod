@@ -340,6 +340,9 @@ public final class QuestService {
 				if (source != null) Development.onRequest(source, player, cargo.reward(), now);
 				Development.onRequest(market, player, cargo.reward(), now);
 				com.akf.tradeexpansion.notebook.LedgerService.onCargoDelivered(player, reward); // T
+				com.akf.tradeexpansion.api.TradeExpansionEvents.REQUEST_COMPLETED.invoker().onRequestCompleted(new com.akf.tradeexpansion.api.TradeExpansionEvents.RequestCompleted(
+						player, com.akf.tradeexpansion.api.TradeExpansionEvents.RequestKind.CARGO, market.id(), cargo.source(), cargo.goods(), cargo.item(),
+						cargo.quantity(), reward, request.useCard())); // S
 				TradeAdvancements.event(player, TradeAdvancements.CARGO_DELIVERED); // R
 				if (source != null) {
 					source.requests().removeIf(r -> r.id() == cargo.requestId() && r.isTransport());
@@ -421,6 +424,9 @@ public final class QuestService {
 							target.quantity(), market.id(), CoinItem.formatCopper(reward), request.useCard() ? " (card)" : "");
 				}
 				TradeService.broadcast(player.level().getServer(), registry, Set.of(market.id()), now);
+				com.akf.tradeexpansion.api.TradeExpansionEvents.REQUEST_COMPLETED.invoker().onRequestCompleted(new com.akf.tradeexpansion.api.TradeExpansionEvents.RequestCompleted(
+						player, com.akf.tradeexpansion.api.TradeExpansionEvents.RequestKind.GOODS, market.id(), market.id(), target.goods(), def.item(),
+						target.quantity(), reward, request.useCard())); // S
 			}
 		}
 		ServerPlayNetworking.send(player, new QuestResultS2C(result, QuestResultS2C.Kind.DELIVER, reward, 0));

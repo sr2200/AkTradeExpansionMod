@@ -299,6 +299,8 @@ java {
 	// if it is present.
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
+	// S-5: javadoc of the public API only (javadoc below), published with the mod for other mods' authors.
+	withJavadocJar()
 
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
@@ -343,11 +345,36 @@ def releaseZip = tasks.register("releaseZip", Zip) {
 }
 
 
-// configure the maven publication
+// S-5: the javadoc covers the public API (com.akf.tradeexpansion.api) only.
+javadoc {
+	include "com/akf/tradeexpansion/api/**"
+	options.encoding = "UTF-8"
+	options.addStringOption("Xdoclint:none", "-quiet")
+}
+
+// S-5: the public API alone, for other mods to compile against (classifier "api"; the mod itself must still be present
+// at runtime). Published together with the mod jar.
+def apiJar = tasks.register("apiJar", Jar) {
+	group = "build"
+	description = "Packs the public API classes (com.akf.tradeexpansion.api) only."
+	def projectName = project.name
+	archiveClassifier = "api"
+	from(sourceSets.main.output) {
+		include "com/akf/tradeexpansion/api/**"
+	}
+	from(licenseFile) {
+		rename { "${it}_$projectName" }
+	}
+}
+tasks.named("assemble") { dependsOn apiJar }
+
+// Maven publication (S-5): "gradlew publishToMavenLocal" puts the mod jar, the api, sources and javadoc jars into the
+// local Maven repository (~/.m2), as com.akf.tradeexpansion:ak_trade_expansion:<version>, for other mods to depend on.
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {
 			from components.java
+			artifact apiJar
 		}
 	}
 

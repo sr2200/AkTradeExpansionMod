@@ -30,6 +30,8 @@ public final class DataReloadListener {
 		loader.registerReloadListener(TradeExpansion.id("goods"), new Goods());
 		loader.registerReloadListener(TradeExpansion.id("market_profiles"), new Profiles());
 		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("market_profiles"));
+		loader.registerReloadListener(TradeExpansion.id("market_profile_additions"), new ProfileAdditions()); // S-4
+		loader.addListenerOrdering(TradeExpansion.id("market_profiles"), TradeExpansion.id("market_profile_additions"));
 		loader.registerReloadListener(TradeExpansion.id("facilities"), new Facilities());
 		// O-1 / O-2 (v0.46): goods groups need the goods (unknown ids are dropped), guilds need the groups.
 		loader.registerReloadListener(TradeExpansion.id("goods_groups"), new Groups());
@@ -38,6 +40,31 @@ public final class DataReloadListener {
 		loader.addListenerOrdering(TradeExpansion.id("goods_groups"), TradeExpansion.id("rival_guilds"));
 		loader.registerReloadListener(TradeExpansion.id("rain_goods"), new Rain()); // U (v0.82)
 		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("rain_goods"));
+	}
+
+	/** S-4: additions to the market profiles, applied after the profiles are loaded (files in id order). */
+	private static final class ProfileAdditions extends SimpleJsonResourceReloadListener<MarketProfile.Addition> {
+		ProfileAdditions() {
+			super(MarketProfile.Addition.CODEC, FileToIdConverter.json("ak_trade_expansion/market_profile_addition"));
+		}
+
+		@Override
+		protected void apply(Map<Identifier, MarketProfile.Addition> loaded, ResourceManager manager, ProfilerFiller profiler) {
+			Map<Identifier, MarketProfile> profiles = new LinkedHashMap<>(MarketProfiles.all());
+			loaded.keySet().stream().sorted().forEach(id -> {
+				MarketProfile.Addition addition = loaded.get(id);
+				addition.pools().forEach(pool -> pool.entries().forEach(e -> {
+					if (GoodsCatalog.get(e.goods()) == null) TradeExpansion.LOGGER.warn("Market profile addition {}: unknown goods {}", id, e.goods());
+				}));
+				for (Identifier target : addition.profiles()) {
+					MarketProfile profile = profiles.get(target);
+					if (profile == null) TradeExpansion.LOGGER.warn("Market profile addition {}: unknown market profile {}, skipped", id, target);
+					else profiles.put(target, profile.with(addition));
+				}
+			});
+			MarketProfiles.replace(profiles);
+			TradeExpansion.LOGGER.info("Loaded {} market profile additions", loaded.size());
+		}
 	}
 
 	/** U (v0.82): goods that get cheaper in a rainy spell (all files together). */

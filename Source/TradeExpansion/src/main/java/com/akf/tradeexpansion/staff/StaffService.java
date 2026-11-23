@@ -689,7 +689,7 @@ public final class StaffService {
 		state.setLastTradeGameTime(now);
 		traded(registry, home, e.goods, -plan.units() * step, now, changes);
 		countDaily(home, plan.units(), now);
-		logTrade(e, "STAFF BUY", def, plan.units(), home, plan.total());
+		logTrade(server, e, e.goods, true, def, plan.units(), home, plan.total());
 		return Deal.of(plan.units(), plan.total(), def.unit());
 	}
 
@@ -713,7 +713,7 @@ public final class StaffService {
 		state.setLastTradeGameTime(now);
 		traded(registry, market, e.goods, plan.units() * step, now, changes);
 		countDaily(market, plan.units(), now);
-		logTrade(e, "STAFF SELL", def, plan.units(), market, plan.total());
+		logTrade(server, e, e.goods, false, def, plan.units(), market, plan.total());
 		com.akf.tradeexpansion.quest.DemandService.onCarrierSold(server, market, e.owner, e.ownerName, e.goods, plan.units(), now); // K-2 v0.90
 		return Deal.of(plan.units(), plan.total(), def.unit());
 	}
@@ -750,7 +750,7 @@ public final class StaffService {
 		state.setLastTradeGameTime(now);
 		traded(registry, market, e.goods, n * impact, now, changes);
 		countDaily(market, n, now);
-		logTrade(e, "STAFF SELL", def, n, market, total);
+		logTrade(server, e, e.goods, false, def, n, market, total);
 		return Deal.of(n, total, def.unit());
 	}
 
@@ -816,12 +816,12 @@ public final class StaffService {
 			boolean someProfit = autoPlan(home, destination, capacity, Long.MAX_VALUE).units() > 0;
 			return Deal.none(someProfit ? Employee.Status.WAIT_FUNDS : Employee.Status.NO_MARGIN);
 		}
-		take(registry, home, plan, e.cargo, e, now, changes);
+		take(server, registry, home, plan, e.cargo, e, now, changes);
 		return new Deal(plan.units(), (int) plan.items(), plan.total(), 0, plan.kinds(), Employee.Status.WORKING);
 	}
 
 	/** Buys the goods of {@code plan} at {@code market} (wholesale, moving its prices) into {@code lines}. */
-	private static void take(MarketRegistry registry, Market market, AutoPlan plan, List<Employee.CargoLine> lines, Employee e, long now, Changes changes) {
+	private static void take(MinecraftServer server, MarketRegistry registry, Market market, AutoPlan plan, List<Employee.CargoLine> lines, Employee e, long now, Changes changes) {
 		double step = config().carrierPriceImpact;
 		for (int i = 0; i < plan.kinds(); i++) {
 			Identifier goodsId = plan.goods().get(i);
@@ -835,7 +835,7 @@ public final class StaffService {
 			lines.add(new Employee.CargoLine(goodsId, p.units(), p.total()));
 			countDaily(market, p.units(), now);
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
-			if (def != null) logTrade(e, "STAFF BUY", def, p.units(), market, p.total());
+			if (def != null) logTrade(server, e, goodsId, true, def, p.units(), market, p.total());
 		}
 		changes.dirty = true;
 	}
@@ -854,7 +854,7 @@ public final class StaffService {
 		if (!config().carrierBackhaul || !e.returnCargo.isEmpty() || !touch(server, market, home)) return;
 		AutoPlan plan = returnPlan(market, home, Math.min(e.quantity - e.stock, dailyRoom(market, now)), e.purse); // v0.83: daily limit
 		if (plan.units() <= 0) return;
-		take(registry, market, plan, e.returnCargo, e, now, changes);
+		take(server, registry, market, plan, e.returnCargo, e, now, changes);
 		e.purse -= plan.total();
 		e.spent += plan.total();
 		log(e, now, "bought_return", null, market.id(), plan.kinds(), plan.items(), plan.total());
@@ -921,7 +921,7 @@ public final class StaffService {
 			total += plan.total();
 			cost += lineCost;
 			kinds++;
-			logTrade(e, "STAFF SELL", def, plan.units(), market, plan.total());
+			logTrade(server, e, line.goods, false, def, plan.units(), market, plan.total());
 			com.akf.tradeexpansion.quest.DemandService.onCarrierSold(server, market, e.owner, e.ownerName, line.goods, plan.units(), now); // K-2 v0.90
 		}
 		lines.removeIf(l -> l.units <= 0);
@@ -936,10 +936,18 @@ public final class StaffService {
 		changes.dirty = true;
 	}
 
-	private static void logTrade(Employee e, String what, GoodsDefinition def, int units, Market market, long total) {
-		if (!TradeExpansionConfig.get().log.trades) return;
-		TradeExpansion.LOGGER.info("{} ({} #{}) {} {} x{} @market#{} total={}", e.ownerName, e.role.name().toLowerCase(java.util.Locale.ROOT), e.id,
-				what, def.item(), units * def.unit(), market.id(), CoinItem.formatCopper(total));
+	/** Every trade of a hired hand: the trade log and the API event (S-1). */
+	private static void logTrade(MinecraftServer server, Employee e, Identifier goodsId, boolean buy, GoodsDefinition def, int units, Market market,
+			long total) {
+		int items = units * Math.max(1, def.unit());
+		if (TradeExpansionConfig.get().log.trades) {
+			TradeExpansion.LOGGER.info("{} ({} #{}) {} {} x{} @market#{} total={}", e.ownerName, e.role.name().toLowerCase(java.util.Locale.ROOT), e.id,
+					buy ? "STAFF BUY" : "STAFF SELL", def.item(), items, market.id(), CoinItem.formatCopper(total));
+		}
+		com.akf.tradeexpansion.api.TradeExpansionEvents.STAFF_TRADE.invoker().onStaffTrade(new com.akf.tradeexpansion.api.TradeExpansionEvents.StaffTrade(
+				server, e.owner, e.ownerName, e.id, e.role == Employee.Role.CARRIER ? com.akf.tradeexpansion.api.TradeExpansionEvents.StaffRole.CARRIER
+						: com.akf.tradeexpansion.api.TradeExpansionEvents.StaffRole.CLERK,
+				market.id(), goodsId, def.item(), buy, units, items, total));
 	}
 
 	private static boolean linked(Market a, Market b) {
