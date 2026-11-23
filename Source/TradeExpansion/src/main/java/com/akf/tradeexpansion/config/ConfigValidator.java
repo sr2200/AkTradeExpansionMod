@@ -120,6 +120,8 @@ public final class ConfigValidator {
 		dm.vigorGain = clamp("demand.vigorGain", dm.vigorGain, 0, 100);
 		dm.vigorLoss = clamp("demand.vigorLoss", dm.vigorLoss, 0, 100);
 		dm.vigorPenalty = clamp("demand.vigorPenalty", dm.vigorPenalty, 0, 1);
+		dm.vigorPerPoint = clamp("demand.vigorPerPoint", dm.vigorPerPoint, 0, 10);
+		dm.vigorRecoverPerDay = clamp("demand.vigorRecoverPerDay", dm.vigorRecoverPerDay, 0, 100);
 
 		TradeExpansionConfig.Rivals rv = c.rivals;
 		rv.chancePerDay = clamp("rivals.chancePerDay", rv.chancePerDay, 0, 1);

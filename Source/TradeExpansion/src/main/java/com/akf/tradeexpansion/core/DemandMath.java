@@ -4,6 +4,9 @@ package com.akf.tradeexpansion.core;
  * K-2 (v0.78): fulfilling shortages makes a village grow. A shortage is fulfilled once {@code demand.fulfillCount}
  * units were sold to it in its period; the market's vigor (0〜100) goes up when one is fulfilled and down for each
  * shortage left unfulfilled at the end of its period. A low vigor slightly lowers the development points (N-2).
+ * <p>
+ * v0.90: the loss of a shortage is lowered by the share already sold, trades and requests at the market raise the vigor a
+ * little, and a vigor below {@link #VIGOR_LOW} comes back to it over time.
  */
 public final class DemandMath {
 	/** Vigor of a new market (and the most it can have). */
@@ -43,5 +46,23 @@ public final class DemandMath {
 	/** Development points given for fulfilling a shortage: B without the shortage × required units × ratio. */
 	public static double fulfillPoints(double basePrice, int required, double ratio) {
 		return Math.max(0, basePrice * required * ratio);
+	}
+
+	/** v0.90: vigor lost by a shortage left unfulfilled with {@code sold} of {@code required} units sold (less the more were sold). */
+	public static double unfulfilledLoss(int sold, int required, double loss) {
+		if (required <= 0 || loss <= 0) return 0;
+		double share = Math.clamp(sold / (double) required, 0, 1);
+		return loss * (1 - share);
+	}
+
+	/** v0.90: a vigor below {@link #VIGOR_LOW} comes back to it by {@code perDay} a day (one at or above it is kept). */
+	public static double recover(double vigor, double days, double perDay) {
+		if (vigor >= VIGOR_LOW || days <= 0 || perDay <= 0) return vigor;
+		return Math.min(VIGOR_LOW, vigor + days * perDay);
+	}
+
+	/** v0.90: vigor gained from {@code points} development points brought by trades and requests. */
+	public static double fromPoints(double points, double perPoint) {
+		return Math.max(0, points * perPoint);
 	}
 }

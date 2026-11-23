@@ -45,18 +45,47 @@ public final class DemandService {
 		return TradeExpansionConfig.get().demand;
 	}
 
-	/** Re-rolls the shortages when a new period has started. @return {@code true} if they changed */
+	/**
+	 * Re-rolls the shortages when a new period has started, and brings the vigor up to date (K-2).
+	 *
+	 * @return {@code true} if they or the vigor changed
+	 */
 	public static boolean refresh(ServerLevel level, Market market, long now) {
 		TradeExpansionConfig.Demand config = config();
 		long period = QuestMath.period(now, config.durationDays);
-		if (period == market.shortagePeriod()) return false;
-		// K-2: shortages of the period that ended without being fulfilled (only once, however many periods passed).
-		if (market.shortagePeriod() != Long.MIN_VALUE && config.fulfillCount > 0 && !market.shortages().isEmpty() && Development.enabled(market)) {
-			market.setVigor(DemandMath.vigor(market.vigor(), -config.vigorLoss * market.shortages().size()));
+		boolean develops = Development.enabled(market);
+		double vigor = market.vigor();
+		if (period == market.shortagePeriod()) {
+			if (develops) recover(market, now);
+			return market.vigor() != vigor;
 		}
+		// K-2: shortages of the period that ended without being fulfilled (only once, however many periods passed).
+		// v0.90: the vigor first recovers up to the end of that period; what was sold to a shortage lowers its loss.
+		if (market.shortagePeriod() != Long.MIN_VALUE && develops) {
+			recover(market, Math.min(now, QuestMath.periodStart(market.shortagePeriod() + 1, config.durationDays)));
+			if (config.fulfillCount > 0) {
+				double loss = 0;
+				for (Identifier goodsId : market.shortages().keySet()) {
+					loss += DemandMath.unfulfilledLoss(market.shortageSold().getOrDefault(goodsId, 0), config.fulfillCount, config.vigorLoss);
+				}
+				market.setVigor(DemandMath.vigor(market.vigor(), -loss));
+			}
+		}
+		if (develops) recover(market, now);
 		market.setShortagePeriod(period);
 		roll(level, market, period);
 		return true;
+	}
+
+	/** K-2 (v0.90): a vigor below 50 comes back toward 50 by {@code demand.vigorRecoverPerDay} from the last time up to {@code time}. */
+	private static void recover(Market market, long time) {
+		long since = market.vigorTime();
+		if (since != Long.MIN_VALUE && time <= since) return;
+		if (since != Long.MIN_VALUE) {
+			double days = (time - since) / (double) com.akf.tradeexpansion.core.PriceModel.TICKS_PER_DAY;
+			market.setVigor(DemandMath.recover(market.vigor(), days, config().vigorRecoverPerDay));
+		}
+		market.setVigorTime(time);
 	}
 
 	/** Chooses new shortages for {@code period} (also used by {@code market reroll}). */
@@ -94,6 +123,23 @@ public final class DemandService {
 	 * and sends the snapshots.
 	 */
 	public static void onSold(ServerLevel level, Market market, ServerPlayer player, Identifier goodsId, int units, long now) {
+		sold(level, market, player.getUUID(), player.getPlainTextName(), player, goodsId, units, now);
+	}
+
+	/**
+	 * K-2 (v0.90): a carrier of {@code owner} sold {@code units} of {@code goodsId} at {@code market}; it counts toward the
+	 * shortage as if the owner (who may be offline) had sold them. The caller marks the registry dirty.
+	 */
+	public static void onCarrierSold(net.minecraft.server.MinecraftServer server, Market market, java.util.UUID owner, String ownerName,
+			Identifier goodsId, int units, long now) {
+		ServerLevel level = server.getLevel(market.dimension());
+		if (level == null) return;
+		sold(level, market, owner, ownerName, server.getPlayerList().getPlayer(owner), goodsId, units, now);
+	}
+
+	/** {@code seller} is the online player of {@code sellerId}, or {@code null}. */
+	private static void sold(ServerLevel level, Market market, java.util.UUID sellerId, String sellerName, ServerPlayer seller, Identifier goodsId,
+			int units, long now) {
 		TradeExpansionConfig.Demand config = config();
 		Double multiplier = market.shortages().get(goodsId);
 		if (config.fulfillCount <= 0 || multiplier == null || units <= 0) return;
@@ -106,10 +152,10 @@ public final class DemandService {
 		market.shortageSold().remove(goodsId);
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		Component good = def == null ? Component.literal(goodsId.toString()) : new ItemStack(BuiltInRegistries.ITEM.getValue(def.item())).getHoverName();
-		TradeExpansion.LOGGER.info("{} fulfilled the shortage of {} at market #{}", player.getPlainTextName(), goodsId, market.id());
+		TradeExpansion.LOGGER.info("{} fulfilled the shortage of {} at market #{}", sellerName, goodsId, market.id());
 
 		if (!Development.enabled(market)) { // the shortage ends, but the village does not grow here
-			tell(level, market, player, Component.translatable("message.ak_trade_expansion.shortage.fulfilled", MarketNames.name(market), good)
+			tell(level, market, seller, Component.translatable("message.ak_trade_expansion.shortage.fulfilled", MarketNames.name(market), good)
 					.withStyle(ChatFormatting.GREEN));
 			return;
 		}
@@ -117,10 +163,10 @@ public final class DemandService {
 		market.setShortagesFulfilled(market.shortagesFulfilled() + 1);
 		double ratio = config.fulfillPointsRatio;
 		if (market.hasFacility(FacilityKind.WHOLESALER)) ratio *= com.akf.tradeexpansion.development.FacilityEffects.raise(market, FacilityKind.WHOLESALER, 1, TradeExpansionConfig.get().development.wholesalerFulfillMultiplier); // v0.79, N-11
-		double points = Development.add(market, player, DemandMath.fulfillPoints(base, config.fulfillCount, ratio), now);
-		tell(level, market, player, Component.translatable("message.ak_trade_expansion.shortage.fulfilled_grow", MarketNames.name(market), good,
+		double points = Development.add(market, sellerId, sellerName, DemandMath.fulfillPoints(base, config.fulfillCount, ratio), now);
+		tell(level, market, seller, Component.translatable("message.ak_trade_expansion.shortage.fulfilled_grow", MarketNames.name(market), good,
 				(long) Math.floor(points), (long) Math.floor(market.vigor())).withStyle(ChatFormatting.GREEN));
-		if (DemandMath.villagerDue(market.shortagesFulfilled(), config.villagersEvery)) villager(level, market, player);
+		if (DemandMath.villagerDue(market.shortagesFulfilled(), config.villagersEvery)) villager(level, market, seller);
 	}
 
 	/** K-2: a villager comes if a bed is free (not in the Nether / End, whose level counts villagers only). */
@@ -137,9 +183,9 @@ public final class DemandService {
 				.withStyle(ChatFormatting.GREEN));
 	}
 
-	/** The seller and the players near the market. */
+	/** The seller (if online; {@code null} otherwise) and the players near the market. */
 	private static void tell(ServerLevel level, Market market, ServerPlayer seller, Component message) {
-		seller.sendSystemMessage(message);
+		if (seller != null) seller.sendSystemMessage(message);
 		for (ServerPlayer p : level.players()) {
 			if (p != seller && market.horizontalDistanceTo(p.blockPosition()) <= NOTIFY_RADIUS) p.sendSystemMessage(message);
 		}

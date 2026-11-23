@@ -83,6 +83,37 @@ final class ServerStaffCases {
 								&& t.getKey().equals("staff.ak_trade_expansion.log.roam_chose")), "no log line of the new destination");
 					});
 				}));
+		cases.add(full("carrier_fulfills_shortage", List.of("9-9"), ctx -> {
+			ctx.config(cfg -> {
+				cfg.staff.accidentBase = 0;
+				cfg.staff.carrierBackhaul = false;
+				cfg.demand.fulfillCount = 4;
+				cfg.demand.vigorPerPoint = 0;
+			});
+			markets(ctx, new int[] {0, 600}, (c, player, m) -> {
+				Market a = m.get(0), b = m.get(1);
+				c.command(player, "aktradeex reputation set 150");
+				c.giveMoney(player, 20_000);
+				Identifier good = shared(c, a, 8, 0, b);
+				a.good(good).setPressure(a.params(good).maxPressure() * 0.8); // cheap here
+				b.good(good).setPressure(b.params(good).minPressure() * 0.8); // dear there
+				com.akf.tradeexpansion.market.MarketUpkeep.touch(c.level(), b);
+				b.clearShortages();
+				b.shortages().put(good, 1.5);
+				b.setVigor(60);
+				var hired = staff(c, player, a, StaffRequestC2S.Action.HIRE_CARRIER, 0, good, b.id(), 20, 1_000_000, 1, 0, false);
+				that(hired == TradeResult.SUCCESS, "hiring gave %s", hired);
+				StaffS2C.View e = only(c, player, a);
+				staff(c, player, a, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), good, 0, 0, 0, 0, 5_000, false);
+				c.command(player, "aktradeex staff hurry"); // buys, goes out
+				c.forget(player);
+				c.command(player, "aktradeex staff hurry"); // sells at b
+				that(!b.shortages().containsKey(good), "the carrier's sale did not fulfill the shortage (sold %s)", b.shortageSold());
+				equal(1, b.shortagesFulfilled(), "shortages fulfilled at the destination");
+				that(Math.abs(60 + TradeExpansionConfig.get().demand.vigorGain - b.vigor()) < 1e-6, "vigor %.2f after the carrier fulfilled it", b.vigor());
+				that(c.gotMessage(player, "message.ak_trade_expansion.shortage.fulfilled_grow"), "the owner was not told: %s", c.messages(player));
+			});
+		}));
 		cases.add(partial("fixed_carrier_told_and_made_auto", List.of("43-2", "43-3"),
 				"品を決めた運び屋が1日儲からないとログとチャットで一度だけ知らせ、「おまかせ」への変更で行き先と1回に運ぶ数はそのままおまかせになること（ボタンの表示は見ていない）",
 				ctx -> {

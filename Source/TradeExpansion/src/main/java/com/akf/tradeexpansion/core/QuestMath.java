@@ -28,6 +28,12 @@ public final class QuestMath {
 		return Math.floorDiv(gameTime, length);
 	}
 
+	/** v0.90: first game time of {@code period} (as numbered by {@link #period}). */
+	public static long periodStart(long period, double durationDays) {
+		long length = Math.max(1, Math.round(durationDays * PriceModel.TICKS_PER_DAY));
+		return period * length;
+	}
+
 	/** K: multiplier in [min, max] from a random fraction in [0, 1). */
 	public static double shortageMultiplier(double fraction, double min, double max) {
 		return min + (max - min) * fraction;

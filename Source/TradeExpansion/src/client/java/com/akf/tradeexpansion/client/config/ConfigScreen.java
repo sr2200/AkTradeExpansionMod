@@ -231,6 +231,8 @@ public final class ConfigScreen {
 				.option(doubleField("demand.vigorGain", d.demand.vigorGain, () -> demand.vigorGain, v -> demand.vigorGain = v, 0, 100))
 				.option(doubleField("demand.vigorLoss", d.demand.vigorLoss, () -> demand.vigorLoss, v -> demand.vigorLoss = v, 0, 100))
 				.option(doubleField("demand.vigorPenalty", d.demand.vigorPenalty, () -> demand.vigorPenalty, v -> demand.vigorPenalty = v, 0, 1))
+				.option(doubleField("demand.vigorPerPoint", d.demand.vigorPerPoint, () -> demand.vigorPerPoint, v -> demand.vigorPerPoint = v, 0, 10))
+				.option(doubleField("demand.vigorRecoverPerDay", d.demand.vigorRecoverPerDay, () -> demand.vigorRecoverPerDay, v -> demand.vigorRecoverPerDay = v, 0, 100))
 				// O (v0.46): rival guilds
 				.option(bool("rivals.enabled", d.rivals.enabled, () -> edit.rivals.enabled, v -> edit.rivals.enabled = v))
 				.option(doubleField("rivals.chancePerDay", d.rivals.chancePerDay, () -> edit.rivals.chancePerDay, v -> edit.rivals.chancePerDay = v, 0, 1))

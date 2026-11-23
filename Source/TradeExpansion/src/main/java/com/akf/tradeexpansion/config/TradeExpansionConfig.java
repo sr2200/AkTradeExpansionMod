@@ -898,12 +898,17 @@ public final class TradeExpansionConfig {
 		public double vigorLoss = 5;
 		/** K-2: at vigor 0 the development points are lowered by this much (× (1 - this)); 0 = no penalty. */
 		public double vigorPenalty = 0.1;
+		/** K-2 (v0.90): vigor gained per development point brought by trades and requests at the market. */
+		public double vigorPerPoint = 0.05;
+		/** K-2 (v0.90): a vigor below 50 comes back to 50 by this much a day (0 = never). */
+		public double vigorRecoverPerDay = 2;
 
 		public Demand() {
 		}
 
 		Demand(int maxShortages, double durationDays, double minMultiplier, double maxMultiplier, int fulfillCount,
-				double fulfillPointsRatio, int villagersEvery, double vigorGain, double vigorLoss, double vigorPenalty) {
+				double fulfillPointsRatio, int villagersEvery, double vigorGain, double vigorLoss, double vigorPenalty, double vigorPerPoint,
+				double vigorRecoverPerDay) {
 			this.maxShortages = maxShortages;
 			this.durationDays = durationDays;
 			this.minMultiplier = minMultiplier;
@@ -914,6 +919,8 @@ public final class TradeExpansionConfig {
 			this.vigorGain = vigorGain;
 			this.vigorLoss = vigorLoss;
 			this.vigorPenalty = vigorPenalty;
+			this.vigorPerPoint = vigorPerPoint;
+			this.vigorRecoverPerDay = vigorRecoverPerDay;
 		}
 
 		static final Codec<Demand> CODEC = RecordCodecBuilder.create(i -> {
@@ -928,7 +935,9 @@ public final class TradeExpansionConfig {
 					Codec.INT.fieldOf("villagersEvery").orElse(d.villagersEvery).forGetter(c -> c.villagersEvery),
 					Codec.DOUBLE.fieldOf("vigorGain").orElse(d.vigorGain).forGetter(c -> c.vigorGain),
 					Codec.DOUBLE.fieldOf("vigorLoss").orElse(d.vigorLoss).forGetter(c -> c.vigorLoss),
-					Codec.DOUBLE.fieldOf("vigorPenalty").orElse(d.vigorPenalty).forGetter(c -> c.vigorPenalty)
+					Codec.DOUBLE.fieldOf("vigorPenalty").orElse(d.vigorPenalty).forGetter(c -> c.vigorPenalty),
+					Codec.DOUBLE.fieldOf("vigorPerPoint").orElse(d.vigorPerPoint).forGetter(c -> c.vigorPerPoint),
+					Codec.DOUBLE.fieldOf("vigorRecoverPerDay").orElse(d.vigorRecoverPerDay).forGetter(c -> c.vigorRecoverPerDay)
 			).apply(i, Demand::new);
 		});
 	}

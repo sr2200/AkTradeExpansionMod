@@ -74,16 +74,20 @@ public final class Development {
 	 * @return the points actually added
 	 */
 	public static double add(Market market, ServerPlayer player, double points, long now) {
+		return add(market, player.getUUID(), player.getPlainTextName(), points, now);
+	}
+
+	/** {@link #add} for a player who may be offline (K-2 v0.90: a carrier's owner). */
+	public static double add(Market market, UUID uuid, String name, double points, long now) {
 		if (points <= 0 || !enabled(market)) return 0;
 		if (market.hasFacility(FacilityKind.PARK)) points *= FacilityEffects.raise(market, FacilityKind.PARK, 0, config().parkPointsMultiplier);
 		points *= FacilityEffects.perk(market, FacilityKind.Perk.DEVELOPMENT); // N-11 (v0.86): directions that bring more points
 		points *= Festival.multiplier(market, now); // v0.51 festival day
 		points *= vigorMultiplier(market); // K-2 (v0.78): a village low in vigor grows a little slower
 		market.setDevelopment(points(market, now) + points, now);
-		UUID uuid = player.getUUID();
 		Market.Contributor old = market.contributors().get(uuid);
 		double total = (old == null ? 0 : old.points()) + points;
-		market.contributors().put(uuid, new Market.Contributor(uuid, player.getPlainTextName(), total));
+		market.contributors().put(uuid, new Market.Contributor(uuid, name, total));
 		return points;
 	}
 
@@ -102,12 +106,23 @@ public final class Development {
 
 	/** N-2: a trade of {@code total} copper at the market. */
 	public static void onTrade(Market market, ServerPlayer player, long total, long now) {
-		add(market, player, total * config().tradePointsPerCoin, now);
+		double points = total * config().tradePointsPerCoin;
+		add(market, player, points, now);
+		raiseVigor(market, points);
 	}
 
 	/** N-2: a delivered request paid {@code reward}; for a transport request the caller adds it to both markets. */
 	public static void onRequest(Market market, ServerPlayer player, long reward, long now) {
-		add(market, player, reward * config().questRewardRatio, now);
+		double points = reward * config().questRewardRatio;
+		add(market, player, points, now);
+		raiseVigor(market, points);
+	}
+
+	/** K-2 (v0.90): trades and requests raise the vigor a little, by the points they bring (before any multiplier). */
+	private static void raiseVigor(Market market, double points) {
+		if (!enabled(market)) return;
+		double gain = com.akf.tradeexpansion.core.DemandMath.fromPoints(points, TradeExpansionConfig.get().demand.vigorPerPoint);
+		if (gain > 0) market.setVigor(com.akf.tradeexpansion.core.DemandMath.vigor(market.vigor(), gain));
 	}
 
 	/** Contributors with the most points first (ties: the earlier one). */

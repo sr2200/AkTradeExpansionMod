@@ -414,6 +414,8 @@ final class ServerChapterCases {
 			ctx.config(cfg -> {
 				cfg.demand.fulfillCount = 4;
 				cfg.demand.villagersEvery = 1;
+				cfg.demand.vigorPerPoint = 0; // v0.90: trades would raise the vigor too (vigor_partly_sold_recovers_and_trades)
+				cfg.demand.vigorRecoverPerDay = 0;
 			});
 			ServerCases.withMarket(ctx, (c, player, market, stall) -> {
 				TradeExpansionConfig.Demand demand = TradeExpansionConfig.get().demand;
@@ -461,6 +463,57 @@ final class ServerChapterCases {
 				c.trade(player, market, next, false, demand.fulfillCount);
 				that(c.gotMessage(player, "message.ak_trade_expansion.shortage.villager"), "no villager message: %s", c.messages(player));
 				equal(villagers + 1, MarketFactory.countVillagers(c.level(), market.center()), "villagers after the 2nd shortage");
+			});
+		}));
+		cases.add(full("vigor_partly_sold_recovers_and_trades", List.of("9-8"), ctx -> {
+			dayClock(ctx);
+			ctx.config(cfg -> {
+				cfg.demand.fulfillCount = 4;
+				cfg.demand.vigorPerPoint = 0;
+				cfg.demand.vigorRecoverPerDay = 0;
+			});
+			ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+				c.openStall(player, stall);
+				Identifier good = fulfillable(c, player, market);
+				// Half of a shortage sold: it loses half the vigor at the end of the period.
+				ServerCases.giveItems(player, c.item(good), 2);
+				c.trade(player, market, good, false, 2);
+				that(c.lastTradeResult(player) == TradeResult.SUCCESS, "selling 2 gave %s", c.lastTradeResult(player));
+				equal(2, market.shortageSold().getOrDefault(good, 0), "units sold to the shortage");
+				market.setVigor(80);
+				TradeExpansionConfig.Demand demand = TradeExpansionConfig.get().demand;
+				double loss = 0;
+				for (Identifier g : market.shortages().keySet()) loss += demand.vigorLoss * (1 - market.shortageSold().getOrDefault(g, 0) / 4.0);
+				that(loss < demand.vigorLoss * market.shortages().size() - 1e-9, "the half sold shortage does not lower the loss (%.2f)", loss);
+				addDays(c, player, demand.durationDays);
+				MarketUpkeep.touch(c.level(), market);
+				near(80 - loss, market.vigor(), "vigor after the period with half of a shortage sold");
+				// A low vigor comes back toward 50 by 2 a day, and not above 50.
+				c.config(cfg -> {
+					cfg.demand.vigorLoss = 0;
+					cfg.demand.vigorRecoverPerDay = 2;
+				});
+				long now = MarketUpkeep.touch(c.level(), market);
+				market.setVigor(20);
+				market.setVigorTime(now);
+				addDays(c, player, 5);
+				MarketUpkeep.touch(c.level(), market);
+				that(Math.abs(30 - market.vigor()) < 0.05, "vigor 5 days after 20: %.3f, expected 30", market.vigor());
+				addDays(c, player, 20);
+				MarketUpkeep.touch(c.level(), market);
+				near(50, market.vigor(), "vigor after 25 days");
+				// Trades at the market raise the vigor by the development points they bring.
+				c.config(cfg -> cfg.demand.vigorPerPoint = 0.5);
+				market.setVigor(60);
+				Identifier sell = market.goods().keySet().stream().filter(g -> !market.shortages().containsKey(g) && sellable(c, player, market, g, 8)).findFirst().orElseThrow();
+				ServerCases.giveItems(player, c.item(sell), 8);
+				long money = c.balance(player);
+				c.trade(player, market, sell, false, 8);
+				that(c.lastTradeResult(player) == TradeResult.SUCCESS, "selling 8 gave %s", c.lastTradeResult(player));
+				long total = c.balance(player) - money;
+				that(total > 0, "the sale paid nothing");
+				double gain = total * TradeExpansionConfig.get().development.tradePointsPerCoin * 0.5;
+				that(Math.abs(60 + gain - market.vigor()) < 0.01, "vigor after a sale of %d: %.3f, expected %.3f", total, market.vigor(), 60 + gain);
 			});
 		}));
 	}

@@ -70,14 +70,15 @@ public final class Market {
 
 	/**
 	 * Fields after the two full records: K-2 (v0.78) the village's vigor and how many shortages were fulfilled; v0.82 the
-	 * last player visit (O-3) and the rain multiplier of the crops (U).
+	 * last player visit (O-3) and the rain multiplier of the crops (U); v0.90 when the vigor last recovered (K-2).
 	 */
-	private record Growth(double vigor, int fulfilled, long lastVisit, double rainMultiplier) {
+	private record Growth(double vigor, int fulfilled, long lastVisit, double rainMultiplier, long vigorTime) {
 		static final MapCodec<Growth> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Codec.DOUBLE.optionalFieldOf("vigor", com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX).forGetter(Growth::vigor),
 				Codec.INT.optionalFieldOf("shortages_fulfilled", 0).forGetter(Growth::fulfilled),
 				Codec.LONG.optionalFieldOf("last_visit", Long.MIN_VALUE).forGetter(Growth::lastVisit),
-				Codec.DOUBLE.optionalFieldOf("rain_multiplier", 1.0).forGetter(Growth::rainMultiplier)
+				Codec.DOUBLE.optionalFieldOf("rain_multiplier", 1.0).forGetter(Growth::rainMultiplier),
+				Codec.LONG.optionalFieldOf("vigor_time", Long.MIN_VALUE).forGetter(Growth::vigorTime)
 		).apply(i, Growth::new));
 	}
 
@@ -181,6 +182,7 @@ public final class Market {
 		m.vigor = Math.clamp(growth.vigor(), 0, com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX);
 		m.shortagesFulfilled = Math.max(0, growth.fulfilled());
 		m.lastVisit = growth.lastVisit();
+		m.vigorTime = growth.vigorTime();
 		m.rainMultiplier = growth.rainMultiplier() > 0 ? growth.rainMultiplier() : 1.0;
 		a.shelved().forEach(sh -> m.shelved.put(sh.goods(), sh));
 		m.specials.addAll(a.specials());
@@ -202,7 +204,7 @@ public final class Market {
 	}, m -> Pair.of(m, Pair.of(new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
 			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
-			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled, m.lastVisit, m.rainMultiplier)))).codec();
+			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled, m.lastVisit, m.rainMultiplier, m.vigorTime)))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -226,6 +228,8 @@ public final class Market {
 	private final Map<Identifier, Integer> shortageSold = new LinkedHashMap<>();
 	private double vigor = com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX;
 	private int shortagesFulfilled;
+	/** K-2 (v0.90): market-clock time the vigor's recovery was last applied; {@link Long#MIN_VALUE} = not yet. */
+	private long vigorTime = Long.MIN_VALUE;
 	/** O-3 (v0.82): market-clock time a player last opened the screen of / traded with this market. */
 	private long lastVisit = Long.MIN_VALUE;
 	/** U (v0.82): multiplier of B of the rain goods, copied from the world's weather when the market is touched (1 = none). */
@@ -348,6 +352,15 @@ public final class Market {
 
 	public void setVigor(double vigor) {
 		this.vigor = vigor;
+	}
+
+	/** K-2 (v0.90): when the vigor's recovery was last applied ({@link Long#MIN_VALUE} = not yet). */
+	public long vigorTime() {
+		return vigorTime;
+	}
+
+	public void setVigorTime(long time) {
+		this.vigorTime = time;
 	}
 
 	/** K-2: shortages fulfilled at this market so far. */

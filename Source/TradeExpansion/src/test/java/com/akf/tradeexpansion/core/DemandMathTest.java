@@ -48,4 +48,28 @@ class DemandMathTest {
 		assertEquals(320, DemandMath.fulfillPoints(20, 16, 1.0), 1e-9);
 		assertEquals(160, DemandMath.fulfillPoints(20, 16, 0.5), 1e-9);
 	}
+
+	/** v0.90: what was sold lowers the loss of a shortage left unfulfilled. */
+	@Test
+	void partlySoldLosesLess() {
+		assertEquals(5, DemandMath.unfulfilledLoss(0, 16, 5), 1e-9);
+		assertEquals(2.5, DemandMath.unfulfilledLoss(8, 16, 5), 1e-9);
+		assertEquals(0, DemandMath.unfulfilledLoss(16, 16, 5), 1e-9);
+		assertEquals(0, DemandMath.unfulfilledLoss(3, 0, 5), 1e-9); // fulfilling is off
+	}
+
+	/** v0.90: a low vigor comes back to 50 over time; a higher one is kept. */
+	@Test
+	void lowVigorRecovers() {
+		assertEquals(26, DemandMath.recover(20, 3, 2), 1e-9);
+		assertEquals(50, DemandMath.recover(45, 10, 2), 1e-9);
+		assertEquals(80, DemandMath.recover(80, 10, 2), 1e-9);
+		assertEquals(20, DemandMath.recover(20, 3, 0), 1e-9); // recovery off
+	}
+
+	@Test
+	void vigorFromPoints() {
+		assertEquals(1, DemandMath.fromPoints(20, 0.05), 1e-9);
+		assertEquals(0, DemandMath.fromPoints(20, 0), 1e-9);
+	}
 }

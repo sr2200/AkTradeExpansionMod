@@ -714,6 +714,7 @@ public final class StaffService {
 		traded(registry, market, e.goods, plan.units() * step, now, changes);
 		countDaily(market, plan.units(), now);
 		logTrade(e, "STAFF SELL", def, plan.units(), market, plan.total());
+		com.akf.tradeexpansion.quest.DemandService.onCarrierSold(server, market, e.owner, e.ownerName, e.goods, plan.units(), now); // K-2 v0.90
 		return Deal.of(plan.units(), plan.total(), def.unit());
 	}
 
@@ -921,6 +922,7 @@ public final class StaffService {
 			cost += lineCost;
 			kinds++;
 			logTrade(e, "STAFF SELL", def, plan.units(), market, plan.total());
+			com.akf.tradeexpansion.quest.DemandService.onCarrierSold(server, market, e.owner, e.ownerName, line.goods, plan.units(), now); // K-2 v0.90
 		}
 		lines.removeIf(l -> l.units <= 0);
 		if (units <= 0) return Deal.none(Employee.Status.WAIT_SELL);
