@@ -66,7 +66,10 @@ final class ServerLookCases {
 		cases.add(partial("raised_buildings_stand", List.of("45-1"),
 				"Lv3 の見た目（23種類の建物の2階建て・高い形（礼拝堂・駅舎・噴水・時計塔・見張り塔・公園・市場・港・劇場・温泉・祭りの広場）を4つの向きで、2階なしの Lv3 を北向きで、7種類の見た目それぞれ）を、Lv1 と同じく構造物をブロックの更新つきで石の床に置くと、落ちて物になる部品が無く、30ティック進めてもブロックが変わらず、水と溶岩が建物の外に流れ出ないこと（Lv2 の飾りと方向 b の旗は Lv3 に含まれるので置いていない。見た目そのものは画像で見る）",
 				ServerLookCases::standRaised));
-		cases.add(partial("building_parts_by_style", List.of("29-14", "22-52", "22-53", "22-55", "22-56", "28-6"),
+		cases.add(partial("upstairs_reachable", List.of("45-3"),
+				"2階建ての Lv3（木組みの家8種・銀行・鋳造所・商人組合の会館・村役場・依頼所）を7種類の見た目と4つの向きで置き、プレイヤーと同じ大きさの箱（幅 0.6・高さ 1.8）を、段差は 0.6 まで歩いて・1.25 まで跳んで動かすと、入口から2階の床まで行けること（階段の途中で頭がつかえない。依頼所ははしご）。宿屋の2階にもベッドがあること（村の見た目。寝られるか・本当に歩いて上がれるかはゲームの中で見る）",
+				ServerLookCases::upstairs));
+		cases.add(partial("building_parts_by_style",List.of("29-14", "22-52", "22-53", "22-55", "22-56", "28-6"),
 				"7種類の見た目それぞれに23種類の建物の構造物があり（平原に代わらない）、看板（建物の目印）が1つずつあること。宿屋は村の見た目でベッド4つ・ネザーとエンドはベッドなしでカーペット、煙突に火の付いた焚き火（エンドはエンドロッド）。依頼所と時計塔に鐘、時計塔にボタンと避雷針、見張り塔にはしご・旗・松明、酒場に吊り看板とろうそく、市場にハチの巣（bee_nest）と飾り壺、劇場と祭りの広場に旗、祭りの広場にろうそくのケーキ、銀行に鉄格子、温泉にソウルサンド、鋳造所に溶鉱炉・金床・鍛冶台と煙突の火（エンドはエンドロッド）、駅舎にレールと鐘、目利きの店にアメジストの塊・模様入りの本棚・書見台、問屋に樽・チェスト・干し草、商人組合の会館にエメラルドブロック・旗・ろうそく、礼拝堂に鐘・ろうそく・色付きガラス、村役場に旗・書見台・本棚、職人の工房に金床・作業台・石切台と煙突の火、学舎に本棚・書見台・ろうそく。噴水広場はネザーで溶岩・ほかは水、公園はネザーで真紅のキノコと溶岩・エンドでコーラスとエンドロッド・村で葉（材料の見た目、鐘を鳴らせる・寝られる・村人が来るは見ていない）",
 				ServerLookCases::parts));
 		cases.add(ServerCase.full("look_by_biome", List.of("22-51"), ctx -> {
@@ -293,6 +296,145 @@ final class ServerLookCases {
 
 	private static String name(BlockPos q, ServerLevel level, Block b) {
 		return q.toShortString() + " " + BuiltInRegistries.BLOCK.getKey(b).getPath();
+	}
+
+	// ---- 45-3: the way up to the second storey
+
+	/** The kinds whose tall level 3 has a second storey (genfacility.js: spec.tall), the quest hall with a ladder. */
+	private static final java.util.Set<FacilityKind> STOREYS = java.util.EnumSet.of(FacilityKind.QUEST_HALL, FacilityKind.BANK, FacilityKind.WAREHOUSE,
+			FacilityKind.INN, FacilityKind.TAVERN, FacilityKind.MINT, FacilityKind.APPRAISER, FacilityKind.WHOLESALER, FacilityKind.GUILD_HALL,
+			FacilityKind.TOWN_HALL, FacilityKind.WORKSHOP, FacilityKind.SCHOOL);
+	/** Height of the second storey's floor over the ground (genfacility.js: wall). */
+	private static final int UPPER_FLOOR = 4;
+
+	private static void upstairs(ServerCtx ctx) {
+		prepare(ctx);
+		List<String> failed = new ArrayList<>();
+		for (String style : STYLES) {
+			for (Rotation rotation : ROTATIONS) {
+				ctx.later(1, c -> {
+					List<Placed> placed = placeAll(c, style, rotation, 3, true);
+					try {
+						for (Placed p : placed) {
+							FacilityKind kind = FacilityCatalog.get(p.id()).kind();
+							if (!STOREYS.contains(kind)) continue;
+							String where = style + " " + p.id().getPath() + " turned " + rotation;
+							String result = Walker.upstairs(c.level(), p.box());
+							if (result != null) failed.add(where + ": " + result);
+							boolean village = !style.equals("nether") && !style.equals("end");
+							if (kind == FacilityKind.INN && village) {
+								int upper = 0;
+								BoundingBox b = p.box();
+								for (BlockPos q : BlockPos.betweenClosed(b.minX(), b.minY() + UPPER_FLOOR + 1, b.minZ(), b.maxX(), b.maxY(), b.maxZ())) {
+									BlockState s = c.level().getBlockState(q);
+									if (s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.HEAD) upper++;
+								}
+								if (upper == 0) failed.add(where + ": no bed on the second storey");
+							}
+						}
+					} finally {
+						clear(c, placed);
+					}
+				});
+			}
+		}
+		ctx.later(1, c -> that(failed.isEmpty(), "the way up to the second storey: %s", failed));
+	}
+
+	/**
+	 * A rough walk of a player's body (0.6 wide, 1.8 high) over the block shapes, on a grid of quarter blocks: it steps up
+	 * 0.6 as it walks (vanilla's step height) or 1.25 with a jump, rising in place first so that the head must be free,
+	 * falls where nothing holds it and climbs ladders. A quarter block a move, the body stands across two block columns
+	 * on the way, as a player's does on a staircase, and can stand off the middle of a block to pass a hanging lantern.
+	 */
+	static final class Walker {
+		private static final double HALF = 0.3, HEIGHT = 1.8, E = 1e-3, STEP = 1.0 / 16, GRID = 0.25;
+		private static final double WALK = 9 * STEP, JUMP = 20 * STEP;
+		private static final int[][] DIRECTIONS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+
+		private final ServerLevel level;
+		private final double bottom;
+
+		private Walker(ServerLevel level, double bottom) {
+			this.level = level;
+			this.bottom = bottom;
+		}
+
+		/** @return null when the second storey's floor of the building in {@code box} can be reached from a door, else why not */
+		static String upstairs(ServerLevel level, BoundingBox box) {
+			Walker w = new Walker(level, box.minY());
+			double goal = box.minY() + UPPER_FLOOR + 1;
+			java.util.ArrayDeque<long[]> queue = new java.util.ArrayDeque<>();
+			java.util.Set<String> seen = new java.util.HashSet<>();
+			// Seeds: the middle of the blocks on both sides of each door on the ground (a door is open to go through).
+			for (BlockPos q : BlockPos.betweenClosed(box.minX(), box.minY() + 1, box.minZ(), box.maxX(), box.minY() + 1, box.maxZ())) {
+				if (!level.getBlockState(q).is(BlockTags.DOORS)) continue;
+				for (int[] d : DIRECTIONS) {
+					double x = q.getX() + d[0] + 0.5, z = q.getZ() + d[1] + 0.5;
+					double feet = w.settle(x, box.minY() + 1 + 2 * STEP, z); // over a rug, under a lantern hanging low
+					if (w.free(x, feet, z)) w.add(queue, seen, x, z, feet);
+				}
+			}
+			if (queue.isEmpty()) return "no door on the ground";
+			double highest = box.minY();
+			while (!queue.isEmpty()) {
+				long[] n = queue.poll();
+				double x = n[0] * GRID, z = n[1] * GRID, feet = n[2] * STEP;
+				highest = Math.max(highest, feet);
+				if (feet >= goal - E && feet < goal + 0.5) return null;
+				for (int[] d : DIRECTIONS) {
+					double nx = x + d[0] * GRID, nz = z + d[1] * GRID;
+					if (nx < box.minX() - 1 || nx > box.maxX() + 2 || nz < box.minZ() - 1 || nz > box.maxZ() + 2) continue;
+					for (double lift : new double[] { WALK, JUMP }) {
+						double to = w.move(x, z, feet, nx, nz, lift);
+						if (!Double.isNaN(to) && to <= box.maxY()) w.add(queue, seen, nx, nz, to);
+					}
+				}
+				// Ladders: on one, the body climbs.
+				if (level.getBlockState(BlockPos.containing(x, feet + E, z)).is(BlockTags.CLIMBABLE) && w.free(x, feet + 0.5, z)) {
+					w.add(queue, seen, x, z, feet + 0.5);
+				}
+			}
+			return String.format("could not get higher than %.2f over the ground (the floor of the second storey is at %d)", highest - box.minY(), UPPER_FLOOR);
+		}
+
+		private void add(java.util.ArrayDeque<long[]> queue, java.util.Set<String> seen, double x, double z, double feet) {
+			long gx = Math.round(x / GRID), gz = Math.round(z / GRID), f = Math.round(feet / STEP);
+			if (seen.add(gx + "," + gz + "," + f)) queue.add(new long[] { gx, gz, f });
+		}
+
+		private AABB body(double x, double feet, double z) {
+			return new AABB(x - HALF + E, feet + E, z - HALF + E, x + HALF - E, feet + HEIGHT - E, z + HALF - E);
+		}
+
+		private boolean free(double x, double feet, double z) {
+			return level.noCollision(body(x, feet, z));
+		}
+
+		/** Falls from {@code feet} to what holds the body (or a few blocks under the ground, where it stops looking). */
+		private double settle(double x, double feet, double z) {
+			double f = feet;
+			while (f > bottom - 3 && free(x, f - STEP, z) && !level.getBlockState(BlockPos.containing(x, f + E, z)).is(BlockTags.CLIMBABLE)) f -= STEP;
+			return f;
+		}
+
+		/** @return the height of the feet after moving from (x, z) to (nx, nz), NaN when the body cannot */
+		private double move(double x, double z, double feet, double nx, double nz, double lift) {
+			double f = feet;
+			if (!free(nx, f, nz)) {
+				double up = Double.NaN;
+				for (double l = STEP; l <= lift + E; l += STEP) {
+					if (!free(x, f + l, z)) break; // the head hits something as it rises
+					if (free(nx, f + l, nz)) {
+						up = f + l;
+						break;
+					}
+				}
+				if (Double.isNaN(up)) return Double.NaN;
+				f = up;
+			}
+			return settle(nx, f, nz);
+		}
 	}
 
 	// ---- 29-14 and others: the parts of each look

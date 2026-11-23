@@ -911,9 +911,11 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 		houseOutside();
 		if (tall) {
 			// v0.87: the way up to the second storey. The quest hall (5x5) is too small for stairs: a ladder against the
-			// back wall instead of the right bookshelves.
+			// back wall instead of the right bookshelves. v0.89: the map table in front of it goes too (a player could not
+			// get to the ladder past it, the sign and the hanging lantern).
 			if (W === 5) {
 				for (const y of [1, 2]) grid.delete(`${R},${y},${D - 2}`);
+				for (const y of [1, 2]) grid.delete(`${R},${y},${D - 3}`);
 				for (let y = 1; y <= wall; y++) set(R, y, D - 2, state('minecraft:ladder', { facing: 'north' }));
 			} else staircase(R, fz + 1);
 			if (kind === 'inn' && m.bed) {
@@ -1150,7 +1152,9 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 	/**
 	 * v0.87 stairs up to the second storey (tall houses and stone buildings): steps in column x from row z0 toward the
 	 * back, the last one in the floor of the second storey (y = wall), on a wedge of the floor's block. Whatever stood in
-	 * the way goes (beds as a whole); the floor over the lower steps stays open for the head.
+	 * the way goes (beds as a whole); the floor over the lower steps stays open for the head. v0.89: three blocks over
+	 * each step, the first one included: a player going up stands across two steps, so the head passes under the floor
+	 * over the step behind (with only two, the floor over the first step stopped it).
 	 */
 	function staircase(x, z0) {
 		const clear = (cx, cy, cz) => {
@@ -1165,7 +1169,7 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 			for (let yy = 1; yy <= y; yy++) clear(x, yy, z);
 			for (let yy = 1; yy < y; yy++) set(x, yy, z, block(m.floor));
 			set(x, y, z, stair(m.bench, 'south'));
-			for (const hy of [y + 1, y + 2]) if (hy < top) clear(x, hy, z);
+			for (const hy of [y + 1, y + 2, y + 3]) if (hy < top) clear(x, hy, z);
 		}
 	}
 
@@ -1889,7 +1893,8 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 				const wood = m.bench === 'minecraft:purpur' ? 'minecraft:warped' : m.bench;
 				if (free(mid, wall - 1, 0)) set(mid, wall - 1, 0, state(wood + '_hanging_sign', { rotation: '0', attached: 'false' }));
 				const R = W - 2;
-				if (free(R, 2, 2)) set(R, 2, 2, state('minecraft:candle', { candles: '3', lit: 'true' }));
+				// on the map table (not there in the tall look: the way to the ladder)
+				if (free(R, 2, 2) && ids[get(R, 1, 2)] === 'minecraft:cartography_table') set(R, 2, 2, state('minecraft:candle', { candles: '3', lit: 'true' }));
 				if (lv >= 3 && !m.flat && free(mid, top + 2, 0) && free(mid, top + 1, 0)) {
 					set(mid, top + 2, 0, state(colour + '_wall_banner', { facing: 'north' }));
 				}
