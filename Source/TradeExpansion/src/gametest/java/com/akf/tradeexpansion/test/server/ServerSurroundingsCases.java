@@ -54,7 +54,7 @@ final class ServerSurroundingsCases {
 	static List<ServerCase> all() {
 		List<ServerCase> cases = new ArrayList<>();
 		cases.add(partial("fountain_water_stays", List.of("28-2"),
-				"平原の村で噴水広場を建てると、水盤と柱の上に水（水源と流れ）が張り、水盤の底に明るさ10以上の光るブロックがあり、ランダムティックを速めて600ティック進めても、水が建物の外に出ず、建物のブロックが変わらないこと（ブロックの下の草が土になるのは除く。4本の流れの形・夜の見え方は画像で見る）",
+				"平原の村で噴水広場を建てると、水盤と柱の上に水（水源と流れ）が張り、水盤の底に明るさ10以上の光るブロックがあり、ランダムティックを速めて600ティック進めても、水が建物の外に出ず、建物のブロックが変わらないこと（ブロックの下の草が土になるのは除く。左右2本の流れの形・夜の見え方は画像で見る）",
 				ctx -> stands(ctx, "plains", List.of(FOUNTAIN), (c, market) -> {
 					Facility f = market.facilities().get(FOUNTAIN);
 					Counts n = count(c.level(), f.box());

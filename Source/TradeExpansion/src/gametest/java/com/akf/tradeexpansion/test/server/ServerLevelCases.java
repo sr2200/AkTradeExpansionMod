@@ -203,6 +203,30 @@ final class ServerLevelCases {
 					that(f.branch().equals("b"), "direction of the rebuilt warehouse: %s", f.branch());
 					equal(blocks, solidBlocks(c, f.box()), "blocks of the rebuilt warehouse (the level 2 look)");
 				})));
+		cases.add(partial("facility_grand_village", List.of("45-8"),
+				"村の5つの建物（依頼所・倉庫・宿屋・酒場・噴水広場）を4つまで Lv3 にしても進捗「立派な村」は取れず、5つ目を Lv3 にすると取れること"
+						+ "（進捗の画面での並びは見ていない）",
+				ctx -> town(ctx, (c, player, market, stall) -> {
+					builder(c, player, market);
+					// the advancements of the levels count the villages the player helped develop
+					c.giveMoney(player, 1_000);
+					ServerDevelopmentCases.donate(c, player, market, 100, false);
+					List<Identifier> kinds = List.of(TradeExpansion.id("quest_hall"), WAREHOUSE, INN, TradeExpansion.id("tavern"), FOUNTAIN);
+					for (Identifier id : kinds) buildAndComplete(c, player, market, id);
+					for (int i = 0; i < kinds.size(); i++) {
+						Identifier id = kinds.get(i);
+						for (int lv = 2; lv <= 3; lv++) {
+							if (points(c, market) < 20_000) builder(c, player, market);
+							TradeResult r = upgrade(c, player, market, id, i % 2);
+							that(r == TradeResult.SUCCESS, "raising %s to level %d gave %s", id, lv, r);
+							c.command(player, "aktradeex development complete");
+							equal(lv, market.facilities().get(id).level(), "level of " + id);
+						}
+						c.clearAfter(market.facilities().get(id).box()); // the tall look is higher than the site that was cleared
+						if (i < kinds.size() - 1) ServerAdvancementCases.notYet(c, player, "grand_village");
+					}
+					ServerAdvancementCases.done(c, player, "grand_village", "after raising all five buildings to level 3");
+				})));
 		return cases;
 	}
 

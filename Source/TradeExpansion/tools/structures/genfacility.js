@@ -251,15 +251,15 @@ const facilities = {
 	warehouse: { w: 9, d: 9, wall: 4, tall: true },
 	inn: { w: 9, d: 9, wall: 4, tall: true },
 	fountain: { w: 11, d: 11, high: true },
-	park: { w: 13, d: 13 },
+	park: { w: 13, d: 13, high: true },
 	clock_tower: { w: 7, d: 7, high: true },
 	watchtower: { w: 5, d: 5, high: true },
 	tavern: { w: 9, d: 9, wall: 4, tall: true },
-	market_hall: { w: 11, d: 9 },
-	harbor: { w: 9, d: 13 }, // rows z 0..5 on land, 6..12 over the water (data: "waterside": 6)
-	theater: { w: 11, d: 11 },
-	hot_spring: { w: 9, d: 9 },
-	festival: { w: 11, d: 11 },
+	market_hall: { w: 11, d: 9, high: true },
+	harbor: { w: 9, d: 13, high: true }, // rows z 0..5 on land, 6..12 over the water (data: "waterside": 6)
+	theater: { w: 11, d: 11, high: true },
+	hot_spring: { w: 9, d: 9, high: true },
+	festival: { w: 11, d: 11, high: true },
 	mint: { w: 7, d: 7, wall: 4, tall: true },
 	// v0.79
 	station: { w: 9, d: 11, wall: 4, high: true },
@@ -343,7 +343,7 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 
 	/**
 	 * Fountain plaza: a rounded basin of water (lava in the Nether) lit from below, a column carrying a bowl, and a spout
-	 * on top whose water runs over the bowl in four streams back into the basin. Paved ring with a compass pattern, lamp
+	 * on top whose water runs over the bowl in two streams (left and right) back into the basin. Paved ring with a compass pattern, lamp
 	 * posts at the corners, and benches, hedges and flower beds along the edge with an opening in the middle of each side.
 	 * The sign stands in the front opening.
 	 */
@@ -376,7 +376,7 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 				if (corner) set(x, 2, z, lantern(false));
 			}
 		}
-		// Column with the bowl, a glowing block and the spout: the water runs over the top in four streams onto the bowl,
+		// Column with the bowl, a glowing block and the spout: the water runs over the top in two streams onto the bowl,
 		// over its edge and down into the basin (in the game; the template only holds the source blocks).
 		// v0.87 level 3 (tall): the column is 4 higher with a second bowl at y 7; the water then runs over that bowl
 		// straight down into the basin.
@@ -391,6 +391,10 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 		}
 		set(c, 6 + rise, c, up(m.glow));
 		set(c, 7 + rise, c, fluid());
+		// v0.88: two cheeks at the front and the back of the spout, so that the water runs over the bowls only to the left
+		// and the right; from the front both bowls stay in sight (four streams hid them, the lower one most of all).
+		set(c, 7 + rise, c - 1, stair(m.bowl, 'south'));
+		set(c, 7 + rise, c + 1, stair(m.bowl, 'north'));
 		if (m.fluid === 'minecraft:water') {
 			for (const [dx, dz] of [[1, -2], [-2, -1], [-1, 2], [2, 1]]) set(c + dx, 2, c + dz, block('minecraft:lily_pad'));
 		}
@@ -478,6 +482,13 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 		set(c, 6, gc, state('minecraft:iron_chain', { axis: 'y' }));
 		set(c, 5, gc, lantern(true));
 		set(c, 3, rz0, lantern(true)); // under the front eave
+		if (tall) {
+			// v0.88 level 3 (high): an open lantern turret on the gazebo roof (fence posts, a small hipped roof, a rod).
+			for (const x of [c - 1, c + 1]) for (const z of [gc - 1, gc + 1]) for (const y of [7, 8]) set(x, y, z, block(m.fence));
+			hipRoof(c - 1, gc - 1, c + 1, gc + 1, 9, m.gzRoof, m.gzTop);
+			set(c, 9, gc, block(m.gzTop));
+			set(c, 11, gc, state('minecraft:waxed_lightning_rod', { facing: 'up' }));
+		}
 		// Lamp posts where the path meets the walk.
 		for (const x of [c - 2, c + 2]) lampPost(x, gz0 - 2, 1);
 
@@ -1321,6 +1332,15 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 		}
 		for (let z = 0; z < D; z++) set(c, 5 + c, z, state(slab(m.gzRoof), { type: 'bottom' }));
 		for (const z of [0, D - 1]) for (const y of [7, 8]) set(c, y, z, block(m.window));
+		if (tall) {
+			// v0.88 level 3 (high): an open lantern turret in the middle of the ridge (posts, a hipped roof, a rod).
+			const zm = Math.floor(D / 2);
+			for (const x of [c - 1, c + 1]) for (const z of [zm - 1, zm + 1]) for (const y of [5 + c, 6 + c]) set(x, y, z, up(m.pillar));
+			hipRoof(c - 1, zm - 1, c + 1, zm + 1, 7 + c, m.gzRoof, m.gzTop);
+			set(c, 7 + c, zm, block(m.gzTop));
+			set(c, 6 + c, zm, lantern(true));
+			set(c, 9 + c, zm, state('minecraft:waxed_lightning_rod', { facing: 'up' }));
+		}
 		// Stalls: counter facing the aisle, goods on it, casks and chests behind; two per side.
 		const goods = ['minecraft:melon', 'minecraft:pumpkin', 'minecraft:hay_block', 'minecraft:cake', 'minecraft:decorated_pot', 'minecraft:bee_nest',
 			'minecraft:dried_kelp_block', 'minecraft:honey_block'];
@@ -1359,17 +1379,28 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 			set(x, 3, D - 1, lantern(false));
 		}
 		// Office: 4x4 with a door to the front, windows and a small hipped roof.
-		const o0 = 0, o1 = 3, oz0 = 1, oz1 = 4;
-		for (let y = 1; y <= 3; y++) for (let x = o0; x <= o1; x++) for (let z = oz0; z <= oz1; z++) {
+		// v0.88 level 3 (high): the office is 3 higher (a second row of windows, all round), with a lamp room on its roof.
+		const o0 = 0, o1 = 3, oz0 = 1, oz1 = 4, oh = tall ? 3 : 0;
+		for (let y = 1; y <= 3 + oh; y++) for (let x = o0; x <= o1; x++) for (let z = oz0; z <= oz1; z++) {
 			if (x !== o0 && x !== o1 && z !== oz0 && z !== oz1) continue;
 			const corner = (x === o0 || x === o1) && (z === oz0 || z === oz1);
 			if (corner) set(x, y, z, up(m.pillar));
-			else if (y === 2 && (x === o0 || z === oz1)) set(x, y, z, block(m.window));
+			else if (y === 2 && (x === o0 || z === oz1) || oh && y === 5) set(x, y, z, block(m.window));
 			else set(x, y, z, block(y === 1 ? m.found : m.wall));
 		}
 		set(2, 1, oz0, state(m.door, { facing: 'north', half: 'lower', hinge: 'left' }));
 		set(2, 2, oz0, state(m.door, { facing: 'north', half: 'upper', hinge: 'left' }));
-		hipRoof(o0, oz0, o1, oz1, 4, m.gzRoof, m.gzTop);
+		if (oh) {
+			for (let x = o0 + 1; x < o1; x++) for (let z = oz0 + 1; z < oz1; z++) set(x, 7, z, block(m.gzTop));
+			for (const x of [o0, o1]) for (const z of [oz0, oz1]) set(x, 7, z, up(m.pillar));
+			for (let x = o0 + 1; x < o1; x++) for (const z of [oz0, oz1]) set(x, 7, z, block(m.fence));
+			for (let z = oz0 + 1; z < oz1; z++) for (const x of [o0, o1]) set(x, 7, z, block(m.fence));
+			// lamp room: glass around a glowing block, a small roof
+			for (const x of [1, 2]) for (const z of [2, 3]) set(x, 8, z, block('minecraft:glass'));
+			set(1, 8, 2, block(m.glow || 'minecraft:glowstone'));
+			hipRoof(1, 2, 2, 3, 9, m.gzRoof, m.gzTop);
+			set(2, 6, 3, lantern(true));
+		} else hipRoof(o0, oz0, o1, oz1, 4, m.gzRoof, m.gzTop);
 		set(1, 1, 3, state('minecraft:cartography_table', {}));
 		set(1, 1, 2, lantern(false));
 		// Crates, a crane with a cask on a chain over the water, lamps at the edge of the quay.
@@ -1406,29 +1437,42 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 		}
 		for (const x of [1, W - 2]) lampPost(x, 5, 1);
 		// Stage: platform, steps, frame, curtain, drapes, valance, roof.
-		const s0 = 7, s1 = D - 2;
+		// v0.88 level 3 (high): the frame and the curtain 3 higher (a taller stage house), standing banners and lanterns on
+		// the front corners of the roof, a second pair of banners on the curtain.
+		const s0 = 7, s1 = D - 2, h = tall ? 3 : 0;
 		for (let x = 1; x < W - 1; x++) for (let z = s0; z <= s1; z++) set(x, 1, z, block(m.deck));
 		set(c, 1, s0 - 1, stair(m.bench, 'south')); // a step up to the stage
-		for (const x of [0, W - 1]) for (let z = s0; z < D; z++) for (let y = 1; y <= 6; y++) set(x, y, z, z === s0 || z === D - 1 ? up(m.pillar) : block(m.wall));
-		for (let x = 1; x < W - 1; x++) for (let y = 1; y <= 6; y++) set(x, y, D - 1, block('minecraft:red_wool'));
-		for (let x = 0; x < W; x++) set(x, 7, s0, lying(m.beam, 'x'));
-		for (let x = 0; x < W; x++) set(x, 7, D - 1, lying(m.beam, 'x'));
-		for (const x of [0, W - 1]) for (let z = s0 + 1; z < D - 1; z++) set(x, 7, z, lying(m.beam, 'z'));
-		for (const x of [1, W - 2]) for (let y = 3; y <= 6; y++) set(x, y, s0, block('minecraft:red_wool'));
-		for (let x = 2; x < W - 2; x++) set(x, 6, s0, block(x % 2 ? 'minecraft:yellow_wool' : 'minecraft:red_wool'));
+		for (const x of [0, W - 1]) for (let z = s0; z < D; z++) for (let y = 1; y <= 6 + h; y++) set(x, y, z, z === s0 || z === D - 1 ? up(m.pillar) : block(m.wall));
+		for (let x = 1; x < W - 1; x++) for (let y = 1; y <= 6 + h; y++) set(x, y, D - 1, block('minecraft:red_wool'));
+		for (let x = 0; x < W; x++) set(x, 7 + h, s0, lying(m.beam, 'x'));
+		for (let x = 0; x < W; x++) set(x, 7 + h, D - 1, lying(m.beam, 'x'));
+		for (const x of [0, W - 1]) for (let z = s0 + 1; z < D - 1; z++) set(x, 7 + h, z, lying(m.beam, 'z'));
+		for (const x of [1, W - 2]) for (let y = 3; y <= 6 + h; y++) set(x, y, s0, block('minecraft:red_wool'));
+		for (let x = 2; x < W - 2; x++) set(x, 6 + h, s0, block(x % 2 ? 'minecraft:yellow_wool' : 'minecraft:red_wool'));
 		for (let x = 0; x < W; x++) {
-			set(x, 8, s0, stair(m.gzRoof, 'south'));
-			set(x, 8, s0 + 1, block(m.gzTop));
-			set(x, 9, s0 + 1, stair(m.gzRoof, 'south'));
-			set(x, 8, s1, block(m.gzTop));
-			set(x, 9, s1, block(m.gzTop));
-			set(x, 10, s1, stair(m.gzRoof, 'south'));
-			set(x, 8, D - 1, block(m.gzTop));
-			set(x, 9, D - 1, block(m.gzTop));
-			set(x, 10, D - 1, state(slab(m.gzRoof), { type: 'bottom' }));
+			set(x, 8 + h, s0, stair(m.gzRoof, 'south'));
+			set(x, 8 + h, s0 + 1, block(m.gzTop));
+			set(x, 9 + h, s0 + 1, stair(m.gzRoof, 'south'));
+			set(x, 8 + h, s1, block(m.gzTop));
+			set(x, 9 + h, s1, block(m.gzTop));
+			set(x, 10 + h, s1, stair(m.gzRoof, 'south'));
+			set(x, 8 + h, D - 1, block(m.gzTop));
+			set(x, 9 + h, D - 1, block(m.gzTop));
+			set(x, 10 + h, D - 1, state(slab(m.gzRoof), { type: 'bottom' }));
 		}
-		for (const x of [3, W - 4]) set(x, 7, s0 + 1, lantern(true));
+		for (const x of [3, W - 4]) set(x, 7 + h, s0 + 1, lantern(true));
 		for (const x of [3, W - 4]) set(x, 5, D - 2, state('minecraft:yellow_wall_banner', { facing: 'north' }));
+		if (h) {
+			for (const x of [3, W - 4]) set(x, 8, D - 2, state('minecraft:red_wall_banner', { facing: 'north' }));
+			for (const x of [0, W - 1]) {
+				set(x, 9 + h, s0 + 1, block(m.gzTop));
+				set(x, 10 + h, s0 + 1, lantern(false));
+			}
+			for (const x of [2, W - 3]) {
+				set(x, 9 + h, s0 + 1, block(m.gzTop));
+				set(x, 10 + h, s0 + 1, state('minecraft:yellow_banner', { rotation: '0' }));
+			}
+		}
 		set(2, 2, s1, state('minecraft:note_block', {}));
 		set(W - 3, 2, s1, state('minecraft:note_block', {}));
 		set(c, 2, s1, state('minecraft:jukebox', {}));
@@ -1477,6 +1521,18 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 		set(1, 1, 2, stair(m.bench, 'west'));
 		set(W - 2, 1, 1, block(m.pot || 'minecraft:potted_bamboo'));
 		set(W - 2, 1, 2, block('minecraft:potted_bamboo'));
+		if (tall) {
+			// v0.88 level 3 (high): a roof on four posts over the bath (a hipped roof of the gazebo material), with lanterns.
+			const r0 = 1, r1 = W - 2, rz0 = 3, rz1 = D - 2; // behind the bench and the pots by the gate
+			for (const x of [r0, r1]) for (const z of [rz0, rz1]) {
+				for (let y = 1; y <= 4; y++) set(x, y, z, up(m.pillar));
+			}
+			for (let x = r0; x <= r1; x++) for (const z of [rz0, rz1]) set(x, 5, z, lying(m.beam, 'x'));
+			for (let z = rz0 + 1; z < rz1; z++) for (const x of [r0, r1]) set(x, 5, z, lying(m.beam, 'z'));
+			hipRoof(r0 - 1, rz0 - 1, r1 + 1, rz1 + 1, 6, m.gzRoof, m.gzTop);
+			for (const x of [r0 + 2, r1 - 2]) set(x, 4, rz0, lantern(true));
+			set(c, 4, rz1, lantern(true));
+		}
 		coreSign(c - 1, 0, 'north');
 	}
 
@@ -1491,19 +1547,33 @@ function build(style, m, kind, spec, lv = 1, tall = false, branch = 'a') {
 			const r = Math.max(Math.abs(x - c), Math.abs(z - c));
 			set(x, 0, z, block(r === 3 ? m.paveAxis : r === 2 ? m.paveRing : m.pave));
 		}
-		// Yagura.
-		for (const x of [c - 1, c + 1]) for (const z of [c - 1, c + 1]) for (let y = 1; y <= 6; y++) set(x, y, z, up(m.pillar));
+		// Yagura. v0.88 level 3 (high): a second stage 4 higher (skirt, deck, railing), the roof, bell and lantern on top of it.
+		const rise = tall ? 4 : 0;
+		for (const x of [c - 1, c + 1]) for (const z of [c - 1, c + 1]) for (let y = 1; y <= 6 + rise; y++) set(x, y, z, up(m.pillar));
 		for (const [x, z] of [[c, c - 1], [c - 1, c], [c + 1, c], [c, c + 1]]) {
-			set(x, 3, z, block('minecraft:red_wool'));
-			set(x, 2, z, block('minecraft:white_wool'));
-			set(x, 5, z, block(m.fence));
+			for (const r of rise ? [0, rise] : [0]) {
+				set(x, 3 + r, z, block('minecraft:red_wool'));
+				set(x, 2 + r, z, block('minecraft:white_wool'));
+				set(x, 5 + r, z, block(m.fence));
+			}
 		}
-		for (let x = c - 1; x <= c + 1; x++) for (let z = c - 1; z <= c + 1; z++) if (x === c || z === c) set(x, 4, z, block(m.deck));
-		set(c, 5, c, state('minecraft:note_block', {}));
-		hipRoof(c - 1, c - 1, c + 1, c + 1, 7, m.gzRoof, m.gzTop);
-		set(c, 6, c, state('minecraft:bell', { attachment: 'ceiling', facing: 'north' }));
-		set(c, 7, c, block(m.gzTop));
-		set(c, 8, c, lantern(false));
+		for (const r of rise ? [0, rise] : [0]) {
+			for (let x = c - 1; x <= c + 1; x++) for (let z = c - 1; z <= c + 1; z++) if (x === c || z === c) set(x, 4 + r, z, block(m.deck));
+		}
+		if (rise) {
+			// the lower stage keeps a lantern and banners in the festival colours under the upper skirt
+			grid.delete(`${c},5,${c}`);
+			set(c, 5, c, lantern(false));
+			for (const [x, z, facing] of [[c, c - 2, 'north'], [c - 2, c, 'west'], [c + 2, c, 'east'], [c, c + 2, 'south']]) {
+				const bx = x === c ? x : x < c ? x + 1 : x - 1, bz = z === c ? z : z < c ? z + 1 : z - 1;
+				if (get(x, 7, z) === undefined && get(bx, 7, bz) !== undefined) set(x, 7, z, state('minecraft:red_wall_banner', { facing }));
+			}
+		}
+		set(c, 5 + rise, c, state('minecraft:note_block', {}));
+		hipRoof(c - 1, c - 1, c + 1, c + 1, 7 + rise, m.gzRoof, m.gzTop);
+		set(c, 6 + rise, c, state('minecraft:bell', { attachment: 'ceiling', facing: 'north' }));
+		set(c, 7 + rise, c, block(m.gzTop));
+		set(c, 8 + rise, c, lantern(false));
 		for (const x of [c - 2, c + 2]) for (const z of [c - 2, c + 2]) set(x, 1, z, state('minecraft:red_candle_cake', { lit: 'true' }));
 		// Poles and ropes of lanterns around the square.
 		for (const x of [0, W - 1]) for (const z of [0, D - 1]) for (let y = 1; y <= 5; y++) set(x, y, z, up(m.pillar));
