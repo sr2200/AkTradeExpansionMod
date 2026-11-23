@@ -10,7 +10,7 @@
 - クライアント（JEI）：バージョン 0.2.44、2026-11-21 17:31、8 件中 0 件失敗
 - クライアント（REI）：バージョン 0.2.44、2026-11-21 17:31、7 件中 0 件失敗
 - クライアント（JourneyMap）：バージョン 0.2.44、2026-11-21 17:31、3 件中 0 件失敗
-- クライアント（建物の画像）：バージョン 0.2.41、2026-11-21 10:28、2 件中 0 件失敗
+- クライアント（建物の画像）：バージョン 0.3.10、2026-11-23 11:52、2 件中 0 件失敗
 - チェックリスト 396 項目のうち、今回 自動で完了 217・一部を確認 160・失敗 0
 
 ## すべての項目
@@ -418,7 +418,7 @@
 | 20-3 | `journeymap_waypoints` | クライアント（JourneyMap） | ✔ | 全部 |
 | 20-5 | `journeymap_waypoints` | クライアント（JourneyMap） | ✔ | JourneyMap がある時、掲示板の市場の一覧の「この市場を登録」で今いる市場の金色の地点が JourneyMap に追加され（チャットには出ない）、もう一度押しても増えないこと（近くに市場が無い時は JourneyMap なしでだけ見た） |
 | 20-3 | `log_has_no_mod_errors` | クライアント（JourneyMap） | ✔ | JourneyMap を入れたクライアントのログに本 Mod のエラー・警告が出ないことのみ |
-| 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 | `building_looks` | クライアント（建物の画像） | ✔ | 14種類の建物を7種類の見た目で、完成の時と同じく構造物を置いて、正面の斜め上から撮った画像（98枚、look_<見た目>_<建物>.png）があり、どの建物にも看板があること（材料と形の見た目・扉や窓や屋根の向き・水の張り方は画像で見る。向きは1つ。鐘を鳴らせる・寝られる・村人が来るは見ていない） |
+| 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 | `building_looks` | クライアント（建物の画像） | ✔ | 23種類の建物を7種類の見た目で、完成の時と同じく構造物を置いて、正面の斜め上から撮った画像（161枚、look_<見た目>_<建物>.png）があり、どの建物にも看板があること（材料と形の見た目・扉や窓や屋根の向き・水の張り方は画像で見る。向きは1つ。鐘を鳴らせる・寝られる・村人が来るは見ていない） |
 | 29-2 | `log_has_no_mod_errors` | クライアント（建物の画像） | ✔ | 建物の画像を撮ったクライアントのログに本 Mod のエラー・警告が出ないことのみ |
 
 ## 見て確かめる画像
@@ -752,6 +752,15 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_plains_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_plains_school.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_quest_hall.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_warehouse.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_inn.png)
@@ -766,6 +775,15 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_desert_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_desert_school.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_quest_hall.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_warehouse.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_inn.png)
@@ -780,6 +798,15 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_savanna_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_savanna_school.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_quest_hall.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_warehouse.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_inn.png)
@@ -794,6 +821,15 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_snowy_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_snowy_school.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_quest_hall.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_warehouse.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_inn.png)
@@ -808,6 +844,15 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_taiga_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_taiga_school.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_quest_hall.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_warehouse.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_inn.png)
@@ -822,6 +867,15 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_nether_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_nether_school.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_quest_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_quest_hall.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_warehouse.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_warehouse.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_inn.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_inn.png)
@@ -836,3 +890,12 @@
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_theater.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_theater.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_hot_spring.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_hot_spring.png)
 - 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_festival.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_festival.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_mint.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_mint.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_station.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_station.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_appraiser.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_appraiser.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_wholesaler.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_wholesaler.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_guild_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_guild_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_chapel.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_chapel.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_town_hall.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_town_hall.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_workshop.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_workshop.png)
+- 22-50・22-52・22-53・22-54・22-55・22-56・28-2・28-3・28-4・28-5・28-6・29-2・29-14 `building_looks`：[look_end_school.png](../../Source/TradeExpansion/build/autotest/screenshots/look_end_school.png)

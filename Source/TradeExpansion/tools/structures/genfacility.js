@@ -8,6 +8,9 @@
 //   wall with the door stands at z = 1. Stone base course, corner and middle posts, a beam on top of the walls, a tie
 //   beam across the room (the lanterns hang from it) and a gable roof of stairs whose gable faces the front (desert: a
 //   flat roof with a parapet). The inn has a chimney with a campfire on top.
+//   v0.84: from 7 wide the side walls stand one block in, so that the eaves hang over them (bushes and open shutters
+//   under them); eave row and ridge of a darker material, upside-down stairs under the roof, a second stone in the base,
+//   roof beams sticking out of flat roofs, the chimney outside the right wall, the kind's goods under the eaves.
 // - bank: a stone house with a portico of columns at the front, a cornice, barred windows, a teller counter, a ceiling
 //   and a hipped roof of stairs.
 // - fountain (11x11) and park (13x13), the leisure facilities: open plazas without walls; see fountain() and park().
@@ -198,6 +201,20 @@ const extra = {
 	end: { springFence: 'minecraft:end_stone_brick_wall', rocks: ['minecraft:end_stone', 'minecraft:end_stone_bricks', 'minecraft:purpur_block', 'minecraft:obsidian'] },
 };
 for (const [style, m] of Object.entries(styles)) Object.assign(m, extra[style]);
+
+// v0.84 houses: open shutters beside the side windows (trapdoor), the eave row and ridge of the gable roof (stem of
+// <stem>_stairs / <stem>_slab), a second stone mixed into the base (by a fixed pattern) and, for flat roofs, the roof
+// beams sticking out under the eaves.
+const houseLook = {
+	plains: { shutter: 'minecraft:spruce_trapdoor', roofEdge: 'minecraft:dark_oak', foundMix: 'minecraft:mossy_cobblestone' },
+	desert: { shutter: 'minecraft:jungle_trapdoor', foundMix: 'minecraft:sandstone', viga: 'minecraft:stripped_jungle_log' },
+	savanna: { shutter: 'minecraft:acacia_trapdoor', roofEdge: 'minecraft:acacia', foundMix: 'minecraft:andesite' },
+	snowy: { shutter: 'minecraft:spruce_trapdoor', roofEdge: 'minecraft:dark_oak', foundMix: 'minecraft:andesite' },
+	taiga: { shutter: 'minecraft:spruce_trapdoor', roofEdge: 'minecraft:spruce', foundMix: 'minecraft:cobblestone' },
+	nether: { shutter: 'minecraft:crimson_trapdoor', roofEdge: 'minecraft:red_nether_brick', foundMix: 'minecraft:blackstone' },
+	end: { shutter: 'minecraft:warped_trapdoor', roofEdge: 'minecraft:end_stone_brick', foundMix: 'minecraft:end_stone' },
+};
+for (const [style, m] of Object.entries(styles)) Object.assign(m, houseLook[style]);
 
 /** Blocks with an axis property (logs, stems, pillars). */
 const AXIS = /(_log|_stem|_pillar|basalt|hay_block)$/;
@@ -563,103 +580,143 @@ function build(style, m, kind, spec) {
 		}
 	}
 
-	/** Timber-framed house with a porch at z = 0 and the front wall at z = 1. */
+	/**
+	 * Timber-framed house (quest hall 5x5, appraiser 7x7, the others 9x9) with a porch at z = 0 and the front wall at
+	 * z = 1. From 7 wide the side walls stand one block in from the edge (x0 / x1), so that the eaves hang over them; that
+	 * strip is a stone drip edge with bushes under the windows and open shutters beside them (or the kind's goods).
+	 */
 	function house() {
 		const fz = 1;
 		const bz = D - 1;
-		// Floor: stone along the walls and on the porch, boards inside.
+		const ins = W >= 7 ? 1 : 0;
+		const x0 = ins, x1 = W - 1 - ins; // the side walls
+		const L = x0 + 1, R = x1 - 1; // the room
+		const span = x1 - x0 + 1;
+		// Stone with a few blocks of a second stone, by a fixed pattern.
+		const found = (x, z) => block(m.foundMix && (x * 7 + z * 3) % 5 === 0 ? m.foundMix : m.found);
+		// Floor: boards in the room, stone under the walls, on the porch and along the sides.
 		for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
-			const inside = x > 0 && x < W - 1 && z > fz && z < bz;
-			set(x, 0, z, block(inside ? m.floor : m.found));
+			const inside = x > x0 && x < x1 && z > fz && z < bz;
+			set(x, 0, z, inside ? block(m.floor) : found(x, z));
 		}
 		// Porch: two posts and a beam carrying the front of the roof.
 		for (let y = 1; y <= wall; y++) {
-			set(0, y, 0, up(m.pillar));
-			set(W - 1, y, 0, up(m.pillar));
+			set(x0, y, 0, up(m.pillar));
+			set(x1, y, 0, up(m.pillar));
 		}
-		for (let x = 1; x < W - 1; x++) set(x, wall, 0, lying(m.beam, 'x'));
+		for (let x = x0 + 1; x < x1; x++) set(x, wall, 0, lying(m.beam, 'x'));
 
 		// Posts, windows (2 high) and plain wall along each side; base course of stone, beam on top.
-		const posts = { 5: [0, 4], 7: [0, 2, 4, 6], 9: [0, 3, 5, 8] }[W];
-		const frontWindows = { 5: [1, 3], 7: [1, 5], 9: [1, 2, 6, 7] }[W];
-		const backPosts = { 5: [0, 4], 7: [0, 3, 6], 9: [0, 4, 8] }[W];
-		const backWindows = { 5: [2], 7: [2, 4], 9: [2, 6] }[W];
+		const rel = (list) => list.map((r) => x0 + r);
+		const posts = rel({ 5: [0, 4], 7: [0, 2, 4, 6] }[span]);
+		const frontWindows = rel({ 5: [1, 3], 7: [1, 5] }[span]);
+		const backPosts = rel({ 5: [0, 4], 7: [0, 3, 6] }[span]);
+		const backWindows = rel({ 5: [2], 7: [1, 5] }[span]);
 		const sidePosts = { 5: [1, 4], 7: [1, 6], 9: [1, 4, 8] }[D];
-		const sideWindows = { 5: [2, 3], 7: [3, 4], 9: [2, 3, 6] }[D];
+		const sideWindows = { 5: [2, 3], 7: [3, 4], 9: [2, 3, 6, 7] }[D];
 		const windowRows = W === 5 ? [2] : [2, 3];
 		const cell = (x, y, z, post, win, axis) => {
 			if (post) return set(x, y, z, up(m.pillar));
 			if (y === wall) return set(x, y, z, lying(m.beam, axis));
 			if (win && windowRows.includes(y)) return set(x, y, z, block(m.window));
-			set(x, y, z, block(y === 1 ? m.found : m.wall));
+			set(x, y, z, y === 1 ? found(x, z) : block(m.wall));
 		};
 		for (let y = 1; y <= wall; y++) {
-			for (let x = 0; x < W; x++) {
+			for (let x = x0; x <= x1; x++) {
 				cell(x, y, fz, posts.includes(x), frontWindows.includes(x), 'x');
 				cell(x, y, bz, backPosts.includes(x), backWindows.includes(x), 'x');
 			}
 			for (let z = fz + 1; z < bz; z++) {
-				cell(0, y, z, sidePosts.includes(z), sideWindows.includes(z), 'z');
-				cell(W - 1, y, z, sidePosts.includes(z), sideWindows.includes(z), 'z');
+				cell(x0, y, z, sidePosts.includes(z), sideWindows.includes(z), 'z');
+				cell(x1, y, z, sidePosts.includes(z), sideWindows.includes(z), 'z');
 			}
 		}
 		door(mid, fz);
+		// Under the eaves: a bush under each side window and open shutters on both sides of each pair of windows.
+		const sides = ins ? [[0, 'west'], [W - 1, 'east']] : [];
+		for (const [xo, facing] of sides) {
+			for (const z of sideWindows) {
+				set(xo, 0, z, block(m.ground));
+				set(xo, 1, z, leaves(m.hedge));
+				for (const dz of [-1, 1]) {
+					const sz = z + dz;
+					if (sideWindows.includes(sz) || sz < 1 || sz >= D) continue;
+					for (const y of windowRows) set(xo, y, sz, state(m.shutter, { facing, half: 'bottom', open: 'true' }));
+				}
+			}
+		}
 		// Tie beam across the room; the lanterns hang from it.
 		const tz = sidePosts.length > 2 ? sidePosts[1] : Math.floor((fz + bz) / 2);
-		for (let x = 1; x < W - 1; x++) set(x, wall, tz, lying(m.beam, 'x'));
-		if (W === 5) set(mid, wall - 1, tz, lantern(true));
-		else for (const x of [2, W - 3]) set(x, wall - 1, tz, lantern(true));
+		for (let x = x0 + 1; x < x1; x++) set(x, wall, tz, lying(m.beam, 'x'));
+		for (const x of span === 7 ? [L + 1, R - 1] : [mid]) set(x, wall - 1, tz, lantern(true));
 
-		roof(fz, bz);
+		roof(fz, bz, ins);
 		sign();
-		const porchSides = [1, W - 2];
+		const porchSides = [x0 + 1, x1 - 1];
+		/** Goods along one outside side instead of the bushes (z from..to at x). */
+		const sideRow = (x, from, to, at) => {
+			for (let z = from; z <= to; z++) {
+				set(x, 0, z, found(x, z));
+				set(x, 1, z, at(z, 1));
+			}
+		};
 		switch (kind) {
 			case 'quest_hall':
 				// Bell under the porch, bookshelves at the back, a lectern and a map table.
-				set(1, wall - 1, 0, state('minecraft:bell', { attachment: 'ceiling', facing: 'east' }));
-				set(W - 2, wall - 1, 0, lantern(true));
-				if (m.pot) set(W - 2, 1, 0, block(m.pot));
-				for (const x of [1, W - 2]) for (const y of [1, 2]) set(x, y, D - 2, block('minecraft:bookshelf'));
-				set(1, 1, 2, state('minecraft:lectern', { facing: 'east' }));
-				set(W - 2, 1, 2, block('minecraft:cartography_table'));
+				set(porchSides[0], wall - 1, 0, state('minecraft:bell', { attachment: 'ceiling', facing: 'east' }));
+				set(porchSides[1], wall - 1, 0, lantern(true));
+				if (m.pot) set(porchSides[1], 1, 0, block(m.pot));
+				for (const x of [L, R]) for (const y of [1, 2]) set(x, y, D - 2, block('minecraft:bookshelf'));
+				set(L, 1, 2, state('minecraft:lectern', { facing: 'east' }));
+				set(R, 1, 2, block('minecraft:cartography_table'));
 				break;
 			case 'warehouse':
-				// Goods on the porch, barrels stacked along one wall, chests along the other.
-				set(1, 1, 0, state('minecraft:barrel', { facing: 'up' }));
-				set(1, 2, 0, state('minecraft:barrel', { facing: 'up' }));
-				set(2, 1, 0, state('minecraft:barrel', { facing: 'north' }));
-				set(W - 2, 1, 0, lying('minecraft:hay_block', 'x'));
-				set(W - 3, 1, 0, lying('minecraft:hay_block', 'z'));
-				set(W - 2, 2, 0, lying('minecraft:hay_block', 'x'));
+				// Goods on the porch, barrels stacked along one wall, chests along the other; firewood stacked under both
+				// eaves and a hoist over a loft door in the front gable.
+				set(L, 1, 0, state('minecraft:barrel', { facing: 'up' }));
+				set(L, 2, 0, state('minecraft:barrel', { facing: 'up' }));
+				set(L + 1, 1, 0, state('minecraft:barrel', { facing: 'north' }));
+				set(R, 1, 0, lying('minecraft:hay_block', 'x'));
+				set(R - 1, 1, 0, lying('minecraft:hay_block', 'z'));
+				set(R, 2, 0, lying('minecraft:hay_block', 'x'));
 				set(mid - 2, wall - 1, 0, lantern(true));
 				set(mid + 2, wall - 1, 0, lantern(true));
 				for (let z = fz + 1; z < bz; z++) {
-					set(1, 1, z, state('minecraft:barrel', { facing: 'up' }));
-					set(1, 2, z, state('minecraft:barrel', { facing: z % 2 ? 'east' : 'up' }));
-					if (z <= D - 3) set(W - 2, 1, z, state('minecraft:chest', { facing: 'west' }));
+					set(L, 1, z, state('minecraft:barrel', { facing: 'up' }));
+					set(L, 2, z, state('minecraft:barrel', { facing: z % 2 ? 'east' : 'up' }));
+					if (z <= D - 3) set(R, 1, z, state('minecraft:chest', { facing: 'west' }));
 				}
-				set(W - 2, 1, D - 2, lying('minecraft:hay_block', 'y'));
-				set(W - 2, 2, D - 2, lying('minecraft:hay_block', 'y'));
-				set(W - 3, 1, D - 2, lying('minecraft:hay_block', 'z'));
-				set(2, 1, D - 2, block('minecraft:crafting_table'));
+				set(R, 1, D - 2, lying('minecraft:hay_block', 'y'));
+				set(R, 2, D - 2, lying('minecraft:hay_block', 'y'));
+				set(R - 1, 1, D - 2, lying('minecraft:hay_block', 'z'));
+				set(L + 1, 1, D - 2, block('minecraft:crafting_table'));
+				for (const x of [0, W - 1]) sideRow(x, 2, D - 2, () => lying(m.pillar, 'z'));
+				if (!m.flat) {
+					grid.delete(`${mid},${wall + 2},${fz}`);
+					set(mid, wall + 1, fz, state(m.door, { facing: 'south', half: 'lower', hinge: 'left' }));
+					set(mid, wall + 2, fz, state(m.door, { facing: 'south', half: 'upper', hinge: 'left' }));
+					set(mid, wall + 3, 0, lying(m.beam, 'z'));
+					set(mid, wall + 2, 0, state('minecraft:iron_chain', { axis: 'y' }));
+					set(mid, wall + 1, 0, lying('minecraft:hay_block', 'y'));
+				}
 				break;
 			case 'inn':
 				// Four beds along the side walls (head at the wall), a rug down the middle, a fireplace with a chimney.
 				for (const z of [3, D - 3]) {
 					if (m.bed) {
-						set(1, 1, z, state(m.bed, { facing: 'west', part: 'head' }));
-						set(2, 1, z, state(m.bed, { facing: 'west', part: 'foot' }));
-						set(W - 2, 1, z, state(m.bed, { facing: 'east', part: 'head' }));
-						set(W - 3, 1, z, state(m.bed, { facing: 'east', part: 'foot' }));
+						set(L, 1, z, state(m.bed, { facing: 'west', part: 'head' }));
+						set(L + 1, 1, z, state(m.bed, { facing: 'west', part: 'foot' }));
+						set(R, 1, z, state(m.bed, { facing: 'east', part: 'head' }));
+						set(R - 1, 1, z, state(m.bed, { facing: 'east', part: 'foot' }));
 					} else {
-						for (const x of [1, 2, W - 3, W - 2]) set(x, 1, z, block(m.carpet));
+						for (const x of [L, L + 1, R - 1, R]) set(x, 1, z, block(m.carpet));
 					}
 				}
 				for (let z = fz + 1; z < D - 2; z++) set(mid, 1, z, block(m.carpet));
-				set(1, 1, D - 2, state('minecraft:barrel', { facing: 'up' }));
-				set(1, 1, 4, block(m.pot || m.carpet));
-				set(W - 2, 1, 4, block('minecraft:crafting_table'));
-				chimney(W - 2, D - 2);
+				set(L, 1, D - 2, state('minecraft:barrel', { facing: 'up' }));
+				set(L, 1, 4, block(m.pot || m.carpet));
+				set(R, 1, D - 2, block('minecraft:crafting_table'));
+				chimney(5);
 				for (const x of porchSides) {
 					set(x, wall - 1, 0, lantern(true));
 					if (m.pot) set(x, 1, 0, block(m.pot));
@@ -667,147 +724,183 @@ function build(style, m, kind, spec) {
 				break;
 			case 'tavern': {
 				// v0.51: a hanging sign and a table with stools on the porch; inside the bar (a counter in front of
-				// stacked casks), two tables with candles and stools, and a fireplace with a chimney.
+				// stacked casks), a table with candles and chairs against each side wall, and a fireplace with a chimney.
+				// Casks stand under the eaves on the other side.
 				const wood = m.bench;
 				set(mid - 2, wall - 1, 0, state((wood === 'minecraft:purpur' ? 'minecraft:warped' : wood) + '_hanging_sign', { rotation: '0', attached: 'false' }));
 				set(mid + 2, wall - 1, 0, lantern(true));
-				set(1, 1, 0, state('minecraft:barrel', { facing: 'up' }));
-				set(W - 2, 1, 0, block(m.fence));
-				set(W - 2, 2, 0, state('minecraft:candle', { candles: '2', lit: 'true' }));
-				set(W - 3, 1, 0, stair(m.bench, 'west')); // back away from the table
-				for (let x = 1; x < W - 1; x++) {
+				set(L, 1, 0, state('minecraft:barrel', { facing: 'up' }));
+				set(R, 1, 0, block(m.fence));
+				set(R, 2, 0, state('minecraft:candle', { candles: '2', lit: 'true' }));
+				set(R - 1, 1, 0, stair(m.bench, 'west')); // back away from the table
+				for (let x = L; x <= R; x++) {
 					if (x === mid) continue; // the sign stands in the gap
 					set(x, 1, D - 3, stair(m.bench, 'south', 'top')); // counter
 					set(x, 1, D - 2, state('minecraft:barrel', { facing: 'north' })); // casks behind it
 					if (x !== mid - 1 && x !== mid + 1) set(x, 2, D - 2, state('minecraft:barrel', { facing: 'north' }));
 				}
-				set(2, 2, D - 3, state('minecraft:brewing_stand', {}));
-				set(W - 3, 2, D - 3, state('minecraft:candle', { candles: '3', lit: 'true' }));
-				for (const tx of [2, W - 3]) {
+				set(L, 2, D - 3, state('minecraft:brewing_stand', {}));
+				set(R, 2, D - 3, state('minecraft:candle', { candles: '3', lit: 'true' }));
+				for (const tx of [L, R]) {
 					set(tx, 1, 3, block(m.fence));
 					set(tx, 2, 3, state('minecraft:candle', { candles: '1', lit: 'true' }));
-					set(tx - 1, 1, 3, stair(m.bench, 'west'));
-					set(tx + 1, 1, 3, stair(m.bench, 'east'));
+					set(tx, 1, 2, stair(m.bench, 'north'));
+					set(tx, 1, 4, stair(m.bench, 'south'));
 				}
 				for (let z = 2; z < D - 3; z++) set(mid, 1, z, block(m.carpet));
-				chimney(W - 2, 2);
+				chimney(5);
+				sideRow(0, 4, 5, () => state('minecraft:barrel', { facing: 'up' }));
 				break;
 			}
 			case 'appraiser':
-				// v0.79: a small shop: a display counter with amethyst and candles, a lectern, bookshelves at the back.
-				set(1, wall - 1, 0, lantern(true));
-				set(W - 2, wall - 1, 0, lantern(true));
-				if (m.pot) set(1, 1, 0, block(m.pot));
-				set(W - 2, 1, 0, state('minecraft:barrel', { facing: 'up' }));
-				for (const x of [1, W - 2]) for (const y of [1, 2]) set(x, y, D - 2, block('minecraft:bookshelf'));
-				for (const x of [2, W - 3]) set(x, 1, D - 2, state('minecraft:chiseled_bookshelf', { facing: 'north' }));
-				for (const x of [W - 3, W - 2]) set(x, 1, 3, stair(m.bench, 'west', 'top')); // display counter
-				set(W - 3, 2, 3, state('minecraft:amethyst_cluster', { facing: 'up' }));
-				set(W - 2, 2, 3, state('minecraft:candle', { candles: '3', lit: 'true' }));
-				set(1, 1, 2, state('minecraft:lectern', { facing: 'east' }));
-				set(1, 1, 3, block('minecraft:cartography_table'));
+				// v0.79: a small shop: a display counter with amethyst and a candle, a lectern and a map table, bookshelves
+				// at the back.
+				set(porchSides[0], wall - 1, 0, lantern(true));
+				set(porchSides[1], wall - 1, 0, lantern(true));
+				if (m.pot) set(porchSides[0], 1, 0, block(m.pot));
+				set(porchSides[1], 1, 0, state('minecraft:barrel', { facing: 'up' }));
+				for (const x of [L, R]) for (const y of [1, 2]) set(x, y, D - 2, block('minecraft:bookshelf'));
+				set(L, 1, D - 3, state('minecraft:chiseled_bookshelf', { facing: 'east' }));
+				for (const z of [2, 3]) set(R, 1, z, stair(m.bench, 'west', 'top')); // display counter
+				set(R, 2, 2, state('minecraft:amethyst_cluster', { facing: 'up' }));
+				set(R, 2, 3, state('minecraft:candle', { candles: '3', lit: 'true' }));
+				set(L, 1, 2, state('minecraft:lectern', { facing: 'east' }));
+				set(L, 1, 3, block('minecraft:cartography_table'));
 				for (let z = fz + 1; z < D - 2; z++) set(mid, 1, z, block(m.carpet));
 				break;
 			case 'wholesaler':
-				// v0.79: casks stacked high on one side, chests and casks on the other, hay, a ledger on a lectern.
-				set(1, 1, 0, state('minecraft:barrel', { facing: 'up' }));
-				set(1, 2, 0, state('minecraft:barrel', { facing: 'up' }));
-				set(2, 1, 0, state('minecraft:chest', { facing: 'south' }));
-				set(W - 2, 1, 0, lying('minecraft:hay_block', 'x'));
-				set(W - 3, 1, 0, state('minecraft:barrel', { facing: 'north' }));
+				// v0.79: casks stacked high on one side, chests and casks on the other, hay, a ledger on a lectern; more
+				// casks and chests under the eaves.
+				set(L, 1, 0, state('minecraft:barrel', { facing: 'up' }));
+				set(L, 2, 0, state('minecraft:barrel', { facing: 'up' }));
+				set(L + 1, 1, 0, state('minecraft:chest', { facing: 'south' }));
+				set(R, 1, 0, lying('minecraft:hay_block', 'x'));
+				set(R - 1, 1, 0, state('minecraft:barrel', { facing: 'north' }));
 				set(mid - 2, wall - 1, 0, lantern(true));
 				set(mid + 2, wall - 1, 0, lantern(true));
 				for (let z = fz + 1; z < bz - 1; z++) {
-					for (const y of [1, 2, 3]) set(1, y, z, state('minecraft:barrel', { facing: (z + y) % 2 ? 'east' : 'up' }));
-					set(W - 2, 1, z, state('minecraft:chest', { facing: 'west' }));
-					set(W - 2, 2, z, state('minecraft:barrel', { facing: 'west' }));
+					for (const y of [1, 2, 3]) set(L, y, z, state('minecraft:barrel', { facing: (z + y) % 2 ? 'east' : 'up' }));
+					set(R, 1, z, state('minecraft:chest', { facing: 'west' }));
+					set(R, 2, z, state('minecraft:barrel', { facing: 'west' }));
 				}
-				set(2, 1, 4, lying('minecraft:hay_block', 'z'));
-				set(2, 1, 5, lying('minecraft:hay_block', 'z'));
-				set(2, 2, 4, lying('minecraft:hay_block', 'x'));
-				set(W - 3, 1, 3, state('minecraft:barrel', { facing: 'up' }));
-				set(2, 1, D - 2, state('minecraft:lectern', { facing: 'north' }));
-				set(W - 3, 1, D - 2, block('minecraft:cartography_table'));
+				set(L + 1, 1, 4, lying('minecraft:hay_block', 'z'));
+				set(L + 1, 1, 5, lying('minecraft:hay_block', 'z'));
+				set(L + 1, 2, 4, lying('minecraft:hay_block', 'x'));
+				set(R - 1, 1, 3, state('minecraft:barrel', { facing: 'up' }));
+				set(L + 1, 1, D - 2, state('minecraft:lectern', { facing: 'north' }));
+				set(R - 1, 1, D - 2, block('minecraft:cartography_table'));
+				for (const x of [0, W - 1]) {
+					sideRow(x, 4, 5, (z) => state('minecraft:barrel', { facing: z % 2 ? 'up' : 'north' }));
+				}
 				break;
 			case 'workshop':
-				// v0.79: crafting tables, a stonecutter, a loom and a fletching table on one side; a furnace with the chimney,
-				// a smoker, a smithing table and an anvil on the other; an anvil and a grindstone on the porch.
-				set(1, 1, 0, state('minecraft:anvil', { facing: 'east' }));
-				set(W - 2, 1, 0, state('minecraft:grindstone', { face: 'floor', facing: 'north' }));
-				set(W - 3, 1, 0, state('minecraft:barrel', { facing: 'up' }));
+				// v0.79: crafting tables, a stonecutter, a loom and a fletching table on one side; a fireplace with the
+				// chimney, a smoker, a smithing table and an anvil on the other; an anvil and a grindstone on the porch;
+				// firewood under the eaves.
+				set(L, 1, 0, state('minecraft:anvil', { facing: 'east' }));
+				set(R, 1, 0, state('minecraft:grindstone', { face: 'floor', facing: 'north' }));
+				set(R - 1, 1, 0, state('minecraft:barrel', { facing: 'up' }));
 				set(mid - 2, wall - 1, 0, lantern(true));
 				set(mid + 2, wall - 1, 0, lantern(true));
-				set(1, 1, 2, block('minecraft:crafting_table'));
-				set(1, 1, 3, block('minecraft:crafting_table'));
-				set(1, 1, 5, state('minecraft:stonecutter', { facing: 'east' }));
-				set(1, 1, 6, state('minecraft:loom', { facing: 'east' }));
-				set(1, 1, D - 2, block('minecraft:fletching_table'));
-				chimney(W - 2, 2);
-				set(W - 2, 1, 3, state('minecraft:smoker', { facing: 'west', lit: 'false' }));
-				set(W - 2, 1, 5, block('minecraft:smithing_table'));
-				set(W - 2, 1, 6, state('minecraft:anvil', { facing: 'north' }));
-				set(W - 2, 1, D - 2, state('minecraft:barrel', { facing: 'up' }));
-				set(3, 1, 5, block('minecraft:crafting_table'));
-				set(W - 4, 1, 5, block('minecraft:cauldron'));
+				set(L, 1, 2, block('minecraft:crafting_table'));
+				set(L, 1, 3, block('minecraft:crafting_table'));
+				set(L, 1, 5, state('minecraft:stonecutter', { facing: 'east' }));
+				set(L, 1, 6, state('minecraft:loom', { facing: 'east' }));
+				set(L, 1, D - 2, block('minecraft:fletching_table'));
+				chimney(5);
+				set(R, 1, 2, state('minecraft:anvil', { facing: 'north' }));
+				set(R, 1, 3, state('minecraft:smoker', { facing: 'west', lit: 'false' }));
+				set(R, 1, 6, block('minecraft:smithing_table'));
+				set(R, 1, D - 2, state('minecraft:barrel', { facing: 'up' }));
+				set(L + 1, 1, 5, block('minecraft:crafting_table'));
+				set(R - 1, 1, 3, block('minecraft:cauldron'));
 				for (const x of [mid - 1, mid + 1]) set(x, 1, D - 2, state('minecraft:chest', { facing: 'north' }));
+				sideRow(0, 4, 5, () => lying(m.pillar, 'z'));
 				break;
 			case 'school': {
 				// v0.79: rows of desks (slabs) and chairs facing the bookshelves at the back, a lectern for the teacher.
-				if (m.pot) set(1, 1, 0, block(m.pot));
-				set(W - 2, 1, 0, stair(m.bench, 'north'));
+				if (m.pot) set(porchSides[0], 1, 0, block(m.pot));
+				set(porchSides[1], 1, 0, stair(m.bench, 'north'));
 				set(mid - 2, wall - 1, 0, lantern(true));
 				set(mid + 2, wall - 1, 0, lantern(true));
-				for (let x = 1; x < W - 1; x++) {
+				for (let x = L; x <= R; x++) {
 					if (x === mid) continue;
 					for (const y of [1, 2]) set(x, y, D - 2, block('minecraft:bookshelf'));
 				}
 				set(mid, 2, D - 2, block('minecraft:bookshelf'));
-				for (const z of [2, 4]) for (let x = 1; x < W - 1; x++) {
+				for (const z of [2, 4]) for (let x = L; x <= R; x++) {
 					if (x === mid) continue;
 					set(x, 1, z, stair(m.bench, 'north')); // chair, its back to the door
 					set(x, 1, z + 1, state(slab(m.bench), { type: 'top' })); // desk
 				}
-				set(2, 2, 3, state('minecraft:candle', { candles: '1', lit: 'true' }));
-				set(W - 3, 2, 5, state('minecraft:candle', { candles: '1', lit: 'true' }));
-				set(2, 1, D - 3, state('minecraft:lectern', { facing: 'north' }));
+				set(L, 2, 3, state('minecraft:candle', { candles: '1', lit: 'true' }));
+				set(R, 2, 5, state('minecraft:candle', { candles: '1', lit: 'true' }));
+				set(L, 1, D - 3, state('minecraft:lectern', { facing: 'north' }));
 				break;
 			}
 		}
 	}
 
-	/** Gable roof (ridge from front to back) or, for flat styles, a flat roof with a parapet. */
-	function roof(fz, bz) {
+	/**
+	 * Gable roof (ridge from front to back): with the walls set in (ins = 1) the lowest row of stairs hangs over them as
+	 * eaves. The eave row and the ridge are of a darker material (roofEdge). The gables at the front and back walls have
+	 * windows, and from 9 wide a collar beam. Flat styles: a flat roof with a parapet over the walls instead, and roof
+	 * beams (viga) sticking out under the eaves.
+	 */
+	function roof(fz, bz, ins) {
 		if (m.flat) {
-			for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) {
+			const x0 = ins, x1 = W - 1 - ins;
+			for (let x = x0; x <= x1; x++) for (let z = 0; z < D; z++) {
 				set(x, wall + 1, z, block(m.roofBlock));
-				const edge = x === 0 || x === W - 1 || z === 0 || z === D - 1;
-				if (edge) set(x, wall + 2, z, (x === 0 || x === W - 1) && (z === 0 || z === D - 1) ? up(m.pillar) : block(m.parapet));
+				const edge = x === x0 || x === x1 || z === 0 || z === D - 1;
+				if (edge) set(x, wall + 2, z, (x === x0 || x === x1) && (z === 0 || z === D - 1) ? up(m.pillar) : block(m.parapet));
 			}
+			if (ins && m.viga) for (let z = 1; z < D - 1; z += 2) for (const x of [0, W - 1]) set(x, wall, z, lying(m.viga, 'x'));
 			return;
 		}
+		const y0 = wall + 1 - ins;
+		const edge = m.roofEdge || m.roof;
 		for (let k = 0; k < mid; k++) {
-			const y = wall + 1 + k;
+			const y = y0 + k;
+			const stem = k === 0 ? edge : m.roof;
 			for (let z = 0; z < D; z++) {
-				set(k, y, z, stair(m.roof, 'east'));
-				set(W - 1 - k, y, z, stair(m.roof, 'west'));
+				set(k, y, z, stair(stem, 'east'));
+				set(W - 1 - k, y, z, stair(stem, 'west'));
 			}
 			// Gables at the front and back wall; the porch side stays open.
-			for (let x = k + 1; x < W - 1 - k; x++) for (const z of [fz, bz]) set(x, y, z, block(m.wall));
+			if (y > wall) for (let x = k + 1; x < W - 1 - k; x++) for (const z of [fz, bz]) set(x, y, z, block(m.wall));
 		}
-		for (let z = 0; z < D; z++) set(mid, wall + 1 + mid, z, state(slab(m.roof), { type: 'bottom' }));
-		// A small window in each gable.
-		for (const z of [fz, bz]) set(mid, wall + 2, z, block(m.window));
-		if (W >= 9) for (const z of [fz, bz]) set(mid, wall + 3, z, block(m.window));
+		for (let z = 0; z < D; z++) set(mid, y0 + mid, z, state(slab(edge), { type: 'bottom' }));
+		// Upside-down stairs under the roof where nothing else is: the roof seen from the porch and the room is a smooth
+		// slope instead of steps.
+		for (let k = 1; k < mid; k++) for (let z = 0; z < D; z++) {
+			if (get(k, y0 + k - 1, z) === undefined) set(k, y0 + k - 1, z, stair(m.roof, 'west', 'top'));
+			if (get(W - 1 - k, y0 + k - 1, z) === undefined) set(W - 1 - k, y0 + k - 1, z, stair(m.roof, 'east', 'top'));
+		}
+		for (const z of [fz, bz]) {
+			if (W >= 9) {
+				// Two small windows over the wall beam and a collar beam above them.
+				for (const x of [mid - 1, mid + 1]) set(x, wall + 1, z, block(m.window));
+				for (let x = mid - 1; x <= mid + 1; x++) set(x, wall + 2, z, lying(m.beam, 'x'));
+			} else {
+				set(mid, wall + 1, z, block(m.window));
+			}
+		}
 	}
 
-	/** Chimney column at (x, z) from a furnace on the floor up through the roof, a fire or rod on top. */
-	function chimney(x, z) {
-		let roofY = wall;
-		for (let y = wall; y < 64; y++) if (get(x, y, z) !== undefined) roofY = y; // the roof over the column
-		const top = roofY + 2;
-		set(x, 1, z, state('minecraft:furnace', { facing: 'west' }));
-		for (let y = 2; y < top; y++) set(x, y, z, block(m.chimney));
-		set(x, top, z, m.chimneyTop.endsWith('campfire') ? state(m.chimneyTop, { lit: 'true', signal_fire: 'false' })
+	/**
+	 * Fireplace in the right side wall at z (houses with the walls set in): a furnace in the wall facing the room, the
+	 * wall above it of the chimney's material, and the chimney stack outside under the eaves up past the roof with a
+	 * fire (or rod) on top.
+	 */
+	function chimney(z) {
+		const xw = W - 2, xo = W - 1;
+		set(xw, 1, z, state('minecraft:furnace', { facing: 'west' }));
+		for (let y = 2; y < wall; y++) set(xw, y, z, block(m.chimney));
+		const top = wall + 4;
+		for (let y = 1; y < top; y++) set(xo, y, z, block(m.chimney));
+		set(xo, 0, z, block(m.found));
+		set(xo, top, z, m.chimneyTop.endsWith('campfire') ? state(m.chimneyTop, { lit: 'true', signal_fire: 'false' })
 				: state(m.chimneyTop, { facing: 'up' }));
 	}
 

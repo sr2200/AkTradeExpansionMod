@@ -48,6 +48,17 @@ final class ClientLookCases {
 	private record Placed(Identifier id, BoundingBox box, BlockPos sign) {
 	}
 
+	/**
+	 * System property {@code ak.looks.only} (gradle {@code -Pautotest.looks}): "plains+desert:inn+warehouse" takes only
+	 * these looks and, after the colon, these buildings; empty takes everything.
+	 */
+	private static final String[] ONLY = System.getProperty("ak.looks.only", "").split(":", 2);
+
+	private static boolean wanted(int part, String name) {
+		if (ONLY.length <= part || ONLY[part].isBlank()) return true;
+		return List.of(ONLY[part].split("\\+")).contains(name);
+	}
+
 	private static BlockPos base(Session s) {
 		return s.stall.offset(-48, 0, 60);
 	}
@@ -58,6 +69,7 @@ final class ClientLookCases {
 		List<Placed> placed = new ArrayList<>();
 		int i = 0;
 		for (var entry : FacilityCatalog.all().entrySet()) {
+			if (!wanted(1, entry.getKey().getPath())) continue;
 			FacilityDefinition def = entry.getValue();
 			StructureTemplate template = FacilityBuilder.template(server, def, style).orElseThrow();
 			BlockPos cell = ground(server, base.getX() + i % COLUMNS * SPACING, base.getZ() + i / COLUMNS * SPACING);
@@ -135,6 +147,7 @@ final class ClientLookCases {
 		List<String> noSign = new ArrayList<>();
 		try {
 			for (String style : STYLES) {
+				if (!wanted(0, style)) continue;
 				s.world.getServer().runCommand("time set 6000");
 				List<Placed> placed = s.world.getServer().computeOnServer(server -> placeAll(server, base, style));
 				try {

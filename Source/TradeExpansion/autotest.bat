@@ -15,6 +15,7 @@ rem                         about 5 minutes; not part of the full run)
 rem   Then records the results in docs\release\ingame-checklist.md and docs\release\autotest-report.md (needs node).
 rem   Other arguments go to Gradle, e.g. autotest.bat server --offline
 rem   Only some cases: -Pautotest.only=2-10+2-11+stall (checklist numbers or case names, joined with +)
+rem   Only some pictures (looks): -Pautotest.looks=plains+desert:inn+warehouse (looks, then buildings after the colon)
 setlocal
 cd /d "%~dp0"
 
