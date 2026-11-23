@@ -619,7 +619,7 @@ final class ServerChapterCases {
 					that(before.equals(c.fingerprint(player)), "a refused hire changed something");
 				})));
 		cases.add(partial("carrier_round_trip", List.of("26-5", "26-6", "26-7", "26-14", "26-22", "26-30"),
-				"おまかせを雇い、資金不足 → 所持金を入れると仕入れて出かけ、行き先で売って戻り、歩合が利益の2割になること。出かけている間は解雇できず、休ませると戻ってから止まること。仕入れで相場が1個 0.25 動くこと。帰り荷 OFF では帰り荷を仕入れないこと（画面の表示は見ていない）",
+				"おまかせを雇い、資金不足 → 所持金を入れると仕入れて出かけ、行き先で売って戻り、歩合が利益の2割になること。出かけている間は解雇できず、休ませると戻ってから止まること。仕入れで相場が1個 0.35 動くこと。帰り荷 OFF では帰り荷を仕入れないこと（画面の表示は見ていない）",
 				ctx -> {
 					ctx.config(cfg -> {
 						cfg.staff.accidentBase = 0;
@@ -642,8 +642,10 @@ final class ServerChapterCases {
 						e = only(c, player, a);
 						that(e.status() == Employee.Status.WAIT_FUNDS.ordinal(), "status with an empty purse: %s (%s: A buys at %d, B pays %d)",
 								Employee.Status.values()[e.status()], good,
-								PriceModel.buyPrice(com.akf.tradeexpansion.core.StaffMath.withSpread(a.params(good), 0.5), a.good(good).pressure()),
-								PriceModel.sellPrice(com.akf.tradeexpansion.core.StaffMath.withSpread(b.params(good), 0.5), b.good(good).pressure()));
+								PriceModel.buyPrice(com.akf.tradeexpansion.core.StaffMath.withSpread(a.params(good), TradeExpansionConfig.get().staff.carrierSpreadMultiplier),
+										a.good(good).pressure()),
+								PriceModel.sellPrice(com.akf.tradeexpansion.core.StaffMath.withSpread(b.params(good), TradeExpansionConfig.get().staff.carrierSpreadMultiplier),
+										b.good(good).pressure()));
 						that(staff(c, player, a, StaffRequestC2S.Action.DEPOSIT_MONEY, e.id(), Employee.AUTO, 0, 0, 0, 0, 5_000, false) == TradeResult.SUCCESS,
 								"depositing 5,000c failed");
 						double x0 = a.good(good).pressure(), s0 = a.good(good).stock();
@@ -654,7 +656,8 @@ final class ServerChapterCases {
 						double bought = s0 - a.good(good).stock();
 						that(bought >= 1, "the dear good was not bought");
 						that(Math.abs((x0 - a.good(good).pressure()) - bought * TradeExpansionConfig.get().staff.carrierPriceImpact) < 0.05,
-								"buying %.0f moved X by %.2f (expected %.2f)", bought, x0 - a.good(good).pressure(), bought * 0.25);
+								"buying %.0f moved X by %.2f (expected %.2f)", bought, x0 - a.good(good).pressure(),
+								bought * TradeExpansionConfig.get().staff.carrierPriceImpact);
 						that(staff(c, player, a, StaffRequestC2S.Action.DISMISS, e.id(), Employee.AUTO, 0, 0, 0, 0, 0, false) == TradeResult.STAFF_AWAY,
 								"a carrier on the road could be dismissed");
 						that(staff(c, player, a, StaffRequestC2S.Action.PAUSE, e.id(), Employee.AUTO, 0, 0, 0, 0, 0, false) == TradeResult.SUCCESS, "pausing failed");
@@ -746,7 +749,8 @@ final class ServerChapterCases {
 					c.command(player, "aktradeex staff hurry");
 					StaffS2C.View e = only(c, player, market);
 					equal(0, e.stock(), "goods left with the clerk");
-					that(e.earned() > 0 && e.purse() == e.earned(), "the sales did not go to the purse (earned %d, purse %d)", e.earned(), e.purse());
+					that(e.earned() > 0 && e.purse() == e.earned() - e.wages(), "the sales (less the pay) did not go to the purse (earned %d, pay %d, purse %d)",
+							e.earned(), e.wages(), e.purse());
 					equal(Employee.Status.SOLD_OUT.ordinal(), e.status(), "status after selling everything");
 					var more = staff(c, player, market, StaffRequestC2S.Action.DEPOSIT_ITEMS, e.id(), good, 0, 0, 0, 0, 0, false);
 					that(more == TradeResult.SUCCESS, "leaving more goods gave %s", more);

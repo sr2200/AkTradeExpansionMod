@@ -23,8 +23,10 @@ import java.util.List;
  * @param today         today's day number (overworld clock)
  * @param days          the days with takings, oldest first (today last when anything happened)
  * @param notes         price notes, newest first
+ * @param staff         v0.83: the player's employees, as on the staff tab (nothing can be changed from the notebook)
  */
-public record NotebookS2C(boolean open, boolean reportOn, boolean reportEnabled, long today, List<DayView> days, List<NoteView> notes)
+public record NotebookS2C(boolean open, boolean reportOn, boolean reportEnabled, long today, List<DayView> days, List<NoteView> notes,
+		List<StaffS2C.View> staff)
 		implements CustomPacketPayload {
 	public static final Type<NotebookS2C> TYPE = new Type<>(TradeExpansion.id("notebook"));
 
@@ -133,11 +135,21 @@ public record NotebookS2C(boolean open, boolean reportOn, boolean reportEnabled,
 		buf.writeLong(today);
 		DayView.CODEC.apply(ByteBufCodecs.list()).encode(buf, days);
 		NoteView.CODEC.apply(ByteBufCodecs.list()).encode(buf, notes);
+		buf.writeVarInt(staff.size());
+		for (StaffS2C.View v : staff) v.write(buf);
 	}
 
 	private static NotebookS2C read(RegistryFriendlyByteBuf buf) {
-		return new NotebookS2C(buf.readBoolean(), buf.readBoolean(), buf.readBoolean(), buf.readLong(),
-				DayView.CODEC.apply(ByteBufCodecs.list()).decode(buf), NoteView.CODEC.apply(ByteBufCodecs.list()).decode(buf));
+		boolean open = buf.readBoolean();
+		boolean reportOn = buf.readBoolean();
+		boolean reportEnabled = buf.readBoolean();
+		long today = buf.readLong();
+		List<DayView> days = DayView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
+		List<NoteView> notes = NoteView.CODEC.apply(ByteBufCodecs.list()).decode(buf);
+		int n = buf.readVarInt();
+		List<StaffS2C.View> staff = new java.util.ArrayList<>(n);
+		for (int i = 0; i < n; i++) staff.add(StaffS2C.View.read(buf));
+		return new NotebookS2C(open, reportOn, reportEnabled, today, days, notes, staff);
 	}
 
 	@Override

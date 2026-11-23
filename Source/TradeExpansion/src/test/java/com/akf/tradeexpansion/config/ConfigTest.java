@@ -157,6 +157,27 @@ class ConfigTest {
 		assertEquals(4096, TradeExpansionConfig.defaults().development.siteSearchLimit);
 	}
 
+	/**
+	 * v0.83: an older file's staff defaults (clerk wage 30c, wholesale spread ×0.5, X per unit 0.25) are read as the new
+	 * ones; values changed by hand, and files written since (with clerkCommission), are kept.
+	 */
+	@Test
+	void oldStaffDefaultsAreMigrated() throws IOException {
+		Path file = dir.resolve("ak_trade_expansion.json");
+		Files.writeString(file, "{\"staff\": {\"clerkWagePerDay\": 30, \"carrierSpreadMultiplier\": 0.5, \"carrierPriceImpact\": 0.25}}");
+		TradeExpansionConfig.Staff staff = ConfigManager.read(file).staff;
+		assertEquals(0, staff.clerkWagePerDay);
+		assertEquals(0.6, staff.carrierSpreadMultiplier);
+		assertEquals(0.35, staff.carrierPriceImpact);
+		assertEquals(0.10, staff.clerkCommission);
+		Files.writeString(file, "{\"staff\": {\"clerkWagePerDay\": 50, \"carrierSpreadMultiplier\": 0.7}}");
+		staff = ConfigManager.read(file).staff;
+		assertEquals(50, staff.clerkWagePerDay);
+		assertEquals(0.7, staff.carrierSpreadMultiplier);
+		Files.writeString(file, "{\"staff\": {\"clerkWagePerDay\": 30, \"clerkCommission\": 0.1}}");
+		assertEquals(30, ConfigManager.read(file).staff.clerkWagePerDay);
+	}
+
 	/** D-5: specials per level; a short list repeats its last entry, a wrong size falls back to the defaults. */
 	@Test
 	void specialGoodsPerLevel() throws IOException {

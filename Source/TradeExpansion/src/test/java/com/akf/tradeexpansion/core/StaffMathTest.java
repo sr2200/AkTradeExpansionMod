@@ -130,6 +130,23 @@ class StaffMathTest {
 		assertEquals(0, StaffMath.commission(-50, 0.2));
 	}
 
+	/** v0.83: a roaming carrier compares destinations by profit per day; very short trips count as a tenth of a day. */
+	@Test
+	void profitPerDay() {
+		assertEquals(100, StaffMath.perDay(50, 0.5));
+		assertEquals(500, StaffMath.perDay(50, 0.05)); // at least 0.1 days
+		assertEquals(500, StaffMath.perDay(50, 0));
+		assertEquals(0, StaffMath.perDay(0, 1));
+	}
+
+	/** v0.83: a clerk's pay is a share of its sales, rounded down. */
+	@Test
+	void clerkCommission() {
+		assertEquals(84, StaffMath.commission(847, 0.10));
+		assertEquals(0, StaffMath.commission(9, 0.10));
+		assertEquals(0, StaffMath.commission(0, 0.10));
+	}
+
 	@Test
 	void costShare() {
 		assertEquals(0, StaffMath.shareOf(1000, 0, 10));

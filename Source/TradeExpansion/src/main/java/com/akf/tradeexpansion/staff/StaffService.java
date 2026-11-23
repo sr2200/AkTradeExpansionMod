@@ -85,6 +85,10 @@ public final class StaffService {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (++tickCounter % 20 == 0) tick(server);
 		});
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			HiredHands.clear();
+			resetDaily();
+		});
 	}
 
 	/** What one update changed: markets traded with (for the snapshots) and whether anything is to be saved. */
@@ -94,8 +98,9 @@ public final class StaffService {
 	}
 
 	private static void tick(MinecraftServer server) {
-		if (!config().enabled) return;
 		MarketRegistry registry = MarketRegistry.get(server);
+		if (tickCounter % 100 == 0) HiredHands.update(server, registry); // v0.83: the villagers at home, every 5 seconds
+		if (!config().enabled) return;
 		if (registry.employees().isEmpty()) return;
 		long now = MarketClock.now(server.overworld());
 		Changes changes = new Changes();
@@ -117,10 +122,26 @@ public final class StaffService {
 		return Math.round(wage * Math.clamp(TradeExpansionConfig.get().development.guildHallClerkWageMultiplier, 0.0, 1.0));
 	}
 
-	/** v0.79: how much a clerk's sale of one unit moves X at {@code home} (1, less with a guild hall: it sells more). */
+	/**
+	 * How much a clerk's sale of one unit moves X at {@code home}: {@code staff.clerkPriceImpact} (v0.83), less with a
+	 * guild hall (v0.79), so it sells more before its lowest price.
+	 */
 	public static double clerkImpact(Market home) {
-		if (!has(home, FacilityKind.GUILD_HALL)) return 1.0;
-		return 1.0 / Math.max(1.0, TradeExpansionConfig.get().development.guildHallClerkSpeedMultiplier);
+		double impact = Math.clamp(config().clerkPriceImpact, 0.05, 1.0);
+		if (!has(home, FacilityKind.GUILD_HALL)) return impact;
+		return impact / Math.max(1.0, TradeExpansionConfig.get().development.guildHallClerkSpeedMultiplier);
+	}
+
+	/** v0.83: the share of every sale a clerk at {@code home} takes as its pay; lower at a market with a guild hall (v0.79). */
+	public static double clerkCommission(Market home) {
+		double rate = Math.clamp(config().clerkCommission, 0.0, 1.0);
+		if (!has(home, FacilityKind.GUILD_HALL)) return rate;
+		return rate * Math.clamp(TradeExpansionConfig.get().development.guildHallClerkWageMultiplier, 0.0, 1.0);
+	}
+
+	/** The pay share of an employee: a carrier's of the profit of a round trip, a clerk's of its sales. */
+	private static double commissionRate(Employee e, Market home) {
+		return e.role == Employee.Role.CARRIER ? Math.clamp(config().carrierCommission, 0.0, 1.0) : clerkCommission(home);
 	}
 
 	/** Working (and paid): not quit, a carrier not resting at home on purpose, a clerk with goods and not paused. */
@@ -193,11 +214,14 @@ public final class StaffService {
 	private static void clerkStep(MinecraftServer server, MarketRegistry registry, Employee e, Market home, long now, Changes changes) {
 		Deal deal = sell(server, registry, home, e, e.stock, now, changes);
 		if (deal.units() > 0) {
+			// v0.83: the clerk's pay is a share of what it sold (StaffMath.commission rounds down)
+			long commission = StaffMath.commission(deal.total(), clerkCommission(home));
 			e.stock -= deal.units();
-			e.purse += deal.total();
+			e.purse += deal.total() - commission;
 			e.earned += deal.total();
+			e.wages += commission;
 			e.sold += deal.units();
-			com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, deal.total()); // T: the goods were left with it
+			com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, deal.total() - commission); // T: the goods were left with it
 			logSale(e, now, deal);
 		}
 		if (e.stock <= 0) {
@@ -227,6 +251,14 @@ public final class StaffService {
 		switch (e.phase) {
 			case HOME -> {
 				sellReturnCargo(server, registry, home, e, now, changes); // v0.54: what is left of the return cargo
+				if (e.roam && e.stock <= 0) { // v0.83: the best destination for this trip
+					Market best = chooseDestination(server, registry, home, e);
+					if (best != null && best.id() != e.destination) {
+						e.destination = best.id();
+						destination = best;
+						log(e, now, "roam_chose", null, best.id());
+					}
+				}
 				if (destination == null || !linked(home, destination)) {
 					setStatus(server, e, Employee.Status.NOT_DEALT, now, changes);
 					e.nextTime = now + RETRY_TICKS;
@@ -238,6 +270,7 @@ public final class StaffService {
 						: e.auto() ? autoBuy(server, registry, home, destination, e, room, now, changes)
 						: carrierBuy(server, registry, home, destination, e, room, now, changes);
 				if (deal.units() > 0) {
+					e.marginWarned = false;
 					e.stock += deal.units();
 					e.purse -= deal.total();
 					e.spent += deal.total();
@@ -253,6 +286,7 @@ public final class StaffService {
 				} else {
 					setStatus(server, e, deal.reason(), now, changes);
 					e.nextTime = now + RETRY_TICKS;
+					warnNoMargin(server, registry, e, deal.reason(), now);
 				}
 			}
 			case OUTBOUND -> {
@@ -337,6 +371,101 @@ public final class StaffService {
 		e.phase = phase;
 		e.phaseStart = now;
 		e.nextTime = now + StaffMath.travelTicks(distance, config().carrierBlocksPerDay, harbor(home, destination)); // v0.51: by water
+	}
+
+	/**
+	 * v0.83: a carrier of one good that has found no profit at home for {@code staff.noMarginNoticeDays} tells its owner
+	 * once (the price gap it was hired for has closed), suggesting おまかせ. Again only after it has bought something.
+	 */
+	private static void warnNoMargin(MinecraftServer server, MarketRegistry registry, Employee e, Employee.Status reason, long now) {
+		double days = config().noMarginNoticeDays;
+		if (e.auto() || e.marginWarned || days <= 0) return;
+		if (reason != Employee.Status.NO_MARGIN && reason != Employee.Status.WAIT_PRICE) return;
+		if (now - e.phaseStart < Math.round(days * PriceModel.TICKS_PER_DAY)) return;
+		e.marginWarned = true;
+		log(e, now, "no_margin_long", e.goods, e.destination);
+		notify(server, e, describe(registry, e, e.log.getLast()));
+	}
+
+	/** v0.83: one destination of a carrier choosing it every trip, and what the trip there should bring per day. */
+	record RoamOption(Market market, long profit, double perDay) {
+	}
+
+	/**
+	 * v0.83: the destinations a carrier at {@code home} could choose from ({@code staff.carrierRoamChoices} nearest), each
+	 * with the expected profit of a round trip now (the goods taken there and the return cargo) and that profit per day of
+	 * travel, the best per day first. Only those with a profit.
+	 */
+	private static List<RoamOption> roamOptions(MinecraftServer server, MarketRegistry registry, Market home, Identifier goodsId, int quantity,
+			long buyLimit, long funds) {
+		return roamOptions(home, nearest(candidates(server, registry, home)), goodsId, quantity, buyLimit, funds);
+	}
+
+	/** The {@code staff.carrierRoamChoices} nearest of {@code candidates} (nearest first). */
+	private static List<Market> nearest(List<Market> candidates) {
+		int n = Math.max(1, config().carrierRoamChoices);
+		return candidates.size() > n ? candidates.subList(0, n) : candidates;
+	}
+
+	private static List<RoamOption> roamOptions(Market home, List<Market> near, Identifier goodsId, int quantity, long buyLimit, long funds) {
+		List<RoamOption> options = new ArrayList<>();
+		for (Market m : near) {
+			long out;
+			if (Employee.AUTO.equals(goodsId)) {
+				out = autoPlan(home, m, quantity, funds).profit();
+			} else {
+				StaffMath.BuyPlan plan = plan(home, m, goodsId, quantity, buyLimit, funds);
+				out = plan == null || plan.units() <= 0 ? 0 : Math.max(0, expectedProfit(home, m, plan));
+			}
+			long back = Math.max(0, returnPlan(m, home, quantity, funds).profit());
+			long profit = out + back;
+			if (profit <= 0) continue;
+			double distance = MarketRegistry.linkedDistance(home, m);
+			double days = 2.0 * StaffMath.travelTicks(distance, config().carrierBlocksPerDay, harbor(home, m)) / PriceModel.TICKS_PER_DAY;
+			options.add(new RoamOption(m, profit, StaffMath.perDay(profit, days)));
+		}
+		options.sort(Comparator.comparingDouble((RoamOption o) -> -o.perDay()).thenComparingLong(o -> o.market().id()));
+		return options;
+	}
+
+	/** v0.83: where a roaming carrier goes this trip, or {@code null} when no destination pays now. */
+	private static Market chooseDestination(MinecraftServer server, MarketRegistry registry, Market home, Employee e) {
+		if (!touch(server, home)) return null;
+		int room = e.quantity - e.returnUnits();
+		if (room <= 0) return null;
+		List<RoamOption> options = roamOptions(server, registry, home, e.goods, room, e.buyLimit, e.purse);
+		return options.isEmpty() ? null : options.getFirst().market();
+	}
+
+	// ---- v0.83: the trading of all employees at one market in one day (staff.marketDailyUnits) ----
+
+	/** Market id → {day, units traded by employees that day}. Not saved: a restart starts the day again. */
+	private static final Map<Long, long[]> DAILY_UNITS = new HashMap<>();
+
+	/** Trading units employees may still trade at {@code market} today. */
+	static int dailyRoom(Market market, long now) {
+		int limit = config().marketDailyUnits;
+		if (limit <= 0) return Integer.MAX_VALUE;
+		long day = Math.floorDiv(now, PriceModel.TICKS_PER_DAY);
+		long[] used = DAILY_UNITS.get(market.id());
+		long traded = used == null || used[0] != day ? 0 : used[1];
+		return (int) Math.max(0, limit - traded);
+	}
+
+	private static void countDaily(Market market, int units, long now) {
+		if (config().marketDailyUnits <= 0 || units <= 0) return;
+		long day = Math.floorDiv(now, PriceModel.TICKS_PER_DAY);
+		long[] used = DAILY_UNITS.computeIfAbsent(market.id(), k -> new long[] {day, 0});
+		if (used[0] != day) {
+			used[0] = day;
+			used[1] = 0;
+		}
+		used[1] += units;
+	}
+
+	/** Tests: forgets today's trading of the employees. */
+	public static void resetDaily() {
+		DAILY_UNITS.clear();
 	}
 
 	private static boolean has(Market market, FacilityKind kind) {
@@ -531,7 +660,9 @@ public final class StaffService {
 			Changes changes) {
 		GoodsDefinition def = GoodsCatalog.get(e.goods);
 		if (def == null || !touch(server, home, destination)) return Deal.none(Employee.Status.NOT_DEALT);
-		StaffMath.BuyPlan plan = plan(home, destination, e.goods, capacity, e.buyLimit, e.purse);
+		int room = dailyRoom(home, now); // v0.83
+		if (room <= 0) return Deal.none(Employee.Status.MARKET_BUSY);
+		StaffMath.BuyPlan plan = plan(home, destination, e.goods, Math.min(capacity, room), e.buyLimit, e.purse);
 		if (plan == null) return Deal.none(Employee.Status.NOT_DEALT);
 		GoodState state = home.good(e.goods);
 		if (plan.units() <= 0) {
@@ -545,6 +676,7 @@ public final class StaffService {
 		state.setStock(state.stock() - plan.units());
 		state.setLastTradeGameTime(now);
 		traded(registry, home, e.goods, -plan.units() * step, now, changes);
+		countDaily(home, plan.units(), now);
 		logTrade(e, "STAFF BUY", def, plan.units(), home, plan.total());
 		return Deal.of(plan.units(), plan.total(), def.unit());
 	}
@@ -556,7 +688,9 @@ public final class StaffService {
 		if (!def.sell() || !regular(market, e.goods)) return Deal.none(Employee.Status.NOT_DEALT);
 		GoodState state = market.good(e.goods);
 		GoodParams p = market.params(e.goods);
-		int max = Math.min(e.stock, PriceModel.sellCapacity(p, state));
+		int room = dailyRoom(market, now); // v0.83
+		if (room <= 0) return Deal.none(Employee.Status.MARKET_BUSY);
+		int max = Math.min(Math.min(e.stock, room), PriceModel.sellCapacity(p, state));
 		if (max <= 0) return Deal.none(Employee.Status.WAIT_SELL);
 		long minPrice = Math.max(e.sellLimit, Math.floorDiv(e.cargoCost, e.stock) + 1); // never below the cost
 		double step = config().carrierPriceImpact;
@@ -566,6 +700,7 @@ public final class StaffService {
 		state.setStock(state.stock() + plan.units());
 		state.setLastTradeGameTime(now);
 		traded(registry, market, e.goods, plan.units() * step, now, changes);
+		countDaily(market, plan.units(), now);
 		logTrade(e, "STAFF SELL", def, plan.units(), market, plan.total());
 		return Deal.of(plan.units(), plan.total(), def.unit());
 	}
@@ -579,7 +714,9 @@ public final class StaffService {
 		if (!def.sell() || !regular(market, e.goods)) return Deal.none(Employee.Status.NOT_DEALT);
 		GoodState state = market.good(e.goods);
 		GoodParams p = market.params(e.goods);
-		int max = Math.min(maxUnits, PriceModel.sellCapacity(p, state));
+		int room = dailyRoom(market, now); // v0.83
+		if (room <= 0) return Deal.none(Employee.Status.MARKET_BUSY);
+		int max = Math.min(Math.min(maxUnits, room), PriceModel.sellCapacity(p, state));
 		if (max <= 0) return Deal.none(Employee.Status.WAIT_SELL);
 		double impact = e.role == Employee.Role.CLERK ? clerkImpact(market) : 1.0;
 		int n;
@@ -599,6 +736,7 @@ public final class StaffService {
 		}
 		state.setLastTradeGameTime(now);
 		traded(registry, market, e.goods, n * impact, now, changes);
+		countDaily(market, n, now);
 		logTrade(e, "STAFF SELL", def, n, market, total);
 		return Deal.of(n, total, def.unit());
 	}
@@ -657,6 +795,9 @@ public final class StaffService {
 	private static Deal autoBuy(MinecraftServer server, MarketRegistry registry, Market home, Market destination, Employee e, int capacity, long now,
 			Changes changes) {
 		if (!touch(server, home, destination)) return Deal.none(Employee.Status.NOT_DEALT);
+		int room = dailyRoom(home, now); // v0.83
+		if (room <= 0) return Deal.none(Employee.Status.MARKET_BUSY);
+		capacity = Math.min(capacity, room);
 		AutoPlan plan = autoPlan(home, destination, capacity, e.purse);
 		if (plan.units() <= 0) {
 			boolean someProfit = autoPlan(home, destination, capacity, Long.MAX_VALUE).units() > 0;
@@ -679,6 +820,7 @@ public final class StaffService {
 			changes.markets.add(market.id());
 			for (Market m : Propagation.apply(registry, market, goodsId, -p.units() * step, now)) changes.markets.add(m.id());
 			lines.add(new Employee.CargoLine(goodsId, p.units(), p.total()));
+			countDaily(market, p.units(), now);
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
 			if (def != null) logTrade(e, "STAFF BUY", def, p.units(), market, p.total());
 		}
@@ -697,7 +839,7 @@ public final class StaffService {
 	private static void buyReturnCargo(MinecraftServer server, MarketRegistry registry, Market market, Market home, Employee e, long now,
 			Changes changes) {
 		if (!config().carrierBackhaul || !e.returnCargo.isEmpty() || !touch(server, market, home)) return;
-		AutoPlan plan = returnPlan(market, home, e.quantity - e.stock, e.purse);
+		AutoPlan plan = returnPlan(market, home, Math.min(e.quantity - e.stock, dailyRoom(market, now)), e.purse); // v0.83: daily limit
 		if (plan.units() <= 0) return;
 		take(registry, market, plan, e.returnCargo, e, now, changes);
 		e.purse -= plan.total();
@@ -734,6 +876,8 @@ public final class StaffService {
 	private static Deal sellLines(MinecraftServer server, MarketRegistry registry, Market market, Employee e, List<Employee.CargoLine> lines, long now,
 			Changes changes) {
 		if (!touch(server, market)) return Deal.none(Employee.Status.NOT_DEALT);
+		int room = dailyRoom(market, now); // v0.83
+		if (room <= 0) return Deal.none(Employee.Status.MARKET_BUSY);
 		double step = config().carrierPriceImpact;
 		int units = 0;
 		long items = 0;
@@ -743,9 +887,10 @@ public final class StaffService {
 		for (Employee.CargoLine line : lines) {
 			GoodsDefinition def = GoodsCatalog.get(line.goods);
 			if (line.units <= 0 || def == null || !def.sell() || !regular(market, line.goods)) continue;
+			if (units >= room) break;
 			GoodState state = market.good(line.goods);
 			GoodParams p = market.params(line.goods);
-			int max = Math.min(line.units, PriceModel.sellCapacity(p, state));
+			int max = Math.min(Math.min(line.units, room - units), PriceModel.sellCapacity(p, state));
 			if (max <= 0) continue;
 			long minPrice = Math.floorDiv(line.cost, line.units) + 1; // never below the cost
 			StaffMath.SellPlan plan = StaffMath.planSell(carrierParams(market, line.goods), state.pressure(), max, minPrice, step);
@@ -754,6 +899,7 @@ public final class StaffService {
 			state.setStock(state.stock() + plan.units());
 			state.setLastTradeGameTime(now);
 			traded(registry, market, line.goods, plan.units() * step, now, changes);
+			countDaily(market, plan.units(), now);
 			long lineCost = StaffMath.shareOf(line.cost, plan.units(), line.units);
 			line.units -= plan.units();
 			line.cost -= lineCost;
@@ -813,7 +959,7 @@ public final class StaffService {
 		return Component.translatable("staff.ak_trade_expansion.role." + role.name().toLowerCase(java.util.Locale.ROOT));
 	}
 
-	private static Component itemName(Identifier goodsId) {
+	static Component itemName(Identifier goodsId) {
 		if (Employee.AUTO.equals(goodsId)) return Component.translatable("staff.ak_trade_expansion.auto");
 		GoodsDefinition def = goodsId == null ? null : GoodsCatalog.get(goodsId);
 		if (def == null) return Component.literal(goodsId == null ? "?" : goodsId.toString());
@@ -847,7 +993,8 @@ public final class StaffService {
 			case "accident_mix" -> Component.translatable(key, v.get(0), coins(v.get(1)));
 			case "leftover_mix" -> Component.translatable(key, market, v.get(0));
 			case "clerk_sold_out", "destination_gone" -> Component.translatable(key, item);
-			case "departed_empty" -> Component.translatable(key, market);
+			case "departed_empty", "roam_chose" -> Component.translatable(key, market);
+			case "no_margin_long" -> Component.translatable(key, item, market);
 			default -> Component.translatable(key);
 		};
 	}
@@ -937,6 +1084,45 @@ public final class StaffService {
 	 * wholesale prices now and what a round trip there would bring now. Nearest first; the client sorts by profit.
 	 */
 	private static List<StaffS2C.Destination> destinations(Market here, List<Market> candidates, Identifier goodsId) {
+		return withRoam(here, candidates, goodsId, listDestinations(here, candidates, goodsId));
+	}
+
+	/**
+	 * v0.83: puts the row "choose every trip" first when there are two destinations or more: the figures of the
+	 * destination it would choose now (the best profit per day of the {@code staff.carrierRoamChoices} nearest).
+	 */
+	private static List<StaffS2C.Destination> withRoam(Market here, List<Market> candidates, Identifier goodsId, List<StaffS2C.Destination> list) {
+		if (list.size() < 2) return list;
+		List<RoamOption> options = roamOptions(here, nearest(candidates), goodsId, config().carrierCapacity, Long.MAX_VALUE, Long.MAX_VALUE);
+		long bestId = options.isEmpty() ? -1 : options.getFirst().market().id();
+		StaffS2C.Destination best = list.stream().filter(d -> d.id() == bestId).findFirst().orElse(null);
+		StaffS2C.Destination row;
+		if (best != null) {
+			row = best.withId(Employee.ROAM, Component.translatable("staff.ak_trade_expansion.roam.now", best.name()));
+		} else { // nothing pays now: the nearest's prices, no profit
+			StaffS2C.Destination near = list.stream().min(Comparator.comparingInt(StaffS2C.Destination::distance)).orElseThrow();
+			row = near.withId(Employee.ROAM, Component.translatable("staff.ak_trade_expansion.roam")).withoutProfit();
+		}
+		List<StaffS2C.Destination> all = new ArrayList<>(list.size() + 1);
+		all.add(row);
+		all.addAll(list);
+		return all;
+	}
+
+	/**
+	 * v0.83: the first destination of a carrier hired (or changed) to choose it every trip: the best now, or the nearest
+	 * when none pays now. -1 when there is none within reach.
+	 */
+	private static long roamStart(MinecraftServer server, MarketRegistry registry, Market market, Identifier goodsId, StaffRequestC2S request) {
+		List<Market> near = nearest(candidates(server, registry, market));
+		if (near.isEmpty()) return -1;
+		if (!Employee.AUTO.equals(goodsId) && near.stream().noneMatch(m -> regular(m, goodsId))) return -1;
+		List<RoamOption> options = roamOptions(market, near, goodsId, Math.clamp(request.quantity(), 1, config().carrierCapacity),
+				Math.max(1, request.buyLimit()), Long.MAX_VALUE);
+		return options.isEmpty() ? near.getFirst().id() : options.getFirst().market().id();
+	}
+
+	private static List<StaffS2C.Destination> listDestinations(Market here, List<Market> candidates, Identifier goodsId) {
 		if (Employee.AUTO.equals(goodsId)) return autoDestinations(here, candidates);
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		if (def == null || !def.sell()) return List.of();
@@ -1062,6 +1248,7 @@ public final class StaffService {
 			}
 			PriceModel.recover(p, s, step, TradeExpansionConfig.get().recovery.restockMultiplier);
 		}
+		revenue -= StaffMath.commission(revenue, clerkCommission(here)); // v0.83: what is left after the clerk's share
 		return new StaffS2C.ClerkHint(goodsId, limit, units * Math.max(1, def.unit()), revenue);
 	}
 
@@ -1088,13 +1275,16 @@ public final class StaffService {
 		return new StaffS2C.Info(c.enabled, c.maxPerPlayer, c.minReputationLevel, Reputation.level(market, player.getUUID(), now), reputation,
 				c.carrierHireFee, c.clerkHireFee, c.carrierWagePerDay, clerkWage(market), c.carrierCapacity, c.clerkCapacity, c.carrierBlocksPerDay,
 				c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax, c.quitChance, c.carrierMaxWaitDays, c.carrierMaxDistance,
-				c.carrierCommission, c.carrierBackhaul);
+				c.carrierCommission, c.carrierBackhaul, clerkCommission(market), c.carrierRoamChoices);
 	}
 
-	/** Every employee of {@code owner} (home market here first, then by id). */
-	private static List<StaffS2C.View> views(MarketRegistry registry, Market here, UUID owner) {
+	/**
+	 * Every employee of {@code owner} (home market here first, then by id). {@code here} is {@code null} for the merchant's
+	 * notebook (v0.83): nothing can be changed there.
+	 */
+	public static List<StaffS2C.View> views(MarketRegistry registry, Market here, UUID owner) {
 		List<Employee> mine = new ArrayList<>(registry.employees().stream().filter(e -> e.owner.equals(owner)).toList());
-		mine.sort(Comparator.comparing((Employee e) -> e.home != here.id()).thenComparingInt(e -> e.id));
+		mine.sort(Comparator.comparing((Employee e) -> here == null || e.home != here.id()).thenComparingInt(e -> e.id));
 		List<StaffS2C.View> views = new ArrayList<>();
 		for (Employee e : mine) {
 			Market home = registry.get(e.home);
@@ -1109,13 +1299,14 @@ public final class StaffService {
 					destination == null ? (e.destination < 0 ? Component.empty() : marketName(registry, e.destination)) : MarketNames.name(destination),
 					distance, e.quantity, e.buyLimit, e.sellLimit, e.purse, e.auto() ? (int) cargoItems(e) : e.stock, e.phase.ordinal(), e.paused,
 					e.status.ordinal(), e.phaseStart, e.nextTime, wage(e, home), e.earned, e.spent, e.wages, e.lost, e.trips, e.sold, log, e.auto(), e.cargo.size(),
-					(int) lineItems(e.returnCargo), harbor(home, destination), watchtower(home, destination)));
+					(int) lineItems(e.returnCargo), harbor(home, destination), watchtower(home, destination), e.roam, commissionRate(e, home)));
 		}
 		return views;
 	}
 
 	/** Money, goods and settings are handled at the home market; anywhere once the home market is gone. */
 	private static boolean atHome(Employee e, Market here, Market home) {
+		if (here == null) return false;
 		return home == null || e.home == here.id();
 	}
 
@@ -1163,7 +1354,11 @@ public final class StaffService {
 		InventoryUtil.Match match = auto ? null : new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(def.item()), GoodsCatalog.patch(goodsId), false);
 		int units = 0;
 		long destinationId = -1;
-		if (carrier) {
+		boolean roam = carrier && request.destination() == Employee.ROAM; // v0.83: a new destination every trip
+		if (roam) {
+			destinationId = roamStart(player.level().getServer(), registry, market, goodsId, request);
+			if (destinationId < 0) return new Outcome(TradeResult.NOT_AVAILABLE);
+		} else if (carrier) {
 			Market destination = registry.get(request.destination());
 			if (destination == null || destination.id() == market.id() || !linked(market, destination)
 					|| MarketRegistry.linkedDistance(market, destination) > c.carrierMaxDistance
@@ -1181,6 +1376,7 @@ public final class StaffService {
 		Employee e = Employee.hire(registry.takeEmployeeId(), player.getUUID(), player.getPlainTextName(),
 				carrier ? Employee.Role.CARRIER : Employee.Role.CLERK, market.id(), goodsId, destinationId, quantity,
 				Math.max(1, request.buyLimit()), sellLimit, now, PriceModel.TICKS_PER_DAY);
+		e.roam = roam;
 		if (!carrier) {
 			InventoryUtil.remove(player, match, menu.sellSlot(), units * def.unit());
 			e.stock = units;
@@ -1189,7 +1385,8 @@ public final class StaffService {
 		registry.employees().add(e);
 		if (TradeExpansionConfig.get().log.trades) {
 			TradeExpansion.LOGGER.info("{} HIRE {} #{} {} @market#{}{} fee={}", player.getPlainTextName(), e.role.name().toLowerCase(java.util.Locale.ROOT),
-					e.id, auto ? goodsId : def.item(), market.id(), carrier ? " -> market#" + destinationId : " x" + units * def.unit(), CoinItem.formatCopper(fee));
+					e.id, auto ? goodsId : def.item(), market.id(), carrier ? " -> market#" + destinationId + (roam ? " (roam)" : "") : " x" + units * def.unit(),
+					CoinItem.formatCopper(fee));
 		}
 		TradeAdvancements.event(player, TradeAdvancements.STAFF_HIRED); // R
 		return new Outcome(TradeResult.SUCCESS, fee, e.id);
@@ -1297,7 +1494,11 @@ public final class StaffService {
 			return new Outcome(TradeResult.NOT_AVAILABLE);
 		}
 		long destinationId = -1;
-		if (carrier) {
+		boolean roam = carrier && request.destination() == Employee.ROAM; // v0.83
+		if (roam) {
+			destinationId = roamStart(player.level().getServer(), registry, market, goodsId, request);
+			if (destinationId < 0) return new Outcome(TradeResult.NOT_AVAILABLE);
+		} else if (carrier) {
 			Market destination = registry.get(request.destination());
 			if (destination == null || destination.id() == market.id() || !linked(market, destination)
 					|| MarketRegistry.linkedDistance(market, destination) > c.carrierMaxDistance || !auto && !regular(destination, goodsId)) {
@@ -1319,6 +1520,8 @@ public final class StaffService {
 		e.cargoCost = 0;
 		e.goods = goodsId;
 		e.destination = destinationId;
+		e.roam = roam;
+		e.marginWarned = false;
 		if (carrier) {
 			e.quantity = Math.clamp(request.quantity(), 1, c.carrierCapacity);
 			e.buyLimit = Math.max(1, request.buyLimit());

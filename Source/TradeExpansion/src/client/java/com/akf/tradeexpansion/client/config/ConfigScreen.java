@@ -376,7 +376,14 @@ public final class ConfigScreen {
 				.option(doubleField("staff.accidentRestDays", sd.accidentRestDays, () -> st.accidentRestDays, v -> st.accidentRestDays = v, 0, 30))
 				.option(doubleField("staff.quitChance", sd.quitChance, () -> st.quitChance, v -> st.quitChance = v, 0, 1))
 				.option(bool("staff.notifyChat", sd.notifyChat, () -> st.notifyChat, v -> st.notifyChat = v))
-				.option(bool("staff.carrierBackhaul", sd.carrierBackhaul, () -> st.carrierBackhaul, v -> st.carrierBackhaul = v));
+				.option(bool("staff.carrierBackhaul", sd.carrierBackhaul, () -> st.carrierBackhaul, v -> st.carrierBackhaul = v))
+				// v0.83
+				.option(doubleField("staff.clerkCommission", sd.clerkCommission, () -> st.clerkCommission, v -> st.clerkCommission = v, 0, 1))
+				.option(doubleField("staff.clerkPriceImpact", sd.clerkPriceImpact, () -> st.clerkPriceImpact, v -> st.clerkPriceImpact = v, 0.05, 1))
+				.option(intField("staff.carrierRoamChoices", sd.carrierRoamChoices, () -> st.carrierRoamChoices, v -> st.carrierRoamChoices = v, 1, 30))
+				.option(intField("staff.marketDailyUnits", sd.marketDailyUnits, () -> st.marketDailyUnits, v -> st.marketDailyUnits = v, 0, 1_000_000))
+				.option(doubleField("staff.noMarginNoticeDays", sd.noMarginNoticeDays, () -> st.noMarginNoticeDays, v -> st.noMarginNoticeDays = v, 0, 30))
+				.option(bool("staff.showEmployees", sd.showEmployees, () -> st.showEmployees, v -> st.showEmployees = v));
 
 		// Client settings are always editable.
 		ConfigCategory.Builder client = category("client")

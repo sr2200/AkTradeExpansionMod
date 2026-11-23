@@ -991,10 +991,11 @@ public final class TradeExpansionConfig {
 		/** v0.48.1: a carrier also takes this share of the profit of every round trip (nothing when there is none). */
 		public double carrierCommission = 0.2;
 		/** v0.48.1: carriers trade at wholesale prices: the spread s of the good × this. */
-		public double carrierSpreadMultiplier = 0.5;
+		public double carrierSpreadMultiplier = 0.6;
 		/** v0.48.1: X moves by this much per unit a carrier trades (players: 1), so one trip can carry more. */
-		public double carrierPriceImpact = 0.25;
-		public long clerkWagePerDay = 30;
+		public double carrierPriceImpact = 0.35;
+		/** v0.83: fixed daily wage of a clerk (0 = none; the clerk takes {@link #clerkCommission} of its sales instead). */
+		public long clerkWagePerDay = 0;
 		/** Trading units a carrier takes on one trip. */
 		public int carrierCapacity = 64;
 		/** Trading units a clerk keeps for sale. */
@@ -1023,6 +1024,21 @@ public final class TradeExpansionConfig {
 		 * (chosen like an automatic carrier's goods) and sells them on its return.
 		 */
 		public boolean carrierBackhaul = true;
+		/** v0.83: a clerk takes this share of every sale (its pay; the rest goes into its purse). */
+		public double clerkCommission = 0.10;
+		/** v0.83: X moves by this much per unit a clerk sells (players: 1), so it sells faster. */
+		public double clerkPriceImpact = 0.5;
+		/** v0.83: a carrier choosing its destination every trip looks at this many nearest markets. */
+		public int carrierRoamChoices = 4;
+		/**
+		 * v0.83: trading units all employees together may buy and sell at one market in one day (0 = no limit), so that
+		 * many carriers on a server do not move the prices too much.
+		 */
+		public int marketDailyUnits = 2048;
+		/** v0.83: employees at their home market stand there as villagers (talk to them to open the staff tab). */
+		public boolean showEmployees = true;
+		/** v0.83: a carrier of one good tells its owner once when it has seen no profit for this many days (0 = never). */
+		public double noMarginNoticeDays = 1.0;
 
 		public Staff() {
 		}
@@ -1054,6 +1070,12 @@ public final class TradeExpansionConfig {
 			this.quitChance = accident.quitChance();
 			this.notifyChat = accident.notifyChat();
 			this.carrierBackhaul = accident.backhaul();
+			this.clerkCommission = accident.clerkCommission();
+			this.clerkPriceImpact = accident.clerkPriceImpact();
+			this.carrierRoamChoices = accident.roamChoices();
+			this.marketDailyUnits = accident.marketDailyUnits();
+			this.showEmployees = accident.showEmployees();
+			this.noMarginNoticeDays = accident.noMarginNoticeDays();
 		}
 
 		/**
@@ -1061,7 +1083,8 @@ public final class TradeExpansionConfig {
 		 * JSON object.
 		 */
 		private record Accident(double base, double perThousandBlocks, double max, double lossMin, double lossMax, double restDays,
-				double quitChance, boolean notifyChat, boolean backhaul) {
+				double quitChance, boolean notifyChat, boolean backhaul, double clerkCommission, double clerkPriceImpact, int roamChoices,
+				int marketDailyUnits, boolean showEmployees, double noMarginNoticeDays) {
 			static MapCodec<Accident> codec(Staff d) {
 				return RecordCodecBuilder.mapCodec(i -> i.group(
 						Codec.DOUBLE.fieldOf("accidentBase").orElse(d.accidentBase).forGetter(Accident::base),
@@ -1072,7 +1095,13 @@ public final class TradeExpansionConfig {
 						Codec.DOUBLE.fieldOf("accidentRestDays").orElse(d.accidentRestDays).forGetter(Accident::restDays),
 						Codec.DOUBLE.fieldOf("quitChance").orElse(d.quitChance).forGetter(Accident::quitChance),
 						Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(Accident::notifyChat),
-						Codec.BOOL.fieldOf("carrierBackhaul").orElse(d.carrierBackhaul).forGetter(Accident::backhaul)
+						Codec.BOOL.fieldOf("carrierBackhaul").orElse(d.carrierBackhaul).forGetter(Accident::backhaul),
+						Codec.DOUBLE.fieldOf("clerkCommission").orElse(d.clerkCommission).forGetter(Accident::clerkCommission),
+						Codec.DOUBLE.fieldOf("clerkPriceImpact").orElse(d.clerkPriceImpact).forGetter(Accident::clerkPriceImpact),
+						Codec.INT.fieldOf("carrierRoamChoices").orElse(d.carrierRoamChoices).forGetter(Accident::roamChoices),
+						Codec.INT.fieldOf("marketDailyUnits").orElse(d.marketDailyUnits).forGetter(Accident::marketDailyUnits),
+						Codec.BOOL.fieldOf("showEmployees").orElse(d.showEmployees).forGetter(Accident::showEmployees),
+						Codec.DOUBLE.fieldOf("noMarginNoticeDays").orElse(d.noMarginNoticeDays).forGetter(Accident::noMarginNoticeDays)
 				).apply(i, Accident::new));
 			}
 		}
@@ -1096,7 +1125,8 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("carrierSpreadMultiplier").orElse(d.carrierSpreadMultiplier).forGetter(c -> c.carrierSpreadMultiplier),
 					Codec.DOUBLE.fieldOf("carrierPriceImpact").orElse(d.carrierPriceImpact).forGetter(c -> c.carrierPriceImpact),
 					Accident.codec(d).forGetter(c -> new Accident(c.accidentBase, c.accidentPerThousandBlocks, c.accidentMax, c.accidentLossMin,
-							c.accidentLossMax, c.accidentRestDays, c.quitChance, c.notifyChat, c.carrierBackhaul))
+							c.accidentLossMax, c.accidentRestDays, c.quitChance, c.notifyChat, c.carrierBackhaul, c.clerkCommission, c.clerkPriceImpact,
+							c.carrierRoamChoices, c.marketDailyUnits, c.showEmployees, c.noMarginNoticeDays))
 			).apply(i, Staff::new);
 		});
 	}

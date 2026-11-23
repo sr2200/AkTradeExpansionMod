@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.registry;
 
 import com.akf.tradeexpansion.TradeExpansion;
+import com.akf.tradeexpansion.entity.HiredHandEntity;
 import com.akf.tradeexpansion.entity.TraderEntity;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.core.Registry;
@@ -19,6 +20,13 @@ public final class ModEntities {
 	public static final EntityType<TraderEntity> TRADER = Registry.register(BuiltInRegistries.ENTITY_TYPE, TRADER_KEY,
 			EntityType.Builder.of(TraderEntity::new, MobCategory.MISC).sized(0.6f, 1.95f).clientTrackingRange(10).build(TRADER_KEY));
 
+	private static final ResourceKey<EntityType<?>> HIRED_HAND_KEY = ResourceKey.create(Registries.ENTITY_TYPE, TradeExpansion.id("hired_hand"));
+
+	/** v0.83: an employee standing at its home market (Q-6); not saved, placed by HiredHands. */
+	public static final EntityType<HiredHandEntity> HIRED_HAND = Registry.register(BuiltInRegistries.ENTITY_TYPE, HIRED_HAND_KEY,
+			EntityType.Builder.of(HiredHandEntity::new, MobCategory.MISC).sized(0.6f, 1.95f).clientTrackingRange(10).noSave().noSummon()
+					.build(HIRED_HAND_KEY));
+
 	public static final SpawnEggItem TRADER_SPAWN_EGG = registerSpawnEgg();
 
 	private ModEntities() {
@@ -31,5 +39,6 @@ public final class ModEntities {
 
 	public static void init() {
 		FabricDefaultAttributeRegistry.register(TRADER, TraderEntity.createAttributes());
+		FabricDefaultAttributeRegistry.register(HIRED_HAND, HiredHandEntity.createAttributes());
 	}
 }

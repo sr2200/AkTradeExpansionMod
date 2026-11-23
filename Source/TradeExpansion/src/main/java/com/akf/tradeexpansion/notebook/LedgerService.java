@@ -235,7 +235,9 @@ public final class LedgerService {
 			}
 		}
 		boolean reportOn = book == null || !book.reportOff;
-		ServerPlayNetworking.send(player, new NotebookS2C(open, reportOn, config().dailyReport, today, days, notes));
+		List<com.akf.tradeexpansion.network.StaffS2C.View> staff = com.akf.tradeexpansion.staff.StaffService.views(MarketRegistry.get(server), null,
+				player.getUUID()); // v0.83: the staff page
+		ServerPlayNetworking.send(player, new NotebookS2C(open, reportOn, config().dailyReport, today, days, notes, staff));
 	}
 
 	/** The notebook screen's switch for the morning report. */

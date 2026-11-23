@@ -128,24 +128,26 @@ final class ServerMoreFacilityCases {
 					equal(before + Development.config().wholesalerExtraShortages, market.shortages().size(), "shortages with a wholesaler");
 				})));
 		cases.add(partial("guild_hall_clerks", List.of("39-5"),
-				"商人組合の会館が建つと、その市場の番頭の1日の給金が 0.75 倍（雇い人タブの説明にも同じ額）になり、番頭の売り1個が相場を動かす量が 1 ÷ 1.5 になること"
+				"商人組合の会館が建つと、その市場の番頭の給金（売上の歩合、v0.83）が 0.75 倍（雇い人タブの説明にも同じ割合）になり、番頭の売り1個が相場を動かす量が 1 ÷ 1.5 になること"
 						+ "（番頭を雇って実際に売れた数は見ていない）",
 				ctx -> town(ctx, (c, player, market, stall) -> {
 					builder(c, player, market);
-					long base = TradeExpansionConfig.get().staff.clerkWagePerDay;
-					equal(base, StaffService.clerkWage(market), "clerk wage without a guild hall");
-					that(StaffService.clerkImpact(market) == 1.0, "clerk impact without a guild hall: %s", StaffService.clerkImpact(market));
+					double base = TradeExpansionConfig.get().staff.clerkCommission;
+					double impact = TradeExpansionConfig.get().staff.clerkPriceImpact;
+					that(Math.abs(StaffService.clerkCommission(market) - base) < 1e-9, "clerk pay share without a guild hall: %s", StaffService.clerkCommission(market));
+					that(Math.abs(StaffService.clerkImpact(market) - impact) < 1e-9, "clerk impact without a guild hall: %s", StaffService.clerkImpact(market));
 					buildAndComplete(c, player, market, GUILD_HALL);
-					long wage = Math.round(base * Development.config().guildHallClerkWageMultiplier);
-					equal(wage, StaffService.clerkWage(market), "clerk wage with a guild hall");
-					that(Math.abs(StaffService.clerkImpact(market) - 1 / Development.config().guildHallClerkSpeedMultiplier) < 1e-9,
+					double wage = base * Development.config().guildHallClerkWageMultiplier;
+					that(Math.abs(StaffService.clerkCommission(market) - wage) < 1e-9, "clerk pay share with a guild hall: %s", StaffService.clerkCommission(market));
+					that(Math.abs(StaffService.clerkImpact(market) - impact / Development.config().guildHallClerkSpeedMultiplier) < 1e-9,
 							"clerk impact with a guild hall: %s", StaffService.clerkImpact(market));
 					ServerDevelopmentCases.ensureOpen(c, player, market);
 					c.forget(player);
 					StaffService.handle(player, new StaffRequestC2S(market.id(), StaffRequestC2S.Action.LIST, 0, Employee.AUTO, 0, 0, 0, 0, 0, false));
 					List<StaffS2C> answers = c.payloads(player, StaffS2C.class);
 					that(!answers.isEmpty(), "no staff list was sent");
-					equal(wage, answers.getLast().info().clerkWage(), "clerk wage shown on the staff tab");
+					that(Math.abs(answers.getLast().info().clerkCommission() - wage) < 1e-9, "clerk pay share shown on the staff tab: %s",
+							answers.getLast().info().clerkCommission());
 				})));
 		cases.add(full("chapel_reputation", List.of("39-6"), ctx -> town(ctx, (c, player, market, stall) -> {
 			builder(c, player, market);

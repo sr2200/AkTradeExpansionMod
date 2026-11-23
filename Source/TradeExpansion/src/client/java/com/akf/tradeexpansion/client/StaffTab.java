@@ -58,7 +58,7 @@ final class StaffTab {
 	/** Roles and phases / statuses by ordinal (as {@code Employee}). */
 	private static final int CARRIER = 0;
 	private static final String[] STATUSES = {"working", "wait_price", "wait_stock", "wait_funds", "wait_sell", "not_dealt", "unpaid", "paused",
-			"sold_out", "resting", "quit", "home_gone", "no_margin"};
+			"sold_out", "resting", "quit", "home_gone", "no_margin", "market_busy"};
 	private static final int PHASE_HOME = 0;
 	private static final int PHASE_OUTBOUND = 1;
 	private static final int PHASE_AWAY = 2;
@@ -103,6 +103,8 @@ final class StaffTab {
 	private Button withdrawItemsButton;
 	private Button pauseButton;
 	private Button changeButton;
+	/** v0.83: a carrier of one good becomes おまかせ (same destination and load). */
+	private Button autoButton;
 	private Button dismissButton;
 	private Button backButton;
 	private Button confirmButton;
@@ -130,6 +132,7 @@ final class StaffTab {
 		withdrawItemsButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.withdraw_items"), b -> send(StaffRequestC2S.Action.WITHDRAW_ITEMS, 0), px + 40, y + 110, 38, 14));
 		pauseButton = add.apply(FittedButton.create(Component.empty(), b -> send(StaffRequestC2S.Action.PAUSE, 0), px, y + 125, 38, 14));
 		changeButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.change"), b -> startChange(), px + 40, y + 125, 38, 14));
+		autoButton = add.apply(FittedButton.create(Component.translatable("screen.ak_trade_expansion.staff.to_auto"), b -> switchToAuto(), px, y + 110, 38, 14));
 		dismissButton = add.apply(Button.builder(Component.empty(), b -> send(StaffRequestC2S.Action.DISMISS, 0)).bounds(px, y + 140, PANEL_W, 14).build());
 		backButton = add.apply(Button.builder(Component.translatable("screen.ak_trade_expansion.staff.back"), b -> back())
 				.bounds(px, y + 137, PANEL_W, 14).build());
@@ -140,7 +143,7 @@ final class StaffTab {
 			spinners[row][1] = add.apply(Button.builder(Component.literal("+"), b -> spin(r, 1)).bounds(px + 64, y + 45 + row * 26, 14, 14).build());
 		}
 		listButtons.addAll(List.of(depositSmallButton, depositLargeButton, withdrawButton, configureButton, depositItemsButton, withdrawItemsButton,
-				pauseButton, changeButton, dismissButton));
+				pauseButton, changeButton, autoButton, dismissButton));
 	}
 
 	void updateButtons(boolean shown) {
@@ -157,7 +160,7 @@ final class StaffTab {
 			hireCarrierButton.setTooltip(Tooltip.create(blocker != null ? blocker : Component.translatable("screen.ak_trade_expansion.staff.hire.carrier.tooltip",
 					CoinItem.formatCopper(data.info().carrierFee()), percent(data.info().commission()))));
 			hireClerkButton.setTooltip(Tooltip.create(blocker != null ? blocker : Component.translatable("screen.ak_trade_expansion.staff.hire.clerk.tooltip",
-					CoinItem.formatCopper(data.info().clerkFee()), CoinItem.formatCopper(data.info().clerkWage()))));
+					CoinItem.formatCopper(data.info().clerkFee()), percent(data.info().clerkCommission()))));
 		}
 		for (Button b : listButtons) b.visible = false;
 		if (view != null) {
@@ -174,6 +177,10 @@ final class StaffTab {
 			pauseButton.visible = !quit;
 			changeButton.visible = home && !quit;
 			changeButton.active = !pending && carrierHome;
+			autoButton.visible = home && !quit && carrier && !view.auto(); // v0.83 (the clerk's "deposit" place)
+			autoButton.active = !pending && carrierHome;
+			autoButton.setTooltip(Tooltip.create(Component.translatable(carrierHome ? "screen.ak_trade_expansion.staff.to_auto.tooltip"
+					: "trade.ak_trade_expansion.result.staff_away")));
 			changeButton.setTooltip(Tooltip.create(Component.translatable(carrierHome ? "screen.ak_trade_expansion.staff.change.tooltip"
 					: "trade.ak_trade_expansion.result.staff_away")));
 			dismissButton.visible = home;
@@ -234,8 +241,13 @@ final class StaffTab {
 	// ---- packets and actions ----
 
 	void open() {
+		open(-1);
+	}
+
+	/** v0.83: opened by talking to employee {@code preselect} at its home market (-1: none selected). */
+	void open(int preselect) {
 		mode = Mode.LIST;
-		selected = -1;
+		selected = preselect;
 		editing = -1;
 		changing = -1;
 		refresh = 0;
@@ -352,8 +364,25 @@ final class StaffTab {
 	private List<StaffS2C.Destination> sortedDestinations() {
 		if (destinations == null || !goodsMatch()) return List.of();
 		List<StaffS2C.Destination> list = new ArrayList<>(destinations);
-		list.sort(java.util.Comparator.comparingLong((StaffS2C.Destination d) -> -totalProfit(d)).thenComparingInt(StaffS2C.Destination::distance));
+		// v0.83: "choose every trip" first, then the most profitable
+		list.sort(java.util.Comparator.comparing((StaffS2C.Destination d) -> !roam(d)).thenComparingLong((StaffS2C.Destination d) -> -totalProfit(d))
+				.thenComparingInt(StaffS2C.Destination::distance));
 		return list;
+	}
+
+	/** v0.83: the row of a carrier choosing its destination every trip. */
+	private static boolean roam(StaffS2C.Destination d) {
+		return d.id() == com.akf.tradeexpansion.staff.Employee.ROAM;
+	}
+
+	/** v0.83: a carrier of one good becomes おまかせ: same destination (or choosing it every trip) and the same load. */
+	private void switchToAuto() {
+		StaffS2C.View view = selectedView();
+		if (view == null || pending) return;
+		pending = true;
+		ClientPlayNetworking.send(new StaffRequestC2S(screen.marketId(), StaffRequestC2S.Action.CHANGE, view.id(), com.akf.tradeexpansion.staff.Employee.AUTO,
+				view.roam() ? com.akf.tradeexpansion.staff.Employee.ROAM : view.destination(), view.quantity(), 1, 1, 0, screen.payingByCard()));
+		screen.refreshButtons();
 	}
 
 	/** v0.54: what a round trip there should bring: the goods taken there and the return cargo. */
@@ -366,7 +395,8 @@ final class StaffTab {
 		if (destination != null) return destination;
 		StaffS2C.View edited = editedView();
 		if (edited == null || destinations == null || !goodsMatch()) return null;
-		for (StaffS2C.Destination d : destinations) if (d.id() == edited.destination()) return d;
+		long id = edited.roam() ? com.akf.tradeexpansion.staff.Employee.ROAM : edited.destination(); // v0.83
+		for (StaffS2C.Destination d : destinations) if (d.id() == id) return d;
 		return null;
 	}
 
@@ -713,18 +743,18 @@ final class StaffTab {
 			int statusWidth = font.width(status.text());
 			g.text(font, status.text(), lx + listW - 9 - statusWidth, ry + 5, status.color());
 			String label = role(v.role()).getString() + "：" + goodsName(v, stack).getString()
-					+ (v.role() == CARRIER ? " → " + v.destinationName().getString() : "");
+					+ (v.role() == CARRIER ? " → " + destinationLabel(v).getString() : "");
 			if (!v.atHome()) label += " ＠" + v.homeName().getString();
 			screen.fit(g, label, lx + 20, ry + 5, listW - 34 - statusWidth, v.phase() == PHASE_QUIT ? COLOR_GRAY : COLOR_WHITE, true);
 		}
 		if (hovered != null) g.setTooltipForNextFrame(screen.screenFont(), MarketScreen.wrapTooltip(screen.screenFont(), screen.width, tooltip(hovered)), Optional.empty(), mouseX, mouseY);
 	}
 
-	private record StatusText(String text, int color) {
+	record StatusText(String text, int color) {
 	}
 
 	/** Short status of a row: where the employee is or what it waits for, with the minutes left when travelling. */
-	private StatusText statusText(StaffS2C.View v) {
+	static StatusText statusText(StaffS2C.View v) {
 		String status = STATUSES[Math.clamp(v.status(), 0, STATUSES.length - 1)];
 		String key = "screen.ak_trade_expansion.staff.status." + status;
 		int minutes = minutesUntil(v.nextTime());
@@ -743,7 +773,13 @@ final class StaffTab {
 		};
 	}
 
-	private List<Component> tooltip(StaffS2C.View v) {
+	/** v0.83: "Market B" or, for a carrier choosing it every trip, "every trip (now Market B)". */
+	static Component destinationLabel(StaffS2C.View v) {
+		return v.roam() ? Component.translatable("screen.ak_trade_expansion.staff.roam.label", v.destinationName()) : v.destinationName();
+	}
+
+	/** The tooltip of an employee's row (also the merchant's notebook, v0.83). */
+	static List<Component> tooltip(StaffS2C.View v) {
 		List<Component> lines = new ArrayList<>();
 		ItemStack stack = stack(v.item());
 		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.title", role(v.role()), goodsName(v, stack)));
@@ -752,8 +788,8 @@ final class StaffTab {
 		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.home", v.homeName()));
 		if (v.role() == CARRIER) {
 			lines.add(v.auto()
-					? Component.translatable("screen.ak_trade_expansion.staff.tooltip.route.auto", v.destinationName(), v.distance(), v.quantity(), v.kinds())
-					: Component.translatable("screen.ak_trade_expansion.staff.tooltip.route", v.destinationName(), v.distance(),
+					? Component.translatable("screen.ak_trade_expansion.staff.tooltip.route.auto", destinationLabel(v), v.distance(), v.quantity(), v.kinds())
+					: Component.translatable("screen.ak_trade_expansion.staff.tooltip.route", destinationLabel(v), v.distance(),
 					v.quantity() * v.unit(), CoinItem.formatCopper(v.buyLimit()), CoinItem.formatCopper(v.sellLimit())));
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.carrier_totals", v.trips(), CoinItem.formatCopper(v.earned()),
 					CoinItem.formatCopper(v.spent()), CoinItem.formatCopper(v.lost())));
@@ -761,8 +797,10 @@ final class StaffTab {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.clerk", CoinItem.formatCopper(v.sellLimit()), v.sold() * v.unit(),
 					CoinItem.formatCopper(v.earned())));
 		}
-		lines.add(v.role() == CARRIER && v.wage() <= 0
-				? Component.translatable("screen.ak_trade_expansion.staff.tooltip.commission", percent(data.info().commission()), CoinItem.formatCopper(v.wages()))
+		// v0.83: a clerk is paid a share of its sales too (a daily wage only when set)
+		lines.add(v.wage() <= 0
+				? Component.translatable(v.role() == CARRIER ? "screen.ak_trade_expansion.staff.tooltip.commission" : "screen.ak_trade_expansion.staff.tooltip.commission.clerk",
+				percent(v.commission()), CoinItem.formatCopper(v.wages()))
 				: Component.translatable("screen.ak_trade_expansion.staff.tooltip.wages", CoinItem.formatCopper(v.wage()), CoinItem.formatCopper(v.wages())));
 		long profit = v.earned() - v.spent() - v.wages();
 		lines.add(Component.translatable("screen.ak_trade_expansion.staff.tooltip.profit", (profit < 0 ? "-" : "") + CoinItem.formatCopper(Math.abs(profit)))
@@ -976,13 +1014,14 @@ final class StaffTab {
 			}
 			int pw = font.width(price);
 			g.text(font, price, lx + listW - 9 - pw, ry + 5, color);
-			String where = Directions.of(d.dx(), d.dz()) + " " + d.distance() + "m";
+			String where = roam(d) ? "" : Directions.of(d.dx(), d.dz()) + " " + d.distance() + "m";
 			int ww = font.width(where);
 			g.text(font, where, lx + listW - 15 - pw - ww, ry + 5, COLOR_GRAY);
 			screen.fit(g, d.name().getString(), lx + 4, ry + 5, listW - 24 - pw - ww, COLOR_WHITE, true);
 			if (over) {
 				List<Component> lines = new ArrayList<>();
 				lines.add(d.name());
+				if (roam(d)) lines.add(Component.translatable("screen.ak_trade_expansion.staff.roam.tooltip", data.info().roamChoices()).withStyle(ChatFormatting.GRAY));
 				if (auto()) {
 					lines.add(autoLine(d));
 				} else {
@@ -1024,6 +1063,7 @@ final class StaffTab {
 			double travelMultiplier = destination != null ? destination.travelMultiplier() : edited != null ? edited.travelMultiplier() : 1.0;
 			double accidentMultiplier = destination != null ? destination.accidentMultiplier() : edited != null ? edited.accidentMultiplier() : 1.0;
 			StaffS2C.Destination d = setupDestination();
+			boolean roaming = d != null ? roam(d) : edited != null && edited.roam(); // v0.83
 			// v0.54: the return cargo's expected profit right after the trip's own (the explanations below are long; on
 			// small screens the page scrolls and its first lines are seen first).
 			Component back = info.backhaul() && d != null ? returnLine(d) : null;
@@ -1033,6 +1073,7 @@ final class StaffTab {
 				if (d != null) lines.add(autoLine(d));
 				if (back != null) lines.add(back);
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.auto.how", quantity));
+				if (roaming) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.roam", info.roamChoices()));
 			} else {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier", item, to).withColor(COLOR_GOLD));
 			lines.add(travelLine(distance, travelMultiplier, accidentMultiplier));
@@ -1046,11 +1087,14 @@ final class StaffTab {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.how", quantity * unit(view), CoinItem.formatCopper(buyLimit),
 					CoinItem.formatCopper(sellLimit)));
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.auto"));
+			if (roaming) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.roam", info.roamChoices()));
 			}
 			if (info.backhaul()) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.return")); // v0.54: return cargo
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.wait", minutes(Math.round(info.maxWaitDays() * PriceModel.TICKS_PER_DAY))));
 			lines.add(info.quitChance() > 0 ? Component.translatable("screen.ak_trade_expansion.staff.summary.accident.quit", percent(info.quitChance()))
 					: Component.translatable("screen.ak_trade_expansion.staff.summary.accident"));
+			// v0.83: after the explanations (on small screens the first lines are seen first)
+			if (!auto()) lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.carrier.one").withStyle(ChatFormatting.GRAY));
 		} else {
 			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.clerk", item).withColor(COLOR_GOLD));
 			if (view != null) {
@@ -1073,7 +1117,10 @@ final class StaffTab {
 		if (editing < 0 && changing < 0) {
 			lines.add(hiringCarrier
 					? Component.translatable("screen.ak_trade_expansion.staff.summary.cost.carrier", CoinItem.formatCopper(info.carrierFee()), percent(info.commission()))
-					: Component.translatable("screen.ak_trade_expansion.staff.summary.cost", CoinItem.formatCopper(info.clerkFee()), CoinItem.formatCopper(info.clerkWage())));
+					: Component.translatable("screen.ak_trade_expansion.staff.summary.cost", CoinItem.formatCopper(info.clerkFee()), percent(info.clerkCommission())));
+		if (!hiringCarrier && info.clerkWage() > 0) {
+			lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.cost.clerk_wage", CoinItem.formatCopper(info.clerkWage())));
+		}
 			if (hiringCarrier && info.carrierWage() > 0) {
 				lines.add(Component.translatable("screen.ak_trade_expansion.staff.summary.cost.carrier_wage", CoinItem.formatCopper(info.carrierWage())));
 			}
@@ -1196,7 +1243,7 @@ final class StaffTab {
 		return left <= 0 ? 0 : minutes(left);
 	}
 
-	private static String percent(double rate) {
+	static String percent(double rate) {
 		double value = Math.round(rate * 1000) / 10.0;
 		return value == Math.rint(value) ? String.valueOf((long) value) : String.format(Locale.ROOT, "%.1f", value);
 	}

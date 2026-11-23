@@ -32,10 +32,12 @@ import java.util.Optional;
  * <li>Days: one line per day of the last days (the most profitable goods in the tooltip) and their total</li>
  * <li>Prices: the goods on the price notes; for the chosen one, its prices at each market noted, how old the note is and
  * where the market is, the cheapest place to buy and the best place to sell marked</li>
+ * <li>Staff (v0.83): the player's employees as on the staff tab (what they do, their purse and the totals in the
+ * tooltip); nothing can be changed here</li>
  * </ul>
  */
 public class NotebookScreen extends Screen {
-	private enum Tab { TODAY, DAYS, PRICES }
+	private enum Tab { TODAY, DAYS, PRICES, STAFF }
 
 	private static final int COLOR_PAGE = 0xFFEDE3C8;
 	private static final int COLOR_EDGE = 0xFF6B4423;
@@ -210,8 +212,9 @@ public class NotebookScreen extends Screen {
 			case TODAY -> todayGoods().size();
 			case DAYS -> data.days().size();
 			case PRICES -> selectedGoods == null ? 0 : priceRows(selectedGoods).size();
+			case STAFF -> data.staff().size();
 		};
-		int max = Math.max(0, total - visibleRows(tab == Tab.DAYS ? 1 : 3));
+		int max = Math.max(0, total - visibleRows(tab == Tab.DAYS ? 1 : tab == Tab.STAFF ? 0 : 3));
 		scroll = Math.clamp(scroll + step, 0, max);
 		return true;
 	}
@@ -246,7 +249,60 @@ public class NotebookScreen extends Screen {
 			case TODAY -> extractToday(g, mouseX, mouseY);
 			case DAYS -> extractDays(g, mouseX, mouseY);
 			case PRICES -> extractPrices(g, mouseX, mouseY);
+			case STAFF -> extractStaff(g, mouseX, mouseY);
 		}
+	}
+
+	/** v0.83: one row per employee: role, goods and route, the purse and what it is doing (details in the tooltip). */
+	private void extractStaff(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		int x = left + 8;
+		int w = panelW - 16;
+		int y = listTop();
+		List<com.akf.tradeexpansion.network.StaffS2C.View> staff = data.staff();
+		if (staff.isEmpty()) {
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.notebook.staff.none"), x, y + 4, w, COLOR_MUTED, false);
+			return;
+		}
+		int rows = visibleRows(0);
+		scroll = Math.clamp(scroll, 0, Math.max(0, staff.size() - rows));
+		com.akf.tradeexpansion.network.StaffS2C.View hovered = null;
+		for (int i = 0; i < rows && scroll + i < staff.size(); i++) {
+			com.akf.tradeexpansion.network.StaffS2C.View v = staff.get(scroll + i);
+			int ry = y + i * ROW_H;
+			if (mouseX >= x && mouseX < x + w && mouseY >= ry && mouseY < ry + ROW_H) {
+				g.fill(x, ry, x + w, ry + ROW_H, COLOR_HOVER);
+				hovered = v;
+			}
+			ItemStack stack = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(v.item()));
+			g.item(stack, x + 1, ry + 1);
+			StaffTab.StatusText status = StaffTab.statusText(v);
+			int sw = Math.min(font.width(status.text()), w / 4);
+			fitText(g, status.text(), x + w - sw - 2, ry + 5, sw, statusColor(status.color()));
+			String purse = CoinItem.formatCopper(v.purse());
+			int pw = font.width(purse);
+			g.text(font, purse, x + w - sw - 8 - pw, ry + 5, COLOR_MUTED, false);
+			boolean carrier = v.role() == 0;
+			String goods = v.auto() ? Component.translatable("staff.ak_trade_expansion.auto").getString() : stack.getHoverName().getString();
+			String label = Component.translatable("staff.ak_trade_expansion.role." + (carrier ? "carrier" : "clerk")).getString() + "：" + goods
+					+ (carrier ? " → " + StaffTab.destinationLabel(v).getString() : "") + " ＠" + v.homeName().getString();
+			fitText(g, label, x + 20, ry + 5, w - sw - pw - 34, v.phase() == 4 ? COLOR_MUTED : COLOR_TEXT);
+		}
+		if (hovered != null) {
+			List<Component> lines = new ArrayList<>(StaffTab.tooltip(hovered));
+			lines.add(2, Component.translatable("screen.ak_trade_expansion.staff.purse", CoinItem.formatCopper(hovered.purse())));
+			lines.add(Component.translatable("screen.ak_trade_expansion.notebook.staff.hint").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			g.setTooltipForNextFrame(font, MarketScreen.wrapTooltip(font, width, lines), Optional.empty(), mouseX, mouseY);
+		}
+	}
+
+	/** The staff tab's status colours are for a dark background: darker ones for the page. */
+	private static int statusColor(int color) {
+		return switch (color) {
+			case 0xFFFF5555 -> COLOR_LOSS;
+			case 0xFF55FF55 -> COLOR_PROFIT;
+			case 0xFFA0A0A0 -> COLOR_MUTED;
+			default -> 0xFF906010;
+		};
 	}
 
 	private List<GoodsView> todayGoods() {

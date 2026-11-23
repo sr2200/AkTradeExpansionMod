@@ -354,6 +354,7 @@ final class ClientStaffCases {
 		List<StaffS2C.Destination> destinations = context.computeOnClient(c -> (List<StaffS2C.Destination>) call(staff, "sortedDestinations"));
 		previous = Long.MAX_VALUE;
 		for (StaffS2C.Destination d : destinations) {
+			if (d.id() == com.akf.tradeexpansion.staff.Employee.ROAM) continue; // v0.83: "choose every trip" is always first
 			long total = (d.units() > 0 ? Math.max(0, d.profit()) : 0) + (d.returnItems() > 0 ? Math.max(0, d.returnProfit()) : 0);
 			check(total <= previous, "the destinations are not by expected profit");
 			previous = total;
@@ -536,7 +537,8 @@ final class ClientStaffCases {
 	/**
 	 * 26-11: "番頭を雇う" lists the goods carried first with "1日 約○c・手持ち○"; the tooltip has the recommendation; the
 	 * setup starts at the recommended lowest price (85%) and every unit carried, and hiring takes the goods. 26-13: with
-	 * an empty purse the next day's wage is not paid: "給金不足" and a chat line; money in, it goes on.
+	 * a daily wage set (staff.clerkWagePerDay, v0.83: 0 by default) and an empty purse the next day's wage is not paid:
+	 * "給金不足" and a chat line; money in, it goes on.
 	 */
 	static void clerk(Session s, CaseResult.Builder result, CaseResult.Builder also) {
 		ClientGameTestContext context = s.context;
@@ -608,6 +610,9 @@ final class ClientStaffCases {
 			waitView(context, staff, id, v -> v.status() == 4, 200, "\"値上がり待ち\"");
 			check(!button(staff, "withdrawButton").active, "\"%s\" can be pressed with an empty purse", text(K + "withdraw"));
 			context.runOnClient(c -> c.gui.hud.getChat().clearMessages(false));
+			// v0.83: a clerk is paid a share of its sales; the daily wage (staff.clerkWagePerDay, 0 by default) is set for this case
+			long wageBefore = s.world.getServer().computeOnServer(server -> TradeExpansionConfig.get().staff.clerkWagePerDay);
+			s.world.getServer().runOnServer(server -> TradeExpansionConfig.get().staff.clerkWagePerDay = 30);
 			s.world.getServer().runCommand("aktradeex clock advance 1.05");
 			String chatStart = text("staff." + NS + ".chat", Component.translatable("staff." + NS + ".role.clerk"), "");
 			String unpaid = prefix("staff." + NS + ".log.unpaid");
@@ -620,6 +625,7 @@ final class ClientStaffCases {
 			clickWidget(context, "+100c");
 			mouseAway(context);
 		waitView(context, staff, id, v -> v.status() != 6, 200, "back to work after the money");
+		s.world.getServer().runOnServer(server -> TradeExpansionConfig.get().staff.clerkWagePerDay = wageBefore);
 	}
 
 	// ---- 26-5 / 26-15 / 26-17 the limit and another market

@@ -213,7 +213,20 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		for (Tab t : Tab.values()) {
 			if (t.key.equals(menu.initialTab())) tab = t;
 		}
+		// v0.83: an employee at its home market opens the staff tab with itself selected ("staff:<id>").
+		if (menu.initialTab().startsWith("staff:")) {
+			tab = Tab.STAFF;
+			try {
+				staffPreselect = Integer.parseInt(menu.initialTab().substring("staff:".length()));
+			} catch (NumberFormatException e) {
+				staffPreselect = -1;
+			}
+		}
 	}
+
+	/** v0.83: the employee to select when the screen opens on the staff tab (-1: none), and whether it was asked for. */
+	private int staffPreselect = -1;
+	private boolean staffOpened;
 
 	/** A-4: the sizes that follow the layout. */
 	private void applyLayout(MarketLayout l) {
@@ -611,7 +624,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			boardMarket = -1;
 			ClientPlayNetworking.send(new BoardRequestC2S(menu.marketId()));
 		}
-		if (newTab == Tab.STAFF) staffTab.open();
+		if (newTab == Tab.STAFF) {
+			staffOpened = true;
+			staffTab.open();
+		}
 		updateButtons();
 	}
 
@@ -834,7 +850,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
 	private void updateButtons() {
 		if (confirmButton == null) return;
-		if (tab == Tab.BANK && !bankAvailable() || tab == Tab.TOWN && !townAvailable() || tab == Tab.STAFF && !staffAvailable()) tab = Tab.BUY;
+		// v0.83: opened on the staff tab, it waits for the first snapshot before deciding the tab is not there
+		if (tab == Tab.BANK && !bankAvailable() || tab == Tab.TOWN && !townAvailable() || tab == Tab.STAFF && snapshot != null && !staffAvailable()) tab = Tab.BUY;
+		if (tab == Tab.STAFF && !staffOpened) {
+			staffOpened = true;
+			staffTab.open(staffPreselect);
+		}
 		tabButtons.forEach((t, b) -> b.active = t != tab);
 		tabButtons.get(Tab.BANK).visible = bankAvailable();
 		tabButtons.get(Tab.TOWN).visible = townAvailable();

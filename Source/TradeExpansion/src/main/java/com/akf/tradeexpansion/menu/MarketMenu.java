@@ -54,6 +54,12 @@ public class MarketMenu extends AbstractContainerMenu {
 		}
 	}
 
+	/**
+	 * v0.83: {@code traderId} of a screen opened by talking to an employee at its home market (Q-6): the screen stays valid
+	 * near {@code stallPos} (where it stood), also after a carrier left on a trip.
+	 */
+	public static final int HIRED_HAND = -2;
+
 	private final long marketId;
 	private final BlockPos stallPos;
 	private final int traderId;
@@ -160,6 +166,7 @@ public class MarketMenu extends AbstractContainerMenu {
 	@Override
 	public boolean stillValid(Player player) {
 		double max = TradeExpansionConfig.get().trade.maxDistance;
+		if (traderId == HIRED_HAND) return player.distanceToSqr(Vec3.atCenterOf(stallPos)) <= max * max;
 		if (traderId >= 0) {
 			Entity trader = player.level().getEntity(traderId);
 			return trader instanceof TraderEntity && trader.isAlive() && player.distanceToSqr(trader) <= max * max;

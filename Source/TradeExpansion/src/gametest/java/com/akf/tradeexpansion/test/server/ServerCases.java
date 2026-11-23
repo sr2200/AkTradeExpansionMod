@@ -389,6 +389,7 @@ public final class ServerCases {
 		}));
 
 		cases.addAll(ServerChapterCases.all());
+		cases.addAll(ServerStaffCases.all()); // v0.83
 		cases.addAll(ServerWorldCases.all());
 		cases.addAll(ServerReputationCases.all());
 		cases.addAll(ServerAdvancementCases.all());

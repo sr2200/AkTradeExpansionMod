@@ -31,8 +31,13 @@ public final class Employee {
 	public enum Status {
 		WORKING, WAIT_PRICE, WAIT_STOCK, WAIT_FUNDS, WAIT_SELL, NOT_DEALT, UNPAID, PAUSED, SOLD_OUT, RESTING, QUIT, HOME_GONE,
 		/** v0.48.1: a carrier sees no profit in buying now (the destination would not pay more). */
-		NO_MARGIN
+		NO_MARGIN,
+		/** v0.83: the employees of all players have traded as much as {@code staff.marketDailyUnits} at the market today. */
+		MARKET_BUSY
 	}
+
+	/** v0.83: the destination of a carrier choosing it again before every trip (in requests and on the screen). */
+	public static final long ROAM = -2;
 
 	/**
 	 * A log line, made into text when shown (item and market names in the reader's language).
@@ -88,7 +93,7 @@ public final class Employee {
 		return Codec.STRING.xmap(parse, e -> e.name().toLowerCase(Locale.ROOT));
 	}
 
-	private record Settings(Role role, long home, Identifier goods, long destination, int quantity, long buyLimit, long sellLimit) {
+	private record Settings(Role role, long home, Identifier goods, long destination, int quantity, long buyLimit, long sellLimit, boolean roam) {
 		static final Codec<Settings> CODEC = RecordCodecBuilder.create(i -> i.group(
 				enumCodec(Role.class, Role.CLERK).fieldOf("role").forGetter(Settings::role),
 				Codec.LONG.fieldOf("home").forGetter(Settings::home),
@@ -96,12 +101,13 @@ public final class Employee {
 				Codec.LONG.optionalFieldOf("destination", -1L).forGetter(Settings::destination),
 				Codec.INT.optionalFieldOf("quantity", 0).forGetter(Settings::quantity),
 				Codec.LONG.optionalFieldOf("buy_limit", 0L).forGetter(Settings::buyLimit),
-				Codec.LONG.optionalFieldOf("sell_limit", 1L).forGetter(Settings::sellLimit)
+				Codec.LONG.optionalFieldOf("sell_limit", 1L).forGetter(Settings::sellLimit),
+				Codec.BOOL.optionalFieldOf("roam", false).forGetter(Settings::roam)
 		).apply(i, Settings::new));
 	}
 
 	private record State(long purse, int stock, long cargoCost, long tripCost, long tripRevenue, Phase phase, boolean paused, Status status,
-			long nextTime, long phaseStart, long wageDue) {
+			long nextTime, long phaseStart, long wageDue, boolean marginWarned) {
 		static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.LONG.optionalFieldOf("purse", 0L).forGetter(State::purse),
 				Codec.INT.optionalFieldOf("stock", 0).forGetter(State::stock),
@@ -113,7 +119,8 @@ public final class Employee {
 				enumCodec(Status.class, Status.WORKING).optionalFieldOf("status", Status.WORKING).forGetter(State::status),
 				Codec.LONG.optionalFieldOf("next_time", 0L).forGetter(State::nextTime),
 				Codec.LONG.optionalFieldOf("phase_start", 0L).forGetter(State::phaseStart),
-				Codec.LONG.optionalFieldOf("wage_due", 0L).forGetter(State::wageDue)
+				Codec.LONG.optionalFieldOf("wage_due", 0L).forGetter(State::wageDue),
+				Codec.BOOL.optionalFieldOf("margin_warned", false).forGetter(State::marginWarned)
 		).apply(i, State::new));
 	}
 
@@ -133,9 +140,9 @@ public final class Employee {
 			Codec.INT.fieldOf("id").forGetter(e -> e.id),
 			UUIDUtil.CODEC.fieldOf("owner").forGetter(e -> e.owner),
 			Codec.STRING.optionalFieldOf("owner_name", "").forGetter(e -> e.ownerName),
-			Settings.CODEC.fieldOf("settings").forGetter(e -> new Settings(e.role, e.home, e.goods, e.destination, e.quantity, e.buyLimit, e.sellLimit)),
+			Settings.CODEC.fieldOf("settings").forGetter(e -> new Settings(e.role, e.home, e.goods, e.destination, e.quantity, e.buyLimit, e.sellLimit, e.roam)),
 			State.CODEC.fieldOf("state").forGetter(e -> new State(e.purse, e.stock, e.cargoCost, e.tripCost, e.tripRevenue, e.phase, e.paused,
-					e.status, e.nextTime, e.phaseStart, e.wageDue)),
+					e.status, e.nextTime, e.phaseStart, e.wageDue, e.marginWarned)),
 			Stats.CODEC.optionalFieldOf("stats", new Stats(0, 0, 0, 0, 0, 0, 0)).forGetter(e -> new Stats(e.earned, e.spent, e.wages, e.lost,
 					e.trips, e.sold, e.hired)),
 			LogEntry.CODEC.listOf().optionalFieldOf("log", List.of()).forGetter(e -> List.copyOf(e.log)),
@@ -151,6 +158,10 @@ public final class Employee {
 	Identifier goods;
 	/** Carrier: the market it sells at; clerk: -1. */
 	long destination;
+	/** v0.83: a carrier choosing its destination again before every trip ({@link #destination} is the present one). */
+	boolean roam;
+	/** v0.83: a carrier of one good has told its owner that it has seen no profit for a while (until it buys again). */
+	boolean marginWarned;
 	/** Carrier: trading units taken on one trip. */
 	int quantity;
 	/** Carrier: highest unit price it pays at home. */
@@ -205,6 +216,7 @@ public final class Employee {
 		this.quantity = settings.quantity();
 		this.buyLimit = settings.buyLimit();
 		this.sellLimit = settings.sellLimit();
+		this.roam = settings.roam();
 		this.purse = state.purse();
 		this.stock = state.stock();
 		this.cargoCost = state.cargoCost();
@@ -216,6 +228,7 @@ public final class Employee {
 		this.nextTime = state.nextTime();
 		this.phaseStart = state.phaseStart();
 		this.wageDue = state.wageDue();
+		this.marginWarned = state.marginWarned();
 		this.earned = stats.earned();
 		this.spent = stats.spent();
 		this.wages = stats.wages();
@@ -229,8 +242,8 @@ public final class Employee {
 	/** A new employee at {@code now}; the first day's wage is part of the hire fee. */
 	static Employee hire(int id, UUID owner, String ownerName, Role role, long home, Identifier goods, long destination, int quantity,
 			long buyLimit, long sellLimit, long now, long day) {
-		Employee e = new Employee(id, owner, ownerName, new Settings(role, home, goods, destination, quantity, buyLimit, sellLimit),
-				new State(0, 0, 0, 0, 0, Phase.HOME, false, Status.WORKING, now, now, now + day), new Stats(0, 0, 0, 0, 0, 0, now), List.of(), List.of(), List.of());
+		Employee e = new Employee(id, owner, ownerName, new Settings(role, home, goods, destination, quantity, buyLimit, sellLimit, false),
+				new State(0, 0, 0, 0, 0, Phase.HOME, false, Status.WORKING, now, now, now + day, false), new Stats(0, 0, 0, 0, 0, 0, now), List.of(), List.of(), List.of());
 		return e;
 	}
 
@@ -260,6 +273,11 @@ public final class Employee {
 
 	public long destination() {
 		return destination;
+	}
+
+	/** v0.83: choosing its destination again before every trip. */
+	public boolean roam() {
+		return roam;
 	}
 
 	public Phase phase() {

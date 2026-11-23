@@ -63,12 +63,33 @@ public final class ConfigManager {
 	 * 256 was the old default and becomes the new one, so that the whole site radius is searched.
 	 */
 	static void migrate(JsonElement json, Path file) {
+		migrateStaff(json, file);
 		if (!json.isJsonObject() || !(json.getAsJsonObject().get("development") instanceof com.google.gson.JsonObject dev)) return;
 		if (dev.has("siteRadiusPerLevel") || !(dev.get("siteSearchLimit") instanceof com.google.gson.JsonPrimitive limit)) return;
 		if (!limit.isNumber() || limit.getAsDouble() != OLD_SITE_SEARCH_LIMIT) return;
 		int now = new TradeExpansionConfig.Development().siteSearchLimit;
 		dev.addProperty("siteSearchLimit", now);
 		TradeExpansion.LOGGER.info("config: development.siteSearchLimit {} (the old default) is read as {} in {}", OLD_SITE_SEARCH_LIMIT, now, file);
+	}
+
+	/**
+	 * v0.83: a file without {@code staff.clerkCommission} was written before it. Its old defaults of the staff are read as
+	 * the new ones: a clerk's daily wage of 30c (now a share of its sales instead), and the carriers' wholesale prices
+	 * (spread ×0.5 → ×0.6, X per unit 0.25 → 0.35). Values changed by hand stay.
+	 */
+	static void migrateStaff(JsonElement json, Path file) {
+		if (!json.isJsonObject() || !(json.getAsJsonObject().get("staff") instanceof com.google.gson.JsonObject staff)) return;
+		if (staff.has("clerkCommission")) return;
+		TradeExpansionConfig.Staff now = new TradeExpansionConfig.Staff();
+		replaceOld(staff, "clerkWagePerDay", 30, now.clerkWagePerDay, file);
+		replaceOld(staff, "carrierSpreadMultiplier", 0.5, now.carrierSpreadMultiplier, file);
+		replaceOld(staff, "carrierPriceImpact", 0.25, now.carrierPriceImpact, file);
+	}
+
+	private static void replaceOld(com.google.gson.JsonObject object, String key, double old, Number now, Path file) {
+		if (!(object.get(key) instanceof com.google.gson.JsonPrimitive value) || !value.isNumber() || value.getAsDouble() != old) return;
+		object.addProperty(key, now);
+		TradeExpansion.LOGGER.info("config: staff.{} {} (the old default) is read as {} in {}", key, value, now, file);
 	}
 
 	public static void write(Path file, TradeExpansionConfig config) {

@@ -109,6 +109,27 @@ class EmployeeCodecTest {
 		assertTrue(Employee.CODEC.parse(JsonOps.INSTANCE, old).getOrThrow().returnCargo.isEmpty());
 	}
 
+	/** v0.83: a carrier choosing its destination every trip, and the notice of a closed price gap, are kept; older saves have neither. */
+	@Test
+	void roamingAndTheNoticeAreKept() {
+		Employee e = Employee.hire(6, OWNER, "Alex", Employee.Role.CARRIER, 1, Employee.AUTO, 2, 64, 1, 1, 0, 24_000);
+		e.roam = true;
+		e.marginWarned = true;
+		JsonElement json = Employee.CODEC.encodeStart(JsonOps.INSTANCE, e).getOrThrow();
+		assertTrue(json.getAsJsonObject().getAsJsonObject("settings").has("roam"));
+		assertTrue(json.getAsJsonObject().getAsJsonObject("state").has("margin_warned")); // snake_case (F-1)
+		Employee back = Employee.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+		assertTrue(back.roam());
+		assertTrue(back.marginWarned);
+		JsonElement old = JsonParser.parseString("""
+				{"id": 1, "owner": [0, 0, 0, 1], "settings": {"role": "carrier", "home": 4, "goods": "ak_trade_expansion:bread"},
+				 "state": {"status": "market_busy"}}
+				""");
+		Employee o = Employee.CODEC.parse(JsonOps.INSTANCE, old).getOrThrow();
+		assertTrue(!o.roam() && !o.marginWarned);
+		assertEquals(Employee.Status.MARKET_BUSY, o.status());
+	}
+
 	@Test
 	void logKeepsTheNewestLines() {
 		Employee e = Employee.hire(1, OWNER, "Alex", Employee.Role.CLERK, 1, Identifier.parse("ak_trade_expansion:bread"), -1, 0, 0, 10, 0, 24_000);

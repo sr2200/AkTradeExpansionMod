@@ -139,7 +139,15 @@ public final class StaffMath {
 		return Math.round(gross > 0 ? gross * (1 - commission) : gross);
 	}
 
-	/** Commission of a round trip: {@code rate} of a positive profit, nothing otherwise. */
+	/**
+	 * v0.83: what a round trip of {@code days} brings per day: profit ÷ days, the days at least a tenth (very close
+	 * markets would otherwise look endlessly good).
+	 */
+	public static double perDay(long profit, double days) {
+		return profit / Math.max(0.1, days);
+	}
+
+	/** Commission of a round trip (or of a clerk's sale, v0.83): {@code rate} of a positive amount, nothing otherwise. */
 	public static long commission(long profit, double rate) {
 		return profit <= 0 ? 0 : (long) Math.floor(profit * Math.clamp(rate, 0.0, 1.0));
 	}

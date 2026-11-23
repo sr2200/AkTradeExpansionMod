@@ -176,7 +176,7 @@ final class ClientBackhaulCases {
 
 	/**
 	 * 26-22: a carrier buying here moves the price in the open trade screen (the row shows the new price), by
-	 * {@code staff.carrierPriceImpact} (0.25) of what the player buying as many would (a cheap good may not move by a whole coin).
+	 * {@code staff.carrierPriceImpact} (0.35) of what the player buying as many would (a cheap good may not move by a whole coin).
 	 */
 	static void carrierMovesPrice(Session s, CaseResult.Builder result) {
 		ClientGameTestContext context = s.context;
@@ -190,7 +190,9 @@ final class ClientBackhaulCases {
 			// Hired from the staff tab, so the server's answer shows; then the buy tab.
 			Object staff = openTab(s);
 			MarketScreen screen = screen(context);
-			request(s, StaffRequestC2S.Action.HIRE_CARRIER, -1, good, otherId, 64, 1_000_000, 1, 0);
+			// v0.83: half the stock at most, so that the good is not sold out here (the row would show "売り切れ", and the next cases need some)
+			int quantity = s.world.getServer().computeOnServer(server -> Math.clamp((int) Math.floor(market(server, s.stall).good(good).stock()) / 2, 1, 64));
+			request(s, StaffRequestC2S.Action.HIRE_CARRIER, -1, good, otherId, quantity, 1_000_000, 1, 0);
 			StaffS2C answer = data(context, staff);
 			String hireResult = String.valueOf(answer == null ? null : answer.result().orElse(null));
 			context.clickScreenButton("screen.ak_trade_expansion.tab.buy");

@@ -39,7 +39,7 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	public record Info(boolean enabled, int maxPerPlayer, int minLevel, int level, boolean reputation, long carrierFee, long clerkFee,
 			long carrierWage, long clerkWage, int carrierCapacity, int clerkCapacity, double blocksPerDay, double accidentBase,
 			double accidentPerThousand, double accidentMax, double quitChance, double maxWaitDays, double maxDistance, double commission,
-			boolean backhaul) {
+			boolean backhaul, double clerkCommission, int roamChoices) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeBoolean(enabled);
 			buf.writeVarInt(maxPerPlayer);
@@ -61,12 +61,15 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeDouble(maxDistance);
 			buf.writeDouble(commission);
 			buf.writeBoolean(backhaul);
+			buf.writeDouble(clerkCommission);
+			buf.writeVarInt(roamChoices);
 		}
 
 		static Info read(RegistryFriendlyByteBuf buf) {
 			return new Info(buf.readBoolean(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readVarLong(),
 					buf.readVarLong(), buf.readVarLong(), buf.readVarLong(), buf.readVarInt(), buf.readVarInt(), buf.readDouble(), buf.readDouble(),
-					buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readBoolean());
+					buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readBoolean(),
+					buf.readDouble(), buf.readVarInt());
 		}
 	}
 
@@ -84,12 +87,14 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	 * @param returnItems v0.54: items of the return cargo carried
 	 * @param travelMultiplier   multiplier of the travel time to the destination (a harbor at either end, 1 = none)
 	 * @param accidentMultiplier multiplier of the accident chance on that trip (a watchtower at either end, 1 = none)
+	 * @param roam       v0.83: a carrier choosing its destination every trip ({@code destination} is the present one)
+	 * @param commission v0.83: the pay share (carrier: of a round trip's profit; clerk: of its sales)
 	 */
 	public record View(int id, int role, long home, Component homeName, boolean atHome, Identifier goods, Identifier item, int unit,
 			long destination, Component destinationName, int distance, int quantity, long buyLimit, long sellLimit, long purse, int stock,
 			int phase, boolean paused, int status, long phaseStart, long nextTime, long wage, long earned, long spent, long wages, long lost,
 			int trips, int sold, List<Component> log, boolean auto, int kinds, int returnItems, double travelMultiplier,
-			double accidentMultiplier) {
+			double accidentMultiplier, boolean roam, double commission) {
 		void write(RegistryFriendlyByteBuf buf) {
 			buf.writeVarInt(id);
 			buf.writeVarInt(role);
@@ -126,6 +131,8 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			buf.writeVarInt(returnItems);
 			buf.writeDouble(travelMultiplier);
 			buf.writeDouble(accidentMultiplier);
+			buf.writeBoolean(roam);
+			buf.writeDouble(commission);
 		}
 
 		static View read(RegistryFriendlyByteBuf buf) {
@@ -162,7 +169,7 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 			for (int i = 0; i < n; i++) log.add(ComponentSerialization.STREAM_CODEC.decode(buf));
 			return new View(id, role, home, homeName, atHome, goods, item, unit, destination, destinationName, distance, quantity, buyLimit,
 					sellLimit, purse, stock, phase, paused, status, phaseStart, nextTime, wage, earned, spent, wages, lost, trips, sold, log, buf.readBoolean(),
-					buf.readVarInt(), buf.readVarInt(), buf.readDouble(), buf.readDouble());
+					buf.readVarInt(), buf.readVarInt(), buf.readDouble(), buf.readDouble(), buf.readBoolean(), buf.readDouble());
 		}
 	}
 
@@ -187,6 +194,18 @@ public record StaffS2C(long marketId, int action, Optional<TradeResult> result, 
 	public record Destination(long id, Component name, int dx, int dz, int distance, long buyPrice, long sellPrice, int units, long profit,
 			long buyLimit, long sellLimit, int kinds, int returnItems, int returnKinds, long returnProfit, double travelMultiplier,
 			double accidentMultiplier, Optional<Outlook> outlook) {
+		/** v0.83: the same figures under another id and name (the row "choose every trip"). */
+		public Destination withId(long id, Component name) {
+			return new Destination(id, name, dx, dz, distance, buyPrice, sellPrice, units, profit, buyLimit, sellLimit, kinds, returnItems,
+					returnKinds, returnProfit, travelMultiplier, accidentMultiplier, outlook);
+		}
+
+		/** v0.83: the same row with no profit now. */
+		public Destination withoutProfit() {
+			return new Destination(id, name, dx, dz, distance, buyPrice, sellPrice, 0, 0, buyLimit, sellLimit, kinds, 0, 0, 0, travelMultiplier,
+					accidentMultiplier, Optional.empty());
+		}
+
 		public Destination withOutlook(Optional<Outlook> outlook) {
 			return new Destination(id, name, dx, dz, distance, buyPrice, sellPrice, units, profit, buyLimit, sellLimit, kinds, returnItems,
 					returnKinds, returnProfit, travelMultiplier, accidentMultiplier, outlook);

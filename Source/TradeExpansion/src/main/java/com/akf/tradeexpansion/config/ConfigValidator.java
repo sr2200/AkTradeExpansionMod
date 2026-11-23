@@ -153,6 +153,11 @@ public final class ConfigValidator {
 		st.accidentLossMax = clamp("staff.accidentLossMax", st.accidentLossMax, st.accidentLossMin, 1);
 		st.accidentRestDays = clamp("staff.accidentRestDays", st.accidentRestDays, 0, 30);
 		st.quitChance = clamp("staff.quitChance", st.quitChance, 0, 1);
+		st.clerkCommission = clamp("staff.clerkCommission", st.clerkCommission, 0, 1);
+		st.clerkPriceImpact = clamp("staff.clerkPriceImpact", st.clerkPriceImpact, 0.05, 1);
+		st.carrierRoamChoices = clamp("staff.carrierRoamChoices", st.carrierRoamChoices, 1, 30);
+		st.marketDailyUnits = clamp("staff.marketDailyUnits", st.marketDailyUnits, 0, 1_000_000);
+		st.noMarginNoticeDays = clamp("staff.noMarginNoticeDays", st.noMarginNoticeDays, 0, 30);
 		TradeExpansionConfig.Trend tr = c.trend;
 		tr.durationDays = clamp("trend.durationDays", tr.durationDays, 0.5, 60);
 		tr.popularCount = clamp("trend.popularCount", tr.popularCount, 0, 5);

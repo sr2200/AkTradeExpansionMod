@@ -18,6 +18,7 @@ public class TradeExpansionClient implements ClientModInitializer {
 			return com.akf.tradeexpansion.menu.MarketLayout.fit(window.getGuiScaledWidth(), window.getGuiScaledHeight());
 		};
 		net.minecraft.client.renderer.entity.EntityRenderers.register(com.akf.tradeexpansion.registry.ModEntities.TRADER, TraderRenderer::new);
+		net.minecraft.client.renderer.entity.EntityRenderers.register(com.akf.tradeexpansion.registry.ModEntities.HIRED_HAND, HiredHandRenderer::new); // Q-6
 		ClientNetworkHandlers.init();
 		ItemTooltips.init();
 
