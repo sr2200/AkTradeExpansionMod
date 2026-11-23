@@ -187,6 +187,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	private Button buildButton;
 	private Button donateItemsButton;
 	private Button markerButton;
+	/** N-11 (v0.86): the two directions to choose when a building is raised to level 2. */
+	private Button branchAButton;
+	private Button branchBButton;
 	/** Q (v0.48): the staff tab (its own widgets and drawing). */
 	private final StaffTab staffTab = new StaffTab(this);
 
@@ -341,6 +344,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				b -> townRequest(DevelopmentRequestC2S.Action.BUILD, selectedFacility)).bounds(x + panelX, y + 122, PANEL_W, 16).build());
 		donateItemsButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.town.donate_items"),
 				b -> townRequest(DevelopmentRequestC2S.Action.DONATE_ITEMS, selectedFacility)).bounds(x + panelX, y + 139, PANEL_W, 14).build());
+		// N-11 (v0.86): raising a building to level 2 chooses one of two directions; to level 3 uses the build button
+		int half = (PANEL_W - 2) / 2;
+		branchAButton = addRenderableWidget(FittedButton.create(Component.empty(), b -> upgradeRequest(0), x + panelX, y + 122, half, 16));
+		branchBButton = addRenderableWidget(FittedButton.create(Component.empty(), b -> upgradeRequest(1), x + panelX + PANEL_W - half, y + 122, half, 16));
 
 		// Request tab (J) and board (I)
 		deliverButton = addRenderableWidget(Button.builder(Component.translatable("screen.ak_trade_expansion.quest.deliver"), b -> deliver())
@@ -514,6 +521,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				case DONATE_COINS -> Component.translatable("screen.ak_trade_expansion.town.donated", CoinItem.formatCopper(result.amount()), points(result.points()));
 				case DONATE_ITEMS -> Component.translatable("screen.ak_trade_expansion.town.donated_items", result.amount(), points(result.points()));
 				case BUILD -> Component.translatable("screen.ak_trade_expansion.town.build_started", points(result.points()));
+				case UPGRADE -> Component.translatable("screen.ak_trade_expansion.town.upgrade_started", points(result.points()));
 				case MARKER -> Component.translatable("screen.ak_trade_expansion.town.marker_given");
 			}, true);
 		} else {
@@ -541,6 +549,76 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		pending = true;
 		ClientPlayNetworking.send(new DevelopmentRequestC2S(menu.marketId(), action, 0, facility, useCard()));
 		updateButtons();
+	}
+
+	/** N-11 (v0.86): raise the selected building to the next level; {@code branch} chooses the direction at level 1. */
+	private void upgradeRequest(int branch) {
+		if (pending || selectedFacility == null) return;
+		pending = true;
+		ClientPlayNetworking.send(new DevelopmentRequestC2S(menu.marketId(), DevelopmentRequestC2S.Action.UPGRADE, branch, selectedFacility, useCard()));
+		updateButtons();
+	}
+
+	/** N-11: the selected building can be raised now (the levels are on and it is completed, below the top, not being raised). */
+	private boolean raisable(MarketSnapshotS2C.FacilityView f) {
+		return f != null && snapshot != null && snapshot.development().levels().enabled() && f.upgradeable() && f.facilityKind() != null;
+	}
+
+	/** Why the selected facility cannot be built or raised now, or {@code null}. */
+	private Component buildReason(MarketSnapshotS2C.DevelopmentView d, MarketSnapshotS2C.FacilityView facility) {
+		return !d.canChoose() ? Component.translatable("screen.ak_trade_expansion.town.reason.reputation", reputationName(d.buildLevel()))
+				: d.freeBuilds() <= 0 ? Component.translatable("screen.ak_trade_expansion.town.reason.limit")
+				: !facility.materialsReady() ? Component.translatable("screen.ak_trade_expansion.town.reason.materials", missing(facility))
+				: d.points() + 1e-9 < facility.cost() ? Component.translatable("screen.ak_trade_expansion.town.reason.points", points(facility.cost() - d.points()))
+				: null;
+	}
+
+	/** N-11: the tooltip of a direction's button: what it does and how strong the effects get at level 2. */
+	private List<Component> branchLines(MarketSnapshotS2C.FacilityView f, String branch, Component reason) {
+		List<Component> lines = new ArrayList<>();
+		String key = "facility.ak_trade_expansion." + f.kind() + ".branch." + branch;
+		lines.add(Component.translatable(key));
+		lines.add(Component.translatable(key + ".desc").withStyle(net.minecraft.ChatFormatting.GRAY));
+		lines.addAll(strengthLines(f, f.level() + 1, branch));
+		if (reason != null) lines.add(reason.copy().withStyle(net.minecraft.ChatFormatting.RED));
+		return lines;
+	}
+
+	/** N-11: how strong each effect of the building is at {@code level} in direction {@code branch} (100% = as at level 1). */
+	private List<Component> strengthLines(MarketSnapshotS2C.FacilityView f, int level, String branch) {
+		List<Component> lines = new ArrayList<>();
+		com.akf.tradeexpansion.development.FacilityKind kind = f.facilityKind();
+		if (kind == null || snapshot == null) return lines;
+		MarketSnapshotS2C.DevelopmentView.Levels levels = snapshot.development().levels();
+		for (int i = 0; i < kind.effects(); i++) {
+			long percent = Math.round(levels.strength(kind, level, branch, i) * 100);
+			lines.add(Component.translatable("screen.ak_trade_expansion.town.strength",
+					Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect." + i), percent).withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		com.akf.tradeexpansion.development.FacilityKind.Perk perk = kind.perk(branch);
+		if (perk != com.akf.tradeexpansion.development.FacilityKind.Perk.NONE) {
+			long percent = Math.round((levels.perk(kind, level, branch) - 1) * 100);
+			lines.add(Component.translatable("screen.ak_trade_expansion.town.perk." + perk.name().toLowerCase(Locale.ROOT), percent)
+					.withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		return lines;
+	}
+
+	/** Lines of a button's tooltip as one text (line breaks between them). */
+	private static Component joinLines(List<Component> lines) {
+		net.minecraft.network.chat.MutableComponent text = Component.empty();
+		for (int i = 0; i < lines.size(); i++) {
+			if (i > 0) text.append("\n");
+			text.append(lines.get(i));
+		}
+		return text;
+	}
+
+	/** N-11: "Lv2", with the direction's name after level 1 ("Lv2 · Big rooms"). */
+	private static Component levelName(MarketSnapshotS2C.FacilityView f) {
+		if (f.branch().isEmpty()) return Component.translatable("screen.ak_trade_expansion.town.level_short", f.level());
+		return Component.translatable("screen.ak_trade_expansion.town.level_branch", f.level(),
+				Component.translatable("facility.ak_trade_expansion." + f.kind() + ".branch." + f.branch()));
 	}
 
 	private MarketSnapshotS2C.FacilityView selectedFacilityView() {
@@ -874,17 +952,34 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		markerButton.visible = tab == Tab.TOWN && facility == null;
 		markerButton.active = !pending;
 		boolean open = facility != null && (facility.state() == MarketSnapshotS2C.FacilityView.NONE || facility.state() == MarketSnapshotS2C.FacilityView.DESTROYED);
-		buildButton.visible = open;
-		donateItemsButton.visible = open && !facility.wanted().isEmpty();
-		if (open) {
+		boolean raise = raisable(facility); // N-11 (v0.86)
+		boolean choose = raise && facility.level() == 1;
+		buildButton.visible = open || raise && !choose;
+		branchAButton.visible = choose;
+		branchBButton.visible = choose;
+		donateItemsButton.visible = (open || raise) && !facility.wanted().isEmpty();
+		buildButton.setMessage(raise ? Component.translatable("screen.ak_trade_expansion.town.upgrade", facility.level() + 1)
+				: Component.translatable("screen.ak_trade_expansion.town.build"));
+		if (open || raise) {
 			MarketSnapshotS2C.DevelopmentView d = snapshot.development();
-			Component reason = !d.canChoose() ? Component.translatable("screen.ak_trade_expansion.town.reason.reputation", reputationName(d.buildLevel()))
-					: d.freeBuilds() <= 0 ? Component.translatable("screen.ak_trade_expansion.town.reason.limit")
-					: !facility.materialsReady() ? Component.translatable("screen.ak_trade_expansion.town.reason.materials", missing(facility))
-					: d.points() + 1e-9 < facility.cost() ? Component.translatable("screen.ak_trade_expansion.town.reason.points", points(facility.cost() - d.points()))
-					: null;
+			Component reason = buildReason(d, facility);
 			buildButton.active = !pending && reason == null;
 			buildButton.setTooltip(reason == null ? null : net.minecraft.client.gui.components.Tooltip.create(reason));
+			if (raise && !choose) {
+				List<Component> lines = new ArrayList<>(strengthLines(facility, facility.level() + 1, facility.branch()));
+				if (facility.level() + 1 == com.akf.tradeexpansion.core.FacilityLevelMath.MAX_LEVEL && facility.tallLook()) {
+					lines.add(Component.translatable("screen.ak_trade_expansion.town.upgrade.tall").withStyle(net.minecraft.ChatFormatting.GRAY));
+				}
+				if (reason != null) lines.add(reason.copy().withStyle(net.minecraft.ChatFormatting.RED));
+				buildButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(joinLines(lines)));
+			}
+			for (int b = 0; b < 2 && choose; b++) {
+				String branch = b == 0 ? "a" : "b";
+				Button button = b == 0 ? branchAButton : branchBButton;
+				button.setMessage(Component.translatable("facility.ak_trade_expansion." + facility.kind() + ".branch." + branch));
+				button.active = !pending && reason == null;
+				button.setTooltip(net.minecraft.client.gui.components.Tooltip.create(joinLines(branchLines(facility, branch, reason))));
+			}
 			int donatable = donatable(facility);
 			donateItemsButton.active = !pending && donatable > 0;
 			donateItemsButton.setMessage(Component.translatable("screen.ak_trade_expansion.town.donate_items", donatable));
@@ -925,6 +1020,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			paymentButton.visible = false;
 			mapHereButton.visible = false;
 			buildButton.visible = false;
+			branchAButton.visible = false;
+			branchBButton.visible = false;
 			donateItemsButton.visible = false;
 			markerButton.visible = false;
 		} else {
@@ -1760,12 +1857,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 					color = COLOR_ORANGE;
 				}
 				case MarketSnapshotS2C.FacilityView.COMPLETE -> {
-					status = Component.translatable("screen.ak_trade_expansion.town.state.complete").getString();
+					// N-11 (v0.86): the level when the levels are on; a raise under way shows how long it still takes
+					status = (d.levels().enabled() && f.level() > 1 ? Component.translatable("screen.ak_trade_expansion.town.state.complete_level", f.level())
+							: Component.translatable("screen.ak_trade_expansion.town.state.complete")).getString();
 					if (f.kind().equals("festival") && d.festivalIn() >= 0) { // v0.51
 						status = (d.festivalIn() == 0 ? Component.translatable("screen.ak_trade_expansion.town.state.festival_today")
 								: Component.translatable("screen.ak_trade_expansion.town.state.festival_in", d.festivalIn())).getString();
 					}
 					color = COLOR_GREEN;
+					if (f.upgrading()) {
+						status = Component.translatable("screen.ak_trade_expansion.town.state.upgrading", f.level() + 1, minutesUntil(f.due())).getString();
+						color = COLOR_ORANGE;
+					}
 				}
 				case MarketSnapshotS2C.FacilityView.DESTROYED -> {
 					status = Component.translatable("screen.ak_trade_expansion.town.state.destroyed", points(f.cost())).getString();
@@ -1808,6 +1911,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		// v0.58: the size (width x depth x height) under the name, beside the icon; the full wording on hover.
 		// A name too long for one line takes both lines instead, and the size is shown only on hover.
 		String size = f.size().getX() > 0 ? Component.translatable("screen.ak_trade_expansion.town.size.short", f.size().getX(), f.size().getZ(), f.size().getY()).getString() : "";
+		// N-11 (v0.86): the level of a built (or destroyed, rebuilt at it) building before the size
+		boolean levels = snapshot != null && snapshot.development().levels().enabled();
+		if (levels && f.state() != MarketSnapshotS2C.FacilityView.NONE && f.level() > 1) {
+			size = Component.translatable("screen.ak_trade_expansion.town.level_short", f.level()).getString() + (size.isEmpty() ? "" : " " + size);
+		}
 		String name = facilityName(f).getString();
 		int nx = px + 18;
 		int nameW = PANEL_W - 18;
@@ -1827,12 +1935,34 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			}
 		}
 		if (!size.isEmpty() && mouseX >= nx && mouseX < px + PANEL_W && mouseY >= y + 36 && mouseY < y + 54) {
-			g.setTooltipForNextFrame(font, wrap(List.of(sizeLine(f))), Optional.empty(), mouseX, tooltipY(mouseY));
+			List<Component> lines = new ArrayList<>();
+			if (levels && f.state() != MarketSnapshotS2C.FacilityView.NONE) {
+				lines.add(levelName(f));
+				if (f.state() == MarketSnapshotS2C.FacilityView.COMPLETE) lines.addAll(strengthLines(f, f.level(), f.branch()));
+			}
+			if (f.size().getX() > 0) lines.add(sizeLine(f));
+			g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
 		}
 		List<FormattedCharSequence> effect = font.split(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect"), PANEL_W);
 		for (int i = 0; i < Math.min(3, effect.size()); i++) g.text(font, effect.get(i), px, y + 54 + i * 9, COLOR_DARK, false);
-		if (f.state() == MarketSnapshotS2C.FacilityView.CONSTRUCTING || f.state() == MarketSnapshotS2C.FacilityView.COMPLETE) return;
-		fitText(g, Component.translatable("screen.ak_trade_expansion.town.cost", points(f.cost())).getString(), px, y + 83, PANEL_W, COLOR_TEXT, false);
+		if (f.state() == MarketSnapshotS2C.FacilityView.CONSTRUCTING) return;
+		if (f.state() == MarketSnapshotS2C.FacilityView.COMPLETE) {
+			// N-11 (v0.86): a raise under way, the top level, or what the next level costs (its materials below, as for building)
+			if (!levels) return;
+			if (f.upgrading()) {
+				fitText(g, Component.translatable("screen.ak_trade_expansion.town.upgrading", f.level() + 1, minutesUntil(f.due())).getString(), px, y + 83,
+						PANEL_W, COLOR_TEXT, false);
+				return;
+			}
+			if (f.level() >= com.akf.tradeexpansion.core.FacilityLevelMath.MAX_LEVEL) {
+				fitText(g, Component.translatable("screen.ak_trade_expansion.town.max_level").getString(), px, y + 83, PANEL_W, COLOR_TEXT, false);
+				return;
+			}
+			fitText(g, Component.translatable("screen.ak_trade_expansion.town.upgrade_cost", f.level() + 1, points(f.cost())).getString(), px, y + 83,
+					PANEL_W, COLOR_TEXT, false);
+		} else {
+			fitText(g, Component.translatable("screen.ak_trade_expansion.town.cost", points(f.cost())).getString(), px, y + 83, PANEL_W, COLOR_TEXT, false);
+		}
 		// Wanted materials: icon and the number still wanted (green when done).
 		for (int i = 0; i < Math.min(3, f.wanted().size()); i++) {
 			MarketSnapshotS2C.WantedView w = f.wanted().get(i);
@@ -1869,6 +1999,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		List<Component> lines = new ArrayList<>();
 		lines.add(facilityName(f));
 		lines.add(Component.translatable("facility.ak_trade_expansion." + f.kind() + ".effect").withStyle(net.minecraft.ChatFormatting.GRAY));
+		if (snapshot != null && snapshot.development().levels().enabled() && f.state() == MarketSnapshotS2C.FacilityView.COMPLETE) { // N-11
+			lines.add(levelName(f).copy().withStyle(net.minecraft.ChatFormatting.GREEN));
+			lines.addAll(strengthLines(f, f.level(), f.branch()));
+		}
 		if (f.size().getX() > 0) lines.add(sizeLine(f).copy().withStyle(net.minecraft.ChatFormatting.GRAY));
 		for (MarketSnapshotS2C.WantedView w : f.wanted()) {
 			Component name = new ItemStack(BuiltInRegistries.ITEM.getValue(w.item())).getHoverName();

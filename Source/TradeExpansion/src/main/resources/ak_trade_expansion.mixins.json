@@ -5,6 +5,7 @@
   "mixins": [
     "ItemEntityMixin",
     "StructureTemplatePoolAccessor",
+    "StructureTemplateAccessor",
     "MerchantContainerMixin",
     "MerchantResultSlotMixin",
     "MerchantMenuMixin",

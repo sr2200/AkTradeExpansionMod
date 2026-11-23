@@ -40,7 +40,7 @@ public final class BoardService {
 		TradeExpansionConfig.Board config = TradeExpansionConfig.get().board;
 		// v0.51: a tavern hears from farther away (radius and number of markets)
 		double reach = here.hasFacility(com.akf.tradeexpansion.development.FacilityKind.TAVERN)
-				? Math.max(1.0, TradeExpansionConfig.get().development.tavernBoardMultiplier) : 1.0;
+				? com.akf.tradeexpansion.development.FacilityEffects.raise(here, com.akf.tradeexpansion.development.FacilityKind.TAVERN, 0, Math.max(1.0, TradeExpansionConfig.get().development.tavernBoardMultiplier)) : 1.0; // N-11
 		double radius = config.radius * reach;
 		List<Market> nearby = new ArrayList<>(registry.within(here.dimension(), here.center(), radius).stream()
 				.filter(m -> m != here && m.horizontalDistanceTo(here.center()) <= radius)

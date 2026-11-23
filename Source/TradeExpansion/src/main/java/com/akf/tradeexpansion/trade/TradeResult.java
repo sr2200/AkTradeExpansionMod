@@ -58,7 +58,11 @@ public enum TradeResult {
 	/** N-4 / E-2: minting that metal is off (currency.allowMinting / allowIronMinting). */
 	MINTING_DISABLED,
 	/** A-4 (v0.77): the open screen's market was deleted ({@code market delete}). */
-	MARKET_GONE;
+	MARKET_GONE,
+	/** N-11 (v0.86): only a completed building can be raised to the next level. */
+	NOT_BUILT,
+	/** N-11: the building is at its top level already. */
+	MAX_LEVEL;
 
 	public static final StreamCodec<ByteBuf, TradeResult> STREAM_CODEC =
 			ByteBufCodecs.VAR_INT.map(i -> values()[i], TradeResult::ordinal);

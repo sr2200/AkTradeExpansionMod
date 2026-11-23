@@ -6,6 +6,7 @@ import com.akf.tradeexpansion.block.FacilitySignBlock;
 import com.akf.tradeexpansion.block.MarketStallBlockEntity;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.core.DevelopmentMath;
+import com.akf.tradeexpansion.core.FacilityLevelMath;
 import com.akf.tradeexpansion.core.PriceModel;
 import com.akf.tradeexpansion.data.FacilityCatalog;
 import com.akf.tradeexpansion.data.FacilityDefinition;
@@ -93,13 +94,37 @@ public final class FacilityBuilder {
 		}
 	}
 
-	/** Development points building {@code id} costs now (half when rebuilding a destroyed one, N-4). */
+	/**
+	 * Development points building {@code id} costs now: its cost; N-11 (v0.86) for a completed one, raising it to the next
+	 * level ({@code development.upgradeCostMultipliers}, 0 at the top level); for a destroyed one, rebuilding it at its level
+	 * ({@code development.rebuildCostRatio} of the building and its raises, N-4).
+	 */
 	public static long cost(Market market, Identifier id) {
 		FacilityDefinition def = FacilityCatalog.get(id);
 		if (def == null) return 0;
+		return FacilityLevelMath.scaled(def.cost(), costFactor(market.facilities().get(id)));
+	}
+
+	/** N-11: the factor of the building's cost and materials that {@link #cost} and {@link #required} apply. */
+	private static double costFactor(Facility existing) {
+		TradeExpansionConfig.Development c = Development.config();
+		if (existing == null || existing.state() == Facility.State.CONSTRUCTING) return 1.0;
+		if (existing.state() == Facility.State.DESTROYED) {
+			return FacilityLevelMath.totalFactor(existing.level(), c.upgradeCostMultipliers) * Math.clamp(c.rebuildCostRatio, 0.0, 1.0);
+		}
+		return c.upgradeEnabled ? FacilityLevelMath.upgradeFactor(existing.level(), c.upgradeCostMultipliers) : 0;
+	}
+
+	/** N-11: the completed building can be raised to the next level now (the levels are on, below the top, no raise under way). */
+	public static boolean upgradeable(Facility facility) {
+		return Development.config().upgradeEnabled && facility != null && facility.complete() && facility.level() < FacilityLevelMath.MAX_LEVEL
+				&& !facility.upgrading();
+	}
+
+	/** N-2 / N-11: the facility takes materials now: not built, destroyed, or completed and upgradeable. */
+	public static boolean takesMaterials(Market market, Identifier id) {
 		Facility existing = market.facilities().get(id);
-		boolean rebuild = existing != null && existing.state() == Facility.State.DESTROYED;
-		return DevelopmentMath.cost(def.cost(), rebuild, Development.config().rebuildCostRatio);
+		return existing == null || existing.state() == Facility.State.DESTROYED || upgradeable(existing);
 	}
 
 	/**
@@ -108,14 +133,15 @@ public final class FacilityBuilder {
 	 */
 	public static int required(Market market, Identifier id, FacilityDefinition.Wanted wanted) {
 		Facility existing = market.facilities().get(id);
-		boolean rebuild = existing != null && existing.state() == Facility.State.DESTROYED;
 		double multiplier = Development.config().materialCountMultiplier;
 		FacilityDefinition def = FacilityCatalog.get(id);
 		if (market.hasFacility(FacilityKind.TOWN_HALL) && (def == null || def.kind() != FacilityKind.TOWN_HALL)) {
-			multiplier *= Math.clamp(Development.config().townHallMaterialMultiplier, 0.1, 1.0); // v0.79: the town hall
+			// v0.79: the town hall; N-11: fewer with its level
+			multiplier *= FacilityEffects.raise(market, FacilityKind.TOWN_HALL, 0, Math.clamp(Development.config().townHallMaterialMultiplier, 0.1, 1.0));
 		}
 		long full = DevelopmentMath.materialCount(wanted.count(), multiplier);
-		return (int) Math.min(Integer.MAX_VALUE, DevelopmentMath.cost(full, rebuild, Development.config().rebuildCostRatio));
+		// N-11 (v0.86): raising to the next level, or rebuilding at the level it had
+		return (int) Math.min(Integer.MAX_VALUE, FacilityLevelMath.scaled(full, costFactor(existing)));
 	}
 
 	/** N-2 (v0.42): every wanted material is donated (always true when {@code development.requireMaterials} is off). */
@@ -129,8 +155,9 @@ public final class FacilityBuilder {
 		return true;
 	}
 
+	/** Constructions under way: new buildings and (N-11) raises to the next level. */
 	public static long constructing(Market market) {
-		return market.facilities().values().stream().filter(f -> f.state() == Facility.State.CONSTRUCTING).count();
+		return market.facilities().values().stream().filter(f -> f.state() == Facility.State.CONSTRUCTING || f.upgrading()).count();
 	}
 
 	/** N-5: checks, finds a site, spends the points and puts up the construction site. */
@@ -146,10 +173,22 @@ public final class FacilityBuilder {
 		long cost = cost(market, id);
 		if (Development.points(market, now) + 1e-9 < cost) return Outcome.fail(TradeResult.NOT_ENOUGH_POINTS);
 		String style = style(level, market.center());
-		StructureTemplate template = template(level.getServer(), def, style).orElse(null);
+		// N-11 (v0.86): a destroyed building is rebuilt at the level it had; a tall level 3 without room for its second
+		// storey is rebuilt without it
+		int buildLevel = existing == null ? 1 : existing.level();
+		boolean tall = existing != null && existing.tall();
+		StructureTemplate template = template(level.getServer(), def, style, buildLevel, tall).orElse(null);
 		if (template == null) return Outcome.fail(TradeResult.NO_TEMPLATE);
 
 		SiteFinder.Result found = SiteFinder.find(level, market, template, def.landRows());
+		if (found.site() == null && tall) {
+			StructureTemplate low = template(level.getServer(), def, style, buildLevel, false).orElse(null);
+			SiteFinder.Result lower = low == null ? found : SiteFinder.find(level, market, low, def.landRows());
+			if (lower.site() != null) {
+				found = lower;
+				existing.setTall(false);
+			}
+		}
 		if (found.site() == null) {
 			return new Outcome(found.markerUsed() ? TradeResult.MARKER_BLOCKED : TradeResult.NO_SITE, 0, found.reason());
 		}
@@ -206,11 +245,34 @@ public final class FacilityBuilder {
 
 	/** {@code <ns>:facility/<style>/<structure>}, falling back to the plains look. */
 	public static Optional<StructureTemplate> template(MinecraftServer server, FacilityDefinition def, String style) {
+		return look(server, def, style, "");
+	}
+
+	/**
+	 * N-11 (v0.86): the look of {@code level}: {@code <structure>_lv2}, {@code _lv3} or {@code _lv3_tall} (with the second
+	 * storey), falling back to the plains look; a level look a data pack lacks falls back to level 1 (a missing tall look
+	 * is empty, so that the caller builds without the second storey).
+	 */
+	public static Optional<StructureTemplate> template(MinecraftServer server, FacilityDefinition def, String style, int level, boolean tall) {
+		if (level <= 1) return template(server, def, style);
+		String suffix = "_lv" + Math.min(level, FacilityLevelMath.MAX_LEVEL);
+		if (tall) return look(server, def, style, suffix + "_tall");
+		Optional<StructureTemplate> found = look(server, def, style, suffix);
+		return found.isPresent() ? found : template(server, def, style);
+	}
+
+	/** The look a building has now (its level and second storey). */
+	public static Optional<StructureTemplate> template(MinecraftServer server, FacilityDefinition def, Facility facility) {
+		Optional<StructureTemplate> found = template(server, def, facility.style(), facility.level(), facility.tall());
+		return found.isPresent() ? found : template(server, def, facility.style(), facility.level(), false);
+	}
+
+	private static Optional<StructureTemplate> look(MinecraftServer server, FacilityDefinition def, String style, String suffix) {
 		Identifier base = TradeExpansion.id(def.structure());
 		var manager = server.getStructureTemplateManager();
-		Optional<StructureTemplate> styled = manager.get(Identifier.fromNamespaceAndPath(base.getNamespace(), "facility/" + style + "/" + base.getPath()));
+		Optional<StructureTemplate> styled = manager.get(Identifier.fromNamespaceAndPath(base.getNamespace(), "facility/" + style + "/" + base.getPath() + suffix));
 		if (styled.isPresent()) return styled;
-		return manager.get(Identifier.fromNamespaceAndPath(base.getNamespace(), "facility/plains/" + base.getPath()));
+		return manager.get(Identifier.fromNamespaceAndPath(base.getNamespace(), "facility/plains/" + base.getPath() + suffix));
 	}
 
 	// ---- completion ----
@@ -226,6 +288,9 @@ public final class FacilityBuilder {
 				if (facility.state() == Facility.State.CONSTRUCTING && now >= facility.due()
 						&& level.hasChunksAt(facility.box().minX(), facility.box().minZ(), facility.box().maxX(), facility.box().maxZ())) {
 					complete(level, market, facility);
+				} else if (facility.upgrading() && now >= facility.upgradeDue()
+						&& level.hasChunksAt(facility.box().minX(), facility.box().minZ(), facility.box().maxX(), facility.box().maxZ())) {
+					completeUpgrade(level, market, facility); // N-11 (v0.86)
 				} else if (facility.complete() && facility.core() != null && level.isLoaded(facility.core())
 						&& !level.getBlockState(facility.core()).is(ModBlocks.FACILITY_SIGN)) {
 					destroyed(level, market, facility); // removed without a block update we saw (e.g. by another mod)
@@ -238,9 +303,12 @@ public final class FacilityBuilder {
 	public static int completeNow(ServerLevel level, Market market) {
 		int count = 0;
 		for (Facility facility : List.copyOf(market.facilities().values())) {
-			if (facility.state() == Facility.State.CONSTRUCTING && level.hasChunksAt(facility.box().minX(), facility.box().minZ(),
-					facility.box().maxX(), facility.box().maxZ())) {
+			if (!level.hasChunksAt(facility.box().minX(), facility.box().minZ(), facility.box().maxX(), facility.box().maxZ())) continue;
+			if (facility.state() == Facility.State.CONSTRUCTING) {
 				complete(level, market, facility);
+				count++;
+			} else if (facility.upgrading()) {
+				completeUpgrade(level, market, facility); // N-11 (v0.86)
 				count++;
 			}
 		}
@@ -253,7 +321,8 @@ public final class FacilityBuilder {
 	 */
 	static void complete(ServerLevel level, Market market, Facility facility) {
 		FacilityDefinition def = FacilityCatalog.get(facility.id());
-		StructureTemplate template = def == null ? null : template(level.getServer(), def, facility.style()).orElse(null);
+		// N-11 (v0.86): a rebuilt building gets the look of the level it had
+		StructureTemplate template = def == null ? null : template(level.getServer(), def, facility).orElse(null);
 		if (template == null) {
 			TradeExpansion.LOGGER.warn("Facility {} of market #{}: no template, construction stays open", facility.id(), market.id());
 			return;
@@ -283,6 +352,144 @@ public final class FacilityBuilder {
 		changed(level, market, Component.translatable("message.ak_trade_expansion.facility.completed", MarketNames.name(market),
 				name(facility.kind())).withStyle(ChatFormatting.GREEN));
 		TradeAdvancements.onFacilityCompleted(level.getServer(), market, MarketClock.now(level)); // R
+	}
+
+	// ---- levels (N-11, v0.86) ----
+
+	/**
+	 * N-11: starts raising the completed building {@code id} to the next level (the same checks as building it: the limit
+	 * of constructions, the reputation, the materials and the points). At level 1 {@code branch} (0 = a, 1 = b) chooses
+	 * the direction. Level 3 gets the second storey when the kind has one and the space above the building is free. The
+	 * building keeps its effect while the work goes on ({@code development.buildDays}).
+	 */
+	public static Outcome upgrade(ServerPlayer player, ServerLevel level, Market market, Identifier id, int branch, long now) {
+		TradeExpansionConfig.Development c = Development.config();
+		FacilityDefinition def = FacilityCatalog.get(id);
+		if (def == null || !c.upgradeEnabled) return Outcome.fail(TradeResult.NOT_AVAILABLE);
+		Facility facility = market.facilities().get(id);
+		if (facility == null || !facility.complete()) return Outcome.fail(TradeResult.NOT_BUILT);
+		if (facility.level() >= FacilityLevelMath.MAX_LEVEL) return Outcome.fail(TradeResult.MAX_LEVEL);
+		if (facility.upgrading()) return Outcome.fail(TradeResult.ALREADY_BUILT);
+		if (facility.level() == 1 && branch != 0 && branch != 1) return Outcome.fail(TradeResult.INVALID_REQUEST);
+		if (constructing(market) >= c.maxConcurrentBuilds) return Outcome.fail(TradeResult.BUILD_LIMIT);
+		if (Reputation.level(market, player.getUUID(), now) < c.buildReputationLevel) return Outcome.fail(TradeResult.REPUTATION_TOO_LOW);
+		if (!materialsReady(market, id)) return Outcome.fail(TradeResult.MATERIALS_MISSING);
+		long cost = cost(market, id);
+		if (Development.points(market, now) + 1e-9 < cost) return Outcome.fail(TradeResult.NOT_ENOUGH_POINTS);
+		int next = facility.level() + 1;
+		MinecraftServer server = level.getServer();
+		if (template(server, def, facility).isEmpty() || template(server, def, facility.style(), next, false).isEmpty()) {
+			return Outcome.fail(TradeResult.NO_TEMPLATE);
+		}
+		Component reason = null;
+		boolean tall = false;
+		if (next == FacilityLevelMath.MAX_LEVEL) {
+			StructureTemplate high = template(server, def, facility.style(), next, true).orElse(null);
+			if (high != null) {
+				tall = roomAbove(level, facility, high);
+				if (!tall) reason = Component.translatable("message.ak_trade_expansion.facility.upgrade.no_room", name(facility.kind()));
+			}
+		}
+		Development.spend(market, cost, now);
+		facility.startUpgrade(branch == 1 ? "b" : "a", tall, now + Math.round(c.buildDays * PriceModel.TICKS_PER_DAY));
+		TradeExpansion.LOGGER.info("{} started raising {} of market #{} to level {}{} (direction {})", player.getPlainTextName(), id, market.id(),
+				next, tall ? " with a second storey" : "", facility.branch());
+		return new Outcome(TradeResult.SUCCESS, cost, reason);
+	}
+
+	/** The box the building would fill with {@code template}, at its place. */
+	private static BoundingBox boxOf(Facility facility, StructureTemplate template) {
+		return template.getBoundingBox(new StructurePlaceSettings().setRotation(facility.rotation()), facility.origin());
+	}
+
+	/** N-11: the cells a taller look adds over the building are free (air, plants, snow: what a building may replace). */
+	private static boolean roomAbove(ServerLevel level, Facility facility, StructureTemplate high) {
+		BoundingBox now = facility.box();
+		BoundingBox box = boxOf(facility, high);
+		if (box.maxY() >= level.getMaxY()) return false;
+		for (BlockPos p : BlockPos.betweenClosed(box.minX(), now.maxY() + 1, box.minZ(), box.maxX(), box.maxY(), box.maxZ())) {
+			if (!SiteFinder.replaceable(level.getBlockState(p), false)) return false;
+		}
+		return true;
+	}
+
+	/** The blocks of a look at the building's place: world position → state (rotated as placed). */
+	private static java.util.Map<BlockPos, BlockState> blocks(StructureTemplate template, Facility facility) {
+		StructurePlaceSettings settings = new StructurePlaceSettings().setRotation(facility.rotation());
+		java.util.Map<BlockPos, BlockState> map = new java.util.HashMap<>();
+		List<StructureTemplate.Palette> palettes = ((com.akf.tradeexpansion.mixin.StructureTemplateAccessor) template).tradeExpansion$palettes();
+		if (palettes.isEmpty()) return map;
+		for (StructureTemplate.StructureBlockInfo info : palettes.getFirst().blocks()) {
+			BlockPos pos = StructureTemplate.calculateRelativePosition(settings, info.pos()).offset(facility.origin());
+			map.put(pos, info.state().mirror(settings.getMirror()).rotate(settings.getRotation()));
+		}
+		return map;
+	}
+
+	/**
+	 * N-11: the raise is done. Only the blocks in which the two looks differ change, so chests and what players keep in
+	 * the building stay; a block a player put where the new look has another one is dropped as an item (as at the
+	 * completion of a construction). The second storey replaces the roof (the old roof's blocks go without drops).
+	 */
+	static void completeUpgrade(ServerLevel level, Market market, Facility facility) {
+		FacilityDefinition def = FacilityCatalog.get(facility.id());
+		MinecraftServer server = level.getServer();
+		StructureTemplate from = def == null ? null : template(server, def, facility).orElse(null);
+		int next = facility.level() + 1;
+		boolean tall = facility.upgradeTall();
+		StructureTemplate to = def == null ? null : template(server, def, facility.style(), next, tall).orElse(null);
+		if (to == null && tall && def != null) {
+			tall = false;
+			to = template(server, def, facility.style(), next, false).orElse(null);
+		}
+		if (from == null || to == null) {
+			TradeExpansion.LOGGER.warn("Facility {} of market #{}: no template for level {}, the raise stays open", facility.id(), market.id(), next);
+			return;
+		}
+		java.util.Map<BlockPos, BlockState> old = blocks(from, facility);
+		java.util.Map<BlockPos, BlockState> target = blocks(to, facility);
+		java.util.Set<BlockPos> cells = new java.util.HashSet<>(old.keySet());
+		cells.addAll(target.keySet());
+		List<BlockPos> changed = new java.util.ArrayList<>();
+		BlockState air = Blocks.AIR.defaultBlockState();
+		List<BlockPos> sorted = new java.util.ArrayList<>(cells);
+		sorted.sort(java.util.Comparator.<BlockPos>comparingInt(p -> p.getY()).thenComparingInt(p -> p.getX()).thenComparingInt(p -> p.getZ()));
+		int flags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+		for (BlockPos pos : sorted) {
+			BlockState had = old.getOrDefault(pos, air);
+			BlockState want = target.getOrDefault(pos, air);
+			if (had.equals(want)) continue;
+			BlockState current = level.getBlockState(pos);
+			if (current.equals(want)) continue;
+			if (!current.equals(had) && !SiteFinder.replaceable(current, true)) level.destroyBlock(pos, true); // put there meanwhile
+			level.setBlock(pos, want, flags);
+			changed.add(pos);
+		}
+		// Shapes and neighbours as a placed template would have them (fences join, doors and lanterns check their support).
+		for (BlockPos pos : changed) {
+			BlockState state = level.getBlockState(pos);
+			BlockState shaped = Block.updateFromNeighbourShapes(state, level, pos);
+			if (!shaped.equals(state)) level.setBlock(pos, shaped, flags);
+		}
+		for (BlockPos pos : changed) level.updateNeighborsAt(pos, level.getBlockState(pos).getBlock());
+		if (tall) facility.setBox(boxOf(facility, to));
+		int before = facility.level();
+		facility.finishUpgrade(tall);
+		market.clearDonations(facility.id());
+		if (facility.kind() == FacilityKind.INN) {
+			// more villagers come to a bigger inn: those its new strength adds
+			int base = Development.config().innVillagers;
+			int more = FacilityLevelMath.count(base, FacilityEffects.strength(FacilityKind.INN, facility.level(), facility.branch(), 0))
+					- FacilityLevelMath.count(base, FacilityEffects.strength(FacilityKind.INN, before, facility.branch(), 0));
+			BoundingBox box = facility.box();
+			if (more > 0) spawnVillagers(level, new BlockPos((box.minX() + box.maxX()) / 2, box.minY() + 1, (box.minZ() + box.maxZ()) / 2), more);
+		}
+		if (facility.kind() == FacilityKind.QUEST_HALL) market.setLastRequestRefresh(Long.MIN_VALUE); // new slots fill at once
+		TradeExpansion.LOGGER.info("Facility {} of market #{} raised to level {}{} ({} blocks changed)", facility.id(), market.id(), facility.level(),
+				tall ? " with a second storey" : "", changed.size());
+		changed(level, market, Component.translatable("message.ak_trade_expansion.facility.upgraded", MarketNames.name(market),
+				name(facility.kind()), facility.level()).withStyle(ChatFormatting.GREEN));
+		TradeAdvancements.onFacilityCompleted(server, market, MarketClock.now(level)); // R
 	}
 
 	/**

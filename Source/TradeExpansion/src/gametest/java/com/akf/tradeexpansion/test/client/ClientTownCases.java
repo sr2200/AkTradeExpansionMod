@@ -786,6 +786,113 @@ final class ClientTownCases {
 		if (!row.contains(status)) problems.add("the row of " + name + " does not say \"" + status + "\": " + row);
 	}
 
+	// ---- 44-1 / 44-8 the levels (v0.86)
+
+	private static final int[][] LEVEL_SIZES = {{854, 480, 0}, {854, 480, 4}, {1920, 1080, 4}, {1920, 1080, 0}};
+
+	/**
+	 * 44-1: a completed warehouse at level 1 shows "Lv2 に：発展度 N" and the two directions as buttons, whose tooltip
+	 * tells the direction and the strengths; an inn at level 2 shows "✔ Lv2" and "Lv3 に上げる"; a bank being raised
+	 * "Lv2 工事中 約N分"; a fountain at level 3 "最高の段階です". 44-8: the texts do not overlap at four sizes, in
+	 * Japanese and English. The buildings are made on the server (their levels set directly).
+	 */
+	static void levels(Session s, CaseResult.Builder result) {
+		ClientGameTestContext context = s.context;
+		ClientChecklistTests.ensureStall(s);
+		Saved saved = save(s);
+		BlockPos stall = s.stall;
+		List<BlockPos> signs = List.of(stall.above(5), stall.above(6), stall.above(7), stall.above(8));
+		List<String> names = List.of("warehouse", "inn", "bank", "fountain");
+		try {
+			setPoints(s, -1, 1_000_000);
+			s.world.getServer().runOnServer(server -> {
+				FacilityKind[] kinds = {FacilityKind.WAREHOUSE, FacilityKind.INN, FacilityKind.BANK, FacilityKind.FOUNTAIN};
+				for (int i = 0; i < 4; i++) facility(server, stall, names.get(i), kinds[i], State.COMPLETE, signs.get(i));
+				Market market = market(server, stall);
+				long now = MarketClock.now(server.overworld());
+				Facility inn = market.facilities().get(id("inn"));
+				inn.startUpgrade("a", false, now);
+				inn.finishUpgrade(false);
+				market.facilities().get(id("bank")).startUpgrade("b", false, now + 2 * PriceModel.TICKS_PER_DAY);
+				Facility fountain = market.facilities().get(id("fountain"));
+				fountain.startUpgrade("b", false, now);
+				fountain.finishUpgrade(false);
+				fountain.startUpgrade("b", false, now);
+				fountain.finishUpgrade(false);
+				MarketRegistry.get(server).setDirty();
+			});
+			List<String> problems = new ArrayList<>();
+			for (String language : List.of(ClientChecklistTests.LANGUAGE, "en_us")) {
+				ClientChecklistTests.setLanguage(context, language);
+				for (int[] size : LEVEL_SIZES) {
+					context.getInput().resizeWindow(size[0], size[1]);
+					context.runOnClient(client -> {
+						client.options.guiScale().set(size[2]);
+						client.resizeGui();
+					});
+					context.waitTicks(3);
+					MarketScreen screen = openTown(s);
+					String where = String.format("%s %dx%d GUI %s", language, size[0], size[1], size[2] == 0 ? "auto" : size[2]);
+					boolean first = language.equals(ClientChecklistTests.LANGUAGE) && size == LEVEL_SIZES[0];
+					// The rows.
+					expectRow(context, screen, "inn", text(T + "state.complete_level", 2), problems);
+					FacilityView bank = view(context, screen, "bank");
+					check(bank.upgrading(), "the bank is not being raised on the development tab");
+					int minutes = context.computeOnClient(c -> (Integer) call(screen, "minutesUntil", bank.due()));
+					expectRow(context, screen, "bank", text(T + "state.upgrading", 2, minutes), problems);
+					expectRow(context, screen, "warehouse", text(T + "state.complete"), problems);
+					// Level 1: the two directions.
+					selectFacility(context, screen, "warehouse");
+					Button a = button(context, screen, "branchAButton");
+					Button b = button(context, screen, "branchBButton");
+					check(a.visible && b.visible, "the direction buttons are not shown for a completed level 1 building");
+					check(!button(context, screen, "buildButton").visible, "\"build\" is shown beside the direction buttons");
+					check(a.getMessage().getString().equals(text("facility." + NS + ".warehouse.branch.a")), "direction a is labelled %s", a.getMessage().getString());
+					FacilityView w = view(context, screen, "warehouse");
+					String cost = squeeze(text(T + "upgrade_cost", 2, points(w.cost())));
+					check(all(context).contains(cost), "the panel does not say \"%s\"", cost);
+					ClientChecklistTests.checkLayout(context, result, where + " level1", first, problems, null);
+					if (first) {
+						String tip = buttonTooltip(context, a);
+						String strength = squeeze(text(T + "strength", text("facility." + NS + ".warehouse.effect.0"), 175));
+						check(tip.contains(strength), "the tooltip of direction a does not say \"%s\": %s", strength, tip);
+						check(tip.contains(squeeze(text("facility." + NS + ".warehouse.branch.a.desc"))), "the tooltip of direction a has no description: %s", tip);
+						moveTo(context, a.getX() + a.getWidth() / 2.0, a.getY() + a.getHeight() / 2.0);
+						context.waitTicks(3);
+						screenshot(context, result, "44-1_directions");
+						mouseAway(context);
+					}
+					// Level 2: "Lv3 に上げる".
+					selectFacility(context, screen, "inn");
+					Button build = button(context, screen, "buildButton");
+					check(build.visible && build.getMessage().getString().equals(text(T + "upgrade", 3)), "the inn at level 2 shows %s (visible %s)",
+							build.getMessage().getString(), build.visible);
+					check(!button(context, screen, "branchAButton").visible, "the direction buttons are shown at level 2");
+					ClientChecklistTests.checkLayout(context, result, where + " level2", first, problems, null);
+					// Being raised, and the top level: no buttons.
+					selectFacility(context, screen, "bank");
+					check(!button(context, screen, "buildButton").visible && !button(context, screen, "branchAButton").visible,
+							"buttons are shown for a building being raised");
+					ClientChecklistTests.checkLayout(context, result, where + " upgrading", false, problems, null);
+					selectFacility(context, screen, "fountain");
+					check(all(context).contains(squeeze(text(T + "max_level"))), "the fountain at level 3 does not say \"%s\"", text(T + "max_level"));
+					check(!button(context, screen, "buildButton").visible, "\"raise\" is shown at the top level");
+					ClientChecklistTests.checkLayout(context, result, where + " level3", false, problems, null);
+				}
+			}
+			check(problems.isEmpty(), "%s", problems);
+		} finally {
+			context.getInput().resizeWindow(854, 480);
+			context.runOnClient(client -> {
+				client.options.guiScale().set(0);
+				client.resizeGui();
+			});
+			ClientChecklistTests.setLanguage(context, ClientChecklistTests.LANGUAGE);
+			context.setScreen(() -> null);
+			restore(s, saved, names, signs);
+		}
+	}
+
 	// ---- 34-2 the size by the village style
 
 	/** A template's size as the snapshot sends it (x, height, z), or zero without one. */

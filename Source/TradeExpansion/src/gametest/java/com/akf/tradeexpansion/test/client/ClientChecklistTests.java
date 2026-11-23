@@ -213,6 +213,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				"発展タブの行の「建設中 約N分」「✔ 完成」「壊れた（建て直しの発展度）」「✔ 今日は祭り／祭りまでN日」（建物はサーバーで直接作る。建設・完成・壊す流れは見ていない）",
 				true, ClientTownCases::rowStates));
 		cases.add(new ClientCase("town_size_by_style", List.of("34-2"), null, true, ClientTownCases::sizeByStyle));
+		cases.add(new ClientCase("town_levels", List.of("44-1", "44-8"), null, true, ClientTownCases::levels)); // v0.86
 		cases.add(new ClientCase("facility_sign_opens_tab", List.of("22-32"), null, true, ClientTownCases::signOpensTab));
 		cases.add(new ClientCase("mint_panel", List.of("37-2"),
 				"鋳造所の看板で両替タブが開き、右に鋳造所（銅ブロックの数・「9個→96c」・鉄は「設定で無効」）が重ならずに出て、「9個」で銅ブロックが9個減り 96c 増えること（建物はサーバーで直接作る。「全部」は見ていない）",

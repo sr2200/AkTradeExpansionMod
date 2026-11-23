@@ -119,7 +119,7 @@ public final class StaffService {
 	public static long clerkWage(Market home) {
 		long wage = config().clerkWagePerDay;
 		if (!has(home, FacilityKind.GUILD_HALL)) return wage;
-		return Math.round(wage * Math.clamp(TradeExpansionConfig.get().development.guildHallClerkWageMultiplier, 0.0, 1.0));
+		return Math.round(wage * guildWage(home));
 	}
 
 	/**
@@ -129,14 +129,19 @@ public final class StaffService {
 	public static double clerkImpact(Market home) {
 		double impact = Math.clamp(config().clerkPriceImpact, 0.05, 1.0);
 		if (!has(home, FacilityKind.GUILD_HALL)) return impact;
-		return impact / Math.max(1.0, TradeExpansionConfig.get().development.guildHallClerkSpeedMultiplier);
+		return impact / com.akf.tradeexpansion.development.FacilityEffects.raise(home, FacilityKind.GUILD_HALL, 0, Math.max(1.0, TradeExpansionConfig.get().development.guildHallClerkSpeedMultiplier)); // N-11
 	}
 
 	/** v0.83: the share of every sale a clerk at {@code home} takes as its pay; lower at a market with a guild hall (v0.79). */
 	public static double clerkCommission(Market home) {
 		double rate = Math.clamp(config().clerkCommission, 0.0, 1.0);
 		if (!has(home, FacilityKind.GUILD_HALL)) return rate;
-		return rate * Math.clamp(TradeExpansionConfig.get().development.guildHallClerkWageMultiplier, 0.0, 1.0);
+		return rate * guildWage(home);
+	}
+
+	/** v0.79 guild hall at {@code home}: the multiplier of its clerks' wage and pay share (N-11: lower with its level). */
+	private static double guildWage(Market home) {
+		return com.akf.tradeexpansion.development.FacilityEffects.raise(home, FacilityKind.GUILD_HALL, 1, Math.clamp(TradeExpansionConfig.get().development.guildHallClerkWageMultiplier, 0.0, 1.0));
 	}
 
 	/** The pay share of an employee: a carrier's of the profit of a round trip, a clerk's of its sales. */
@@ -515,7 +520,7 @@ public final class StaffService {
 		Component line = describe(registry, e, e.log.getLast());
 		boolean spring = has(home, FacilityKind.HOT_SPRING); // v0.51: a hot spring at home
 		TradeExpansionConfig.Development dev = TradeExpansionConfig.get().development;
-		if (random.nextDouble() < c.quitChance * (spring ? Math.clamp(dev.hotSpringQuitMultiplier, 0.0, 1.0) : 1.0)) {
+		if (random.nextDouble() < c.quitChance * (spring ? com.akf.tradeexpansion.development.FacilityEffects.raise(home, FacilityKind.HOT_SPRING, 1, Math.clamp(dev.hotSpringQuitMultiplier, 0.0, 1.0)) : 1.0)) {
 			long left = e.cargoCost + lineCosts(e.returnCargo);
 			e.lost += left; // what is left of the cargo goes with the carrier
 			com.akf.tradeexpansion.notebook.LedgerService.onStaff(server, e.owner, -left); // T
@@ -531,7 +536,8 @@ public final class StaffService {
 			return true;
 		}
 		notify(server, e, line);
-		e.nextTime = now + Math.round(c.accidentRestDays * (spring ? Math.clamp(dev.hotSpringRestMultiplier, 0.0, 1.0) : 1.0) * PriceModel.TICKS_PER_DAY);
+		e.nextTime = now + Math.round(c.accidentRestDays * (spring ? com.akf.tradeexpansion.development.FacilityEffects.raise(home, FacilityKind.HOT_SPRING, 0, Math.clamp(dev.hotSpringRestMultiplier, 0.0, 1.0)) : 1.0)
+				* PriceModel.TICKS_PER_DAY);
 		setStatus(server, e, Employee.Status.RESTING, now, changes);
 		return false;
 	}
@@ -613,14 +619,20 @@ public final class StaffService {
 
 	/** v0.51: a harbor at either end makes trips faster (by water): the multiplier of the travel time. */
 	private static double harbor(Market home, Market destination) {
-		return has(home, FacilityKind.HARBOR) || has(destination, FacilityKind.HARBOR)
-				? Math.clamp(TradeExpansionConfig.get().development.harborTravelMultiplier, 0.1, 1.0) : 1.0;
+		return atEitherEnd(home, destination, FacilityKind.HARBOR, 1, Math.clamp(TradeExpansionConfig.get().development.harborTravelMultiplier, 0.1, 1.0));
 	}
 
 	/** v0.51: a watchtower at either end makes accidents rarer. */
 	private static double watchtower(Market home, Market destination) {
-		return has(home, FacilityKind.WATCHTOWER) || has(destination, FacilityKind.WATCHTOWER)
-				? Math.clamp(TradeExpansionConfig.get().development.watchtowerAccidentMultiplier, 0.0, 1.0) : 1.0;
+		return atEitherEnd(home, destination, FacilityKind.WATCHTOWER, 0, Math.clamp(TradeExpansionConfig.get().development.watchtowerAccidentMultiplier, 0.0, 1.0));
+	}
+
+	/** A lowering multiplier {@code base} of a building at either end of a trip: the stronger one (N-11: by its level), else 1. */
+	private static double atEitherEnd(Market home, Market destination, FacilityKind kind, int effect, double base) {
+		double m = 1.0;
+		if (has(home, kind)) m = Math.min(m, com.akf.tradeexpansion.development.FacilityEffects.raise(home, kind, effect, base));
+		if (has(destination, kind)) m = Math.min(m, com.akf.tradeexpansion.development.FacilityEffects.raise(destination, kind, effect, base));
+		return m;
 	}
 
 	/** Mean share of the cargo lost in an accident. */

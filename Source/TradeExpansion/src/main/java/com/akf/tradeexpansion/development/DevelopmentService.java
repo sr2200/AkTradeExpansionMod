@@ -64,6 +64,7 @@ public final class DevelopmentService {
 				case DONATE_COINS -> donateCoins(player, market, request, now);
 				case DONATE_ITEMS -> donateItems(player, menu, market, request, now);
 				case BUILD -> build(player, market, request, now);
+				case UPGRADE -> upgrade(player, market, request, now);
 				case MARKER -> marker(player, request);
 			};
 		}
@@ -92,7 +93,10 @@ public final class DevelopmentService {
 		FacilityDefinition def = id == null ? null : FacilityCatalog.get(id);
 		if (def == null) return fail(TradeResult.NOT_AVAILABLE, request);
 		Facility existing = market.facilities().get(id);
-		if (existing != null && existing.state() != Facility.State.DESTROYED) return fail(TradeResult.ALREADY_BUILT, request);
+		if (!FacilityBuilder.takesMaterials(market, id)) { // N-11 (v0.86): also for the raise to the next level
+			return fail(existing != null && existing.complete() && existing.level() >= com.akf.tradeexpansion.core.FacilityLevelMath.MAX_LEVEL
+					? TradeResult.MAX_LEVEL : TradeResult.ALREADY_BUILT, request);
+		}
 		Map<String, Integer> donated = market.donations(id);
 		int items = 0;
 		double points = 0;
@@ -153,6 +157,15 @@ public final class DevelopmentService {
 		Identifier id = Identifier.tryParse(request.facility());
 		if (id == null) return fail(TradeResult.INVALID_REQUEST, request);
 		FacilityBuilder.Outcome outcome = FacilityBuilder.build(player, player.level(), market, id, now);
+		if (outcome.reason() != null) player.sendSystemMessage(outcome.reason().copy().withStyle(net.minecraft.ChatFormatting.YELLOW));
+		return new DevelopmentResultS2C(outcome.result(), request.action(), 0, outcome.cost());
+	}
+
+	/** N-11 (v0.86): raises a completed building to the next level. */
+	private static DevelopmentResultS2C upgrade(ServerPlayer player, Market market, DevelopmentRequestC2S request, long now) {
+		Identifier id = Identifier.tryParse(request.facility());
+		if (id == null || request.amount() < 0 || request.amount() > 1) return fail(TradeResult.INVALID_REQUEST, request);
+		FacilityBuilder.Outcome outcome = FacilityBuilder.upgrade(player, player.level(), market, id, (int) request.amount(), now);
 		if (outcome.reason() != null) player.sendSystemMessage(outcome.reason().copy().withStyle(net.minecraft.ChatFormatting.YELLOW));
 		return new DevelopmentResultS2C(outcome.result(), request.action(), 0, outcome.cost());
 	}

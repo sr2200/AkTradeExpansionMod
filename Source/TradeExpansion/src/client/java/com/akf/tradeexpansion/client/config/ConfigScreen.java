@@ -347,7 +347,14 @@ public final class ConfigScreen {
 				.option(doubleField("development.guildHallClerkWageMultiplier", dd.guildHallClerkWageMultiplier, () -> dev.guildHallClerkWageMultiplier, v -> dev.guildHallClerkWageMultiplier = v, 0, 1))
 				.option(doubleField("development.chapelReputationDecayMultiplier", dd.chapelReputationDecayMultiplier, () -> dev.chapelReputationDecayMultiplier, v -> dev.chapelReputationDecayMultiplier = v, 0, 1))
 				.option(doubleField("development.townHallMaterialMultiplier", dd.townHallMaterialMultiplier, () -> dev.townHallMaterialMultiplier, v -> dev.townHallMaterialMultiplier = v, 0.1, 1))
-				.option(doubleField("development.workshopVillagerPriceMultiplier", dd.workshopVillagerPriceMultiplier, () -> dev.workshopVillagerPriceMultiplier, v -> dev.workshopVillagerPriceMultiplier = v, 0.1, 1));
+				.option(doubleField("development.workshopVillagerPriceMultiplier", dd.workshopVillagerPriceMultiplier, () -> dev.workshopVillagerPriceMultiplier, v -> dev.workshopVillagerPriceMultiplier = v, 0.1, 1))
+				// N-11 (v0.86): levels of the buildings
+				.option(bool("development.upgradeEnabled", dd.upgradeEnabled, () -> dev.upgradeEnabled, v -> dev.upgradeEnabled = v))
+				.option(stringField("development.upgradeCostMultipliers", joinDoubles(dd.upgradeCostMultipliers), () -> joinDoubles(dev.upgradeCostMultipliers),
+						v -> dev.upgradeCostMultipliers = splitDoubles(v)))
+				.option(stringField("development.upgradeEffectSteps", joinDoubles(dd.upgradeEffectSteps), () -> joinDoubles(dev.upgradeEffectSteps),
+						v -> dev.upgradeEffectSteps = splitDoubles(v)))
+				.option(doubleField("development.upgradePerkBonus", dd.upgradePerkBonus, () -> dev.upgradePerkBonus, v -> dev.upgradePerkBonus = v, 0, 1));
 
 		// Q (v0.48): hired staff.
 		TradeExpansionConfig.Staff st = edit.staff;
@@ -509,6 +516,23 @@ public final class ConfigScreen {
 		List<String> list = new ArrayList<>();
 		for (String part : value.split(",")) {
 			if (!part.isBlank()) list.add(part.trim());
+		}
+		return list;
+	}
+
+	private static String joinDoubles(List<Double> values) {
+		return String.join(", ", values.stream().map(String::valueOf).toList());
+	}
+
+	/** "1.5, 2" → [1.5, 2.0]; entries that are not numbers are dropped (the validator corrects the rest). */
+	private static List<Double> splitDoubles(String value) {
+		List<Double> list = new ArrayList<>();
+		for (String part : splitList(value)) {
+			try {
+				list.add(Double.parseDouble(part));
+			} catch (NumberFormatException ignored) {
+				// not a number
+			}
 		}
 		return list;
 	}

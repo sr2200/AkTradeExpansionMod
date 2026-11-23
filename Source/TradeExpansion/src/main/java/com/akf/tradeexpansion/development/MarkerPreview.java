@@ -88,7 +88,9 @@ public final class MarkerPreview {
 		for (Map.Entry<Identifier, FacilityDefinition> e : FacilityCatalog.all().entrySet()) {
 			Facility existing = market.facilities().get(e.getKey());
 			if (existing != null && existing.state() != Facility.State.DESTROYED) continue; // built or under construction
-			StructureTemplate template = FacilityBuilder.template(level.getServer(), e.getValue(), style).orElse(null);
+			// N-11 (v0.86): a destroyed building is rebuilt at its level
+			StructureTemplate template = (existing == null ? FacilityBuilder.template(level.getServer(), e.getValue(), style)
+					: FacilityBuilder.template(level.getServer(), e.getValue(), style, existing.level(), existing.tall())).orElse(null);
 			if (template == null) continue;
 			SiteFinder.Preview preview = SiteFinder.preview(level, market, template, pos, facing, e.getValue().landRows());
 			boolean ok = preview.reason() == null;

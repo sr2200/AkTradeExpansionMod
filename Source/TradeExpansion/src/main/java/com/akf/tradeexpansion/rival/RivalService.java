@@ -218,7 +218,7 @@ public final class RivalService {
 		double w = baseWeight(registry, market, c);
 		// v0.51: a watchtower sees the guild coming; its market feels less of the push
 		if (w > 0 && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.WATCHTOWER)) {
-			w *= Math.clamp(TradeExpansionConfig.get().development.watchtowerRivalMultiplier, 0.0, 1.0);
+			w *= com.akf.tradeexpansion.development.FacilityEffects.raise(market, com.akf.tradeexpansion.development.FacilityKind.WATCHTOWER, 1, Math.clamp(TradeExpansionConfig.get().development.watchtowerRivalMultiplier, 0.0, 1.0)); // N-11
 		}
 		return w;
 	}

@@ -42,8 +42,11 @@ final class DevelopmentCommand {
 				market.level(), market.measuredLevel(), MarketFactory.levelBonus(market), market.completedFacilities())), false);
 		for (Facility f : market.facilities().values()) {
 			long left = Math.max(0, f.due() - now);
-			context.getSource().sendSuccess(() -> Component.literal(String.format("  %s: %s at %s%s", f.id(), f.state().getSerializedName(),
-					f.box().getCenter().toShortString(), f.state() == Facility.State.CONSTRUCTING ? String.format(" (%.2f days left)", left / 24000.0) : "")), false);
+			long upLeft = Math.max(0, f.upgradeDue() - now);
+			context.getSource().sendSuccess(() -> Component.literal(String.format("  %s: %s level %d%s%s at %s%s%s", f.id(), f.state().getSerializedName(),
+					f.level(), f.branch().isEmpty() ? "" : " (" + f.branch() + ")", f.tall() ? " tall" : "", f.box().getCenter().toShortString(),
+					f.state() == Facility.State.CONSTRUCTING ? String.format(" (%.2f days left)", left / 24000.0) : "",
+					f.upgrading() ? String.format(" (raising to level %d, %.2f days left)", f.level() + 1, upLeft / 24000.0) : "")), false);
 		}
 		return (int) Math.min(Integer.MAX_VALUE, points);
 	}

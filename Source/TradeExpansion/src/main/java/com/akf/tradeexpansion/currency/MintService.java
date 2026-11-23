@@ -40,9 +40,9 @@ public final class MintService {
 			return c.allowMinting && (block() != Items.IRON_BLOCK || c.allowIronMinting);
 		}
 
-		/** Copper value of one minting (9 blocks) at the mint. */
-		public long mintValue() {
-			return DevelopmentMath.mintValue(value, TradeExpansionConfig.get().development.mintValueMultiplier, 1);
+		/** Copper value of one minting (9 blocks) at the mint of {@code market} (N-11: more with its level). */
+		public long mintValue(Market market) {
+			return DevelopmentMath.mintValue(value, com.akf.tradeexpansion.development.FacilityEffects.raise(market, FacilityKind.MINT, 0, TradeExpansionConfig.get().development.mintValueMultiplier), 1);
 		}
 	}
 
@@ -74,7 +74,7 @@ public final class MintService {
 		if (!metal.enabled()) return TradeResult.MINTING_DISABLED;
 		int blocks = request.batches() * DevelopmentMath.MINT_BATCH;
 		if (InventoryUtil.countPlain(player, metal.block()) < blocks) return TradeResult.INSUFFICIENT_ITEMS;
-		long value = metal.mintValue() * request.batches();
+		long value = metal.mintValue(market) * request.batches();
 		InventoryUtil.removePlain(player, metal.block(), blocks);
 		WalletService.giveCoins(player, CoinMath.decompose(value, CoinType.valueTable()));
 		minted[0] = value;

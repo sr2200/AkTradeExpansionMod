@@ -66,7 +66,7 @@ public final class BankService {
 		long cap = TradeExpansionConfig.get().bank.interestMaxBalance;
 		Market market = registeredBank(player, bank);
 		if (market == null || cap <= 0) return cap;
-		double raised = cap * TradeExpansionConfig.get().development.bankInterestMaxMultiplier;
+		double raised = cap * com.akf.tradeexpansion.development.FacilityEffects.raise(market, FacilityKind.BANK, 0, TradeExpansionConfig.get().development.bankInterestMaxMultiplier); // N-11
 		return raised >= Long.MAX_VALUE ? Long.MAX_VALUE : (long) raised;
 	}
 

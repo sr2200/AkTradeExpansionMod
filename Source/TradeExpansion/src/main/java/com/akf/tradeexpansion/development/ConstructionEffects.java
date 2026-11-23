@@ -49,7 +49,7 @@ public final class ConstructionEffects {
 			ServerLevel level = server.getLevel(market.dimension());
 			if (level == null) continue;
 			for (Facility facility : market.facilities().values()) {
-				if (facility.state() != Facility.State.CONSTRUCTING) continue;
+				if (facility.state() != Facility.State.CONSTRUCTING && !facility.upgrading()) continue; // N-11: a raise to the next level too
 				BoundingBox box = facility.box();
 				List<ServerPlayer> viewers = viewers(level, box);
 				if (viewers.isEmpty()) continue;

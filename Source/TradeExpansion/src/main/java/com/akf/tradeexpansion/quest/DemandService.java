@@ -72,7 +72,9 @@ public final class DemandService {
 		}
 		Random random = new Random(MarketFactory.seed(level, market.center()) ^ (period * 0x632BE59BD9B4E019L));
 		int slots = config.maxShortages;
-		if (market.hasFacility(FacilityKind.WHOLESALER)) slots += Math.max(0, TradeExpansionConfig.get().development.wholesalerExtraShortages); // v0.79
+		if (market.hasFacility(FacilityKind.WHOLESALER)) { // v0.79; N-11: more with its level
+			slots += com.akf.tradeexpansion.development.FacilityEffects.count(market, FacilityKind.WHOLESALER, 0, Math.max(0, TradeExpansionConfig.get().development.wholesalerExtraShortages));
+		}
 		for (int i = 0; i < slots && !candidates.isEmpty(); i++) {
 			Identifier pick = candidates.remove(random.nextInt(candidates.size()));
 			market.shortages().put(pick, QuestMath.shortageMultiplier(random.nextDouble(), config.minMultiplier, config.maxMultiplier));
@@ -114,7 +116,7 @@ public final class DemandService {
 		market.setVigor(DemandMath.vigor(market.vigor(), config.vigorGain));
 		market.setShortagesFulfilled(market.shortagesFulfilled() + 1);
 		double ratio = config.fulfillPointsRatio;
-		if (market.hasFacility(FacilityKind.WHOLESALER)) ratio *= TradeExpansionConfig.get().development.wholesalerFulfillMultiplier; // v0.79
+		if (market.hasFacility(FacilityKind.WHOLESALER)) ratio *= com.akf.tradeexpansion.development.FacilityEffects.raise(market, FacilityKind.WHOLESALER, 1, TradeExpansionConfig.get().development.wholesalerFulfillMultiplier); // v0.79, N-11
 		double points = Development.add(market, player, DemandMath.fulfillPoints(base, config.fulfillCount, ratio), now);
 		tell(level, market, player, Component.translatable("message.ak_trade_expansion.shortage.fulfilled_grow", MarketNames.name(market), good,
 				(long) Math.floor(points), (long) Math.floor(market.vigor())).withStyle(ChatFormatting.GREEN));

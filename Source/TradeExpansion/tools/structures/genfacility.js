@@ -226,46 +226,56 @@ const L = (arr, et) => ({ t: 9, et, v: arr });
 
 /** Footprints (width x depth) and wall heights. */
 const facilities = {
-	quest_hall: { w: 5, d: 5, wall: 4 },
-	bank: { w: 7, d: 7, wall: 4 },
-	warehouse: { w: 9, d: 9, wall: 4 },
-	inn: { w: 9, d: 9, wall: 4 },
+	quest_hall: { w: 5, d: 5, wall: 4, tall: true },
+	bank: { w: 7, d: 7, wall: 4, tall: true },
+	warehouse: { w: 9, d: 9, wall: 4, tall: true },
+	inn: { w: 9, d: 9, wall: 4, tall: true },
 	fountain: { w: 11, d: 11 },
 	park: { w: 13, d: 13 },
 	clock_tower: { w: 7, d: 7 },
 	watchtower: { w: 5, d: 5 },
-	tavern: { w: 9, d: 9, wall: 4 },
+	tavern: { w: 9, d: 9, wall: 4, tall: true },
 	market_hall: { w: 11, d: 9 },
 	harbor: { w: 9, d: 13 }, // rows z 0..5 on land, 6..12 over the water (data: "waterside": 6)
 	theater: { w: 11, d: 11 },
 	hot_spring: { w: 9, d: 9 },
 	festival: { w: 11, d: 11 },
-	mint: { w: 7, d: 7, wall: 4 },
+	mint: { w: 7, d: 7, wall: 4, tall: true },
 	// v0.79
 	station: { w: 9, d: 11, wall: 4 },
-	appraiser: { w: 7, d: 7, wall: 4 },
-	wholesaler: { w: 9, d: 9, wall: 4 },
-	guild_hall: { w: 7, d: 9, wall: 4 },
+	appraiser: { w: 7, d: 7, wall: 4, tall: true },
+	wholesaler: { w: 9, d: 9, wall: 4, tall: true },
+	guild_hall: { w: 7, d: 9, wall: 4, tall: true },
 	chapel: { w: 7, d: 9, wall: 5 },
-	town_hall: { w: 9, d: 9, wall: 4 },
-	workshop: { w: 9, d: 9, wall: 4 },
-	school: { w: 9, d: 9, wall: 4 },
+	town_hall: { w: 9, d: 9, wall: 4, tall: true },
+	workshop: { w: 9, d: 9, wall: 4, tall: true },
+	school: { w: 9, d: 9, wall: 4, tall: true },
 };
 
 /** Stairs and slabs from the stem of their block ids: minecraft:spruce -> minecraft:spruce_stairs. */
 const stairs = (stem) => stem + '_stairs';
 const slab = (stem) => stem + '_slab';
 
-function build(style, m, kind, spec) {
+/**
+ * One template. lv (v0.86, N-11): 1 = the building as built, 2 / 3 = the same building with decorations added (decorate);
+ * tall: level 3 with a second storey (only kinds with spec.tall; the walls go up 4 more, see top).
+ */
+function build(style, m, kind, spec, lv = 1, tall = false) {
 	const { w: W, d: D, wall } = spec;
+	// Height of the walls under the roof: the second storey of a tall level 3 adds 4 (its floor is at y = wall).
+	const top = tall ? wall + 4 : wall;
+	/** Window rows of the ground floor (rows), repeated on the second storey. */
+	const winRow = (y, rows) => rows.includes(y) || tall && rows.includes(y - wall);
 	const palette = [];
 	const index = new Map();
+	const ids = [];
 	const state = (id, props) => {
 		const key = id + JSON.stringify(props || {});
 		if (!index.has(key)) {
 			const entry = { id: S(id) };
 			if (props) entry.properties = C(Object.fromEntries(Object.entries(props).map(([k, v]) => [k, S(v)])));
 			index.set(key, palette.length);
+			ids.push(id);
 			palette.push(C(entry));
 		}
 		return index.get(key);
@@ -599,12 +609,19 @@ function build(style, m, kind, spec) {
 			const inside = x > x0 && x < x1 && z > fz && z < bz;
 			set(x, 0, z, inside ? block(m.floor) : found(x, z));
 		}
-		// Porch: two posts and a beam carrying the front of the roof.
-		for (let y = 1; y <= wall; y++) {
+		// Porch: two posts and a beam carrying the front of the roof. Tall (v0.86): the posts go up to the roof, the beam
+		// over the porch carries a balcony with a railing, and a second beam carries the roof.
+		for (let y = 1; y <= top; y++) {
 			set(x0, y, 0, up(m.pillar));
 			set(x1, y, 0, up(m.pillar));
 		}
 		for (let x = x0 + 1; x < x1; x++) set(x, wall, 0, lying(m.beam, 'x'));
+		if (tall) {
+			for (let x = x0 + 1; x < x1; x++) {
+				set(x, wall + 1, 0, block(m.fence));
+				set(x, top, 0, lying(m.beam, 'x'));
+			}
+		}
 
 		// Posts, windows (2 high) and plain wall along each side; base course of stone, beam on top.
 		const rel = (list) => list.map((r) => x0 + r);
@@ -617,11 +634,11 @@ function build(style, m, kind, spec) {
 		const windowRows = W === 5 ? [2] : [2, 3];
 		const cell = (x, y, z, post, win, axis) => {
 			if (post) return set(x, y, z, up(m.pillar));
-			if (y === wall) return set(x, y, z, lying(m.beam, axis));
-			if (win && windowRows.includes(y)) return set(x, y, z, block(m.window));
+			if (y === wall || y === top) return set(x, y, z, lying(m.beam, axis));
+			if (win && winRow(y, windowRows)) return set(x, y, z, block(m.window));
 			set(x, y, z, y === 1 ? found(x, z) : block(m.wall));
 		};
-		for (let y = 1; y <= wall; y++) {
+		for (let y = 1; y <= top; y++) {
 			for (let x = x0; x <= x1; x++) {
 				cell(x, y, fz, posts.includes(x), frontWindows.includes(x), 'x');
 				cell(x, y, bz, backPosts.includes(x), backWindows.includes(x), 'x');
@@ -632,6 +649,14 @@ function build(style, m, kind, spec) {
 			}
 		}
 		door(mid, fz);
+		if (tall) {
+			// The second storey: boards over the room, a door out to the balcony, a rug and a lantern under the upper
+			// tie beam.
+			for (let x = x0 + 1; x < x1; x++) for (let z = fz + 1; z < bz; z++) set(x, wall, z, block(m.floor));
+			set(mid, wall + 1, fz, state(m.door, { facing: 'south', half: 'lower', hinge: 'left' }));
+			set(mid, wall + 2, fz, state(m.door, { facing: 'south', half: 'upper', hinge: 'left' }));
+			for (let z = fz + 1; z < bz; z++) set(mid, wall + 1, z, block(m.carpet));
+		}
 		// Under the eaves: a bush under each side window and open shutters on both sides of each pair of windows.
 		const sides = ins ? [[0, 'west'], [W - 1, 'east']] : [];
 		for (const [xo, facing] of sides) {
@@ -641,14 +666,19 @@ function build(style, m, kind, spec) {
 				for (const dz of [-1, 1]) {
 					const sz = z + dz;
 					if (sideWindows.includes(sz) || sz < 1 || sz >= D) continue;
-					for (const y of windowRows) set(xo, y, sz, state(m.shutter, { facing, half: 'bottom', open: 'true' }));
+					for (const y of windowRows) {
+						set(xo, y, sz, state(m.shutter, { facing, half: 'bottom', open: 'true' }));
+						if (tall) set(xo, y + wall, sz, state(m.shutter, { facing, half: 'bottom', open: 'true' }));
+					}
 				}
 			}
 		}
-		// Tie beam across the room; the lanterns hang from it.
+		// Tie beam across the room; the lanterns hang from it (tall: on both storeys).
 		const tz = sidePosts.length > 2 ? sidePosts[1] : Math.floor((fz + bz) / 2);
-		for (let x = x0 + 1; x < x1; x++) set(x, wall, tz, lying(m.beam, 'x'));
-		for (const x of span === 7 ? [L + 1, R - 1] : [mid]) set(x, wall - 1, tz, lantern(true));
+		for (const ty of tall ? [wall, top] : [wall]) {
+			for (let x = x0 + 1; x < x1; x++) set(x, ty, tz, lying(m.beam, 'x'));
+			for (const x of span === 7 ? [L + 1, R - 1] : [mid]) set(x, ty - 1, tz, lantern(true));
+		}
 
 		roof(fz, bz, ins);
 		sign();
@@ -692,12 +722,12 @@ function build(style, m, kind, spec) {
 				set(L + 1, 1, D - 2, block('minecraft:crafting_table'));
 				for (const x of [0, W - 1]) sideRow(x, 2, D - 2, () => lying(m.pillar, 'z'));
 				if (!m.flat) {
-					grid.delete(`${mid},${wall + 2},${fz}`);
-					set(mid, wall + 1, fz, state(m.door, { facing: 'south', half: 'lower', hinge: 'left' }));
-					set(mid, wall + 2, fz, state(m.door, { facing: 'south', half: 'upper', hinge: 'left' }));
-					set(mid, wall + 3, 0, lying(m.beam, 'z'));
-					set(mid, wall + 2, 0, state('minecraft:iron_chain', { axis: 'y' }));
-					set(mid, wall + 1, 0, lying('minecraft:hay_block', 'y'));
+					grid.delete(`${mid},${top + 2},${fz}`);
+					set(mid, top + 1, fz, state(m.door, { facing: 'south', half: 'lower', hinge: 'left' }));
+					set(mid, top + 2, fz, state(m.door, { facing: 'south', half: 'upper', hinge: 'left' }));
+					set(mid, top + 3, 0, lying(m.beam, 'z'));
+					set(mid, top + 2, 0, state('minecraft:iron_chain', { axis: 'y' }));
+					set(mid, top + 1, 0, lying('minecraft:hay_block', 'y'));
 				}
 				break;
 			case 'inn':
@@ -851,14 +881,14 @@ function build(style, m, kind, spec) {
 		if (m.flat) {
 			const x0 = ins, x1 = W - 1 - ins;
 			for (let x = x0; x <= x1; x++) for (let z = 0; z < D; z++) {
-				set(x, wall + 1, z, block(m.roofBlock));
+				set(x, top + 1, z, block(m.roofBlock));
 				const edge = x === x0 || x === x1 || z === 0 || z === D - 1;
-				if (edge) set(x, wall + 2, z, (x === x0 || x === x1) && (z === 0 || z === D - 1) ? up(m.pillar) : block(m.parapet));
+				if (edge) set(x, top + 2, z, (x === x0 || x === x1) && (z === 0 || z === D - 1) ? up(m.pillar) : block(m.parapet));
 			}
-			if (ins && m.viga) for (let z = 1; z < D - 1; z += 2) for (const x of [0, W - 1]) set(x, wall, z, lying(m.viga, 'x'));
+			if (ins && m.viga) for (let z = 1; z < D - 1; z += 2) for (const x of [0, W - 1]) set(x, top, z, lying(m.viga, 'x'));
 			return;
 		}
-		const y0 = wall + 1 - ins;
+		const y0 = top + 1 - ins;
 		const edge = m.roofEdge || m.roof;
 		for (let k = 0; k < mid; k++) {
 			const y = y0 + k;
@@ -868,7 +898,7 @@ function build(style, m, kind, spec) {
 				set(W - 1 - k, y, z, stair(stem, 'west'));
 			}
 			// Gables at the front and back wall; the porch side stays open.
-			if (y > wall) for (let x = k + 1; x < W - 1 - k; x++) for (const z of [fz, bz]) set(x, y, z, block(m.wall));
+			if (y > top) for (let x = k + 1; x < W - 1 - k; x++) for (const z of [fz, bz]) set(x, y, z, block(m.wall));
 		}
 		for (let z = 0; z < D; z++) set(mid, y0 + mid, z, state(slab(edge), { type: 'bottom' }));
 		// Upside-down stairs under the roof where nothing else is: the roof seen from the porch and the room is a smooth
@@ -880,10 +910,10 @@ function build(style, m, kind, spec) {
 		for (const z of [fz, bz]) {
 			if (W >= 9) {
 				// Two small windows over the wall beam and a collar beam above them.
-				for (const x of [mid - 1, mid + 1]) set(x, wall + 1, z, block(m.window));
-				for (let x = mid - 1; x <= mid + 1; x++) set(x, wall + 2, z, lying(m.beam, 'x'));
+				for (const x of [mid - 1, mid + 1]) set(x, top + 1, z, block(m.window));
+				for (let x = mid - 1; x <= mid + 1; x++) set(x, top + 2, z, lying(m.beam, 'x'));
 			} else {
-				set(mid, wall + 1, z, block(m.window));
+				set(mid, top + 1, z, block(m.window));
 			}
 		}
 	}
@@ -897,10 +927,10 @@ function build(style, m, kind, spec) {
 		const xw = W - 2, xo = W - 1;
 		set(xw, 1, z, state('minecraft:furnace', { facing: 'west' }));
 		for (let y = 2; y < wall; y++) set(xw, y, z, block(m.chimney));
-		const top = wall + 4;
-		for (let y = 1; y < top; y++) set(xo, y, z, block(m.chimney));
+		const stack = top + 4;
+		for (let y = 1; y < stack; y++) set(xo, y, z, block(m.chimney));
 		set(xo, 0, z, block(m.found));
-		set(xo, top, z, m.chimneyTop.endsWith('campfire') ? state(m.chimneyTop, { lit: 'true', signal_fire: 'false' })
+		set(xo, stack, z, m.chimneyTop.endsWith('campfire') ? state(m.chimneyTop, { lit: 'true', signal_fire: 'false' })
 				: state(m.chimneyTop, { facing: 'up' }));
 	}
 
@@ -923,12 +953,12 @@ function build(style, m, kind, spec) {
 		const backWindows = [2, W - 3];
 		const sideWindows = [3, 4];
 		const cell = (x, y, z, corner, win) => {
-			if (y === wall) return set(x, y, z, block(m.cornice));
+			if (y === wall || y === top) return set(x, y, z, block(m.cornice));
 			if (corner) return set(x, y, z, up(m.column));
-			if (win && (y === 2 || y === 3)) return set(x, y, z, block('minecraft:iron_bars'));
+			if (win && winRow(y, [2, 3])) return set(x, y, z, block('minecraft:iron_bars'));
 			set(x, y, z, block(y === 1 ? m.stoneBase : m.stone));
 		};
-		for (let y = 1; y <= wall; y++) {
+		for (let y = 1; y <= top; y++) {
 			for (let x = 0; x < W; x++) {
 				const corner = x === 0 || x === W - 1;
 				cell(x, y, fz, corner, frontWindows.includes(x));
@@ -941,10 +971,14 @@ function build(style, m, kind, spec) {
 		}
 		door(mid, fz);
 		// Ceiling with a lantern in the middle of the hall.
-		for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, wall, z, block(m.ceiling));
+		for (const cy of tall ? [wall, top] : [wall]) for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, cy, z, block(m.ceiling));
+		if (tall) upperStorey(fz, bz);
 		set(mid, wall - 1, Math.floor((fz + 1 + D - 3) / 2), lantern(true));
-		// Hipped roof: rings of stairs facing inward, a slab on the top.
-		for (let k = 0; k <= mid; k++) {
+		// Hipped roof: rings of stairs facing inward, a slab on the top. Tall: over the house only, the portico has its own.
+		if (tall) {
+			porchSlabs(m.bankRoof);
+			hipRoof(0, fz, W - 1, bz, top + 1, m.bankRoof, m.cornice);
+		} else for (let k = 0; k <= mid; k++) {
 			const y = wall + 1 + k;
 			for (let x = k; x < W - k; x++) for (let z = k; z < D - k; z++) {
 				const onRing = x === k || x === W - 1 - k || z === k || z === D - 1 - k;
@@ -967,6 +1001,18 @@ function build(style, m, kind, spec) {
 	}
 
 	// ---- v0.51 buildings ----
+
+	/** v0.86 tall stone buildings: the porch keeps a roof of slabs over its cornice, the house goes up past it. */
+	function porchSlabs(stem) {
+		for (let x = 0; x < W; x++) set(x, wall + 1, 0, state(slab(stem), { type: 'bottom' }));
+	}
+
+	/** v0.86 the second storey of a tall stone building: a rug and a lantern under its ceiling. */
+	function upperStorey(fz, bz) {
+		const cz = Math.floor((fz + bz) / 2);
+		for (let z = fz + 1; z < bz; z++) set(mid, wall + 1, z, block(m.carpet));
+		set(mid, top - 1, cz, lantern(true));
+	}
 
 	/** Rings of stairs facing inward from the rectangle x0..x1 / z0..z1 at height y up; the last line or cell gets top. */
 	function hipRoof(x0, z0, x1, z1, y, stem, top) {
@@ -1347,12 +1393,12 @@ function build(style, m, kind, spec) {
 		set(W - 3, 1, 0, block('minecraft:waxed_copper_block'));
 		// Walls: columns at the corners, a base course, barred windows, the cornice on top (as the bank).
 		const cell = (x, y, z, corner, win) => {
-			if (y === wall) return set(x, y, z, block(m.cornice));
+			if (y === wall || y === top) return set(x, y, z, block(m.cornice));
 			if (corner) return set(x, y, z, up(m.column));
-			if (win && (y === 2 || y === 3)) return set(x, y, z, block('minecraft:iron_bars'));
+			if (win && winRow(y, [2, 3])) return set(x, y, z, block('minecraft:iron_bars'));
 			set(x, y, z, block(y === 1 ? m.stoneBase : m.stone));
 		};
-		for (let y = 1; y <= wall; y++) {
+		for (let y = 1; y <= top; y++) {
 			for (let x = 0; x < W; x++) {
 				const corner = x === 0 || x === W - 1;
 				cell(x, y, fz, corner, x === 1 || x === W - 2);
@@ -1364,9 +1410,11 @@ function build(style, m, kind, spec) {
 			}
 		}
 		door(mid, fz);
-		for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, wall, z, block(m.ceiling));
+		for (const cy of tall ? [wall, top] : [wall]) for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, cy, z, block(m.ceiling));
+		if (tall) upperStorey(fz, bz);
 		set(mid, wall - 1, 3, lantern(true));
-		hipRoof(0, 0, W - 1, D - 1, wall + 1, m.bankRoof, m.cornice);
+		if (tall) porchSlabs(m.bankRoof);
+		hipRoof(0, tall ? fz : 0, W - 1, tall ? bz : D - 1, top + 1, m.bankRoof, m.cornice);
 		// Back: two blast furnaces, a smithing table and the sign between them; barrels and a grindstone at the sides.
 		set(1, 1, D - 2, state('minecraft:blast_furnace', { facing: 'north', lit: 'true' }));
 		set(W - 2, 1, D - 2, state('minecraft:blast_furnace', { facing: 'north', lit: 'true' }));
@@ -1377,8 +1425,8 @@ function build(style, m, kind, spec) {
 		set(W - 2, 1, 2, state('minecraft:grindstone', { face: 'floor', facing: 'north' }));
 		set(1, 1, 3, block('minecraft:cauldron'));
 		// Chimney from the right furnace up through the ceiling and the roof, a fire on top.
-		let roofY = wall;
-		for (let y = wall; y < 64; y++) if (get(W - 2, y, D - 2) !== undefined) roofY = y;
+		let roofY = top;
+		for (let y = top; y < 64; y++) if (get(W - 2, y, D - 2) !== undefined) roofY = y;
 		for (let y = 2; y <= roofY + 1; y++) set(W - 2, y, D - 2, block(m.chimney));
 		set(W - 2, roofY + 2, D - 2, m.chimneyTop.endsWith('campfire') ? state(m.chimneyTop, { lit: 'true', signal_fire: 'false' })
 				: state(m.chimneyTop, { facing: 'up' }));
@@ -1406,12 +1454,12 @@ function build(style, m, kind, spec) {
 		const backWindows = [2, W - 3];
 		const sideWindows = [3, D - 3];
 		const cell = (x, y, z, corner, win) => {
-			if (y === wall) return set(x, y, z, block(m.cornice));
+			if (y === wall || y === top) return set(x, y, z, block(m.cornice));
 			if (corner) return set(x, y, z, up(m.column));
-			if (win && (y === 2 || y === 3)) return set(x, y, z, block(m.window));
+			if (win && winRow(y, [2, 3])) return set(x, y, z, block(m.window));
 			set(x, y, z, block(y === 1 ? m.stoneBase : m.stone));
 		};
-		for (let y = 1; y <= wall; y++) {
+		for (let y = 1; y <= top; y++) {
 			for (let x = 0; x < W; x++) {
 				const corner = x === 0 || x === W - 1;
 				cell(x, y, fz, corner, frontWindows.includes(x));
@@ -1423,8 +1471,10 @@ function build(style, m, kind, spec) {
 			}
 		}
 		door(mid, fz);
-		for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, wall, z, block(m.ceiling));
-		hipRoof(0, 0, W - 1, D - 1, wall + 1, m.bankRoof, m.cornice);
+		for (const cy of tall ? [wall, top] : [wall]) for (let x = 1; x < W - 1; x++) for (let z = fz + 1; z < bz; z++) set(x, cy, z, block(m.ceiling));
+		if (tall) upperStorey(fz, bz);
+		if (tall) porchSlabs(m.bankRoof);
+		hipRoof(0, tall ? fz : 0, W - 1, tall ? bz : D - 1, top + 1, m.bankRoof, m.cornice);
 		sign();
 		if (kind === 'guild_hall') {
 			// A long table with chairs and candles, green banners, bookshelves, a chest and a cask at the back.
@@ -1586,6 +1636,148 @@ function build(style, m, kind, spec) {
 	const shapes = { bank, mint, fountain, park, clock_tower: clockTower, watchtower, market_hall: marketHall, harbor, theater, hot_spring: hotSpring, festival,
 		station, guild_hall: stoneHall, town_hall: stoneHall, chapel };
 	(shapes[kind] || house)();
+	if (lv >= 2) decorate();
+
+	/**
+	 * v0.86 (N-11) decorations of a building raised to level 2 / 3. They go only where the cell is empty, so every kind
+	 * keeps its own shape, and never into the way to the door or the sign:
+	 * - level 2: two banners of the style's colour on the front wall (hung on solid blocks, never on glass); buildings
+	 *   without a front wall (the plazas) get two standing banners at the entrance instead. Flower pots at the front
+	 *   corners and beside the door, lanterns on the low posts and fences at the corners.
+	 * - level 3: a second pair of banners in a second colour, banners on the side walls, lanterns at the back corners and
+	 *   on the low posts and fences in the middle of each side.
+	 */
+	function decorate() {
+		const NOT_SOLID = /(_slab|_stairs|_wall|_fence|fence_gate|pane|_bars|glass|door|lantern|torch|sign|banner|carpet|chain|candle|bell|rail|button|_bed|potted|leaves|sapling|_rod|campfire|cauldron|anvil|ladder|bush|grass$|fern|roots|fungus|tulip|poppy|dandelion|daisy|orchid|allium|bluet|lily|rose|lilac|peony|sunflower|cane|water|lava|cactus|chest|lectern|grindstone|stonecutter|brewing|amethyst|scaffolding|dirt_path|snow$|azalea|_head|skull|decorated_pot|bamboo|cake|kelp$|vine|torchflower|wheat|crop|pressure_plate|lever|note_block)/;
+		const idAt = (x, y, z) => { const st = get(x, y, z); return st === undefined ? null : ids[st]; };
+		const solid = (x, y, z) => { const id = idAt(x, y, z); return id !== null && id !== 'minecraft:air' && !NOT_SOLID.test(id); };
+		const inside = (x, y, z) => x >= 0 && x < W && z >= 0 && z < D && y >= 0;
+		const free = (x, y, z) => inside(x, y, z) && get(x, y, z) === undefined;
+		const colours = [(m.carpet || 'minecraft:red_carpet').replace('_carpet', '')];
+		colours.push(colours[0] === 'minecraft:yellow' ? 'minecraft:white' : 'minecraft:yellow');
+		/** A wall banner at (x, y, z) on the solid block behind it (bx, bz), with room below it for the cloth. */
+		const canHang = (x, y, z, bx, bz) => free(x, y, z) && free(x, y - 1, z) && y - 1 >= 1 && solid(bx, y, bz);
+		/** Row of the front banner of column x at height y: in front of the first block from the front (z 1..2). */
+		const frontRow = (x, y) => {
+			if (x < 0 || x >= W) return -1;
+			for (let z = 1; z <= 2; z++) {
+				if (get(x, y, z) === undefined) continue;
+				return canHang(x, y, z - 1, x, z) ? z - 1 : -1;
+			}
+			return -1;
+		};
+		/** One symmetric pair of front banners, the nearest to the door first. @return placed */
+		const frontBanners = (colour) => {
+			for (let dx = 1; dx < mid; dx++) for (const y of [3, 2, 4]) {
+				const a = frontRow(mid - dx, y), b = frontRow(mid + dx, y);
+				if (a < 0 || b < 0) continue;
+				set(mid - dx, y, a, state(colour + '_wall_banner', { facing: 'north' }));
+				set(mid + dx, y, b, state(colour + '_wall_banner', { facing: 'north' }));
+				return true;
+			}
+			return false;
+		};
+		/** A spot on the floor of the front row: free with a solid floor, and not in front of the way in. */
+		const floorSpot = (x, z) => free(x, 1, z) && solid(x, 0, z);
+		const clearBehind = (x) => get(x, 1, 1) === undefined;
+		/** Plazas: one symmetric pair of standing banners in the front row, facing out. */
+		const standingBanners = (colour) => {
+			for (let dx = 1; dx < mid; dx++) {
+				const a = mid - dx, b = mid + dx;
+				if (!floorSpot(a, 0) || !floorSpot(b, 0) || !free(a, 2, 0) || !free(b, 2, 0) || !clearBehind(a) || !clearBehind(b)) continue;
+				// the way in stays open: the cells between the banners and the middle are free or the sign
+				set(a, 1, 0, state(colour + '_banner', { rotation: '8' }));
+				set(b, 1, 0, state(colour + '_banner', { rotation: '8' }));
+				return true;
+			}
+			return false;
+		};
+		const pot = () => m.pot ? block(m.pot) : lantern(false);
+		/** Lantern on the top of a low post or fence at (x, z) (at most 3 high), where nothing stands on it. */
+		const POST = /(_fence|_wall|_log|_stem|pillar|chiseled_|_bricks)$/;
+		const postLantern = (x, z) => {
+			let y = -1;
+			for (let yy = 0; yy < 8; yy++) if (get(x, yy, z) !== undefined) y = yy;
+			if (y < 1 || y > 3 || !POST.test(idAt(x, y, z) || '') || !free(x, y + 1, z)) return;
+			for (let yy = 1; yy <= y; yy++) if (get(x, yy, z) === undefined) return; // a solid column, not a roof edge
+			set(x, y + 1, z, lantern(false));
+		};
+
+		/** Lanterns on the low fences of the front row (the hot spring), one symmetric pair, skipping {@code skip} pairs. */
+		const fenceLanterns = (skip) => {
+			for (let dx = 1; dx <= mid; dx++) {
+				const a = mid - dx, b = mid + dx;
+				const low = (x) => /(_fence|_wall)$/.test(idAt(x, 1, 0) || '') && free(x, 2, 0);
+				if (!low(a) || !low(b) || skip-- > 0) continue;
+				set(a, 2, 0, lantern(false));
+				set(b, 2, 0, lantern(false));
+				return;
+			}
+		};
+		/** Lanterns hanging under the beam or roof over the front row, one symmetric pair where nothing hangs yet. */
+		const hangingLanterns = () => {
+			for (let dx = 1; dx <= mid; dx++) {
+				const spot = (x) => {
+					for (let y = 2; y < 8; y++) if (get(x, y, 0) !== undefined) return solid(x, y, 0) && free(x, y - 1, 0) && free(x, y - 2, 0) && y - 1 >= 2 ? y - 1 : -1;
+					return -1;
+				};
+				const a = spot(mid - dx), b = spot(mid + dx);
+				if (a < 0 || a !== b) continue;
+				set(mid - dx, a, 0, lantern(true));
+				set(mid + dx, a, 0, lantern(true));
+				return;
+			}
+		};
+
+		// ---- level 2 ----
+		const walled = frontBanners(colours[0]);
+		if (!walled) standingBanners(colours[0]);
+		for (const x of [0, W - 1]) if (floorSpot(x, 0)) set(x, 1, 0, pot());
+		for (let dx = 1; dx <= 2; dx++) {
+			const a = mid - dx, b = mid + dx;
+			const potted = (x) => /potted_/.test(idAt(x, 1, 0) || '');
+			if (floorSpot(a, 0) && floorSpot(b, 0) && clearBehind(a) === clearBehind(b)) {
+				set(a, 1, 0, pot());
+				set(b, 1, 0, pot());
+				break;
+			}
+			// one side has a pot already (the quest hall's porch): the other gets one too
+			if (floorSpot(a, 0) && potted(b) || floorSpot(b, 0) && potted(a)) {
+				set(floorSpot(a, 0) ? a : b, 1, 0, pot());
+				break;
+			}
+		}
+		for (const [x, z] of [[0, 0], [W - 1, 0], [0, D - 1], [W - 1, D - 1]]) postLantern(x, z);
+		fenceLanterns(0);
+		if (lv < 3) return;
+
+		// ---- level 3 ----
+		if (walled) frontBanners(colours[1]);
+		else standingBanners(colours[1]);
+		const zs = [Math.floor(D / 2), Math.floor(D / 2) - 1, Math.floor(D / 2) + 1, 2, D - 3];
+		sideBanners: for (const z of zs) {
+			for (const y of [3, 2, 4]) {
+				let a = -1, b = -1;
+				for (let x = 1; x <= 2; x++) if (get(x, y, z) !== undefined) { a = canHang(x - 1, y, z, x, z) ? x - 1 : -1; break; }
+				for (let x = W - 2; x >= W - 3; x--) if (get(x, y, z) !== undefined) { b = canHang(x + 1, y, z, x, z) ? x + 1 : -1; break; }
+				if (a < 0 || b < 0) continue;
+				set(a, y, z, state(colours[0] + '_wall_banner', { facing: 'west' }));
+				set(b, y, z, state(colours[0] + '_wall_banner', { facing: 'east' }));
+				break sideBanners;
+			}
+		}
+		for (const x of [0, W - 1]) if (floorSpot(x, D - 1)) set(x, 1, D - 1, lantern(false));
+		hangingLanterns();
+		fenceLanterns(1);
+		// Plazas: lanterns at the inner corners, where all four are open paving.
+		const corners = [[1, 1], [W - 2, 1], [1, D - 2], [W - 2, D - 2]];
+		if (corners.every(([x, z]) => floorSpot(x, z) && free(x, 2, z))) for (const [x, z] of corners) set(x, 1, z, lantern(false));
+		for (const [x, z] of [[mid, D - 1], [0, Math.floor(D / 2)], [W - 1, Math.floor(D / 2)]]) postLantern(x, z);
+		// Stone buildings: the ends of the porch cornice of the block over their door.
+		const accent = { bank: 'minecraft:gold_block', town_hall: 'minecraft:gold_block', guild_hall: 'minecraft:emerald_block',
+			mint: 'minecraft:waxed_chiseled_copper' }[kind];
+		if (accent) for (const x of [0, W - 1]) if (idAt(x, wall, 0) === m.cornice) set(x, wall, 0, block(accent));
+	}
 
 	// Air everywhere else in the box (the site is checked to be free up to the top).
 	let H = 0;
@@ -1604,13 +1796,20 @@ function build(style, m, kind, spec) {
 		palette: L(palette, 10),
 		DataVersion: I(DATA_VERSION),
 	});
-	const file = path.join(out, style, `${kind}.nbt`);
+	const suffix = lv === 1 ? '' : `_lv${lv}` + (tall ? '_tall' : '');
+	const file = path.join(out, style, `${kind}${suffix}.nbt`);
 	fs.mkdirSync(path.dirname(file), { recursive: true });
 	fs.writeFileSync(file, n.write(root));
 	const back = n.plain(n.read(fs.readFileSync(file)));
-	console.log(style, kind, back.size, back.blocks.length, 'blocks', back.palette.length, 'states');
+	console.log(style, kind + suffix, back.size, back.blocks.length, 'blocks', back.palette.length, 'states');
 }
 
 for (const [style, m] of Object.entries(styles)) {
-	for (const [kind, spec] of Object.entries(facilities)) build(style, m, kind, spec);
+	for (const [kind, spec] of Object.entries(facilities)) {
+		build(style, m, kind, spec);
+		// v0.86 (N-11): the looks of levels 2 and 3, and level 3 with a second storey where the kind has one
+		build(style, m, kind, spec, 2);
+		build(style, m, kind, spec, 3);
+		if (spec.tall) build(style, m, kind, spec, 3, true);
+	}
 }

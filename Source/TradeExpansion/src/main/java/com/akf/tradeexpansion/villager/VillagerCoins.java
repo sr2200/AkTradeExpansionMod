@@ -140,7 +140,7 @@ public final class VillagerCoins {
 		double radius = TradeExpansionConfig.get().distance.mergeRadius;
 		for (Market market : MarketRegistry.get(level.getServer()).within(level.dimension(), pos, radius)) {
 			if (market.horizontalDistanceTo(pos) <= radius && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.WORKSHOP)) {
-				return Math.clamp(TradeExpansionConfig.get().development.workshopVillagerPriceMultiplier, 0.1, 1.0);
+				return com.akf.tradeexpansion.development.FacilityEffects.raise(market, com.akf.tradeexpansion.development.FacilityKind.WORKSHOP, 0, Math.clamp(TradeExpansionConfig.get().development.workshopVillagerPriceMultiplier, 0.1, 1.0)); // N-11
 			}
 		}
 		return 1.0;

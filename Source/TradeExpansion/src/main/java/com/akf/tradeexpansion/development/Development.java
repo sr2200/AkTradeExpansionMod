@@ -75,7 +75,8 @@ public final class Development {
 	 */
 	public static double add(Market market, ServerPlayer player, double points, long now) {
 		if (points <= 0 || !enabled(market)) return 0;
-		if (market.hasFacility(FacilityKind.PARK)) points *= config().parkPointsMultiplier;
+		if (market.hasFacility(FacilityKind.PARK)) points *= FacilityEffects.raise(market, FacilityKind.PARK, 0, config().parkPointsMultiplier);
+		points *= FacilityEffects.perk(market, FacilityKind.Perk.DEVELOPMENT); // N-11 (v0.86): directions that bring more points
 		points *= Festival.multiplier(market, now); // v0.51 festival day
 		points *= vigorMultiplier(market); // K-2 (v0.78): a village low in vigor grows a little slower
 		market.setDevelopment(points(market, now) + points, now);

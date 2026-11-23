@@ -47,7 +47,8 @@ public final class Reputation {
 	public static double halfLifeDays(Market market) {
 		double h = config().halfLifeDays;
 		if (h <= 0 || !market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.CHAPEL)) return h;
-		double k = Math.clamp(TradeExpansionConfig.get().development.chapelReputationDecayMultiplier, 0.0, 1.0);
+		double k = com.akf.tradeexpansion.development.FacilityEffects.raise(market, com.akf.tradeexpansion.development.FacilityKind.CHAPEL, 0,
+				Math.clamp(TradeExpansionConfig.get().development.chapelReputationDecayMultiplier, 0.0, 1.0)); // N-11: stronger with its level
 		return k <= 0 ? 0 : h / k;
 	}
 
@@ -55,8 +56,11 @@ public final class Reputation {
 	public static void add(Market market, UUID player, double delta, long now) {
 		if (!config().enabled || delta == 0) return;
 		if (delta > 0 && market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.FOUNTAIN)) { // N-4 (v0.50): gains only
-			delta *= TradeExpansionConfig.get().development.fountainReputationMultiplier;
+			delta *= com.akf.tradeexpansion.development.FacilityEffects.raise(market, com.akf.tradeexpansion.development.FacilityKind.FOUNTAIN, 0,
+					TradeExpansionConfig.get().development.fountainReputationMultiplier); // N-11: stronger with its level
 		}
+		// N-11 (v0.86): buildings whose direction gives more reputation
+		if (delta > 0) delta *= com.akf.tradeexpansion.development.FacilityEffects.perk(market, com.akf.tradeexpansion.development.FacilityKind.Perk.REPUTATION);
 		if (delta > 0) delta *= com.akf.tradeexpansion.development.Festival.multiplier(market, now); // v0.51 festival day
 		double points = Math.max(0, points(market, player, now) + delta);
 		market.setStanding(new Market.Standing(player, points, now));

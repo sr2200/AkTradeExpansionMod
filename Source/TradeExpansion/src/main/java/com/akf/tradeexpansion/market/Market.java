@@ -425,8 +425,10 @@ public final class Market {
 	 * v0.51 theater: a trend in fashion raises B by {@code theaterTrendMultiplier} times its bonus, one out of fashion
 	 * lowers it by only 1 / that of its loss.
 	 */
-	public static double theater(double m, boolean theater) {
-		return theater ? com.akf.tradeexpansion.core.TrendMath.theater(m, TradeExpansionConfig.get().development.theaterTrendMultiplier) : m;
+	public static double theater(double m, Market market) {
+		if (market == null || !market.hasFacility(FacilityKind.THEATER)) return m;
+		return com.akf.tradeexpansion.core.TrendMath.theater(m, com.akf.tradeexpansion.development.FacilityEffects.raise(market, FacilityKind.THEATER, 0,
+				TradeExpansionConfig.get().development.theaterTrendMultiplier)); // N-11: stronger with its level
 	}
 
 	public double trendMultiplier(Identifier goodsId) {
@@ -434,8 +436,7 @@ public final class Market {
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		if (def == null || def.autoAdd().isPresent()) return 1.0;
 		double m = 1.0;
-		boolean theater = hasFacility(FacilityKind.THEATER);
-		for (Identifier group : GoodsGroups.groupsOf(goodsId)) m *= theater(trends.getOrDefault(group, 1.0), theater);
+		for (Identifier group : GoodsGroups.groupsOf(goodsId)) m *= theater(trends.getOrDefault(group, 1.0), this);
 		return m;
 	}
 
@@ -693,17 +694,21 @@ public final class Market {
 	}
 
 	/** v0.51: a clock tower shortens the recovery half-life H of every good. */
-	private static GoodParams clockTower(GoodParams p) {
-		double k = Math.clamp(TradeExpansionConfig.get().development.clockTowerRecoveryMultiplier, 0.1, 1.0);
+	private GoodParams clockTower(GoodParams p) {
+		double k = com.akf.tradeexpansion.development.FacilityEffects.raise(this, FacilityKind.CLOCK_TOWER, 0,
+				Math.clamp(TradeExpansionConfig.get().development.clockTowerRecoveryMultiplier, 0.1, 1.0)); // N-11: stronger with its level
 		return new GoodParams(p.basePrice(), p.elasticity(), p.spread(), p.targetStock(), p.maxStock(), p.restockPerDay(),
 				p.minMultiplier(), p.maxMultiplier(), p.consumePerDay(), p.halfLifeDays() * k);
 	}
 
 	/** N-4: a warehouse raises the stock cap Scap and the restock speed r (unlimited stock stays unlimited). */
-	private static GoodParams warehouse(GoodParams p) {
+	private GoodParams warehouse(GoodParams p) {
 		TradeExpansionConfig.Development c = TradeExpansionConfig.get().development;
-		double cap = p.maxStock() >= 1e9 ? p.maxStock() : Math.max(p.targetStock(), Math.floor(p.maxStock() * c.warehouseStockMultiplier));
-		return new GoodParams(p.basePrice(), p.elasticity(), p.spread(), p.targetStock(), cap, p.restockPerDay() * c.warehouseRestockMultiplier,
+		// N-11 (v0.86): both grow with the level; the direction chosen at level 2 favours one
+		double stock = com.akf.tradeexpansion.development.FacilityEffects.raise(this, FacilityKind.WAREHOUSE, 0, c.warehouseStockMultiplier);
+		double restock = com.akf.tradeexpansion.development.FacilityEffects.raise(this, FacilityKind.WAREHOUSE, 1, c.warehouseRestockMultiplier);
+		double cap = p.maxStock() >= 1e9 ? p.maxStock() : Math.max(p.targetStock(), Math.floor(p.maxStock() * stock));
+		return new GoodParams(p.basePrice(), p.elasticity(), p.spread(), p.targetStock(), cap, p.restockPerDay() * restock,
 				p.minMultiplier(), p.maxMultiplier(), p.consumePerDay(), p.halfLifeDays());
 	}
 

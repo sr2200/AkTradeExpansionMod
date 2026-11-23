@@ -172,8 +172,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		/** In fashion first, then out of fashion, each by multiplier. */
 		public static List<TrendView> of(Market market) {
 			List<TrendView> list = new ArrayList<>();
-			boolean theater = market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.THEATER);
-			market.trends().forEach((group, m) -> list.add(new TrendView(group, Market.theater(m, theater)))); // v0.51 theater
+			market.trends().forEach((group, m) -> list.add(new TrendView(group, Market.theater(m, market)))); // v0.51 theater
 			list.sort(java.util.Comparator.comparingDouble(TrendView::multiplier).reversed());
 			return list;
 		}
@@ -186,7 +185,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			List<TrendView> list = new ArrayList<>();
 			for (Identifier group : com.akf.tradeexpansion.data.GoodsGroups.groupsOf(goodsId)) {
 				Double m = market.trends().get(group);
-				if (m != null) list.add(new TrendView(group, Market.theater(m, market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.THEATER))));
+				if (m != null) list.add(new TrendView(group, Market.theater(m, market)));
 			}
 			return list;
 		}
@@ -281,9 +280,34 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 */
 	public record DevelopmentView(boolean enabled, double points, double mine, List<ContributorView> top, int measuredLevel, int bonus,
 			boolean bank, boolean canChoose, int buildLevel, int freeBuilds, List<FacilityView> facilities, int festivalIn, double vigor,
-			double vigorMultiplier, int shortagesFulfilled, int villagersEvery) {
+			double vigorMultiplier, int shortagesFulfilled, int villagersEvery, Levels levels) {
 		public static final DevelopmentView DISABLED = new DevelopmentView(false, 0, 0, List.of(), 1, 0, false, false, 0, 0, List.of(), -1,
-				100, 1, 0, 0);
+				100, 1, 0, 0, Levels.OFF);
+
+		/**
+		 * N-11 (v0.86): the settings of the buildings' levels the screen needs to show how strong they are
+		 * ({@code development.upgradeEnabled}, {@code upgradeEffectSteps}, {@code upgradePerkBonus}).
+		 */
+		public record Levels(boolean enabled, List<Double> steps, double perkBonus) {
+			public static final Levels OFF = new Levels(false, List.of(), 0);
+			static final StreamCodec<RegistryFriendlyByteBuf, Levels> CODEC = StreamCodec.composite(
+					ByteBufCodecs.BOOL, Levels::enabled,
+					ByteBufCodecs.DOUBLE.apply(ByteBufCodecs.list()), Levels::steps,
+					ByteBufCodecs.DOUBLE, Levels::perkBonus,
+					Levels::new);
+
+			/** Strength of effect {@code effect} of {@code kind} at {@code level} in direction {@code branch} (1 = as at level 1). */
+			public double strength(com.akf.tradeexpansion.development.FacilityKind kind, int level, String branch, int effect) {
+				if (!enabled) return 1.0;
+				return com.akf.tradeexpansion.core.FacilityLevelMath.strength(level, kind.role(branch, effect), steps);
+			}
+
+			/** Multiplier of the side bonus of direction {@code branch} at {@code level} (1 = none). */
+			public double perk(com.akf.tradeexpansion.development.FacilityKind kind, int level, String branch) {
+				if (!enabled || kind.perk(branch) == com.akf.tradeexpansion.development.FacilityKind.Perk.NONE) return 1.0;
+				return com.akf.tradeexpansion.core.FacilityLevelMath.perk(level, perkBonus);
+			}
+		}
 
 		static final StreamCodec<RegistryFriendlyByteBuf, DevelopmentView> CODEC = StreamCodec.ofMember(DevelopmentView::write, DevelopmentView::read);
 
@@ -304,13 +328,14 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			buf.writeDouble(vigorMultiplier);
 			buf.writeVarInt(shortagesFulfilled);
 			buf.writeVarInt(villagersEvery);
+			Levels.CODEC.encode(buf, levels);
 		}
 
 		private static DevelopmentView read(RegistryFriendlyByteBuf buf) {
 			return new DevelopmentView(buf.readBoolean(), buf.readDouble(), buf.readDouble(), ContributorView.CODEC.apply(ByteBufCodecs.list()).decode(buf),
 					buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(), buf.readVarInt(),
 					FacilityView.CODEC.apply(ByteBufCodecs.list()).decode(buf), buf.readVarInt() - 1, buf.readDouble(), buf.readDouble(),
-					buf.readVarInt(), buf.readVarInt());
+					buf.readVarInt(), buf.readVarInt(), Levels.CODEC.decode(buf));
 		}
 	}
 
@@ -322,22 +347,51 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	 * @param due   market-clock time the construction ends (state 1)
 	 * @param materialsReady every wanted material is donated, or materials are not required (v0.42, development.requireMaterials)
 	 * @param size          N-6 (v0.58): size of the building in this market's look (x = width, y = height, z = depth); 0 when unknown
+	 * @param level         N-11 (v0.86): its level (1..3; a destroyed one keeps the level it is rebuilt at)
+	 * @param branch        N-11: the direction chosen at level 2 ({@code a} / {@code b}), empty before
+	 * @param upgrading     N-11: a completed building is being raised to the next level ({@code due} is when it is done)
+	 * @param tallLook      N-11: its level 3 has a second storey (when the space above is free)
 	 */
 	public record FacilityView(String id, String kind, Identifier icon, int state, long cost, long due, List<WantedView> wanted,
-			boolean materialsReady, BlockPos size) {
+			boolean materialsReady, BlockPos size, int level, String branch, boolean upgrading, boolean tallLook) {
 		public static final int NONE = 0, CONSTRUCTING = 1, COMPLETE = 2, DESTROYED = 3;
 
-		static final StreamCodec<RegistryFriendlyByteBuf, FacilityView> CODEC = StreamCodec.composite(
-				ByteBufCodecs.STRING_UTF8, FacilityView::id,
-				ByteBufCodecs.STRING_UTF8, FacilityView::kind,
-				Identifier.STREAM_CODEC, FacilityView::icon,
-				ByteBufCodecs.VAR_INT, FacilityView::state,
-				ByteBufCodecs.VAR_LONG, FacilityView::cost,
-				ByteBufCodecs.VAR_LONG, FacilityView::due,
-				WantedView.CODEC.apply(ByteBufCodecs.list()), FacilityView::wanted,
-				ByteBufCodecs.BOOL, FacilityView::materialsReady,
-				BlockPos.STREAM_CODEC, FacilityView::size,
-				FacilityView::new);
+		static final StreamCodec<RegistryFriendlyByteBuf, FacilityView> CODEC = StreamCodec.ofMember(FacilityView::write, FacilityView::read);
+
+		private void write(RegistryFriendlyByteBuf buf) {
+			buf.writeUtf(id);
+			buf.writeUtf(kind);
+			Identifier.STREAM_CODEC.encode(buf, icon);
+			buf.writeVarInt(state);
+			buf.writeVarLong(cost);
+			buf.writeVarLong(due);
+			WantedView.CODEC.apply(ByteBufCodecs.list()).encode(buf, wanted);
+			buf.writeBoolean(materialsReady);
+			BlockPos.STREAM_CODEC.encode(buf, size);
+			buf.writeVarInt(level);
+			buf.writeUtf(branch);
+			buf.writeBoolean(upgrading);
+			buf.writeBoolean(tallLook);
+		}
+
+		private static FacilityView read(RegistryFriendlyByteBuf buf) {
+			return new FacilityView(buf.readUtf(), buf.readUtf(), Identifier.STREAM_CODEC.decode(buf), buf.readVarInt(), buf.readVarLong(),
+					buf.readVarLong(), WantedView.CODEC.apply(ByteBufCodecs.list()).decode(buf), buf.readBoolean(), BlockPos.STREAM_CODEC.decode(buf),
+					buf.readVarInt(), buf.readUtf(), buf.readBoolean(), buf.readBoolean());
+		}
+
+		/** N-11: the kind as the enum, or {@code null} for an unknown one. */
+		public com.akf.tradeexpansion.development.FacilityKind facilityKind() {
+			for (com.akf.tradeexpansion.development.FacilityKind k : com.akf.tradeexpansion.development.FacilityKind.values()) {
+				if (k.getSerializedName().equals(kind)) return k;
+			}
+			return null;
+		}
+
+		/** N-11: completed, not being raised and below the top level (the levels being on is checked by the caller). */
+		public boolean upgradeable() {
+			return state == COMPLETE && !upgrading && level < com.akf.tradeexpansion.core.FacilityLevelMath.MAX_LEVEL;
+		}
 	}
 
 	/**
@@ -451,7 +505,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			if (!market.hasFacility(FacilityKind.MINT)) return NONE;
 			List<MintOption> options = new ArrayList<>();
 			for (com.akf.tradeexpansion.currency.MintService.Metal m : com.akf.tradeexpansion.currency.MintService.METALS) {
-				options.add(new MintOption(BuiltInRegistries.ITEM.getKey(m.block()), m.mintValue(), m.enabled()));
+				options.add(new MintOption(BuiltInRegistries.ITEM.getKey(m.block()), m.mintValue(market), m.enabled()));
 			}
 			return new MintView(true, options);
 		}
@@ -473,6 +527,7 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 		Market.Contributor mine = market.contributors().get(player.getUUID());
 		TradeExpansionConfig.Development c = Development.config();
 		List<FacilityView> facilities = new ArrayList<>();
+		java.util.Map<String, Long> order = new java.util.HashMap<>(); // N-6: the order is by the cost of building (not of the next level)
 		net.minecraft.server.MinecraftServer server = player.level().getServer();
 		net.minecraft.server.level.ServerLevel marketLevel = server.getLevel(market.dimension());
 		String placeStyle = marketLevel == null ? "plains" : FacilityBuilder.style(marketLevel, market.center());
@@ -481,7 +536,11 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 			Facility f = market.facilities().get(e.getKey());
 			// v0.58: the size of the look it has (under construction or built) or would get here (also a rebuild)
 			String style = f != null && f.state() != Facility.State.DESTROYED ? f.style() : placeStyle;
-			BlockPos size = FacilityBuilder.template(server, def, style).map(t -> new BlockPos(t.getSize().getX(), t.getSize().getY(), t.getSize().getZ())).orElse(BlockPos.ZERO);
+			// N-11 (v0.86): the size of the look of its level
+			java.util.Optional<net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate> look = f != null
+					? FacilityBuilder.template(server, def, style, f.level(), f.tall()) : FacilityBuilder.template(server, def, style);
+			BlockPos size = look.map(t -> new BlockPos(t.getSize().getX(), t.getSize().getY(), t.getSize().getZ())).orElse(BlockPos.ZERO);
+			boolean tallLook = FacilityBuilder.template(server, def, style, com.akf.tradeexpansion.core.FacilityLevelMath.MAX_LEVEL, true).isPresent();
 			int state = f == null ? FacilityView.NONE : switch (f.state()) {
 				case CONSTRUCTING -> FacilityView.CONSTRUCTING;
 				case COMPLETE -> FacilityView.COMPLETE;
@@ -493,18 +552,22 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 				wanted.add(new WantedView(BuiltInRegistries.ITEM.getKey(w.displayItem()), w.tag().map(Identifier::toString).orElse(""), FacilityBuilder.required(market, e.getKey(), w),
 						donated.getOrDefault(w.key(), 0)));
 			}
+			boolean upgrading = f != null && f.upgrading();
 			facilities.add(new FacilityView(e.getKey().toString(), def.kind().getSerializedName(), def.icon(), state,
-					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : f.due(), wanted, FacilityBuilder.materialsReady(market, e.getKey()), size));
+					FacilityBuilder.cost(market, e.getKey()), f == null ? 0 : upgrading ? f.upgradeDue() : f.due(), wanted,
+					FacilityBuilder.materialsReady(market, e.getKey()), size, f == null ? 1 : f.level(), f == null ? "" : f.branch(), upgrading, tallLook));
+			order.put(e.getKey().toString(), def.cost());
 		}
 		// N-6: cheapest first (ties by id), the order the town can grow in.
-		facilities.sort(java.util.Comparator.comparingLong(FacilityView::cost).thenComparing(FacilityView::id));
+		facilities.sort(java.util.Comparator.comparingLong((FacilityView v) -> order.getOrDefault(v.id(), v.cost())).thenComparing(FacilityView::id));
 		int buildLevel = c.buildReputationLevel;
 		return new DevelopmentView(true, Development.points(market, now), mine == null ? 0 : mine.points(), top, market.measuredLevel(),
 				com.akf.tradeexpansion.market.MarketFactory.levelBonus(market), market.hasFacility(FacilityKind.BANK),
 				Reputation.level(market, player.getUUID(), now) >= buildLevel, buildLevel,
 				(int) Math.max(0, c.maxConcurrentBuilds - FacilityBuilder.constructing(market)), facilities,
 				com.akf.tradeexpansion.development.Festival.daysUntil(market, now), market.vigor(), Development.vigorMultiplier(market),
-				market.shortagesFulfilled(), com.akf.tradeexpansion.config.TradeExpansionConfig.get().demand.villagersEvery);
+				market.shortagesFulfilled(), com.akf.tradeexpansion.config.TradeExpansionConfig.get().demand.villagersEvery,
+				new DevelopmentView.Levels(c.upgradeEnabled, List.copyOf(c.upgradeEffectSteps), c.upgradePerkBonus));
 	}
 
 	/** N-6: contributors listed on the development tab. */

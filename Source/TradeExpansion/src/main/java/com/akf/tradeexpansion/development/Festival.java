@@ -16,7 +16,7 @@ public final class Festival {
 	/** Days until the next festival day of {@code market} (0 = today), or -1 without a completed festival plaza. */
 	public static int daysUntil(Market market, long now) {
 		if (!market.hasFacility(FacilityKind.FESTIVAL)) return -1;
-		return DevelopmentMath.festivalIn(market.id(), Math.floorDiv(now, PriceModel.TICKS_PER_DAY), Development.config().festivalIntervalDays);
+		return DevelopmentMath.festivalIn(market.id(), Math.floorDiv(now, PriceModel.TICKS_PER_DAY), intervalDays(market));
 	}
 
 	public static boolean today(Market market, long now) {
@@ -25,6 +25,17 @@ public final class Festival {
 
 	/** Multiplier of reputation and development points gained at {@code market} now. */
 	public static double multiplier(Market market, long now) {
-		return today(market, now) ? Development.config().festivalMultiplier : 1.0;
+		return today(market, now) ? festivalMultiplier(market) : 1.0;
+	}
+
+	/** N-11 (v0.86): the multiplier of a festival day at {@code market}: {@code development.festivalMultiplier}, stronger with the level. */
+	public static double festivalMultiplier(Market market) {
+		return FacilityEffects.raise(market, FacilityKind.FESTIVAL, 0, Development.config().festivalMultiplier);
+	}
+
+	/** N-11: days between the festivals of {@code market}: {@code development.festivalIntervalDays}, fewer with the level (at least 2). */
+	public static int intervalDays(Market market) {
+		return com.akf.tradeexpansion.core.FacilityLevelMath.interval(Development.config().festivalIntervalDays,
+				FacilityEffects.strength(market, FacilityKind.FESTIVAL, 1), 2);
 	}
 }

@@ -1426,6 +1426,14 @@ public final class TradeExpansionConfig {
 		public double townHallMaterialMultiplier = 0.75;
 		/** v0.79 workshop: multiplier of the coin prices of villager trades near the market (H). */
 		public double workshopVillagerPriceMultiplier = 0.9;
+		/** N-11 (v0.86): completed buildings can be raised to level 2 and 3. */
+		public boolean upgradeEnabled = true;
+		/** N-11: development points and materials of raising a building to level 2 / 3, as a multiple of building it. */
+		public List<Double> upgradeCostMultipliers = new ArrayList<>(List.of(1.0, 1.5));
+		/** N-11: strength of the effects at level 2 / 3 (1 = as at level 1; the growth is the part above 1). */
+		public List<Double> upgradeEffectSteps = new ArrayList<>(List.of(1.5, 2.0));
+		/** N-11: the side bonus of a direction (more reputation / development points) per level above 1. */
+		public double upgradePerkBonus = 0.15;
 
 		public Development() {
 		}
@@ -1546,7 +1554,8 @@ public final class TradeExpansionConfig {
 		private record MoreBuildings(int stationExtraRoutes, double stationRoadWeight, int appraiserExtraSpecials,
 				double appraiserSpecialPriceMultiplier, int wholesalerExtraShortages, double wholesalerFulfillMultiplier,
 				double guildHallClerkSpeedMultiplier, double guildHallClerkWageMultiplier, double chapelReputationDecayMultiplier,
-				double townHallMaterialMultiplier, double workshopVillagerPriceMultiplier) {
+				double townHallMaterialMultiplier, double workshopVillagerPriceMultiplier, boolean upgradeEnabled, List<Double> upgradeCostMultipliers,
+				List<Double> upgradeEffectSteps, double upgradePerkBonus) {
 			static final MapCodec<MoreBuildings> CODEC = RecordCodecBuilder.mapCodec(i -> {
 				Development d = new Development();
 				return i.group(
@@ -1560,7 +1569,11 @@ public final class TradeExpansionConfig {
 						Codec.DOUBLE.fieldOf("guildHallClerkWageMultiplier").orElse(d.guildHallClerkWageMultiplier).forGetter(MoreBuildings::guildHallClerkWageMultiplier),
 						Codec.DOUBLE.fieldOf("chapelReputationDecayMultiplier").orElse(d.chapelReputationDecayMultiplier).forGetter(MoreBuildings::chapelReputationDecayMultiplier),
 						Codec.DOUBLE.fieldOf("townHallMaterialMultiplier").orElse(d.townHallMaterialMultiplier).forGetter(MoreBuildings::townHallMaterialMultiplier),
-						Codec.DOUBLE.fieldOf("workshopVillagerPriceMultiplier").orElse(d.workshopVillagerPriceMultiplier).forGetter(MoreBuildings::workshopVillagerPriceMultiplier)
+						Codec.DOUBLE.fieldOf("workshopVillagerPriceMultiplier").orElse(d.workshopVillagerPriceMultiplier).forGetter(MoreBuildings::workshopVillagerPriceMultiplier),
+						Codec.BOOL.fieldOf("upgradeEnabled").orElse(d.upgradeEnabled).forGetter(MoreBuildings::upgradeEnabled),
+						Codec.DOUBLE.listOf().fieldOf("upgradeCostMultipliers").orElse(d.upgradeCostMultipliers).forGetter(MoreBuildings::upgradeCostMultipliers),
+						Codec.DOUBLE.listOf().fieldOf("upgradeEffectSteps").orElse(d.upgradeEffectSteps).forGetter(MoreBuildings::upgradeEffectSteps),
+						Codec.DOUBLE.fieldOf("upgradePerkBonus").orElse(d.upgradePerkBonus).forGetter(MoreBuildings::upgradePerkBonus)
 				).apply(i, MoreBuildings::new);
 			});
 		}
@@ -1599,11 +1612,15 @@ public final class TradeExpansionConfig {
 			c.chapelReputationDecayMultiplier = b.chapelReputationDecayMultiplier();
 			c.townHallMaterialMultiplier = b.townHallMaterialMultiplier();
 			c.workshopVillagerPriceMultiplier = b.workshopVillagerPriceMultiplier();
+			c.upgradeEnabled = b.upgradeEnabled();
+			c.upgradeCostMultipliers = new ArrayList<>(b.upgradeCostMultipliers());
+			c.upgradeEffectSteps = new ArrayList<>(b.upgradeEffectSteps());
+			c.upgradePerkBonus = b.upgradePerkBonus();
 			return c;
 		}, c -> Pair.of(c, new MoreBuildings(c.stationExtraRoutes, c.stationRoadWeight, c.appraiserExtraSpecials,
 				c.appraiserSpecialPriceMultiplier, c.wholesalerExtraShortages, c.wholesalerFulfillMultiplier, c.guildHallClerkSpeedMultiplier,
 				c.guildHallClerkWageMultiplier, c.chapelReputationDecayMultiplier, c.townHallMaterialMultiplier,
-				c.workshopVillagerPriceMultiplier))).codec();
+				c.workshopVillagerPriceMultiplier, c.upgradeEnabled, c.upgradeCostMultipliers, c.upgradeEffectSteps, c.upgradePerkBonus))).codec();
 
 		public int[] levelBonusThresholdArray() {
 			return levelBonusThresholds.stream().mapToInt(Integer::intValue).toArray();

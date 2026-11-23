@@ -198,7 +198,7 @@ public final class MarketFactory {
 	public static int goodsTarget(Market market, int level) {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		int target = MarketLevel.goodsCount(level, config.market.minGoods, config.market.maxGoods);
-		if (market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.MARKET_HALL)) target += Math.max(0, config.development.marketHallExtraGoods);
+		if (market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.MARKET_HALL)) target += com.akf.tradeexpansion.development.FacilityEffects.count(market, com.akf.tradeexpansion.development.FacilityKind.MARKET_HALL, 0, Math.max(0, config.development.marketHallExtraGoods)); // N-11
 		return target;
 	}
 
@@ -275,7 +275,7 @@ public final class MarketFactory {
 		TradeExpansionConfig config = TradeExpansionConfig.get();
 		int regular = config.market.specialGoodsAt(market.level());
 		if (market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.APPRAISER)) {
-			regular += Math.max(0, config.development.appraiserExtraSpecials); // v0.79: the appraiser finds one more
+			regular += com.akf.tradeexpansion.development.FacilityEffects.count(market, com.akf.tradeexpansion.development.FacilityKind.APPRAISER, 0, Math.max(0, config.development.appraiserExtraSpecials)); // v0.79: the appraiser finds one more (N-11: more with its level)
 		}
 		// M: the last specialBonusCount specials are shown only to players with a good reputation.
 		int bonus = config.reputation.enabled ? config.reputation.specialBonusCount : 0;

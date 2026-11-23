@@ -68,13 +68,14 @@ public final class TradeRoutes {
 			points.add(new RouteMath.Point(0, posts.get(i).getX(), posts.get(i).getZ()));
 		}
 		List<RouteMath.Point> centers = new ArrayList<>(markets.size());
-		Set<Long> stations = new HashSet<>();
+		Map<Long, Integer> stations = new HashMap<>();
 		for (Market m : markets) {
 			centers.add(new RouteMath.Point(m.id(), m.center().getX(), m.center().getZ()));
-			if (m.hasFacility(FacilityKind.STATION)) stations.add(m.id()); // v0.79: a station allows more routes
+			// v0.79: a station allows more routes; N-11: more with its level
+			if (m.hasFacility(FacilityKind.STATION)) stations.put(m.id(), com.akf.tradeexpansion.development.FacilityEffects.count(m, FacilityKind.STATION, 0, key.stationExtra()));
 		}
 		RouteMath.Result result = RouteMath.routes(points, centers, key.spacing(), key.reach(),
-				id -> !key.enabled() ? 0 : key.max() + (stations.contains(id) ? key.stationExtra() : 0));
+				id -> !key.enabled() ? 0 : key.max() + stations.getOrDefault(id, 0));
 		return new Cached(result, List.copyOf(posts), Map.copyOf(index), key);
 	}
 
@@ -97,13 +98,22 @@ public final class TradeRoutes {
 	/** v0.79: the road weight between two markets on a route; a station at either end raises it (development.stationRoadWeight). */
 	public static double roadWeight(Market a, Market b) {
 		boolean station = a != null && a.hasFacility(FacilityKind.STATION) || b != null && b.hasFacility(FacilityKind.STATION);
-		return RouteMath.roadWeight(roadWeight(), station, TradeExpansionConfig.get().development.stationRoadWeight);
+		double base = Math.clamp(TradeExpansionConfig.get().development.stationRoadWeight, 0.0, 1.0);
+		// N-11: a station of a higher level brings the weight closer to 1 (the gap to 1 shrinks with the strength)
+		double weight = Math.max(stationWeight(a, base), stationWeight(b, base));
+		return RouteMath.roadWeight(roadWeight(), station, weight);
+	}
+
+	private static double stationWeight(Market m, double base) {
+		if (m == null || !m.hasFacility(FacilityKind.STATION)) return 0;
+		return 1 - com.akf.tradeexpansion.core.FacilityLevelMath.raise(1 - base, com.akf.tradeexpansion.development.FacilityEffects.strength(m, FacilityKind.STATION, 1));
 	}
 
 	/** v0.79: routes {@code market} can have: route.maxRoutesPerMarket, more with a station. */
 	public static int maxRoutes(Market market) {
 		TradeExpansionConfig c = TradeExpansionConfig.get();
-		return c.route.maxRoutesPerMarket + (market != null && market.hasFacility(FacilityKind.STATION) ? Math.max(0, c.development.stationExtraRoutes) : 0);
+		return c.route.maxRoutesPerMarket + (market != null && market.hasFacility(FacilityKind.STATION)
+				? com.akf.tradeexpansion.development.FacilityEffects.count(market, FacilityKind.STATION, 0, Math.max(0, c.development.stationExtraRoutes)) : 0);
 	}
 
 	private static double roadWeight(MarketRegistry registry, RouteMath.Route r) {

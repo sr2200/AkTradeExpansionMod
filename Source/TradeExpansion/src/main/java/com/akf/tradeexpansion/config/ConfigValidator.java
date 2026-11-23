@@ -238,6 +238,10 @@ public final class ConfigValidator {
 		dv.chapelReputationDecayMultiplier = clamp("development.chapelReputationDecayMultiplier", dv.chapelReputationDecayMultiplier, 0, 1);
 		dv.townHallMaterialMultiplier = clamp("development.townHallMaterialMultiplier", dv.townHallMaterialMultiplier, 0.1, 1);
 		dv.workshopVillagerPriceMultiplier = clamp("development.workshopVillagerPriceMultiplier", dv.workshopVillagerPriceMultiplier, 0.1, 1);
+		// N-11 (v0.86): levels 2 and 3
+		dv.upgradeCostMultipliers = doubleList("development.upgradeCostMultipliers", dv.upgradeCostMultipliers, 2, 0.1, 20, List.of(1.0, 1.5));
+		dv.upgradeEffectSteps = doubleList("development.upgradeEffectSteps", dv.upgradeEffectSteps, 2, 1, 5, List.of(1.5, 2.0));
+		dv.upgradePerkBonus = clamp("development.upgradePerkBonus", dv.upgradePerkBonus, 0, 1);
 		dv.reputationPerPoint = clamp("development.reputationPerPoint", dv.reputationPerPoint, 0, 10);
 		dv.materialCountMultiplier = clamp("development.materialCountMultiplier", dv.materialCountMultiplier, 0.1, 100);
 

@@ -36,7 +36,7 @@ public final class MarketAccess {
 		long now = MarketUpkeep.visit(level, market);
 		if (com.akf.tradeexpansion.development.Festival.today(market, now)) { // v0.51 festival plaza
 			player.sendSystemMessage(Component.translatable("message.ak_trade_expansion.festival.today", MarketNames.name(market),
-					formatMultiplier(TradeExpansionConfig.get().development.festivalMultiplier)).withStyle(ChatFormatting.LIGHT_PURPLE));
+					formatMultiplier(com.akf.tradeexpansion.development.Festival.festivalMultiplier(market))).withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 		ServerPlayNetworking.send(player, MarketSnapshotS2C.of(market, player, now));
 		com.akf.tradeexpansion.notebook.LedgerService.notePrices(player, market, now); // T: price notes of the notebook

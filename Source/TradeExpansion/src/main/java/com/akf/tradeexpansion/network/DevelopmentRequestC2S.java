@@ -9,13 +9,15 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 /**
  * Development tab (design N-6): donate coins / materials, build a facility, take a construction marker.
  *
- * @param amount   DONATE_COINS: copper to donate
- * @param facility DONATE_ITEMS / BUILD: facility id ({@code ak_trade_expansion:warehouse}), empty otherwise
+ * @param amount   DONATE_COINS: copper to donate; UPGRADE (N-11, v0.86): the direction chosen at level 1 (0 = a, 1 = b)
+ * @param facility DONATE_ITEMS / BUILD / UPGRADE: facility id ({@code ak_trade_expansion:warehouse}), empty otherwise
  * @param useCard  DONATE_COINS: pay from the bank account (E-8, no card fee)
  */
 public record DevelopmentRequestC2S(long marketId, Action action, long amount, String facility, boolean useCard) implements CustomPacketPayload {
 	public enum Action {
-		DONATE_COINS, DONATE_ITEMS, BUILD, MARKER
+		DONATE_COINS, DONATE_ITEMS, BUILD, MARKER,
+		/** N-11 (v0.86): raise a completed building to the next level. */
+		UPGRADE
 	}
 
 	public static final Type<DevelopmentRequestC2S> TYPE = new Type<>(TradeExpansion.id("development_request"));

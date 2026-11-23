@@ -76,8 +76,8 @@ public final class QuestService {
 		// N-4: a request hall adds slots.
 		boolean hall = market.hasFacility(com.akf.tradeexpansion.development.FacilityKind.QUEST_HALL);
 		TradeExpansionConfig.Development dev = TradeExpansionConfig.get().development;
-		int maxRequests = config.maxPerMarket + (hall ? dev.questHallExtraQuests : 0);
-		int maxTransport = config.transportPerMarket + (hall ? dev.questHallExtraTransport : 0);
+		int maxRequests = config.maxPerMarket + (hall ? com.akf.tradeexpansion.development.FacilityEffects.count(market, com.akf.tradeexpansion.development.FacilityKind.QUEST_HALL, 0, dev.questHallExtraQuests) : 0); // N-11
+		int maxTransport = config.transportPerMarket + (hall ? com.akf.tradeexpansion.development.FacilityEffects.count(market, com.akf.tradeexpansion.development.FacilityKind.QUEST_HALL, 1, dev.questHallExtraTransport) : 0);
 		while (market.requests().stream().filter(r -> !r.isTransport()).count() < maxRequests) {
 			Request request = create(market, random, now);
 			if (request == null) break;
@@ -174,7 +174,11 @@ public final class QuestService {
 		long deposit = Math.max(1, (long) Math.ceil(value - 1e-9));
 		double multiplier = QuestMath.transportMultiplier(MarketRegistry.linkedDistance(market, destination), config.transportBaseMultiplier,
 				config.transportPerThousandBlocks, config.transportMaxMultiplier);
-		if (harbor(market) || harbor(destination)) multiplier *= Math.max(1.0, TradeExpansionConfig.get().development.harborRewardMultiplier); // v0.51
+		if (harbor(market) || harbor(destination)) { // v0.51; N-11: the stronger of the two harbors
+			double base = Math.max(1.0, TradeExpansionConfig.get().development.harborRewardMultiplier);
+			multiplier *= Math.max(harbor(market) ? com.akf.tradeexpansion.development.FacilityEffects.raise(market, com.akf.tradeexpansion.development.FacilityKind.HARBOR, 0, base) : 1.0,
+					harbor(destination) ? com.akf.tradeexpansion.development.FacilityEffects.raise(destination, com.akf.tradeexpansion.development.FacilityKind.HARBOR, 0, base) : 1.0);
+		}
 		long reward = Math.max(1, (long) Math.ceil(value * multiplier - 1e-9));
 		int difficulty = QuestMath.difficulty(value, thresholds());
 		long deadline = now + Math.round(config.durationDays * PriceModel.TICKS_PER_DAY);

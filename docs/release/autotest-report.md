@@ -2,8 +2,8 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.3.12、2026-11-23 12:18、224 件中 1 件失敗
-- クライアント：バージョン 0.3.1、2026-11-22 11:16、153 件中 0 件失敗
+- サーバー：バージョン 0.3.14、2026-11-23 13:40、228 件中 1 件失敗
+- クライアント：バージョン 0.3.1、2026-11-22 11:16、154 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.44、2026-11-21 17:44、3 件中 0 件失敗
 - クライアント（Mod Menu だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
 - クライアント（YACL だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
@@ -11,7 +11,7 @@
 - クライアント（REI）：バージョン 0.2.44、2026-11-21 17:31、7 件中 0 件失敗
 - クライアント（JourneyMap）：バージョン 0.2.44、2026-11-21 17:31、3 件中 0 件失敗
 - クライアント（建物の画像）：バージョン 0.3.10、2026-11-23 11:52、2 件中 0 件失敗
-- チェックリスト 397 項目のうち、今回 自動で完了 217・一部を確認 159・失敗 2
+- チェックリスト 406 項目のうち、今回 自動で完了 219・一部を確認 165・失敗 2
 
 ## 失敗した項目
 
@@ -191,6 +191,10 @@
 | 39-7 | `town_hall_materials` | サーバー | ✔ | 全部 |
 | 39-8 | `workshop_villagers` | サーバー | ✔ | 全部 |
 | 39-9 | `school_outlook` | サーバー | ✔ | 学舎が建つと、交易画面のスナップショットに品不足・流行の残り日数（1日以上、それぞれの入れ替えの日数以下）が入り、雇い人タブの行き先（品を決めた運び屋）に、行き先の品不足の倍率と残り日数が入ること。学舎が無い時はどちらも入らない（画面の文の表示は見ていない） |
+| 44-2・44-3・44-5 | `facility_upgrade_level2` | サーバー | ✔ | 完成した倉庫を「大きな蔵」で Lv2 に上げると、建てる時と同じ発展度が減って工事中になり、工事中も効果が続き、終わると「Lv2 になりました」が届いて Lv2 になること。建物の飾りが増え、チェストに入れた物は残り、在庫の上限の倍率が 1.5 → 1.875、補充の速さが 1.5 → 1.625 になること（画面の表示と見た目そのものは見ていない） |
+| 44-4・44-5 | `facility_upgrade_level3_tall` | サーバー | ✔ | 宿屋を「大部屋」で Lv2・Lv3 に上げると、そのたびに村人が増え（2人 → 4人 → 5人の分）、上が空いている Lv3 は2階建てになって建物の高さが 4 増えること。上をふさいだ倉庫は2階なしで Lv3 になり、そのことがチャットに出ること。Lv3 はそれ以上上げられないこと（2階の見た目そのものは見ていない） |
+| 44-2・44-7 | `facility_upgrade_checks` | サーバー | ✔ | 建っていない建物は「完成した建物だけ」で上げられず、評判・同時の工事の数・発展度が足りないと建てる時と同じ理由で上げられず、Lv1 の方向は 0 か 1 だけなこと。噴水を「にぎわう広場」にすると、噴水の評判の倍率は少し、発展度は +15% になること。upgradeEnabled を OFF にすると上げられず、効果は Lv1 と同じになること（ボタンの表示は見ていない） |
+| 44-6 | `facility_rebuilt_at_level` | サーバー | ✔ | Lv2 の倉庫の看板を壊すと壊れ、建て直す費用は建てた分と Lv2 に上げた分の合計の半分で、建て直すと Lv2 のまま、Lv2 の見た目で建つこと（見た目そのものは見ていない） |
 | 28-2 | `fountain_water_stays` | サーバー | ✔ | 平原の村で噴水広場を建てると、水盤と柱の上に水（水源と流れ）が張り、水盤の底に明るさ10以上の光るブロックがあり、ランダムティックを速めて600ティック進めても、水が建物の外に出ず、建物のブロックが変わらないこと（ブロックの下の草が土になるのは除く。4本の流れの形・夜の見え方は画像で見る） |
 | 28-4 | `park_stays` | サーバー | ✔ | 公園を建てると、生け垣と木の葉・池・サトウキビ・スイレンの葉・柵・ベンチ（階段）があり、ランダムティックを速めて600ティック進めても、葉が消えず、池の水が外に流れ出ず、サトウキビ・スイレンの葉も含めて建物のブロックが変わらないこと（ブロックの下の草が土になる・サトウキビが伸びるのは除く。池の下が低い地面の時は見ていない。見た目は画像で見る） |
 | 29-5 | `hot_spring_and_festival_water_stay` | サーバー | ✔ | 温泉の湯船の底にソウルサンドがあって泡（泡の柱）が上がり、温泉と祭りの広場をランダムティックを速めて600ティック進めても、水が建物の外に出ず、建物のブロックが変わらないこと（ブロックの下の草が土になるのは除く。見た目は画像で見る） |
@@ -397,6 +401,7 @@
 | 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
 | 40-12 | `notebook_screen` | クライアント | ✔ | 1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に売上が出て、3つのタブとも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない |
 | 40-2 | `notebook_screen` | クライアント | ✔ | 手帳を使うキー（右クリック）で手帳の画面が開くこと（タブの切り替えの見え方は画像で見る） |
+| 44-1・44-8 | `town_levels` | クライアント | ✔ | 全部 |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
 | 1-1 | `startup_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | 全部 |
 | 15-3 | `trade_without_modmenu_yacl` | クライアント（Mod Menu・YACL なし） | ✔ | Mod Menu・YACL を外した開発用の起動構成（テスト用の Mod は入っている）で、新しいワールドに入って村に交易所を置き、交易画面で1つ買い1つ売れることのみ（配布 jar だけの起動構成では見ていない） |
@@ -712,6 +717,9 @@
 - 40-12 `notebook_screen`：[layout_notebook_today_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_en_us_854x480_GUI_auto.png)
 - 40-12 `notebook_screen`：[layout_notebook_days_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_en_us_854x480_GUI_auto.png)
 - 40-12 `notebook_screen`：[layout_notebook_prices_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_en_us_854x480_GUI_auto.png)
+- 44-1・44-8 `town_levels`：[layout_ja_jp_854x480_GUI_auto_level1.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_level1.png)
+- 44-1・44-8 `town_levels`：[44-1_directions.png](../../Source/TradeExpansion/build/autotest/screenshots/44-1_directions.png)
+- 44-1・44-8 `town_levels`：[layout_ja_jp_854x480_GUI_auto_level2.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_level2.png)
 - 1-1 `startup_without_modmenu_yacl`：[1-1_title_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/1-1_title_without_modmenu_yacl.png)
 - 15-3 `trade_without_modmenu_yacl`：[15-3_bought_without_modmenu_yacl.png](../../Source/TradeExpansion/build/autotest/screenshots/15-3_bought_without_modmenu_yacl.png)
 - 1-6 `startup_modmenu_without_yacl`：[1-2_mod_list.png](../../Source/TradeExpansion/build/autotest/screenshots/1-2_mod_list.png)
