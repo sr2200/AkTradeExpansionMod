@@ -47,12 +47,13 @@ public final class ModBlocks {
 					.noOcclusion()
 					.pushReaction(PushReaction.POPPED)));
 
-	/** C-5: signpost of a trade route; cannot be pushed (its position is saved). */
+	/** C-5: signpost of a trade route; cannot be pushed (its position is saved). Gives light like its lantern. */
 	public static final SignpostBlock SIGNPOST = register("signpost",
 			new SignpostBlock(BlockBehaviour.Properties.of()
 					.setId(blockKey("signpost"))
 					.mapColor(MapColor.WOOD)
 					.strength(1.5f)
+					.lightLevel(state -> 15)
 					.sound(SoundType.WOOD)
 					.noOcclusion()
 					.pushReaction(PushReaction.IMMOVEABLE)));
