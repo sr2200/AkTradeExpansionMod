@@ -4,8 +4,10 @@ import com.akf.tradeexpansion.config.GoodsOverride;
 import com.akf.tradeexpansion.config.TradeExpansionConfig;
 import com.akf.tradeexpansion.data.GoodsCatalog;
 import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.data.PriceSuggester;
 import com.akf.tradeexpansion.client.FittedButton;
 import com.akf.tradeexpansion.item.CoinItem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -36,8 +38,12 @@ public final class GoodsManagerScreen extends Screen {
 	private static final int CELL = 18;
 	private static final int GRID_COLS = 9;
 	private static final int GRID_ROWS = 7;
-	private static final int LIST_COLS = 9;
-	private static final int LIST_ROWS = 3;
+	private static final int LIST_COLS = 8;
+	private static final int LIST_ROWS = 4;
+	private static final int GRID_Y = 44;
+	private static final int LIST_X = 176;
+	private static final int LIST_Y = 114;
+	private static final int SCROLLBAR_W = 6; // as MarketScreen's
 
 	private static final int COLOR_TEXT = 0xFFFFFFFF;
 	private static final int COLOR_GRAY = 0xFFA0A0A0;
@@ -45,6 +51,8 @@ public final class GoodsManagerScreen extends Screen {
 	private static final int COLOR_CELL = 0xFF3A3A3A;
 	private static final int COLOR_ERROR = 0xFFFF6060;
 	private static final int COLOR_OK = 0xFF60FF60;
+	private static final int COLOR_SCROLL_TRACK = 0xFF2B2B2B;
+	private static final int COLOR_SCROLL_THUMB = 0xFFC6C6C6;
 
 	private enum Mode {
 		GOODS, CONSUMABLE_ADD, CONSUMABLE_REMOVE
@@ -59,6 +67,9 @@ public final class GoodsManagerScreen extends Screen {
 	private List<Item> filtered = new ArrayList<>();
 	private int gridScroll;
 	private int listScroll;
+	/** Which scrollbar thumb is being dragged: 0 none, 1 the item grid, 2 the listed entries. */
+	private int dragging;
+	private double dragOffset;
 	private Item picked;
 	/** Selected entry of the list: goods id (GOODS) or item id (consumables). */
 	private String selectedEntry;
@@ -237,7 +248,20 @@ public final class GoodsManagerScreen extends Screen {
 				selectedEntry = itemId;
 			}
 		}
+		showSelected();
 		setStatus(Component.translatable(KEY + "added", new ItemStack(picked).getHoverName()), true);
+	}
+
+	/** Scrolls the listed entries so that the selected one is in view (after "Add"). */
+	private void showSelected() {
+		List<Map.Entry<String, Item>> entries = entries();
+		for (int i = 0; i < entries.size(); i++) {
+			if (!entries.get(i).getKey().equals(selectedEntry)) continue;
+			int row = i / LIST_COLS;
+			if (row < listScroll) listScroll = row;
+			else if (row >= listScroll + LIST_ROWS) listScroll = row - LIST_ROWS + 1;
+			return;
+		}
 	}
 
 	private void remove() {
@@ -249,6 +273,7 @@ public final class GoodsManagerScreen extends Screen {
 		}
 		setStatus(Component.translatable(KEY + "removed", selectedEntry), true);
 		selectedEntry = null;
+		listScroll = Math.min(listScroll, listScrollbar().max());
 	}
 
 	private void setStatus(Component text, boolean ok) {
@@ -257,24 +282,54 @@ public final class GoodsManagerScreen extends Screen {
 		updateWidgets();
 	}
 
+	/**
+	 * Fills the price box with a suggested base price for the picked item (v0.92): from the world's recipes and the goods'
+	 * prices, else a rough guess from the item. The screen opens only in a singleplayer world, so the recipes are there.
+	 */
+	private void suggestPrice() {
+		var server = Minecraft.getInstance().getSingleplayerServer();
+		if (server == null || picked == null) return;
+		PriceSuggester.Suggestion s = PriceSuggester.suggest(server, picked);
+		String text = s.price() == Math.rint(s.price()) ? String.valueOf((long) s.price()) : String.valueOf(s.price());
+		price.setValue(text);
+		status = Component.translatable(KEY + (s.fromRecipe() ? "suggested.recipe" : "suggested.traits"), text);
+		statusColor = COLOR_GRAY;
+	}
+
 	// ---- input ----
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		for (int which = 1; which <= 2; which++) {
+			Scrollbar bar = which == 1 ? gridScrollbar() : listScrollbar();
+			if (!bar.contains(event.x(), event.y())) continue;
+			int scrollPos = which == 1 ? gridScroll : listScroll;
+			if (bar.max() > 0) {
+				int thumbTop = bar.y() + bar.thumbY(scrollPos);
+				if (event.y() >= thumbTop && event.y() < thumbTop + bar.thumbH()) {
+					dragging = which;
+					dragOffset = event.y() - thumbTop;
+				} else {
+					setScroll(which, Math.clamp(scrollPos + (event.y() < thumbTop ? -bar.visible() : bar.visible()), 0, bar.max()));
+				}
+			}
+			return true;
+		}
 		int gx = left();
-		int gy = top() + 44;
+		int gy = top() + GRID_Y;
 		int col = (int) Math.floor((event.x() - gx) / CELL);
 		int row = (int) Math.floor((event.y() - gy) / CELL);
 		if (col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS) {
 			int index = (gridScroll + row) * GRID_COLS + col;
 			if (index < filtered.size()) {
 				picked = filtered.get(index);
+				if (mode == Mode.GOODS) suggestPrice();
 				updateWidgets();
 				return true;
 			}
 		}
-		int lx = left() + 176;
-		int ly = top() + 114;
+		int lx = left() + LIST_X;
+		int ly = top() + LIST_Y;
 		col = (int) Math.floor((event.x() - lx) / CELL);
 		row = (int) Math.floor((event.y() - ly) / CELL);
 		if (col >= 0 && col < LIST_COLS && row >= 0 && row < LIST_ROWS) {
@@ -296,14 +351,78 @@ public final class GoodsManagerScreen extends Screen {
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
 		int step = (int) -Math.signum(scrollY);
-		if (mouseX < left() + 176) {
-			int maxScroll = Math.max(0, (filtered.size() + GRID_COLS - 1) / GRID_COLS - GRID_ROWS);
-			gridScroll = Math.clamp(gridScroll + step, 0, maxScroll);
-		} else {
-			int maxScroll = Math.max(0, (entries().size() + LIST_COLS - 1) / LIST_COLS - LIST_ROWS);
-			listScroll = Math.clamp(listScroll + step, 0, maxScroll);
-		}
+		if (mouseX < left() + LIST_X) gridScroll = Math.clamp(gridScroll + step, 0, gridScrollbar().max());
+		else listScroll = Math.clamp(listScroll + step, 0, listScrollbar().max());
 		return true;
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+		if (dragging != 0) {
+			setScroll(dragging, (dragging == 1 ? gridScrollbar() : listScrollbar()).scrollAt(event.y() - dragOffset));
+			return true;
+		}
+		return super.mouseDragged(event, dragX, dragY);
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		if (dragging != 0) {
+			dragging = 0;
+			return true;
+		}
+		return super.mouseReleased(event);
+	}
+
+	private void setScroll(int which, int scrollPos) {
+		if (which == 1) gridScroll = scrollPos;
+		else listScroll = scrollPos;
+	}
+
+	// ---- scrollbars (as the trade screen's, A-4) ----
+
+	/** A scrollable grid, by rows: where its bar is (screen coordinates) and how far it can scroll. */
+	private record Scrollbar(int x, int y, int h, int total, int visible) {
+		int max() {
+			return Math.max(0, total - visible);
+		}
+
+		int thumbH() {
+			return Math.max(10, h * visible / Math.max(1, total));
+		}
+
+		int thumbY(int scroll) {
+			return max() == 0 ? 0 : (h - thumbH()) * scroll / max();
+		}
+
+		boolean contains(double mx, double my) {
+			return mx >= x && mx < x + SCROLLBAR_W && my >= y && my < y + h;
+		}
+
+		/** Scroll position for the thumb's top at {@code thumbTop} (dragging). */
+		int scrollAt(double thumbTop) {
+			int range = h - thumbH();
+			if (range <= 0 || max() == 0) return 0;
+			return (int) Math.clamp(Math.round((thumbTop - y) / range * max()), 0, max());
+		}
+	}
+
+	private Scrollbar gridScrollbar() {
+		return new Scrollbar(left() + GRID_COLS * CELL + 1, top() + GRID_Y, GRID_ROWS * CELL - 1, (filtered.size() + GRID_COLS - 1) / GRID_COLS, GRID_ROWS);
+	}
+
+	private Scrollbar listScrollbar() {
+		return new Scrollbar(left() + LIST_X + LIST_COLS * CELL + 1, top() + LIST_Y, LIST_ROWS * CELL - 1, (entries().size() + LIST_COLS - 1) / LIST_COLS, LIST_ROWS);
+	}
+
+	/** Track always; the thumb only when there is more than fits. */
+	private void extractScrollbar(GuiGraphicsExtractor g, Scrollbar bar, int scrollPos, boolean active) {
+		g.fill(bar.x(), bar.y(), bar.x() + SCROLLBAR_W, bar.y() + bar.h(), COLOR_SCROLL_TRACK);
+		if (bar.max() == 0) return;
+		int top = bar.y() + bar.thumbY(scrollPos);
+		int bottom = top + bar.thumbH();
+		g.fill(bar.x(), top, bar.x() + SCROLLBAR_W, bottom, active ? COLOR_TEXT : COLOR_SCROLL_THUMB);
+		g.fill(bar.x() + 1, top + 1, bar.x() + SCROLLBAR_W - 1, bottom - 1, active ? 0xFFE0E0E0 : 0xFFA8A8A8);
 	}
 
 	// ---- rendering ----
@@ -316,7 +435,7 @@ public final class GoodsManagerScreen extends Screen {
 
 		// Item grid
 		int gx = left;
-		int gy = top + 44;
+		int gy = top + GRID_Y;
 		Item hovered = null;
 		for (int row = 0; row < GRID_ROWS; row++) {
 			for (int col = 0; col < GRID_COLS; col++) {
@@ -331,6 +450,7 @@ public final class GoodsManagerScreen extends Screen {
 				if (mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL) hovered = item;
 			}
 		}
+		extractScrollbar(g, gridScrollbar(), gridScroll, dragging == 1);
 		g.text(font, Component.translatable(KEY + "count", filtered.size()), gx, gy + GRID_ROWS * CELL + 3, COLOR_GRAY);
 
 		// Picked item and add / remove
@@ -348,7 +468,7 @@ public final class GoodsManagerScreen extends Screen {
 		// Listed entries
 		List<Map.Entry<String, Item>> entries = entries();
 		g.text(font, Component.translatable(KEY + "listed", entries.size()), px, top + 103, COLOR_TEXT);
-		int ly = top + 114;
+		int ly = top + LIST_Y;
 		String hoveredEntry = null;
 		for (int row = 0; row < LIST_ROWS; row++) {
 			for (int col = 0; col < LIST_COLS; col++) {
@@ -363,6 +483,7 @@ public final class GoodsManagerScreen extends Screen {
 				if (mouseX >= x && mouseX < x + CELL && mouseY >= y && mouseY < y + CELL) hoveredEntry = entry.getKey();
 			}
 		}
+		extractScrollbar(g, listScrollbar(), listScroll, dragging == 2);
 		g.text(font, status, px, ly + LIST_ROWS * CELL + 4, statusColor);
 
 		if (hovered != null) {

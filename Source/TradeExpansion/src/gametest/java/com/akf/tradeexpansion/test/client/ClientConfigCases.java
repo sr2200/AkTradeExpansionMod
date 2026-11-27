@@ -300,7 +300,13 @@ final class ClientConfigCases {
 
 			// 13-6: search, pick the icon, type the price, "追加".
 			pick(context, screen, newItem);
-			clickWidget(context, (EditBox) get(screen, "price"));
+			// v0.92: picking fills in a suggested base price.
+			EditBox priceBox = (EditBox) get(screen, "price");
+			String suggested = context.computeOnClient(client -> priceBox.getValue());
+			check(statusKey(context, screen).startsWith(GOODS_KEY + "suggested.") && !suggested.isEmpty() && Double.parseDouble(suggested) > 0,
+					"picking %s suggests \"%s\" (%s)", newItem, suggested, status(context, screen));
+			clickWidget(context, priceBox);
+			context.runOnClient(client -> priceBox.setValue(""));
 			context.getInput().typeChars("123");
 			context.clickScreenButton(GOODS_KEY + "add");
 			context.waitTicks(2);
@@ -332,9 +338,9 @@ final class ClientConfigCases {
 			context.waitTicks(2);
 			List<String> withExtra = entries(context, screen);
 			int at = withExtra.indexOf(extra);
-			check(at >= 0 && at < 27, "%s is listed at %d: %s", extra, at, withExtra);
+			check(at >= 0 && at < 32, "%s is listed at %d: %s", extra, at, withExtra);
 			int[] corner = context.computeOnClient(client -> new int[] {(Integer) call(screen, "left"), (Integer) call(screen, "top")});
-			clickAt(context, corner[0] + 176 + (at % 9) * 18 + 8, corner[1] + 114 + (at / 9) * 18 + 8);
+			clickAt(context, corner[0] + 176 + (at % 8) * 18 + 8, corner[1] + 114 + (at / 8) * 18 + 8);
 			mouseAway(context);
 			context.clickScreenButton(GOODS_KEY + "remove");
 			context.waitTicks(2);
