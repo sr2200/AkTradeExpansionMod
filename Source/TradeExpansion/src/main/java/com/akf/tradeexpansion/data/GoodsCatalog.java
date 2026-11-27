@@ -90,7 +90,8 @@ public final class GoodsCatalog {
 	public static InventoryUtil.Match match(Identifier goodsId) {
 		GoodsDefinition def = goods.get(goodsId);
 		Item item = BuiltInRegistries.ITEM.getValue(def.item());
-		return new InventoryUtil.Match(item, patch(goodsId), def.acceptsDamaged() && def.unit() == 1);
+		return new InventoryUtil.Match(item, patch(goodsId), def.acceptsDamaged() && def.unit() == 1,
+				def.unit() == 1 ? com.akf.tradeexpansion.trade.ItemValuations.get(goodsId) : null, java.util.List.of()); // S-7
 	}
 
 	/** The components a stack of this good must have (D-2); empty for plain goods or when the JSON is invalid. */

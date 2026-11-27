@@ -1,6 +1,17 @@
 package com.akf.tradeexpansion.test.server;
 
+import com.akf.tradeexpansion.api.ItemValuation;
 import com.akf.tradeexpansion.api.TradeExpansionApi;
+import com.akf.tradeexpansion.core.PriceModel;
+import com.akf.tradeexpansion.data.GoodsCatalog;
+import com.akf.tradeexpansion.data.GoodsDefinition;
+import com.akf.tradeexpansion.trade.InventoryUtil;
+import com.akf.tradeexpansion.trade.ItemValuations;
+import com.akf.tradeexpansion.trade.TradeService;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import com.akf.tradeexpansion.api.TradeExpansionEvents;
 import com.akf.tradeexpansion.core.GoodState;
 import com.akf.tradeexpansion.market.Market;
@@ -136,6 +147,41 @@ final class ServerApiCases {
 						thrown = true;
 					}
 					that(thrown, "0 units did not throw");
+				})));
+		cases.add(partial("api_item_valuation", List.of("46-5"),
+				"値付け（ItemValuation）を登録した商品で、ぴったりの品は1倍、値付けの品は倍率どおりの値段で、倍率の高い品から売れること。"
+						+ "市場のほかの商品にぴったりの品は値付けの商品で数えないこと（まとめて売る・売却スロット・クライアントのプレビューは見ていない）",
+				ctx -> ServerCases.withMarket(ctx, (c, player, market, stall) -> {
+					long now = MarketUpkeep.touch(c.level(), market);
+					Identifier good = c.tradableGood(market, 0, 4);
+					Item item = BuiltInRegistries.ITEM.getValue(GoodsCatalog.get(good).item());
+					Identifier otherGood = market.goods().keySet().stream().filter(id -> {
+						GoodsDefinition def = GoodsCatalog.get(id);
+						return def != null && def.sell() && def.unit() == 1 && def.components().isEmpty() && !def.item().equals(GoodsCatalog.get(good).item())
+								&& Reputation.canSee(market, player.getUUID(), id, now);
+					}).findFirst().orElseThrow(() -> new AutotestCheck.Failed("no second plain goods in the market"));
+					Item other = BuiltInRegistries.ITEM.getValue(GoodsCatalog.get(otherGood).item());
+					// Named stacks of the good's item are worth 3x; the other goods' plain item would be 2x but belongs to that goods.
+					ItemValuation.register(good, stack -> stack.has(DataComponents.CUSTOM_NAME) ? 3.0 : stack.is(other) ? 2.0 : -1);
+					c.atCleanUp(() -> ItemValuations.unregister(good));
+					c.emptyInventory(player);
+					ServerCases.giveItems(player, item, 2);
+					ItemStack named = new ItemStack(item, 2);
+					named.set(DataComponents.CUSTOM_NAME, Component.literal("valued"));
+					player.getInventory().add(named);
+					ServerCases.giveItems(player, other, 1);
+					InventoryUtil.Match match = TradeService.sellMatch(market, player.getUUID(), good, now);
+					equal(4, InventoryUtil.count(player, match, null), "items counted as the valued goods (2 plain + 2 named, not the other goods' item)");
+					double[] ratios = InventoryUtil.sellRatios(player, match, null, 4);
+					that(ratios != null && ratios[0] == 3.0 && ratios[1] == 3.0 && ratios[2] == 1.0 && ratios[3] == 1.0,
+							"selling order and ratios: %s", java.util.Arrays.toString(ratios));
+					var params = Reputation.params(market, player.getUUID(), good, now);
+					long expected = PriceModel.sumSell(params, market.good(good).pressure(), ratios);
+					that(expected > PriceModel.sumSell(params, market.good(good).pressure(), 4), "the valued items are not worth more (%d)", expected);
+					TradeResult sold = c.tradeRaw(player, market.id(), good, false, 4, expected, false, false);
+					that(sold == TradeResult.SUCCESS, "selling 4 of the valued goods gave %s", sold);
+					equal(0, player.getInventory().countItem(item), "items of the good left (plain and named)");
+					equal(1, InventoryUtil.countPlain(player, other), "the other goods' item left");
 				})));
 		cases.add(partial("api_money", List.of("46-3"),
 				"deposit で口座が増え、withdraw は残高まで引けて、足りなければ false で変わらず、giveCash・takeCash で財布と硬貨が増減し、足りなければ false で変わらないこと。"

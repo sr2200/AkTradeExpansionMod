@@ -84,7 +84,7 @@ public final class SellAllService {
 				return fail(TradeResult.NOT_AVAILABLE);
 			}
 			GoodParams params = Reputation.params(market, player.getUUID(), goodsId, now);
-			InventoryUtil.Match match = GoodsCatalog.match(goodsId);
+			InventoryUtil.Match match = TradeService.sellMatch(market, player.getUUID(), goodsId, now); // S-7
 			int units = line.units();
 			if (units > PriceModel.sellCapacity(params, state)) return fail(TradeResult.STOCK_FULL);
 			int itemCount = units * def.unit();

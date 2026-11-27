@@ -99,7 +99,7 @@ public final class TradeService {
 		GoodParams params = Reputation.params(market, player.getUUID(), goodsId, now); // M: the player's price bonus
 		int unit = def.unit();
 		int itemCount = qty * unit; // qty counts trading units (B-5)
-		InventoryUtil.Match match = GoodsCatalog.match(goodsId); // components (D-2) and reduced-price damaged items (A-4)
+		InventoryUtil.Match match = sellMatch(market, player.getUUID(), goodsId, now); // components (D-2), damaged items (A-4), valuations (S-7)
 		Container sellSlot = menu.sellSlot(); // sold before the inventory (A-4 操作2)
 
 		// 3. Price + checks (all-or-nothing, B-5)
@@ -178,6 +178,23 @@ public final class TradeService {
 		TradeAdvancements.afterTrade(player, market, buy, qty, total, now);
 
 		return new TradeResultS2C(TradeResult.SUCCESS, buy, qty, total);
+	}
+
+	/**
+	 * Which stacks count as {@code goodsId} at {@code market} for {@code player}: {@link GoodsCatalog#match} and, for a
+	 * valued goods (S-7), without the stacks another goods the player sees there takes (same as the client's snapshot).
+	 */
+	public static InventoryUtil.Match sellMatch(Market market, java.util.UUID player, Identifier goodsId, long now) {
+		InventoryUtil.Match match = GoodsCatalog.match(goodsId);
+		if (match.valuation() == null) return match;
+		List<InventoryUtil.Match> others = new java.util.ArrayList<>();
+		for (Identifier other : market.goods().keySet()) {
+			GoodsDefinition def = GoodsCatalog.get(other);
+			if (other.equals(goodsId) || def == null || !def.sell() || ItemValuations.has(other) || !Reputation.canSee(market, player, other, now)) continue;
+			InventoryUtil.Match m = GoodsCatalog.match(other);
+			others.add(new InventoryUtil.Match(m.item(), m.patch(), m.acceptDamaged()));
+		}
+		return match.withOthers(others);
 	}
 
 	private static TradeResultS2C fail(TradeResult result, TradeRequestC2S request) {

@@ -1,6 +1,7 @@
 package com.akf.tradeexpansion.trade;
 
 import com.akf.tradeexpansion.item.CoinItem;
+import com.akf.tradeexpansion.api.ItemValuation;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Prediction;
@@ -25,10 +26,42 @@ public final class InventoryUtil {
 	/**
 	 * Which stacks count as a good (D-2): the item with exactly {@code patch} (empty = plain items only), and with
 	 * {@code acceptDamaged} also plain items whose only difference is damage (A-4 reduced-price buying).
+	 * With a {@code valuation} (S-7, v0.93) also the stacks it prices, except those that {@code others} (the market's
+	 * other goods) match: those are sold as that goods.
 	 */
-	public record Match(Item item, DataComponentPatch patch, boolean acceptDamaged) {
+	public record Match(Item item, DataComponentPatch patch, boolean acceptDamaged, ItemValuation valuation, List<Match> others) {
+		public Match {
+			others = others == null ? List.of() : List.copyOf(others);
+		}
+
+		public Match(Item item, DataComponentPatch patch, boolean acceptDamaged) {
+			this(item, patch, acceptDamaged, null, List.of());
+		}
+
 		public static Match plain(Item item) {
 			return new Match(item, DataComponentPatch.EMPTY, false);
+		}
+
+		/** This match with the market's other goods that come first (S-7); unchanged without a valuation. */
+		public Match withOthers(List<Match> others) {
+			return valuation == null ? this : new Match(item, patch, acceptDamaged, valuation, others);
+		}
+
+		/** Price ratio of one item of {@code stack}: 1 exact, &lt; 1 damaged (A-4), the valuation's (S-7), or -1 if it does not count. */
+		public double ratio(ItemStack stack) {
+			if (exact(stack)) return 1.0;
+			double damaged = damagedRatio(stack);
+			if (damaged >= 0) return damaged;
+			if (valuation == null || stack.isEmpty()) return -1;
+			for (Match other : others) {
+				if (other.exact(stack) || other.damagedRatio(stack) >= 0) return -1;
+			}
+			return ItemValuations.ratio(valuation, stack);
+		}
+
+		/** The stack counts as this good. */
+		public boolean accepts(ItemStack stack) {
+			return ratio(stack) >= 0;
 		}
 
 		public boolean exact(ItemStack stack) {
@@ -80,7 +113,7 @@ public final class InventoryUtil {
 	public static int count(Player player, Match match, Container extra, boolean skipHotbar) {
 		int count = 0;
 		for (ItemStack stack : stacks(player, extra, skipHotbar)) {
-			if (match.exact(stack) || match.damagedRatio(stack) >= 0) count += stack.getCount();
+			if (match.accepts(stack)) count += stack.getCount();
 		}
 		return count;
 	}
@@ -89,19 +122,20 @@ public final class InventoryUtil {
 	private record Unit(ItemStack stack, double ratio) {
 	}
 
+	/** Exact items first, then the others by ratio, highest first (damaged A-4, valued S-7). The sort is stable. */
 	private static List<Unit> sellOrder(Player player, Match match, Container extra, boolean skipHotbar) {
 		List<Unit> exact = new ArrayList<>();
-		List<Unit> damaged = new ArrayList<>();
+		List<Unit> rest = new ArrayList<>();
 		for (ItemStack stack : stacks(player, extra, skipHotbar)) {
 			if (match.exact(stack)) {
 				for (int i = 0; i < stack.getCount(); i++) exact.add(new Unit(stack, 1.0));
 			} else {
-				double ratio = match.damagedRatio(stack);
-				if (ratio >= 0) for (int i = 0; i < stack.getCount(); i++) damaged.add(new Unit(stack, ratio));
+				double ratio = match.ratio(stack);
+				if (ratio >= 0) for (int i = 0; i < stack.getCount(); i++) rest.add(new Unit(stack, ratio));
 			}
 		}
-		damaged.sort(Comparator.comparingDouble(Unit::ratio).reversed());
-		exact.addAll(damaged);
+		rest.sort(Comparator.comparingDouble(Unit::ratio).reversed());
+		exact.addAll(rest);
 		return exact;
 	}
 

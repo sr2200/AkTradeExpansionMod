@@ -80,9 +80,23 @@ public record MarketSnapshotS2C(long marketId, BlockPos center, long gameTime, i
 	public record GoodView(Identifier goods, Identifier item, int unit, GoodParams params, double pressure, double stock, boolean buy, boolean sell,
 			boolean shortage, boolean special, DataComponentPatch patch, boolean acceptDamaged, List<Double> history,
 			double shortageMultiplier, List<TrendView> trends, Optional<RivalView> rival, int shortageLeft, double rainMultiplier) {
-		/** Which stacks count as this good (client-side counting and preview). */
+		/** Which stacks count as this good (client-side counting and preview), without its valuation (S-7). */
 		public InventoryUtil.Match match() {
 			return new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(item), patch, acceptDamaged);
+		}
+
+		/**
+		 * Which stacks this market takes as this good, like {@code TradeService.sellMatch} on the server: with its
+		 * valuation (S-7) and without the stacks that the other sellable goods of {@code market} take.
+		 */
+		public InventoryUtil.Match match(List<GoodView> market) {
+			com.akf.tradeexpansion.api.ItemValuation valuation = unit == 1 ? com.akf.tradeexpansion.trade.ItemValuations.get(goods) : null;
+			if (valuation == null) return match();
+			List<InventoryUtil.Match> others = new java.util.ArrayList<>();
+			for (GoodView other : market) {
+				if (!other.goods.equals(goods) && other.sell && !com.akf.tradeexpansion.trade.ItemValuations.has(other.goods)) others.add(other.match());
+			}
+			return new InventoryUtil.Match(BuiltInRegistries.ITEM.getValue(item), patch, acceptDamaged, valuation, others);
 		}
 
 		public ItemStack displayStack() {

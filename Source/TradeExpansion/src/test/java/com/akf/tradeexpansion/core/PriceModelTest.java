@@ -299,6 +299,17 @@ class PriceModelTest {
 		assertEquals(0, PriceModel.sumSell(SWORD, 0, new double[0]));
 	}
 
+	/** S-7: a valuation's ratio above 1 raises the item's price; X still rises by 1 per item. */
+	@Test
+	void valuedItemsAboveTheFullPrice() {
+		double x = 0;
+		long first = PriceModel.sellPrice(SWORD, x);
+		long second = PriceModel.sellPrice(SWORD, SWORD.clampPressure(x + 1));
+		assertEquals((long) Math.floor(first * 2.5 + 1e-9) + (long) Math.floor(second * 1.3 + 1e-9),
+				PriceModel.sumSell(SWORD, x, new double[] {2.5, 1.3}));
+		assertEquals(PriceModel.sumSell(SWORD, x, 3), PriceModel.sumSell(SWORD, x, new double[] {1, 1, 1}));
+	}
+
 	@Test
 	void invalidParamsAreRejected() {
 		assertThrows(IllegalArgumentException.class, () -> new GoodParams(0, 16, 0.4, 8, 24, 4, 0.25, 3.0));

@@ -47,15 +47,15 @@ public final class PriceModel {
 	}
 
 	/**
-	 * Selling with reduced prices for damaged items (A-4): item k is paid floor(Psell(X + k) × ratios[k]), at least 1c.
-	 * Ratios are in selling order (plain items first = 1.0, then by remaining durability).
+	 * Selling with price ratios per item: item k is paid floor(Psell(X + k) × ratios[k]), at least 1c. Ratios are in
+	 * selling order: plain items first (1.0), then by remaining durability (A-4, &lt; 1) or by a valuation (S-7, may be &gt; 1).
 	 */
 	public static long sumSell(GoodParams p, double pressure, double[] ratios) {
 		long total = 0;
 		double x = pressure;
 		for (double ratio : ratios) {
 			long full = sellPrice(p, x);
-			total += ratio >= 1.0 ? full : Math.max(1L, (long) Math.floor(full * ratio + ROUNDING_EPSILON));
+			total += ratio == 1.0 ? full : Math.max(1L, (long) Math.floor(full * ratio + ROUNDING_EPSILON));
 			x = p.clampPressure(x + 1);
 		}
 		return total;

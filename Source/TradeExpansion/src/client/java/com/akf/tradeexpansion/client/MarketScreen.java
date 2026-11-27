@@ -856,7 +856,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 					: WalletService.balance(player);
 			return PriceModel.maxAffordable(params, state.pressure(), funds, max, view.unit(), snapshot.bulkDiscount());
 		}
-		int held = PriceModel.units(InventoryUtil.count(player, match, menu.sellSlot()), view.unit());
+		int held = PriceModel.units(InventoryUtil.count(player, sellMatch(view), menu.sellSlot()), view.unit());
 		return Math.min(limit, Math.min(held, PriceModel.sellCapacity(params, state)));
 	}
 
@@ -865,11 +865,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		updateButtons();
 	}
 
+	/** Which stacks the market takes as {@code view} when selling (valuations S-7 included). */
+	private InventoryUtil.Match sellMatch(GoodView view) {
+		return snapshot == null ? view.match() : view.match(snapshot.goods());
+	}
+
 	private long previewTotal(GoodView view, int qty) {
 		GoodState state = currentState(view);
 		if (tab == Tab.BUY) return PriceModel.sumBuy(view.params(), state.pressure(), qty, view.unit(), snapshot.bulkDiscount());
 		Player player = player();
-		double[] ratios = player != null && view.unit() == 1 ? InventoryUtil.sellRatios(player, view.match(), menu.sellSlot(), qty) : null;
+		double[] ratios = player != null && view.unit() == 1 ? InventoryUtil.sellRatios(player, sellMatch(view), menu.sellSlot(), qty) : null;
 		return ratios != null ? PriceModel.sumSell(view.params(), state.pressure(), ratios) : PriceModel.sumSell(view.params(), state.pressure(), qty);
 	}
 
@@ -1065,7 +1070,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		goods.sort(BY_PRICE);
 		for (GoodView view : goods) {
 			if (!view.sell()) continue;
-			InventoryUtil.Match match = view.match();
+			InventoryUtil.Match match = sellMatch(view);
 			int heldUnits = PriceModel.units(InventoryUtil.count(player, match, menu.sellSlot(), true), view.unit());
 			if (heldUnits <= 0) continue;
 			GoodState state = currentState(view);
@@ -1176,8 +1181,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		lastSellSlot = inSlot.copy();
 		if (inSlot.isEmpty() || snapshot == null) return;
 		for (GoodView view : snapshot.goods()) {
-			InventoryUtil.Match match = view.match();
-			if (view.sell() && (match.exact(inSlot) || match.damagedRatio(inSlot) >= 0)) {
+			if (view.sell() && sellMatch(view).accepts(inSlot)) {
 				if (tab != Tab.SELL) setTab(Tab.SELL);
 				selected = view.goods();
 				quantity = Math.clamp(PriceModel.units(inSlot.getCount(), view.unit()), 1, TradeExpansionConfig.get().trade.maxPerTransaction);
@@ -1344,8 +1348,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		ItemStack inSlot = menu.sellSlotItem();
 		if (inSlot.isEmpty() || snapshot == null) return false;
 		for (GoodView view : snapshot.goods()) {
-			InventoryUtil.Match match = view.match();
-			if (view.sell() && (match.exact(inSlot) || match.damagedRatio(inSlot) >= 0)) {
+			if (view.sell() && sellMatch(view).accepts(inSlot)) {
 				return PriceModel.sellCapacity(view.params(), currentState(view)) < 1;
 			}
 		}
