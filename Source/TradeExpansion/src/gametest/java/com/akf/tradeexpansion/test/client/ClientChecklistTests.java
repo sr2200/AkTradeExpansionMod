@@ -158,7 +158,7 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("exchange_tab", List.of("8-6"), null, true, ClientDisplayCases::exchange));
 		cases.add(new ClientCase("wallet_screen", List.of("7-4"), null, true, ClientDisplayCases::wallet));
 		cases.add(new ClientCase("wallet_offhand_and_limits", List.of("7-12"), null, true, ClientWindowCases::wallet));
-		cases.add(new ClientCase("notebook_screen", List.of("40-12"), "1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に売上が出て、3つのタブとも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない",
+		cases.add(new ClientCase("notebook_screen", List.of("40-12", "40-15"), "1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に今日の売上、「昨日」に昨日の売上が出て（「昨日」に日報のボタンは無い）、4つのタブ（雇い人は除く）とも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない",
 				true, ClientNotebookCases::screen, List.of("40-2"), "手帳を使うキー（右クリック）で手帳の画面が開くこと（タブの切り替えの見え方は画像で見る）"));
 		cases.add(new ClientCase("trader_opens_market", List.of("6-3"), null, true, ClientDisplayCases::traderOpens));
 		cases.add(new ClientCase("advancements_screen", List.of("27-1"), null, true, (ses, r, a) -> ClientScreenCases.advancements(ses, r, a),

@@ -29,6 +29,7 @@ import java.util.Optional;
  * <ul>
  * <li>Today: takings, purchases, profit, request rewards and the staff's earnings of today, the most profitable goods, and
  * the switch of the morning report</li>
+ * <li>Yesterday (v0.95): the same figures and goods of yesterday</li>
  * <li>Days: one line per day of the last days (the most profitable goods in the tooltip) and their total</li>
  * <li>Prices: the goods on the price notes; for the chosen one, its prices at each market noted, how old the note is and
  * where the market is, the cheapest place to buy and the best place to sell marked</li>
@@ -37,7 +38,7 @@ import java.util.Optional;
  * </ul>
  */
 public class NotebookScreen extends Screen {
-	private enum Tab { TODAY, DAYS, PRICES, STAFF }
+	private enum Tab { TODAY, YESTERDAY, DAYS, PRICES, STAFF }
 
 	private static final int COLOR_PAGE = 0xFFEDE3C8;
 	private static final int COLOR_EDGE = 0xFF6B4423;
@@ -218,7 +219,7 @@ public class NotebookScreen extends Screen {
 			return true;
 		}
 		int total = switch (tab) {
-			case TODAY -> todayGoods().size();
+			case TODAY, YESTERDAY -> pageGoods().size();
 			case DAYS -> data.days().size();
 			case PRICES -> selectedGoods == null ? 0 : priceRows(selectedGoods).size();
 			case STAFF -> data.staff().size();
@@ -255,7 +256,8 @@ public class NotebookScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
 		super.extractRenderState(g, mouseX, mouseY, partialTick);
 		switch (tab) {
-			case TODAY -> extractToday(g, mouseX, mouseY);
+			case TODAY -> extractDay(g, mouseX, mouseY, data.today());
+			case YESTERDAY -> extractDay(g, mouseX, mouseY, data.today() - 1);
 			case DAYS -> extractDays(g, mouseX, mouseY);
 			case PRICES -> extractPrices(g, mouseX, mouseY);
 			case STAFF -> extractStaff(g, mouseX, mouseY);
@@ -319,16 +321,26 @@ public class NotebookScreen extends Screen {
 		};
 	}
 
-	private List<GoodsView> todayGoods() {
-		return day(data.today()).map(DayView::top).orElse(List.of());
+	/** The day shown on the page of today or yesterday. */
+	private long pageDay() {
+		return tab == Tab.YESTERDAY ? data.today() - 1 : data.today();
 	}
 
-	private void extractToday(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+	private List<GoodsView> pageGoods() {
+		return day(pageDay()).map(DayView::top).orElse(List.of());
+	}
+
+	/** The page of one day (today or yesterday): its figures and the most profitable goods. */
+	private void extractDay(GuiGraphicsExtractor g, int mouseX, int mouseY, long dayNumber) {
 		int x = left + 8;
 		int y = listTop();
 		int w = panelW - 16;
-		DayView today = day(data.today()).orElse(new DayView(data.today(), 0, 0, 0, 0, 0, 0, List.of()));
-		fitText(g, dayLabel(data.today()).getString(), x, y, w, COLOR_TITLE);
+		if (dayNumber < 0) { // yesterday on the first day: there is none
+			g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.notebook.yesterday.none"), x, y + 4, w, COLOR_MUTED, false);
+			return;
+		}
+		DayView today = day(dayNumber).orElse(new DayView(dayNumber, 0, 0, 0, 0, 0, 0, List.of()));
+		fitText(g, dayLabel(dayNumber).getString(), x, y, w, COLOR_TITLE);
 		y += 12;
 		// Two columns of figures.
 		int col = w / 2;
@@ -344,9 +356,10 @@ public class NotebookScreen extends Screen {
 		g.fill(x, y - 3, x + w, y - 2, COLOR_LINE);
 		fitText(g, Component.translatable("screen.ak_trade_expansion.notebook.best").getString(), x, y, w, COLOR_TITLE);
 		y += 11;
-		List<GoodsView> goods = todayGoods();
+		List<GoodsView> goods = pageGoods();
 		if (goods.isEmpty()) {
-			fitText(g, Component.translatable("screen.ak_trade_expansion.notebook.best.none").getString(), x, y + 4, w, COLOR_MUTED);
+			String none = dayNumber == data.today() ? "screen.ak_trade_expansion.notebook.best.none" : "screen.ak_trade_expansion.notebook.best.none_yesterday";
+			fitText(g, Component.translatable(none).getString(), x, y + 4, w, COLOR_MUTED);
 		}
 		int rows = Math.max(1, (listBottom() - y) / ROW_H);
 		scroll = Math.clamp(scroll, 0, Math.max(0, goods.size() - rows));
