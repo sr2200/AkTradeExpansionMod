@@ -2,8 +2,8 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.3.26、2026-11-28 11:49、238 件中 0 件失敗
-- クライアント：バージョン 0.3.1、2026-11-22 11:16、155 件中 0 件失敗
+- サーバー：バージョン 0.3.27、2026-11-28 12:07、238 件中 0 件失敗
+- クライアント：バージョン 0.3.1、2026-11-22 11:16、161 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.44、2026-11-21 17:44、3 件中 0 件失敗
 - クライアント（Mod Menu だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
 - クライアント（YACL だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
@@ -11,7 +11,7 @@
 - クライアント（REI）：バージョン 0.2.44、2026-11-21 17:31、7 件中 0 件失敗
 - クライアント（JourneyMap）：バージョン 0.2.44、2026-11-21 17:31、3 件中 0 件失敗
 - クライアント（建物の画像）：バージョン 0.3.17、2026-11-23 16:05、2 件中 0 件失敗
-- チェックリスト 432 項目のうち、今回 自動で完了 221・一部を確認 180・失敗 0
+- チェックリスト 432 項目のうち、今回 自動で完了 221・一部を確認 181・失敗 0
 
 ## すべての項目
 
@@ -297,6 +297,9 @@
 | 20-5 | `board_no_markets` | クライアント | ✔ | 近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし） |
 | 35-2 | `board_no_markets` | クライアント | ✔ | 1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない） |
 | 47-2・47-3 | `board_market_event` | クライアント | ✔ | この市場で進んでいるイベントと、400 ブロック東の市場の明日からのイベント（予報）が、掲示板の一番上に近い順に並び、見出し（値下がりは緑・値上がりは赤）と「この市場 あと N 日」「東 400m 明日から」が重ならずに出て、ツールチップに名前・説明・中心の倍率・「始まってから3日かけて…」・この市場の値段も動くこと・クリックで開けることが出て、クリックでその市場の商品が開くこと。交易画面のイベントの品の行のツールチップに「豊作：基準価格 ×0.9x（あと N 日）」が色つきで出ること。日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で掲示板の文字が重ならず、はみ出さず、ツールチップが画面に収まること（品のアイコンの見た目・前の日のチャット・中心から離れた市場の倍率は見ていない。チャットと倍率はサーバーのテストで見ている） |
+| 9-5 | `shortage_left_and_vigor` | クライアント | ✔ | 5個売った品不足の品の行のツールチップに、オレンジの品不足の行の下に灰色で「あと N 個売ると品不足が満たされ、村が育つ」が出ること（売って満たすこと・チャットはサーバーのテストで見ている） |
+| 9-6 | `shortage_left_and_vigor` | クライアント | ✔ | 「発展」タブの上の行に「元気 N」が点数と段階の間に重ならずに出て、80 は緑・30 は黄・10 は赤になり、マウスで元気・50 より下の時だけ「貯まる発展度が ×0.9N」・満たした回数とあと何回で村人が来るか・説明が出ること（元気が下がること・上がることはサーバーのテストで見ている） |
+| 39-9 | `school_outlook` | クライアント | ✔ | 学舎のある村の交易画面で、品不足の品と流行の品の行のツールチップ、「流行」のツールチップに「学舎の見立て：…はあと N 日で入れ替わります」が出て（日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で画面に収まる）、品を決めた運び屋を雇う時の行き先（品不足と流行の村）のツールチップに「学舎の見立て（行き先の相場）：」と品不足・流行の倍率と残り日数が出ること（商会の動きの行は見ていない） |
 | 30-1 | `goods_names` | クライアント | ✔ | 交易画面と掲示板に並ぶ品（このワールドの市場の品と、市場に足した新しい商品：エリトラ・トライデント・ダイヤのツルハシとチェストプレート）の名前が翻訳されていて、正しいアイテムで、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は viewer_new_goods で見る） |
 | 26-2 | `staff_needs_reputation` | クライアント | ✔ | 全部 |
 | 18-1・31-2 | `sell_all_box` | クライアント | ✔ | 全部 |
@@ -309,6 +312,7 @@
 | 8-6 | `exchange_tab` | クライアント | ✔ | 全部 |
 | 7-4 | `wallet_screen` | クライアント | ✔ | 全部 |
 | 7-12 | `wallet_offhand_and_limits` | クライアント | ✔ | 全部 |
+| 40-9 | `notebook_price_notes` | クライアント | ✔ | 2つの市場（ここで安く、もう1つで高い品がある）の値段を書き留めた手帳の価格メモで、左の品が差の大きい順に並び、品を選ぶと緑の「いちばん安い所で買って高い所で売ると +N」、市場ごとの買値・売値（いちばん安い買値だけ青、いちばん高い売値だけ緑）、市場の名前と方角・距離が出て、行のツールチップに「書き留めた時の値段です…」と、いちばん安い・高い市場の行だけその説明が出ること。日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で文字が重ならず、はみ出さないこと（交易画面を開いた時に書き留めること・別の次元はサーバーのテストで見る） |
 | 6-3 | `trader_opens_market` | クライアント | ✔ | 全部 |
 | 27-1 | `advancements_screen` | クライアント | ✔ | 全部 |
 | 27-11 | `advancements_screen` | クライアント | ✔ | 全部 |
@@ -377,6 +381,8 @@
 | 26-30 | `staff_backhaul_hint` | クライアント | ✔ | staff.carrierBackhaul を OFF にすると、雇う画面の行き先の見込みに帰り荷の分が入らず、ツールチップと設定の画面に帰り荷の説明が出ないこと（帰り荷を仕入れない・空荷で出かけないはサーバーのテストで見ている） |
 | 26-29 | `staff_empty_trip` | クライアント | ✔ | 全部 |
 | 26-22 | `staff_carrier_moves_price` | クライアント | ✔ | 全部 |
+| 43-1 | `staff_roam_and_auto` | クライアント | ✔ | 行き先が2か所の品の運び屋を雇う時、行き先の一覧の先頭が「毎回選ぶ（今なら○○）」で、ツールチップに「出かけるたびに、近くの4 か所の市場から…」が出て、それを選んで雇うと雇い人タブに「毎回選ぶ（今は○○）」と出ること（往復ごとに行き先を変えること・ログはサーバーのテストで見ている） |
+| 43-3・43-7・43-9 | `staff_roam_and_auto` | クライアント | ✔ | 品を決めた運び屋の右パネルに「おまかせ」が文字が切れずに出て、マウスで説明が出て、押すとおまかせになりボタンが消えること（番頭に出ないこと・出かけている時は見ていない）。市場の近くに立つ雇い人に話しかけると交易画面がその雇い人を選んだ「雇い人」タブで開くこと（見た目・ほかの人は見ていない）。商人の手帳の「雇い人」タブにその運び屋が2段（役・品・行き先／＠長い名前の雇った村は「…」で切れる・所持金）で出て、ツールチップに所持金と「お金や品の出し入れ・設定は…」が出て、日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で文字が重ならないこと |
 | 26-10 | `staff_accident` | クライアント | ✔ | 全部 |
 | 26-6 | `staff_accident` | クライアント | ✔ | 行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと |
 | 2-20 | `market_gone_while_open` | クライアント | ✔ | 全部 |
@@ -528,6 +534,15 @@
 - 47-2・47-3 `board_market_event`：[47-3_board_event_forecast.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_board_event_forecast.png)
 - 47-2・47-3 `board_market_event`：[47-3_event_opens_market.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_event_opens_market.png)
 - 47-2・47-3 `board_market_event`：[47-3_board_events_en.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_board_events_en.png)
+- 9-5 `shortage_left_and_vigor`：[9-5_shortage_left.png](../../Source/TradeExpansion/build/autotest/screenshots/9-5_shortage_left.png)
+- 9-6 `shortage_left_and_vigor`：[9-6_vigor_80.png](../../Source/TradeExpansion/build/autotest/screenshots/9-6_vigor_80.png)
+- 9-6 `shortage_left_and_vigor`：[9-6_vigor_30.png](../../Source/TradeExpansion/build/autotest/screenshots/9-6_vigor_30.png)
+- 9-6 `shortage_left_and_vigor`：[9-6_vigor_10.png](../../Source/TradeExpansion/build/autotest/screenshots/9-6_vigor_10.png)
+- 39-9 `school_outlook`：[39-9_outlook_row_cobblestone_ja_jp.png](../../Source/TradeExpansion/build/autotest/screenshots/39-9_outlook_row_cobblestone_ja_jp.png)
+- 39-9 `school_outlook`：[39-9_outlook_row_torch_ja_jp.png](../../Source/TradeExpansion/build/autotest/screenshots/39-9_outlook_row_torch_ja_jp.png)
+- 39-9 `school_outlook`：[39-9_outlook_row_cobblestone_en_us.png](../../Source/TradeExpansion/build/autotest/screenshots/39-9_outlook_row_cobblestone_en_us.png)
+- 39-9 `school_outlook`：[39-9_outlook_row_torch_en_us.png](../../Source/TradeExpansion/build/autotest/screenshots/39-9_outlook_row_torch_en_us.png)
+- 39-9 `school_outlook`：[39-9_outlook_destination.png](../../Source/TradeExpansion/build/autotest/screenshots/39-9_outlook_destination.png)
 - 30-1 `goods_names`：[30-1_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_goods.png)
 - 30-1 `goods_names`：[30-1_new_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_new_goods.png)
 - 26-2 `staff_needs_reputation`：[26-2_staff_needs_reputation.png](../../Source/TradeExpansion/build/autotest/screenshots/26-2_staff_needs_reputation.png)
@@ -545,6 +560,8 @@
 - 8-6 `exchange_tab`：[8-6_exchange_down.png](../../Source/TradeExpansion/build/autotest/screenshots/8-6_exchange_down.png)
 - 7-4 `wallet_screen`：[7-4_wallet_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/7-4_wallet_screen.png)
 - 7-12 `wallet_offhand_and_limits`：[7-12_wallet_offhand.png](../../Source/TradeExpansion/build/autotest/screenshots/7-12_wallet_offhand.png)
+- 40-9 `notebook_price_notes`：[40-9_price_notes.png](../../Source/TradeExpansion/build/autotest/screenshots/40-9_price_notes.png)
+- 40-9 `notebook_price_notes`：[40-9_price_notes_cheapest_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/40-9_price_notes_cheapest_tooltip.png)
 - 6-3 `trader_opens_market`：[6-3_trader_opens.png](../../Source/TradeExpansion/build/autotest/screenshots/6-3_trader_opens.png)
 - 27-1 `advancements_screen`：[27-1_advancements_tab.png](../../Source/TradeExpansion/build/autotest/screenshots/27-1_advancements_tab.png)
 - 27-11 `advancements_screen`：[27-11_advancements_en.png](../../Source/TradeExpansion/build/autotest/screenshots/27-11_advancements_en.png)
@@ -687,6 +704,11 @@
 - 26-26 `staff_backhaul_hint`：[26-26_return_cargo_setup.png](../../Source/TradeExpansion/build/autotest/screenshots/26-26_return_cargo_setup.png)
 - 26-29 `staff_empty_trip`：[26-29_empty_trip_return_cargo.png](../../Source/TradeExpansion/build/autotest/screenshots/26-29_empty_trip_return_cargo.png)
 - 26-22 `staff_carrier_moves_price`：[26-22_carrier_moved_price.png](../../Source/TradeExpansion/build/autotest/screenshots/26-22_carrier_moved_price.png)
+- 43-1 `staff_roam_and_auto`：[43-1_roam_row.png](../../Source/TradeExpansion/build/autotest/screenshots/43-1_roam_row.png)
+- 43-1 `staff_roam_and_auto`：[43-1_roam_hired.png](../../Source/TradeExpansion/build/autotest/screenshots/43-1_roam_hired.png)
+- 43-3・43-7・43-9 `staff_roam_and_auto`：[43-3_to_auto_button.png](../../Source/TradeExpansion/build/autotest/screenshots/43-3_to_auto_button.png)
+- 43-3・43-7・43-9 `staff_roam_and_auto`：[43-7_talk_opens_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/43-7_talk_opens_staff.png)
+- 43-3・43-7・43-9 `staff_roam_and_auto`：[43-9_notebook_staff.png](../../Source/TradeExpansion/build/autotest/screenshots/43-9_notebook_staff.png)
 - 26-10 `staff_accident`：[26-6_no_margin.png](../../Source/TradeExpansion/build/autotest/screenshots/26-6_no_margin.png)
 - 26-10 `staff_accident`：[26-10_resting.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_resting.png)
 - 26-10 `staff_accident`：[26-10_quit.png](../../Source/TradeExpansion/build/autotest/screenshots/26-10_quit.png)

@@ -147,6 +147,10 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				true, ClientBoardCases::noMarkets, List.of("35-2"), "1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない）"));
 		cases.add(new ClientCase("board_market_event", List.of("47-2", "47-3"), "この市場で進んでいるイベントと、400 ブロック東の市場の明日からのイベント（予報）が、掲示板の一番上に近い順に並び、見出し（値下がりは緑・値上がりは赤）と「この市場 あと N 日」「東 400m 明日から」が重ならずに出て、ツールチップに名前・説明・中心の倍率・「始まってから3日かけて…」・この市場の値段も動くこと・クリックで開けることが出て、クリックでその市場の商品が開くこと。交易画面のイベントの品の行のツールチップに「豊作：基準価格 ×0.9x（あと N 日）」が色つきで出ること。日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で掲示板の文字が重ならず、はみ出さず、ツールチップが画面に収まること（品のアイコンの見た目・前の日のチャット・中心から離れた市場の倍率は見ていない。チャットと倍率はサーバーのテストで見ている）",
 				true, ClientEventCases::board));
+		cases.add(new ClientCase("shortage_left_and_vigor", List.of("9-5"), "5個売った品不足の品の行のツールチップに、オレンジの品不足の行の下に灰色で「あと N 個売ると品不足が満たされ、村が育つ」が出ること（売って満たすこと・チャットはサーバーのテストで見ている）",
+				true, ClientScreenMoreCases::shortageAndVigor, List.of("9-6"), "「発展」タブの上の行に「元気 N」が点数と段階の間に重ならずに出て、80 は緑・30 は黄・10 は赤になり、マウスで元気・50 より下の時だけ「貯まる発展度が ×0.9N」・満たした回数とあと何回で村人が来るか・説明が出ること（元気が下がること・上がることはサーバーのテストで見ている）"));
+		cases.add(new ClientCase("school_outlook", List.of("39-9"), "学舎のある村の交易画面で、品不足の品と流行の品の行のツールチップ、「流行」のツールチップに「学舎の見立て：…はあと N 日で入れ替わります」が出て（日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で画面に収まる）、品を決めた運び屋を雇う時の行き先（品不足と流行の村）のツールチップに「学舎の見立て（行き先の相場）：」と品不足・流行の倍率と残り日数が出ること（商会の動きの行は見ていない）",
+				true, ClientScreenMoreCases::schoolOutlook));
 		cases.add(new ClientCase("goods_names", List.of("30-1"), "交易画面と掲示板に並ぶ品（このワールドの市場の品と、市場に足した新しい商品：エリトラ・トライデント・ダイヤのツルハシとチェストプレート）の名前が翻訳されていて、正しいアイテムで、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は viewer_new_goods で見る）",
 				true, ClientScreenCases::goodsNames));
 		cases.add(new ClientCase("staff_needs_reputation", List.of("26-2"), null, true, ClientScreenCases::staffNeedsReputation));
@@ -162,6 +166,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 		cases.add(new ClientCase("wallet_offhand_and_limits", List.of("7-12"), null, true, ClientWindowCases::wallet));
 		cases.add(new ClientCase("notebook_screen", List.of("40-12", "40-15"), "1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に今日の売上、「昨日」に昨日の売上が出て（「昨日」に日報のボタンは無い）、4つのタブ（雇い人は除く）とも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない",
 				true, ClientNotebookCases::screen, List.of("40-2"), "手帳を使うキー（右クリック）で手帳の画面が開くこと（タブの切り替えの見え方は画像で見る）"));
+		cases.add(new ClientCase("notebook_price_notes", List.of("40-9"), "2つの市場（ここで安く、もう1つで高い品がある）の値段を書き留めた手帳の価格メモで、左の品が差の大きい順に並び、品を選ぶと緑の「いちばん安い所で買って高い所で売ると +N」、市場ごとの買値・売値（いちばん安い買値だけ青、いちばん高い売値だけ緑）、市場の名前と方角・距離が出て、行のツールチップに「書き留めた時の値段です…」と、いちばん安い・高い市場の行だけその説明が出ること。日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で文字が重ならず、はみ出さないこと（交易画面を開いた時に書き留めること・別の次元はサーバーのテストで見る）",
+				true, ClientScreenMoreCases::priceNotes));
 		cases.add(new ClientCase("trader_opens_market", List.of("6-3"), null, true, ClientDisplayCases::traderOpens));
 		cases.add(new ClientCase("advancements_screen", List.of("27-1"), null, true, (ses, r, a) -> ClientScreenCases.advancements(ses, r, a),
 				List.of("27-11"), null));
@@ -251,6 +257,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				List.of("26-30"), "staff.carrierBackhaul を OFF にすると、雇う画面の行き先の見込みに帰り荷の分が入らず、ツールチップと設定の画面に帰り荷の説明が出ないこと（帰り荷を仕入れない・空荷で出かけないはサーバーのテストで見ている）"));
 		cases.add(new ClientCase("staff_empty_trip", List.of("26-29"), null, true, ClientBackhaulCases::emptyTrip));
 		cases.add(new ClientCase("staff_carrier_moves_price", List.of("26-22"), null, true, ClientBackhaulCases::carrierMovesPrice));
+		cases.add(new ClientCase("staff_roam_and_auto", List.of("43-1"), "行き先が2か所の品の運び屋を雇う時、行き先の一覧の先頭が「毎回選ぶ（今なら○○）」で、ツールチップに「出かけるたびに、近くの4 か所の市場から…」が出て、それを選んで雇うと雇い人タブに「毎回選ぶ（今は○○）」と出ること（往復ごとに行き先を変えること・ログはサーバーのテストで見ている）",
+				true, ClientScreenMoreCases::staffScreens, List.of("43-3", "43-7", "43-9"), "品を決めた運び屋の右パネルに「おまかせ」が文字が切れずに出て、マウスで説明が出て、押すとおまかせになりボタンが消えること（番頭に出ないこと・出かけている時は見ていない）。市場の近くに立つ雇い人に話しかけると交易画面がその雇い人を選んだ「雇い人」タブで開くこと（見た目・ほかの人は見ていない）。商人の手帳の「雇い人」タブにその運び屋が2段（役・品・行き先／＠長い名前の雇った村は「…」で切れる・所持金）で出て、ツールチップに所持金と「お金や品の出し入れ・設定は…」が出て、日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で文字が重ならないこと"));
 		cases.add(new ClientCase("staff_accident", List.of("26-10"), null, true, ClientStaffMoreCases::accident,
 				List.of("26-6"), "行き先で高く売れない時に運び屋の行が「利益なし」になり、仕入れずに出かけないこと"));
 		cases.add(new ClientCase("market_gone_while_open", List.of("2-20"), null, true, ClientWindowCases::marketGone));
