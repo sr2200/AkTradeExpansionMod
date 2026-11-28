@@ -128,7 +128,8 @@ function main() {
 	for (const run of runs) {
 		for (const c of run.cases) {
 			for (const id of c.checklist) {
-				if (!byItem.has(id)) byItem.set(id, { cases: [], version: run.version, date: shortDate(run.finished) });
+				// A case merged into an older run's results (a subset run) may carry its own version and time.
+				if (!byItem.has(id)) byItem.set(id, { cases: [], version: c.version ?? run.version, date: shortDate(c.finished ?? run.finished) });
 				byItem.get(id).cases.push({ ...c, side: run.side });
 			}
 		}

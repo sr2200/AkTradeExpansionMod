@@ -2,8 +2,8 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.3.25、2026-11-28 11:26、238 件中 0 件失敗
-- クライアント：バージョン 0.3.1、2026-11-22 11:16、154 件中 0 件失敗
+- サーバー：バージョン 0.3.26、2026-11-28 11:49、238 件中 0 件失敗
+- クライアント：バージョン 0.3.1、2026-11-22 11:16、155 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.44、2026-11-21 17:44、3 件中 0 件失敗
 - クライアント（Mod Menu だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
 - クライアント（YACL だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
@@ -296,6 +296,7 @@
 | 29-11 | `board_theater_trends` | クライアント | ✔ | 野外劇場の村の流行の倍率（人気は 1+(m−1)×1.5、余り気味は 1−(1−m)÷1.5）が、ほかの村の掲示板の市場の行のツールチップと、その村の交易画面の「流行」のツールチップに出ること（値段への効きはサーバーのテストで見ている） |
 | 20-5 | `board_no_markets` | クライアント | ✔ | 近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし） |
 | 35-2 | `board_no_markets` | クライアント | ✔ | 1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない） |
+| 47-2・47-3 | `board_market_event` | クライアント | ✔ | この市場で進んでいるイベントと、400 ブロック東の市場の明日からのイベント（予報）が、掲示板の一番上に近い順に並び、見出し（値下がりは緑・値上がりは赤）と「この市場 あと N 日」「東 400m 明日から」が重ならずに出て、ツールチップに名前・説明・中心の倍率・「始まってから3日かけて…」・この市場の値段も動くこと・クリックで開けることが出て、クリックでその市場の商品が開くこと。交易画面のイベントの品の行のツールチップに「豊作：基準価格 ×0.9x（あと N 日）」が色つきで出ること。日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で掲示板の文字が重ならず、はみ出さず、ツールチップが画面に収まること（品のアイコンの見た目・前の日のチャット・中心から離れた市場の倍率は見ていない。チャットと倍率はサーバーのテストで見ている） |
 | 30-1 | `goods_names` | クライアント | ✔ | 交易画面と掲示板に並ぶ品（このワールドの市場の品と、市場に足した新しい商品：エリトラ・トライデント・ダイヤのツルハシとチェストプレート）の名前が翻訳されていて、正しいアイテムで、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は viewer_new_goods で見る） |
 | 26-2 | `staff_needs_reputation` | クライアント | ✔ | 全部 |
 | 18-1・31-2 | `sell_all_box` | クライアント | ✔ | 全部 |
@@ -522,6 +523,11 @@
 - 20-5 `board_no_markets`：[35-2_board_no_markets.png](../../Source/TradeExpansion/build/autotest/screenshots/35-2_board_no_markets.png)
 - 20-5 `board_no_markets`：[20-5_no_markets_coords.png](../../Source/TradeExpansion/build/autotest/screenshots/20-5_no_markets_coords.png)
 - 35-2 `board_no_markets`：[35-2_board_tavern.png](../../Source/TradeExpansion/build/autotest/screenshots/35-2_board_tavern.png)
+- 47-2・47-3 `board_market_event`：[47-2_event_row_tooltip.png](../../Source/TradeExpansion/build/autotest/screenshots/47-2_event_row_tooltip.png)
+- 47-2・47-3 `board_market_event`：[47-3_board_event_running.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_board_event_running.png)
+- 47-2・47-3 `board_market_event`：[47-3_board_event_forecast.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_board_event_forecast.png)
+- 47-2・47-3 `board_market_event`：[47-3_event_opens_market.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_event_opens_market.png)
+- 47-2・47-3 `board_market_event`：[47-3_board_events_en.png](../../Source/TradeExpansion/build/autotest/screenshots/47-3_board_events_en.png)
 - 30-1 `goods_names`：[30-1_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_goods.png)
 - 30-1 `goods_names`：[30-1_new_goods.png](../../Source/TradeExpansion/build/autotest/screenshots/30-1_new_goods.png)
 - 26-2 `staff_needs_reputation`：[26-2_staff_needs_reputation.png](../../Source/TradeExpansion/build/autotest/screenshots/26-2_staff_needs_reputation.png)

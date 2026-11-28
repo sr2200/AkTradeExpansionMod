@@ -145,6 +145,8 @@ public class ClientChecklistTests implements FabricClientGameTest {
 				true, ClientBoardCases::theaterTrends));
 		cases.add(new ClientCase("board_no_markets", List.of("20-5"), "近くに市場が無い時（board.radius 150）も「この市場の座標」が出て、押すとこの市場の名前と座標が自分のチャットに出ること（JourneyMap なし）",
 				true, ClientBoardCases::noMarkets, List.of("35-2"), "1人用の世界で、近くに市場が無い時の「半径 ◯ ブロック以内にほかの市場はありません」の数字が board.radius で、酒場のある村ではサーバーが使った半径（tavernBoardMultiplier 倍）になること（サーバーと自分の設定が違う時は見ていない）"));
+		cases.add(new ClientCase("board_market_event", List.of("47-2", "47-3"), "この市場で進んでいるイベントと、400 ブロック東の市場の明日からのイベント（予報）が、掲示板の一番上に近い順に並び、見出し（値下がりは緑・値上がりは赤）と「この市場 あと N 日」「東 400m 明日から」が重ならずに出て、ツールチップに名前・説明・中心の倍率・「始まってから3日かけて…」・この市場の値段も動くこと・クリックで開けることが出て、クリックでその市場の商品が開くこと。交易画面のイベントの品の行のツールチップに「豊作：基準価格 ×0.9x（あと N 日）」が色つきで出ること。日本語と英語、854×480 と 1920×1080 の GUI 1〜4 で掲示板の文字が重ならず、はみ出さず、ツールチップが画面に収まること（品のアイコンの見た目・前の日のチャット・中心から離れた市場の倍率は見ていない。チャットと倍率はサーバーのテストで見ている）",
+				true, ClientEventCases::board));
 		cases.add(new ClientCase("goods_names", List.of("30-1"), "交易画面と掲示板に並ぶ品（このワールドの市場の品と、市場に足した新しい商品：エリトラ・トライデント・ダイヤのツルハシとチェストプレート）の名前が翻訳されていて、正しいアイテムで、耐久値のある品が新品で並ぶこと（アイコンの見た目は画像で見る。JEI／REI は viewer_new_goods で見る）",
 				true, ClientScreenCases::goodsNames));
 		cases.add(new ClientCase("staff_needs_reputation", List.of("26-2"), null, true, ClientScreenCases::staffNeedsReputation));
