@@ -1,0 +1,14 @@
+{
+  "goods": [
+    "ak_trade_expansion:wheat",
+    "ak_trade_expansion:bread",
+    "ak_trade_expansion:carrot",
+    "ak_trade_expansion:potato",
+    "ak_trade_expansion:beetroot"
+  ],
+  "min_multiplier": 0.65,
+  "max_multiplier": 0.8,
+  "min_days": 3,
+  "max_days": 5,
+  "weight": 3
+}

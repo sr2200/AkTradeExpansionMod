@@ -69,6 +69,7 @@ class MarketCodecTest {
 		m.setTrendPeriod(2);
 		m.addReroll();
 		m.addReroll();
+		m.eventMultipliers().put(BREAD, 0.75);
 
 		Market back = roundTrip(m);
 		assertEquals(5, back.id());
@@ -108,6 +109,8 @@ class MarketCodecTest {
 		assertEquals(1.2, back.trends().get(Identifier.parse("ak_trade_expansion:food")));
 		assertEquals(2, back.trendPeriod());
 		assertEquals(2, back.rerolls());
+		assertEquals(0.75, back.eventMultiplierFor(BREAD)); // V
+		assertEquals(1.0, back.eventMultiplierFor(IRON));
 	}
 
 	/** A shelved good keeps its state through a save (D-4). */
@@ -168,6 +171,7 @@ class MarketCodecTest {
 		assertTrue(m.trends().isEmpty());
 		assertEquals(Long.MIN_VALUE, m.rivalDay());
 		assertEquals(0, m.rerolls()); // v0.77: no reroll yet, so the goods draw is the one at creation
+		assertTrue(m.eventMultipliers().isEmpty()); // V
 		GoodState bread = m.good(BREAD);
 		assertTrue(bread.history().isEmpty());
 		assertEquals(Long.MIN_VALUE, bread.lastSampleDay());
@@ -188,7 +192,10 @@ class MarketCodecTest {
 				{"schema_version": 2, "currency_ratios": [10, 20, 10, 10], "next_id": 3,
 				 "markets": [{"id": 1, "dimension": "minecraft:overworld", "center": [0, 64, 0], "origin": "natural",
 				              "stalls": [], "last_update": 0, "goods": []}],
-				 "rival_day": 8, "next_campaign_id": 4, "next_employee_id": 6}
+				 "rival_day": 8, "next_campaign_id": 4, "next_employee_id": 6,
+				 "event_day": 9, "next_event_id": 3,
+				 "events": [{"id": 2, "event": "ak_trade_expansion:bumper_harvest", "market": 1, "goods": ["ak_trade_expansion:bread"],
+				             "start_day": 9, "end_day": 12, "multiplier": 0.7}]}
 				""");
 		MarketRegistry registry = MarketRegistry.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
 		MarketRegistry back = MarketRegistry.CODEC.parse(JsonOps.INSTANCE,
@@ -201,6 +208,10 @@ class MarketCodecTest {
 		assertEquals(6, back.takeEmployeeId());
 		assertTrue(back.campaigns().isEmpty());
 		assertTrue(back.employees().isEmpty());
+		assertEquals(9, back.eventDay()); // V
+		assertEquals(3, back.takeEventId());
+		assertEquals(List.of(new com.akf.tradeexpansion.event.MarketEvent(2, Identifier.parse("ak_trade_expansion:bumper_harvest"), 1, List.of(BREAD), 9, 12, 0.7)),
+				back.events());
 	}
 
 	/** A registry saved before v0.46 / v0.48: no rival guilds, no staff. */
@@ -213,6 +224,8 @@ class MarketCodecTest {
 		assertEquals(Long.MIN_VALUE, registry.rivalDay());
 		assertEquals(1, registry.takeCampaignId());
 		assertEquals(1, registry.takeEmployeeId());
+		assertEquals(Long.MIN_VALUE, registry.eventDay()); // V: no market events yet
+		assertTrue(registry.events().isEmpty());
 		assertFalse(registry.isDirty());
 	}
 

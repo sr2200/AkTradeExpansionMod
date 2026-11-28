@@ -40,6 +40,35 @@ public final class DataReloadListener {
 		loader.addListenerOrdering(TradeExpansion.id("goods_groups"), TradeExpansion.id("rival_guilds"));
 		loader.registerReloadListener(TradeExpansion.id("rain_goods"), new Rain()); // U (v0.82)
 		loader.addListenerOrdering(TradeExpansion.id("goods"), TradeExpansion.id("rain_goods"));
+		loader.registerReloadListener(TradeExpansion.id("market_events"), new Events()); // V: the goods and groups must be loaded
+		loader.addListenerOrdering(TradeExpansion.id("goods_groups"), TradeExpansion.id("market_events"));
+	}
+
+	/** V: market events (a definition whose multipliers are not on one side of 1 is skipped). */
+	private static final class Events extends SimpleJsonResourceReloadListener<MarketEvents.Definition> {
+		Events() {
+			super(MarketEvents.Definition.CODEC, FileToIdConverter.json("ak_trade_expansion/market_event"));
+		}
+
+		@Override
+		protected void apply(Map<Identifier, MarketEvents.Definition> loaded, ResourceManager manager, ProfilerFiller profiler) {
+			Map<Identifier, MarketEvents.Definition> valid = new LinkedHashMap<>();
+			loaded.forEach((id, def) -> {
+				if (!def.valid()) {
+					TradeExpansion.LOGGER.warn("Market event {}: min_multiplier / max_multiplier must both be below 1 or both above 1 (and min_days <= max_days), skipped", id);
+					return;
+				}
+				def.goods().forEach(g -> {
+					if (GoodsCatalog.get(g) == null) TradeExpansion.LOGGER.warn("Market event {}: unknown goods {}", id, g);
+				});
+				def.groups().forEach(g -> {
+					if (GoodsGroups.get(g) == null) TradeExpansion.LOGGER.warn("Market event {}: unknown goods group {}", id, g);
+				});
+				valid.put(id, def);
+			});
+			MarketEvents.replace(valid);
+			TradeExpansion.LOGGER.info("Loaded {} market events", valid.size());
+		}
 	}
 
 	/** S-4: additions to the market profiles, applied after the profiles are loaded (files in id order). */

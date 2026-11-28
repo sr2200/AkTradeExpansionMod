@@ -47,6 +47,7 @@ public class TradeExpansion implements ModInitializer {
 		com.akf.tradeexpansion.staff.StaffService.register(); // Q: hired staff work with the market clock
 		com.akf.tradeexpansion.notebook.LedgerService.register(); // T: the merchant's ledger and the morning report
 		com.akf.tradeexpansion.weather.WeatherService.register(); // U: the weather moves the market
+		com.akf.tradeexpansion.event.EventService.register(); // V: market events
 		com.akf.tradeexpansion.advancement.TradeAdvancements.init(); // R: advancement trigger and checks on join
 		EmeraldCoinRecipe.init();
 		MintingRecipe.init();

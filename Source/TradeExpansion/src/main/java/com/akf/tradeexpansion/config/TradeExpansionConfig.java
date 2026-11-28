@@ -56,6 +56,8 @@ public final class TradeExpansionConfig {
 	public Notebook notebook = new Notebook();
 	/** U (v0.82): the weather moves the market (rainy spells, thunderstorms). */
 	public Weather weather = new Weather();
+	/** V: market events (a good harvest, a mine accident...) moving the prices of a region for a few days. */
+	public Events events = new Events();
 	/** D-2: per-goods values replacing the goods definition (goods id → values). */
 	public Map<String, GoodsOverride> goods = new TreeMap<>();
 
@@ -106,7 +108,7 @@ public final class TradeExpansionConfig {
 	/** Sections of stages 10 / 13 / 14 (design A-5, I, J, K, H). */
 	private record Extra(Board board, Quest quest, Demand demand, Trader trader, Villager villager, Consumables consumables,
 			Map<String, GoodsOverride> goods, Reputation reputation, Development development, Rivals rivals, Trend trend,
-			Staff staff, Route route, Notebook notebook, Weather weather) {
+			Staff staff, Route route, Notebook notebook, Weather weather, Events events) {
 		static final MapCodec<Extra> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				section("board", Board.CODEC, new Board()).forGetter(Extra::board),
 				section("quest", Quest.CODEC, new Quest()).forGetter(Extra::quest),
@@ -122,7 +124,8 @@ public final class TradeExpansionConfig {
 				section("staff", Staff.CODEC, new Staff()).forGetter(Extra::staff),
 				section("route", Route.CODEC, new Route()).forGetter(Extra::route),
 				section("notebook", Notebook.CODEC, new Notebook()).forGetter(Extra::notebook),
-				section("weather", Weather.CODEC, new Weather()).forGetter(Extra::weather)
+				section("weather", Weather.CODEC, new Weather()).forGetter(Extra::weather),
+				section("events", Events.CODEC, new Events()).forGetter(Extra::events)
 		).apply(i, Extra::new));
 	}
 
@@ -144,9 +147,10 @@ public final class TradeExpansionConfig {
 		c.route = e.route();
 		c.notebook = e.notebook();
 		c.weather = e.weather();
+		c.events = e.events();
 		return c;
 	}, c -> Pair.of(c, new Extra(c.board, c.quest, c.demand, c.trader, c.villager, c.consumables, c.goods, c.reputation, c.development, c.rivals, c.trend,
-			c.staff, c.route, c.notebook, c.weather))).codec();
+			c.staff, c.route, c.notebook, c.weather, c.events))).codec();
 
 	private static volatile TradeExpansionConfig current = defaults();
 
@@ -801,6 +805,62 @@ public final class TradeExpansionConfig {
 					Codec.DOUBLE.fieldOf("stormRewardMultiplier").orElse(d.stormRewardMultiplier).forGetter(c -> c.stormRewardMultiplier),
 					Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(c -> c.notifyChat)
 			).apply(i, Weather::new);
+		});
+	}
+
+	/** V: market events. */
+	public static final class Events {
+		public boolean enabled = true;
+		/** Events that raise prices (a mine accident, a poor harvest...) may happen. */
+		public boolean priceUp = true;
+		/** Events that lower prices (a good harvest, a big catch...) may happen. */
+		public boolean priceDown = true;
+		/** Tell about an event the day before it starts (board news, chat). */
+		public boolean forecast = true;
+		/** Tell the players near the center in the chat when an event is forecast / starts. */
+		public boolean notifyChat = true;
+		/** Events may happen at markets in the Nether and the End too. */
+		public boolean otherDimensions = true;
+		public double chancePerDay = 0.4;
+		public int maxActive = 2;
+		public double nearRadius = 128;
+		public double farRadius = 640;
+		/** Multiplies the deviation (m − 1) of every event's multiplier: 0.5 = half the effect. */
+		public double strength = 1.0;
+
+		public Events() {
+		}
+
+		Events(boolean enabled, boolean priceUp, boolean priceDown, boolean forecast, boolean notifyChat, boolean otherDimensions,
+				double chancePerDay, int maxActive, double nearRadius, double farRadius, double strength) {
+			this.enabled = enabled;
+			this.priceUp = priceUp;
+			this.priceDown = priceDown;
+			this.forecast = forecast;
+			this.notifyChat = notifyChat;
+			this.otherDimensions = otherDimensions;
+			this.chancePerDay = chancePerDay;
+			this.maxActive = maxActive;
+			this.nearRadius = nearRadius;
+			this.farRadius = farRadius;
+			this.strength = strength;
+		}
+
+		static final Codec<Events> CODEC = RecordCodecBuilder.create(i -> {
+			Events d = new Events();
+			return i.group(
+					Codec.BOOL.fieldOf("enabled").orElse(d.enabled).forGetter(c -> c.enabled),
+					Codec.BOOL.fieldOf("priceUp").orElse(d.priceUp).forGetter(c -> c.priceUp),
+					Codec.BOOL.fieldOf("priceDown").orElse(d.priceDown).forGetter(c -> c.priceDown),
+					Codec.BOOL.fieldOf("forecast").orElse(d.forecast).forGetter(c -> c.forecast),
+					Codec.BOOL.fieldOf("notifyChat").orElse(d.notifyChat).forGetter(c -> c.notifyChat),
+					Codec.BOOL.fieldOf("otherDimensions").orElse(d.otherDimensions).forGetter(c -> c.otherDimensions),
+					Codec.DOUBLE.fieldOf("chancePerDay").orElse(d.chancePerDay).forGetter(c -> c.chancePerDay),
+					Codec.INT.fieldOf("maxActive").orElse(d.maxActive).forGetter(c -> c.maxActive),
+					Codec.DOUBLE.fieldOf("nearRadius").orElse(d.nearRadius).forGetter(c -> c.nearRadius),
+					Codec.DOUBLE.fieldOf("farRadius").orElse(d.farRadius).forGetter(c -> c.farRadius),
+					Codec.DOUBLE.fieldOf("strength").orElse(d.strength).forGetter(c -> c.strength)
+			).apply(i, Events::new);
 		});
 	}
 

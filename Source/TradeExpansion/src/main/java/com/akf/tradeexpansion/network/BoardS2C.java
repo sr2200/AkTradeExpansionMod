@@ -17,7 +17,7 @@ import java.util.List;
  * @param marketId the market whose screen asked
  * @param radius   the radius actually used, in blocks ({@code board.radius} of the server, times the tavern's multiplier)
  */
-public record BoardS2C(long marketId, int radius, List<Entry> markets, List<News> news) implements CustomPacketPayload {
+public record BoardS2C(long marketId, int radius, List<Entry> markets, List<News> news, List<EventNews> events) implements CustomPacketPayload {
 	public static final Type<BoardS2C> TYPE = new Type<>(TradeExpansion.id("board"));
 
 	/**
@@ -81,11 +81,65 @@ public record BoardS2C(long marketId, int radius, List<Entry> markets, List<News
 				News::new);
 	}
 
+	/**
+	 * V-5: a market event, running or forecast (starting tomorrow).
+	 *
+	 * @param items      icons: the items of its first goods (at most 3)
+	 * @param goods      names of its goods ("小麦・パンなど")
+	 * @param multiplier the multiplier of B at the center at full strength
+	 * @param marketId   the center market (to open it on the board when it is listed)
+	 * @param dx / dz    offset of the center from the current market, 0 / 0 when it is the current market
+	 * @param daysLeft   days after today (0 = ends today); for a forecast its length in days
+	 * @param felt       prices of the current market are (or will be) moved by it
+	 */
+	public record EventNews(Identifier event, boolean raises, boolean forecast, List<Identifier> items, Component goods, double multiplier,
+			Component market, long marketId, int dx, int dz, int daysLeft, boolean felt) {
+		static final StreamCodec<RegistryFriendlyByteBuf, EventNews> CODEC = new StreamCodec<>() {
+			@Override
+			public EventNews decode(RegistryFriendlyByteBuf buf) {
+				return new EventNews(Identifier.STREAM_CODEC.decode(buf), buf.readBoolean(), buf.readBoolean(),
+						Identifier.STREAM_CODEC.apply(ByteBufCodecs.list()).decode(buf), ComponentSerialization.STREAM_CODEC.decode(buf),
+						buf.readDouble(), ComponentSerialization.STREAM_CODEC.decode(buf), buf.readVarLong(), buf.readVarInt(), buf.readVarInt(),
+						buf.readVarInt(), buf.readBoolean());
+			}
+
+			@Override
+			public void encode(RegistryFriendlyByteBuf buf, EventNews n) {
+				Identifier.STREAM_CODEC.encode(buf, n.event());
+				buf.writeBoolean(n.raises());
+				buf.writeBoolean(n.forecast());
+				Identifier.STREAM_CODEC.apply(ByteBufCodecs.list()).encode(buf, n.items());
+				ComponentSerialization.STREAM_CODEC.encode(buf, n.goods());
+				buf.writeDouble(n.multiplier());
+				ComponentSerialization.STREAM_CODEC.encode(buf, n.market());
+				buf.writeVarLong(n.marketId());
+				buf.writeVarInt(n.dx());
+				buf.writeVarInt(n.dz());
+				buf.writeVarInt(n.daysLeft());
+				buf.writeBoolean(n.felt());
+			}
+		};
+	}
+
+	/** Rows of news on the board: market events first, then the rival campaigns. */
+	public int newsCount() {
+		return events.size() + news.size();
+	}
+
+	/** The center market of news row {@code index} ({@link #newsCount}), or -1. */
+	public long newsMarket(int index) {
+		if (index < 0) return -1;
+		if (index < events.size()) return events.get(index).marketId();
+		index -= events.size();
+		return index < news.size() ? news.get(index).marketId() : -1;
+	}
+
 	public static final StreamCodec<RegistryFriendlyByteBuf, BoardS2C> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_LONG, BoardS2C::marketId,
 			ByteBufCodecs.VAR_INT, BoardS2C::radius,
 			Entry.CODEC.apply(ByteBufCodecs.list()), BoardS2C::markets,
 			News.CODEC.apply(ByteBufCodecs.list()), BoardS2C::news,
+			EventNews.CODEC.apply(ByteBufCodecs.list()), BoardS2C::events,
 			BoardS2C::new);
 
 	@Override

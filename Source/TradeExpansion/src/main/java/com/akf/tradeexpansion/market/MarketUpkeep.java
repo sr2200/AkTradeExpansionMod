@@ -8,7 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 
 /**
  * Brings a market up to date before it is shown or traded with: lazy recovery (B-3), rival guilds (O-4), today's
- * specials (D-5), shortages (K), trends (P), requests (J), the weather (U).
+ * specials (D-5), shortages (K), trends (P), requests (J), the weather (U), market events (V).
  */
 public final class MarketUpkeep {
 	private MarketUpkeep() {
@@ -19,6 +19,8 @@ public final class MarketUpkeep {
 		long now = MarketClock.now(level);
 		MarketRegistry registry = MarketRegistry.get(level.getServer());
 		boolean changed = com.akf.tradeexpansion.weather.WeatherService.apply(level.getServer(), market); // U: before prices are used
+		changed |= com.akf.tradeexpansion.event.EventService.advance(level, registry, now); // V: also rolled on the server tick
+		changed |= com.akf.tradeexpansion.event.EventService.apply(registry, market, now); // V: before prices are used
 		market.refresh(now);
 		changed |= RivalService.advance(level, registry, now);
 		changed |= RivalService.apply(registry, market, now); // after refresh: pushes are added already recovered to now

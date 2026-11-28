@@ -810,7 +810,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 			case BUY, SELL -> visibleGoods().size();
 			case QUEST -> snapshot == null ? 0 : snapshot.requests().size();
 			// A market's goods list has a header line, so one row fewer fits: count it as one more row.
-			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() + 1 : board.news().size() + board.markets().size();
+			case BOARD -> board == null ? 0 : boardEntry() != null ? boardEntry().goods().size() + 1 : board.newsCount() + board.markets().size();
 			case STAFF -> staffTab.rowCount();
 			default -> 0;
 		};
@@ -1244,10 +1244,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 				case STAFF -> staffTab.clickRow(index);
 				case BOARD -> {
 					if (board != null && boardMarket < 0) {
-						// O-5: news rows come first; a news row opens its center market when it is listed.
+						// O-5 / V-5: news rows come first; a news row opens its center market when it is listed.
 						long id = -1;
-						if (index < board.news().size()) id = board.news().get(index).marketId();
-						else if (index - board.news().size() < board.markets().size()) id = board.markets().get(index - board.news().size()).id();
+						if (index < board.newsCount()) id = board.newsMarket(index);
+						else if (index - board.newsCount() < board.markets().size()) id = board.markets().get(index - board.newsCount()).id();
 						long chosen = id;
 						if (id >= 0 && board.markets().stream().anyMatch(e -> e.id() == chosen)) {
 							boardMarket = id;
@@ -1510,7 +1510,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 	}
 
-	/** Tooltip of a goods row: special (D-5), shortage (K), trends (P), rival guild (O-5), rain (U), debug values (A-4). */
+	/** Tooltip of a goods row: special (D-5), shortage (K), trends (P), rival guild (O-5), market event (V-5), rain (U), debug values (A-4). */
 	private List<Component> rowTooltip(GoodView view) {
 		List<Component> lines = new ArrayList<>();
 		if (view.special()) lines.add(Component.translatable("screen.ak_trade_expansion.special.tooltip"));
@@ -1524,6 +1524,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		for (MarketSnapshotS2C.TrendView t : view.trends()) lines.add(trendLine(t, true));
 		if (!view.trends().isEmpty() && snapshot.outlook().school()) lines.add(outlookLine("trend", snapshot.outlook().trendDays()));
 		view.rival().ifPresent(r -> lines.add(rivalLine(r.guild(), r.buying(), r.daysLeft())));
+		view.event().ifPresent(e -> lines.add(Component.translatable("screen.ak_trade_expansion.event.tooltip", // V-5
+				com.akf.tradeexpansion.data.MarketEvents.name(e.event()), multiplier(e.multiplier()), daysLeftText(e.daysLeft()))
+				.withColor(e.multiplier() > 1 ? COLOR_RED : COLOR_GREEN)));
 		if (view.rainMultiplier() != 1.0) { // U (v0.82): a rainy spell
 			lines.add(Component.translatable("screen.ak_trade_expansion.weather.rain.tooltip", multiplier(view.rainMultiplier())).withColor(COLOR_RAIN));
 		}
@@ -2201,18 +2204,20 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 		}
 		BoardS2C.Entry entry = boardEntry();
 		if (entry == null) {
-			if (board.markets().isEmpty() && board.news().isEmpty()) {
+			if (board.markets().isEmpty() && board.newsCount() == 0) {
 				g.textWithWordWrap(font, Component.translatable("screen.ak_trade_expansion.board.none", board.radius()),
 						bx + 4, by + 4, listW - 8, COLOR_WHITE, false);
 				return;
 			}
 			BoardS2C.Entry hovered = null;
-			int newsCount = board.news().size();
+			int newsCount = board.newsCount();
+			int eventCount = board.events().size();
 			for (int row = 0; row < rows && scroll + row < newsCount + board.markets().size(); row++) {
 				int rowY = by + row * ROW_H;
 				boolean over = mouseX >= bx && mouseX < bx + listW && mouseY >= rowY && mouseY < rowY + ROW_H;
 				if (scroll + row < newsCount) {
-					extractNews(g, board.news().get(scroll + row), bx, rowY, over, mouseX, mouseY);
+					if (scroll + row < eventCount) extractEventNews(g, board.events().get(scroll + row), bx, rowY, over, mouseX, mouseY);
+					else extractNews(g, board.news().get(scroll + row - eventCount), bx, rowY, over, mouseX, mouseY);
 					continue;
 				}
 				BoardS2C.Entry e = board.markets().get(scroll + row - newsCount);
@@ -2341,6 +2346,38 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 	}
 
 	private static final int COLOR_NEWS_BG = 0xFF4A4A5A;
+
+	/** V-5: one news row of the board (a market event, running or forecast). */
+	private void extractEventNews(GuiGraphicsExtractor g, BoardS2C.EventNews n, int bx, int rowY, boolean over, int mouseX, int mouseY) {
+		g.fill(bx, rowY, bx + listW, rowY + ROW_H, over ? 0xFF6A6A7A : COLOR_NEWS_BG);
+		if (!n.items().isEmpty()) g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(n.items().getFirst())), bx + 2, rowY + 1);
+		int y = rowY + 5;
+		String where = n.dx() == 0 && n.dz() == 0 ? Component.translatable("screen.ak_trade_expansion.board.news.here").getString()
+				: Component.translatable("screen.ak_trade_expansion.board.where", direction(n.dx(), n.dz()),
+						(int) Math.round(Math.sqrt((double) n.dx() * n.dx() + (double) n.dz() * n.dz()))).getString();
+		Component when = n.forecast() ? Component.translatable("screen.ak_trade_expansion.board.event.tomorrow") : daysLeftText(n.daysLeft());
+		String right = where + " " + when.getString();
+		int rx = bx + listW - 8 - font.width(right);
+		g.text(font, right, rx, y, COLOR_GOLD);
+		String key = "screen.ak_trade_expansion.board.event." + (n.forecast() ? "forecast." : "") + (n.raises() ? "up" : "down");
+		Component text = Component.translatable(key, com.akf.tradeexpansion.data.MarketEvents.name(n.event()), n.goods());
+		fitText(g, text.getString(), bx + 20, y, rx - bx - 24, n.raises() ? 0xFFFF8080 : 0xFF80FF80, true);
+		if (over && mouseX < bx + listW - SCROLLBAR_W) {
+			String eventKey = com.akf.tradeexpansion.data.MarketEvents.key(n.event());
+			List<Component> lines = new ArrayList<>();
+			lines.add(com.akf.tradeexpansion.data.MarketEvents.name(n.event()).copy().withColor(n.raises() ? COLOR_RED : COLOR_GREEN));
+			lines.add(Component.translatable(eventKey + (n.forecast() ? ".forecast" : ".desc"), n.market()));
+			lines.add(n.forecast() ? Component.translatable("screen.ak_trade_expansion.board.event.tooltip.forecast", n.daysLeft(), multiplier(n.multiplier()))
+					: Component.translatable("screen.ak_trade_expansion.board.event.tooltip.multiplier", multiplier(n.multiplier()), daysLeftText(n.daysLeft())));
+			lines.add(Component.translatable("screen.ak_trade_expansion.board.event.tooltip.ramp").withColor(COLOR_GRAY));
+			if (n.felt()) lines.add(Component.translatable(n.forecast() ? "screen.ak_trade_expansion.board.event.felt_forecast"
+					: "screen.ak_trade_expansion.board.event.felt").withColor(COLOR_GOLD));
+			if (board.markets().stream().anyMatch(e -> e.id() == n.marketId())) {
+				lines.add(Component.translatable("screen.ak_trade_expansion.board.news.open").withColor(COLOR_GRAY));
+			}
+			g.setTooltipForNextFrame(font, wrap(lines), Optional.empty(), mouseX, tooltipY(mouseY));
+		}
+	}
 
 	/** O-5: one news row of the board (a rival campaign). */
 	private void extractNews(GuiGraphicsExtractor g, BoardS2C.News n, int bx, int rowY, boolean over, int mouseX, int mouseY) {

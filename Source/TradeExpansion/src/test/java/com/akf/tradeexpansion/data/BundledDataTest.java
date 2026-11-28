@@ -106,6 +106,56 @@ class BundledDataTest {
 		assertEquals(groups.keySet(), covered);
 	}
 
+	/**
+	 * V-1: the eight bundled market events decode, their multipliers are on one side of 1, they move existing goods an
+	 * event may move (single items, bought and sold, no auto_add), and each has its name, description and forecast in
+	 * both language files. V-4: on the first day (1/3 strength) no event moves the price as far as the buy / sell gap.
+	 */
+	@Test
+	void marketEventsDecode() throws IOException {
+		Map<String, GoodsDefinition> goods = decodeAll("goods", GoodsDefinition.CODEC);
+		Map<String, GoodsGroups.Group> groups = decodeAll("goods_group", GoodsGroups.Group.CODEC);
+		Map<String, MarketEvents.Definition> events = decodeAll("market_event", MarketEvents.Definition.CODEC);
+		assertEquals(8, events.size());
+		Map<String, String> ja = lang("ja_jp"), en = lang("en_us");
+		int up = 0;
+		for (Map.Entry<String, MarketEvents.Definition> e : events.entrySet()) {
+			MarketEvents.Definition def = e.getValue();
+			assertTrue(def.valid(), e.getKey());
+			assertTrue(def.weight() > 0, e.getKey());
+			if (def.raises()) up++;
+			java.util.List<net.minecraft.resources.Identifier> moved = new java.util.ArrayList<>(def.goods());
+			for (net.minecraft.resources.Identifier group : def.groups()) {
+				assertTrue(groups.containsKey(group.getPath()), e.getKey() + ": unknown group " + group);
+				moved.addAll(groups.get(group.getPath()).goods());
+			}
+			assertFalse(moved.isEmpty(), e.getKey());
+			for (net.minecraft.resources.Identifier id : moved) {
+				GoodsDefinition g = goods.get(id.getPath());
+				assertNotNull(g, e.getKey() + ": unknown goods " + id);
+				assertTrue(g.unit() == 1 && g.autoAdd().isEmpty() && g.buy() && g.sell(), e.getKey() + ": cannot move " + id);
+			}
+			double firstDay = com.akf.tradeexpansion.core.EventMath.multiplier(def.maxMultiplier() > 1 ? def.maxMultiplier() : def.minMultiplier(), 1, 1,
+					com.akf.tradeexpansion.core.EventMath.ramp(0, 0));
+			double gap = (1 + 0.4 / 2) / (1 - 0.4 / 2);
+			assertTrue(firstDay < gap && 1 / firstDay < gap, e.getKey());
+			String key = "market_event.ak_trade_expansion." + e.getKey();
+			for (String suffix : List.of("", ".desc", ".forecast")) {
+				assertTrue(ja.containsKey(key + suffix), "ja_jp: " + key + suffix);
+				assertTrue(en.containsKey(key + suffix), "en_us: " + key + suffix);
+			}
+		}
+		assertTrue(up >= 3 && events.size() - up >= 3, "both directions");
+		assertEquals(List.of(net.minecraft.resources.Identifier.parse("minecraft:the_nether")), events.get("fortress_collapse").dimensions());
+	}
+
+	private static Map<String, String> lang(String name) throws IOException {
+		Map<String, String> map = new HashMap<>();
+		JsonParser.parseString(Files.readString(Path.of("src/main/resources/assets/ak_trade_expansion/lang/" + name + ".json")))
+				.getAsJsonObject().entrySet().forEach(e -> map.put(e.getKey(), e.getValue().getAsString()));
+		return map;
+	}
+
 	/** N-4 (v0.38, v0.50, v0.51, mint, v0.79): the twenty-three facilities, one per kind, each with its structure in every style it falls back to. */
 	@Test
 	void facilitiesDecode() throws IOException {

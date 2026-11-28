@@ -1,0 +1,12 @@
+{
+  "goods": [
+    "ak_trade_expansion:iron_ingot",
+    "ak_trade_expansion:coal",
+    "ak_trade_expansion:copper_ingot"
+  ],
+  "min_multiplier": 1.3,
+  "max_multiplier": 1.6,
+  "min_days": 2,
+  "max_days": 4,
+  "weight": 2
+}

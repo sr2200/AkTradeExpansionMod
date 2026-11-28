@@ -97,7 +97,9 @@ public final class DemandService {
 			GoodsDefinition def = GoodsCatalog.get(goodsId);
 			// Sellable goods only; tokens such as the emerald coin (unit > 1 / auto_add) are excluded.
 			// Today's specials (D-5) leave the next day, so they are not short either.
-			if (def != null && def.sell() && def.unit() == 1 && def.autoAdd().isEmpty() && !market.isSpecial(goodsId)) candidates.add(goodsId);
+			// V-4: nor goods a market event is moving here ("short of bread" next to "bread is cheap after a good harvest").
+			if (def != null && def.sell() && def.unit() == 1 && def.autoAdd().isEmpty() && !market.isSpecial(goodsId)
+					&& market.eventMultiplierFor(goodsId) == 1.0) candidates.add(goodsId);
 		}
 		Random random = new Random(MarketFactory.seed(level, market.center()) ^ (period * 0x632BE59BD9B4E019L));
 		int slots = config.maxShortages;

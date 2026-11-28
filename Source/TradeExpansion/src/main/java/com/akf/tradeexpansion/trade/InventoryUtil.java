@@ -118,11 +118,11 @@ public final class InventoryUtil {
 		return count;
 	}
 
-	/** One entry per item in selling order: exact items first (1.0), then damaged ones by remaining durability. */
+	/** One entry per item in selling order, with its price ratio (1.0 = exact). */
 	private record Unit(ItemStack stack, double ratio) {
 	}
 
-	/** Exact items first, then the others by ratio, highest first (damaged A-4, valued S-7). The sort is stable. */
+	/** Every item by ratio, highest first (stable): valued S-7 (ratio > 1), then exact (1.0), then damaged A-4 (< 1). */
 	private static List<Unit> sellOrder(Player player, Match match, Container extra, boolean skipHotbar) {
 		List<Unit> exact = new ArrayList<>();
 		List<Unit> rest = new ArrayList<>();
@@ -134,8 +134,9 @@ public final class InventoryUtil {
 				if (ratio >= 0) for (int i = 0; i < stack.getCount(); i++) rest.add(new Unit(stack, ratio));
 			}
 		}
-		rest.sort(Comparator.comparingDouble(Unit::ratio).reversed());
 		exact.addAll(rest);
+		// Best price first (stable): valued items (S-7, ratio > 1) before exact ones, damaged ones (ratio < 1) after.
+		exact.sort(Comparator.comparingDouble(Unit::ratio).reversed());
 		return exact;
 	}
 

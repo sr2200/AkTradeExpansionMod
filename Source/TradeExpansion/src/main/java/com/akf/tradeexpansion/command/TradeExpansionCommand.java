@@ -108,6 +108,7 @@ public final class TradeExpansionCommand {
 						.executes(TradeExpansionCommand::audit)
 						.then(Commands.literal("villagers").executes(c -> VillagerAudit.run(c.getSource()))))
 				.then(RivalCommand.build(admin(Commands.literal("rivals"))))
+				.then(EventCommand.build(admin(Commands.literal("events"))))
 				.then(admin(Commands.literal("staff"))
 						.executes(TradeExpansionCommand::staffList)
 						.then(Commands.literal("hurry").executes(TradeExpansionCommand::staffHurry)))

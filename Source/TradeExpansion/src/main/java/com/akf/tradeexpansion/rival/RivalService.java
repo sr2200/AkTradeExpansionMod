@@ -100,6 +100,8 @@ public final class RivalService {
 			List<Identifier> goods = eligibleGoods(m);
 			// Not the same good twice in one region at the same time.
 			goods.removeIf(g -> running.stream().anyMatch(other -> other.goods().equals(g) && near(registry, m, other)));
+			// V-3: nor a good a market event near here is moving (news pointing opposite ways side by side)
+			goods.removeIf(g -> com.akf.tradeexpansion.event.EventService.blocksRival(registry, m, g, day));
 			if (goods.isEmpty()) continue;
 			centers.add(m);
 			choices.add(goods);

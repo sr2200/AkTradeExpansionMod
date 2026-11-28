@@ -70,16 +70,26 @@ public final class Market {
 
 	/**
 	 * Fields after the two full records: K-2 (v0.78) the village's vigor and how many shortages were fulfilled; v0.82 the
-	 * last player visit (O-3) and the rain multiplier of the crops (U); v0.90 when the vigor last recovered (K-2).
+	 * last player visit (O-3) and the rain multiplier of the crops (U); v0.90 when the vigor last recovered (K-2); V the
+	 * multipliers of B of the market events felt here.
 	 */
-	private record Growth(double vigor, int fulfilled, long lastVisit, double rainMultiplier, long vigorTime) {
+	private record Growth(double vigor, int fulfilled, long lastVisit, double rainMultiplier, long vigorTime, List<EventEffect> events) {
 		static final MapCodec<Growth> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 				Codec.DOUBLE.optionalFieldOf("vigor", com.akf.tradeexpansion.core.DemandMath.VIGOR_MAX).forGetter(Growth::vigor),
 				Codec.INT.optionalFieldOf("shortages_fulfilled", 0).forGetter(Growth::fulfilled),
 				Codec.LONG.optionalFieldOf("last_visit", Long.MIN_VALUE).forGetter(Growth::lastVisit),
 				Codec.DOUBLE.optionalFieldOf("rain_multiplier", 1.0).forGetter(Growth::rainMultiplier),
-				Codec.LONG.optionalFieldOf("vigor_time", Long.MIN_VALUE).forGetter(Growth::vigorTime)
+				Codec.LONG.optionalFieldOf("vigor_time", Long.MIN_VALUE).forGetter(Growth::vigorTime),
+				EventEffect.CODEC.listOf().optionalFieldOf("event_multipliers", List.of()).forGetter(Growth::events)
 		).apply(i, Growth::new));
+	}
+
+	/** V: the multiplier of B of one good from the market events, copied when the market is touched. */
+	private record EventEffect(Identifier goods, double multiplier) {
+		static final Codec<EventEffect> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Identifier.CODEC.fieldOf("goods").forGetter(EventEffect::goods),
+				Codec.DOUBLE.fieldOf("multiplier").forGetter(EventEffect::multiplier)
+		).apply(i, EventEffect::new));
 	}
 
 	/** C-4: name and namer (founder of a crafted market, or whoever named it first). */
@@ -184,6 +194,9 @@ public final class Market {
 		m.lastVisit = growth.lastVisit();
 		m.vigorTime = growth.vigorTime();
 		m.rainMultiplier = growth.rainMultiplier() > 0 ? growth.rainMultiplier() : 1.0;
+		growth.events().forEach(e -> {
+			if (e.multiplier() > 0) m.eventMultipliers.put(e.goods(), e.multiplier());
+		});
 		a.shelved().forEach(sh -> m.shelved.put(sh.goods(), sh));
 		m.specials.addAll(a.specials());
 		m.specialDay = a.specialDay();
@@ -204,7 +217,7 @@ public final class Market {
 	}, m -> Pair.of(m, Pair.of(new Assortment(List.copyOf(m.shelved.values()), List.copyOf(m.specials), m.specialDay,
 			List.copyOf(m.reputation.values()), List.copyOf(m.bonusSpecials), m.development, m.developmentSince,
 			List.copyOf(m.contributors.values()), List.copyOf(m.facilities.values()), Map.copyOf(m.donations), List.copyOf(m.markers),
-			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled, m.lastVisit, m.rainMultiplier, m.vigorTime)))).codec();
+			m.measuredLevel, m.rivalDay, m.trendEntries(), m.trendPeriod, m.rerolls), new Growth(m.vigor, m.shortagesFulfilled, m.lastVisit, m.rainMultiplier, m.vigorTime, m.eventEntries())))).codec();
 
 	private final long id;
 	private final ResourceKey<Level> dimension;
@@ -234,6 +247,8 @@ public final class Market {
 	private long lastVisit = Long.MIN_VALUE;
 	/** U (v0.82): multiplier of B of the rain goods, copied from the world's weather when the market is touched (1 = none). */
 	private double rainMultiplier = 1.0;
+	/** V: multipliers of B from the market events (goods id → multiplier), copied from the registry when touched. */
+	private final Map<Identifier, Double> eventMultipliers = new LinkedHashMap<>();
 	/** C-4: custom name ({@code null} = automatic) and the player allowed to change it. */
 	private String name;
 	private UUID namer;
@@ -401,6 +416,22 @@ public final class Market {
 	public double rainMultiplierFor(Identifier goodsId) {
 		if (rainMultiplier == 1.0 || specials.contains(goodsId) || !com.akf.tradeexpansion.data.RainGoods.contains(goodsId)) return 1.0;
 		return rainMultiplier;
+	}
+
+	/** V: multipliers of B from the market events (goods id → multiplier; missing = 1). */
+	public Map<Identifier, Double> eventMultipliers() {
+		return eventMultipliers;
+	}
+
+	/** V: the event multiplier of one good (1 for none). */
+	public double eventMultiplierFor(Identifier goodsId) {
+		return eventMultipliers.getOrDefault(goodsId, 1.0);
+	}
+
+	private List<EventEffect> eventEntries() {
+		List<EventEffect> list = new ArrayList<>();
+		eventMultipliers.forEach((goodsId, m) -> list.add(new EventEffect(goodsId, m)));
+		return list;
 	}
 
 	public long rivalDay() {
@@ -690,10 +721,13 @@ public final class Market {
 		GoodState state = goods.get(goodsId);
 		GoodsDefinition def = GoodsCatalog.get(goodsId);
 		if (state == null || def == null) return null;
-		double multiplier = profileMultiplier(goodsId, def) * shortages.getOrDefault(goodsId, 1.0); // K: shortage raises B
-		multiplier *= trendMultiplier(goodsId); // P: trends
-		multiplier *= rainMultiplierFor(goodsId); // U (v0.82): a rainy spell makes the crops cheaper
-		if (specials.contains(goodsId)) multiplier *= specialPriceMultiplier(); // D-5
+		double events = shortages.getOrDefault(goodsId, 1.0); // K: shortage raises B
+		events *= trendMultiplier(goodsId); // P: trends
+		events *= rainMultiplierFor(goodsId); // U (v0.82): a rainy spell makes the crops cheaper
+		events *= eventMultiplierFor(goodsId); // V: market events
+		if (specials.contains(goodsId)) events *= specialPriceMultiplier(); // D-5
+		// V-4: what happens at the market moves B by ×0.4..×2.5 at most, on top of the profile's multiplier
+		double multiplier = profileMultiplier(goodsId, def) * com.akf.tradeexpansion.core.EventMath.clampCombined(events);
 		GoodParams params = def.params(state.priceFactor(), multiplier, TradeExpansionConfig.get());
 		if (hasFacility(FacilityKind.WAREHOUSE)) params = warehouse(params);
 		if (hasFacility(FacilityKind.CLOCK_TOWER)) params = clockTower(params);

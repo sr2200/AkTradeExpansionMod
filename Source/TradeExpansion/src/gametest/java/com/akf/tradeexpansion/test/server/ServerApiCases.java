@@ -178,6 +178,7 @@ final class ServerApiCases {
 					var params = Reputation.params(market, player.getUUID(), good, now);
 					long expected = PriceModel.sumSell(params, market.good(good).pressure(), ratios);
 					that(expected > PriceModel.sumSell(params, market.good(good).pressure(), 4), "the valued items are not worth more (%d)", expected);
+					c.openStall(player, stall); // the server takes trades only from the open trade screen
 					TradeResult sold = c.tradeRaw(player, market.id(), good, false, 4, expected, false, false);
 					that(sold == TradeResult.SUCCESS, "selling 4 of the valued goods gave %s", sold);
 					equal(0, player.getInventory().countItem(item), "items of the good left (plain and named)");

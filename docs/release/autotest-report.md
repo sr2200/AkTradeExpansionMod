@@ -2,7 +2,7 @@
 
 `autotest.bat`（`Source/TradeExpansion`）が作る生成物です。手で直さないでください。結果はチェックリスト（`ingame-checklist.md`）の各項目にも書き込まれます。
 
-- サーバー：バージョン 0.3.19、2026-11-23 18:22、236 件中 0 件失敗
+- サーバー：バージョン 0.3.25、2026-11-28 11:26、238 件中 0 件失敗
 - クライアント：バージョン 0.3.1、2026-11-22 11:16、154 件中 0 件失敗
 - クライアント（Mod Menu・YACL なし）：バージョン 0.2.44、2026-11-21 17:44、3 件中 0 件失敗
 - クライアント（Mod Menu だけ）：バージョン 0.2.44、2026-11-21 17:44、2 件中 0 件失敗
@@ -11,7 +11,7 @@
 - クライアント（REI）：バージョン 0.2.44、2026-11-21 17:31、7 件中 0 件失敗
 - クライアント（JourneyMap）：バージョン 0.2.44、2026-11-21 17:31、3 件中 0 件失敗
 - クライアント（建物の画像）：バージョン 0.3.17、2026-11-23 16:05、2 件中 0 件失敗
-- チェックリスト 420 項目のうち、今回 自動で完了 221・一部を確認 173・失敗 0
+- チェックリスト 432 項目のうち、今回 自動で完了 221・一部を確認 180・失敗 0
 
 ## すべての項目
 
@@ -249,8 +249,10 @@
 | 23-12 | `rival_center_near_visits` | サーバー | ✔ | 商会の動きの中心が、最近プレイヤーが交易画面を開いた市場の近く（board.radius 以内）から選ばれ、最近開かれた市場が無い時は全部の市場から選ばれること（rivals start と同じ選び方を5回ずつ。日ごとの抽選そのものは見ていない） |
 | 41-1・41-2・41-4 | `weather_rain_crops` | サーバー | ✔ | 今日と前の2日の雨が合わせて1日分になると、オーバーワールドの市場の作物の基準価格が ×0.85 になり（交易画面のスナップショットの倍率と B）、作物でない品は変わらず、雨続きが始まった・終わった時にチャットで知らせ、雨が足りない時・weather.enabled が OFF の時は元の値段のままなこと（ツールチップの表示は見ていない） |
 | 41-3・41-5 | `weather_storm_cargo` | サーバー | ✔ | 雷雨の間に荷箱を届けると、輸送の報酬が ×1.5（切り上げ）になり、保証金はそのまま戻り、チャットに雷雨の配達の行が出ること。雷雨が始まった時に荷箱を持っていると知らせが出ること（雷雨の見え方は見ていない。雷雨は天気の値を直接変えて作った） |
+| 47-1・47-2・47-3・47-4・47-5 | `market_event` | サーバー | ✔ | 豊作のイベントを中心の市場で始めると、その品の基準価格が1日目は倍率のずれの 1/3（3日目から全部）だけ下がり（スナップショットの倍率と B）、300 ブロック先の市場には距離で弱めた分だけ効き、終わった日・events.enabled が OFF の時は元に戻ること。日が変わると次の日のイベントが予報として選ばれ、中心の近くのプレイヤーに予報と始まりがチャットで届き、掲示板のニュースの一覧に入ること。イベントの品は品不足と商会の動きに選ばれないこと（掲示板の画面の表示・ツールチップは見ていない） |
 | 46-1 | `api_staff_and_request_events` | サーバー | ✔ | 番頭が品を売ると STAFF_TRADE が来て（持ち主・番頭・売り・市場・品、合計が番頭の売上と同じ）、依頼を納品すると REQUEST_COMPLETED（GOODS・市場・品・数・報酬・現金）が来ること（運び屋と荷箱の配達は見ていない） |
 | 46-2 | `api_external_trade` | サーバー | ✔ | recordExternalTrade で買ったことにすると値段が上がって在庫が減り、売ったことにすると値段が下がって在庫が増え、MARKETS_CHANGED にその市場が入ること。在庫より多くは買えず（在庫の数だけ）、扱っていない品・無い市場は 0、数が範囲の外なら例外になること（周りの市場への波及は見ていない） |
+| 46-5 | `api_item_valuation` | サーバー | ✔ | 値付け（ItemValuation）を登録した商品で、ぴったりの品は1倍、値付けの品は倍率どおりの値段で、倍率の高い品から売れること。市場のほかの商品にぴったりの品は値付けの商品で数えないこと（まとめて売る・売却スロット・クライアントのプレビューは見ていない） |
 | 46-3 | `api_money` | サーバー | ✔ | deposit で口座が増え、withdraw は残高まで引けて、足りなければ false で変わらず、giveCash・takeCash で財布と硬貨が増減し、足りなければ false で変わらないこと。オフラインのプレイヤーの口座にも入れられること（利息の扱いは見ていない） |
 | 14-4 | `log_has_no_mod_errors` | サーバー | ✔ | テスト用サーバー（専用サーバーではない）のログに本 Mod のエラーが出ないことのみ |
 | 1-2 | `startup_with_modmenu_yacl` | クライアント | ✔ | 全部 |
@@ -403,7 +405,7 @@
 | 11-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの普通の世界で、生成された村の中で where show をすると、緑の点（村の範囲）が村の構造物の枠の辺の上に、地面（いちばん上のブロック＋0.3）に届くこと（見やすさは画像で確認） |
 | 6-1・6-2 | `where_show_natural_village` | クライアント | ✔ | 決まったシードの世界で、スポーンの近くの村（最大7つ）のどれかに生成された屋台の建物があり、交易所のまわりに樽・干し草・ランタン・柵があり、建物の床（7×7）の上に草や花が無いこと。交易所の正面が建物の入口に向き、交易所と入口の間に通れないブロックが無く、入口の外に村の道（土の道）があること（村の種類ごとには見ていない。建物が道や家と自然につながって見えるかは画像で確認） |
 | 2-8 | `stall_place_and_open` | クライアント | ✔ | 全部 |
-| 40-12 | `notebook_screen` | クライアント | ✔ | 1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に売上が出て、3つのタブとも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない |
+| 40-12・40-15 | `notebook_screen` | クライアント | ✔ | 1週間分の記録（長い名前の品6つ）と価格メモを入れた手帳が使うキーで開き、「今日」に今日の売上、「昨日」に昨日の売上が出て（「昨日」に日報のボタンは無い）、4つのタブ（雇い人は除く）とも文字が重ならず、ボタンに重ならず、手帳の紙からはみ出さないこと（日本語と英語、854×480 と 1920×1080 の GUI 2・4・自動）。ツールチップは見ていない |
 | 40-2 | `notebook_screen` | クライアント | ✔ | 手帳を使うキー（右クリック）で手帳の画面が開くこと（タブの切り替えの見え方は画像で見る） |
 | 44-1・44-8 | `town_levels` | クライアント | ✔ | 全部 |
 | 20-4・25-1 | `log_has_no_mod_errors` | クライアント | ✔ | 全部 |
@@ -714,13 +716,17 @@
 - 11-2 `where_show_natural_village`：[11-2_where_show_village.png](../../Source/TradeExpansion/build/autotest/screenshots/11-2_where_show_village.png)
 - 6-1・6-2 `where_show_natural_village`：[6-1_generated_stall.png](../../Source/TradeExpansion/build/autotest/screenshots/6-1_generated_stall.png)
 - 2-8 `stall_place_and_open`：[2-8_trade_screen.png](../../Source/TradeExpansion/build/autotest/screenshots/2-8_trade_screen.png)
-- 40-12 `notebook_screen`：[40-2_notebook_today.png](../../Source/TradeExpansion/build/autotest/screenshots/40-2_notebook_today.png)
-- 40-12 `notebook_screen`：[layout_notebook_today_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_ja_jp_854x480_GUI_auto.png)
-- 40-12 `notebook_screen`：[layout_notebook_days_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_ja_jp_854x480_GUI_auto.png)
-- 40-12 `notebook_screen`：[layout_notebook_prices_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_ja_jp_854x480_GUI_auto.png)
-- 40-12 `notebook_screen`：[layout_notebook_today_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_en_us_854x480_GUI_auto.png)
-- 40-12 `notebook_screen`：[layout_notebook_days_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_en_us_854x480_GUI_auto.png)
-- 40-12 `notebook_screen`：[layout_notebook_prices_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_en_us_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[40-2_notebook_today.png](../../Source/TradeExpansion/build/autotest/screenshots/40-2_notebook_today.png)
+- 40-12・40-15 `notebook_screen`：[40-15_notebook_yesterday_next_day.png](../../Source/TradeExpansion/build/autotest/screenshots/40-15_notebook_yesterday_next_day.png)
+- 40-12・40-15 `notebook_screen`：[40-15_notebook_yesterday.png](../../Source/TradeExpansion/build/autotest/screenshots/40-15_notebook_yesterday.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_today_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_ja_jp_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_yesterday_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_yesterday_ja_jp_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_days_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_ja_jp_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_prices_ja_jp_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_ja_jp_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_today_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_today_en_us_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_yesterday_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_yesterday_en_us_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_days_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_days_en_us_854x480_GUI_auto.png)
+- 40-12・40-15 `notebook_screen`：[layout_notebook_prices_en_us_854x480_GUI_auto.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_notebook_prices_en_us_854x480_GUI_auto.png)
 - 44-1・44-8 `town_levels`：[layout_ja_jp_854x480_GUI_auto_level1.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_level1.png)
 - 44-1・44-8 `town_levels`：[44-1_directions.png](../../Source/TradeExpansion/build/autotest/screenshots/44-1_directions.png)
 - 44-1・44-8 `town_levels`：[layout_ja_jp_854x480_GUI_auto_level2.png](../../Source/TradeExpansion/build/autotest/screenshots/layout_ja_jp_854x480_GUI_auto_level2.png)

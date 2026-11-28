@@ -1,0 +1,11 @@
+{
+  "goods": [
+    "ak_trade_expansion:cod",
+    "ak_trade_expansion:salmon"
+  ],
+  "min_multiplier": 0.65,
+  "max_multiplier": 0.8,
+  "min_days": 2,
+  "max_days": 4,
+  "weight": 2
+}

@@ -243,6 +243,18 @@ public final class ConfigScreen {
 				.option(doubleField("rivals.maxImpact", d.rivals.maxImpact, () -> edit.rivals.maxImpact, v -> edit.rivals.maxImpact = v, 0, 2))
 				.option(doubleField("rivals.nearRadius", d.rivals.nearRadius, () -> edit.rivals.nearRadius, v -> edit.rivals.nearRadius = v, 0, 100_000))
 				.option(doubleField("rivals.farRadius", d.rivals.farRadius, () -> edit.rivals.farRadius, v -> edit.rivals.farRadius = v, 0, 100_000))
+				// V: market events
+				.option(bool("events.enabled", d.events.enabled, () -> edit.events.enabled, v -> edit.events.enabled = v))
+				.option(bool("events.priceUp", d.events.priceUp, () -> edit.events.priceUp, v -> edit.events.priceUp = v))
+				.option(bool("events.priceDown", d.events.priceDown, () -> edit.events.priceDown, v -> edit.events.priceDown = v))
+				.option(bool("events.forecast", d.events.forecast, () -> edit.events.forecast, v -> edit.events.forecast = v))
+				.option(bool("events.notifyChat", d.events.notifyChat, () -> edit.events.notifyChat, v -> edit.events.notifyChat = v))
+				.option(bool("events.otherDimensions", d.events.otherDimensions, () -> edit.events.otherDimensions, v -> edit.events.otherDimensions = v))
+				.option(doubleField("events.chancePerDay", d.events.chancePerDay, () -> edit.events.chancePerDay, v -> edit.events.chancePerDay = v, 0, 1))
+				.option(intField("events.maxActive", d.events.maxActive, () -> edit.events.maxActive, v -> edit.events.maxActive = v, 0, 20))
+				.option(doubleField("events.nearRadius", d.events.nearRadius, () -> edit.events.nearRadius, v -> edit.events.nearRadius = v, 0, 100_000))
+				.option(doubleField("events.farRadius", d.events.farRadius, () -> edit.events.farRadius, v -> edit.events.farRadius = v, 0, 100_000))
+				.option(doubleField("events.strength", d.events.strength, () -> edit.events.strength, v -> edit.events.strength = v, 0, 2))
 				// P (v0.46): village trends
 				.option(doubleField("trend.durationDays", d.trend.durationDays, () -> edit.trend.durationDays, v -> edit.trend.durationDays = v, 0.5, 60))
 				.option(intField("trend.popularCount", d.trend.popularCount, () -> edit.trend.popularCount, v -> edit.trend.popularCount = v, 0, 5))

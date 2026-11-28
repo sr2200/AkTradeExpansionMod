@@ -50,7 +50,11 @@ public final class MarketRegistry extends SavedData {
 			// C-5: signposts of the trade routes
 			Signpost.CODEC.listOf().optionalFieldOf("signposts", List.of()).forGetter(MarketRegistry::signpostList),
 			// U (v0.82): rain of the last game days
-			RainDay.CODEC.listOf().optionalFieldOf("rain", List.of()).forGetter(MarketRegistry::rainList)
+			RainDay.CODEC.listOf().optionalFieldOf("rain", List.of()).forGetter(MarketRegistry::rainList),
+			// V: market events
+			Codec.LONG.optionalFieldOf("event_day", Long.MIN_VALUE).forGetter(r -> r.eventDay),
+			Codec.INT.optionalFieldOf("next_event_id", 1).forGetter(r -> r.nextEventId),
+			com.akf.tradeexpansion.event.MarketEvent.CODEC.listOf().optionalFieldOf("events", List.of()).forGetter(r -> List.copyOf(r.events))
 	).apply(i, MarketRegistry::new));
 
 	/** U (v0.82): ticks it rained in the overworld on one game day. */
@@ -113,13 +117,22 @@ public final class MarketRegistry extends SavedData {
 	/** U (v0.82): ticks it rained on each of the last game days (game day → ticks), oldest first. */
 	private final Map<Long, Integer> rain = new java.util.TreeMap<>();
 
+	/** V: the last market-clock day events were rolled for, and the events (oldest first). */
+	private long eventDay = Long.MIN_VALUE;
+	private int nextEventId = 1;
+	private final List<com.akf.tradeexpansion.event.MarketEvent> events = new ArrayList<>();
+
 	private MarketRegistry() {
-		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of(), 0L, List.of(), List.of());
+		this(SCHEMA_VERSION, toList(CoinType.ratios()), 1, List.of(), Long.MIN_VALUE, 1, List.of(), 1, List.of(), 0L, List.of(), List.of(),
+				Long.MIN_VALUE, 1, List.of());
 	}
 
 	private MarketRegistry(int schemaVersion, List<Integer> currencyRatios, long nextId, List<Market> markets, long rivalDay,
 			int nextCampaignId, List<Campaign> campaigns, int nextEmployeeId, List<Employee> employees, long clockOffset,
-			List<Signpost> signposts, List<RainDay> rain) {
+			List<Signpost> signposts, List<RainDay> rain, long eventDay, int nextEventId, List<com.akf.tradeexpansion.event.MarketEvent> events) {
+		this.eventDay = eventDay;
+		this.nextEventId = nextEventId;
+		this.events.addAll(events);
 		rain.forEach(r -> this.rain.put(r.day(), r.ticks()));
 		for (Signpost s : signposts) this.signposts.computeIfAbsent(s.dimension(), k -> new java.util.LinkedHashSet<>()).add(s.pos().immutable());
 		this.clockOffset = Math.max(0, clockOffset);
@@ -154,6 +167,24 @@ public final class MarketRegistry extends SavedData {
 		List<RainDay> list = new ArrayList<>();
 		rain.forEach((day, ticks) -> list.add(new RainDay(day, ticks)));
 		return list;
+	}
+
+	/** V: last day market events were rolled for. */
+	public long eventDay() {
+		return eventDay;
+	}
+
+	public void setEventDay(long day) {
+		this.eventDay = day;
+	}
+
+	/** V: market events, oldest first (mutable; callers mark the registry dirty). */
+	public List<com.akf.tradeexpansion.event.MarketEvent> events() {
+		return events;
+	}
+
+	public int takeEventId() {
+		return nextEventId++;
 	}
 
 	/** O-4: last day campaigns were rolled for. */

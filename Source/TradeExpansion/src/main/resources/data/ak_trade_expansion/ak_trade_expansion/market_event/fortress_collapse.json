@@ -1,0 +1,14 @@
+{
+  "goods": [
+    "ak_trade_expansion:blaze_rod",
+    "ak_trade_expansion:nether_wart"
+  ],
+  "min_multiplier": 1.35,
+  "max_multiplier": 1.6,
+  "min_days": 3,
+  "max_days": 5,
+  "weight": 2,
+  "dimensions": [
+    "minecraft:the_nether"
+  ]
+}

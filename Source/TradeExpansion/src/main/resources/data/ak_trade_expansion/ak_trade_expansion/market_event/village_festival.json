@@ -1,0 +1,24 @@
+{
+  "goods": [
+    "ak_trade_expansion:poppy",
+    "ak_trade_expansion:dandelion",
+    "ak_trade_expansion:cornflower",
+    "ak_trade_expansion:oxeye_daisy",
+    "ak_trade_expansion:azure_bluet",
+    "ak_trade_expansion:red_tulip",
+    "ak_trade_expansion:orange_tulip",
+    "ak_trade_expansion:white_tulip",
+    "ak_trade_expansion:pink_tulip",
+    "ak_trade_expansion:allium",
+    "ak_trade_expansion:blue_orchid",
+    "ak_trade_expansion:lily_of_the_valley",
+    "ak_trade_expansion:bread",
+    "ak_trade_expansion:pumpkin_pie",
+    "ak_trade_expansion:honey_bottle"
+  ],
+  "min_multiplier": 1.25,
+  "max_multiplier": 1.45,
+  "min_days": 2,
+  "max_days": 3,
+  "weight": 1
+}

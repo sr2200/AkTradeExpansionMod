@@ -76,7 +76,25 @@ public final class BoardService {
 					sameDimension ? center.center().getX() - here.center().getX() : 0, sameDimension ? center.center().getZ() - here.center().getZ() : 0,
 					c.daysLeft(today), here.good(c.goods()) != null && RivalService.weight(registry, here, c) > 0));
 		}
-		ServerPlayNetworking.send(player, new BoardS2C(here.id(), (int) Math.round(radius), entries, news));
+		// V-5: market events (running and forecast)
+		List<BoardS2C.EventNews> events = new ArrayList<>();
+		long eventToday = com.akf.tradeexpansion.event.EventService.day(now);
+		for (com.akf.tradeexpansion.event.MarketEvent e : com.akf.tradeexpansion.event.EventService.news(registry, here, radius, now)) {
+			Market center = registry.get(e.market());
+			if (center == null) continue;
+			boolean sameDimension = center.dimension().equals(here.dimension());
+			boolean forecast = e.startDay() > eventToday;
+			List<net.minecraft.resources.Identifier> items = new ArrayList<>();
+			for (net.minecraft.resources.Identifier g : e.goods()) {
+				GoodsDefinition def = GoodsCatalog.get(g);
+				if (def != null && items.size() < 3) items.add(def.item());
+			}
+			events.add(new BoardS2C.EventNews(e.event(), e.raises(), forecast, items, com.akf.tradeexpansion.event.EventService.goodsNames(e),
+					e.multiplier(), com.akf.tradeexpansion.market.MarketNames.name(center), center.id(),
+					sameDimension ? center.center().getX() - here.center().getX() : 0, sameDimension ? center.center().getZ() - here.center().getZ() : 0,
+					forecast ? e.days() : e.daysLeft(eventToday), com.akf.tradeexpansion.event.EventService.felt(registry, here, e)));
+		}
+		ServerPlayNetworking.send(player, new BoardS2C(here.id(), (int) Math.round(radius), entries, news, events));
 	}
 
 	private static BoardS2C.Good good(Market here, java.util.UUID uuid, long now, net.minecraft.resources.Identifier goodsId, GoodsDefinition def, GoodParams p, GoodState state,
